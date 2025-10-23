@@ -3,7 +3,7 @@ import {Box} from "@/components/ui/box";
 import {Text} from "@/components/ui/text";
 import {useRouter} from "expo-router";
 import {ScrollView} from "react-native";
-import Mount from "../components/mount";
+import Mount, { MountType } from "../components/mount";
 
 export default function Home() {
   const router = useRouter();
@@ -20,10 +20,20 @@ export default function Home() {
       </Box>
       <Box className="mt-6 grid flex-1 min-h-0 grid-cols-1 gap-5 overflow-y-auto sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         <ScrollView showsVerticalScrollIndicator={false}>
-          <Mount />
-          <Mount />
-          <Mount />
-          <Mount />
+          <Mount
+            name="nome"
+            path="fwedf"
+            usageTotalGB={100}
+            usageUsedGB={90}
+            host="slave1"
+          />
+          <Mount
+            name="nome2"
+            path="fwedf/2"
+            usageTotalGB={2024}
+            usageUsedGB={980}
+            host="slave2"
+          />
         </ScrollView>
       </Box>
     </Box>
