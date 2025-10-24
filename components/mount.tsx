@@ -15,12 +15,13 @@ export type MountType = {
   path: string;
   usageUsedGB: number;
   usageTotalGB: number;
+  working: boolean;
 };
 
-export default function Mount({name, path, usageUsedGB, usageTotalGB, host}:MountType) {
+export default function Mount({name, path, usageUsedGB, usageTotalGB, host, working}:MountType) {
 let usagePercent = Number(((usageUsedGB*100) / usageTotalGB).toFixed(2));
 
-const status = (usagePercent >= 90) ? "error" : "success";
+const status = (working) ? "success" : "error";
        
     return (
       <Box className="flex flex-col justify-between rounded-2xl border border-outline-100 bg-background-0 dark:border-[#222937] dark:bg-[#11141a39] mb-6">
@@ -61,7 +62,7 @@ const status = (usagePercent >= 90) ? "error" : "success";
           <Box className="flex">
             <Text
               className="color-[#9AA4B8]"
-              style={{fontFamily: "Inter_700Regular"}}
+              style={{fontFamily: "Inter_400Regular"}}
             >
               {path}
             </Text>
@@ -69,13 +70,13 @@ const status = (usagePercent >= 90) ? "error" : "success";
           <Box className="flex flex-row justify-between mt-4">
             <Text
               className="color-[#9AA4B8]"
-              style={{fontFamily: "Inter_700Regular"}}
+              style={{fontFamily: "Inter_400Regular"}}
             >
               Usage
             </Text>
             <Text
               className="color-[#9AA4B8]"
-              style={{fontFamily: "Inter_700Regular"}}
+              style={{fontFamily: "Inter_400Regular"}}
             >
               {usagePercent}%
             </Text>
@@ -86,12 +87,20 @@ const status = (usagePercent >= 90) ? "error" : "success";
               size="md"
               orientation="horizontal"
               className={`w-full h-2 ${
-                status === "error" ? "bg-[#ef444419]" : "bg-[#2dd4be19]"
+                usagePercent >= 90
+                  ? "bg-[#ef444419]"
+                  : usagePercent >= 50
+                  ? "bg-[#facc1524]"
+                  : "bg-[#2dd4be19]"
               }`}
             >
               <ProgressFilledTrack
                 className={`h-2 ${
-                  status === "error" ? "bg-[#EF4444]" : "bg-[#2DD4BF]"
+                  usagePercent >= 90
+                    ? "bg-[#EF4444]"
+                    : usagePercent >= 50
+                    ? "bg-[#FBBF24]"
+                    : "bg-[#2DD4BF]"
                 }`}
               />
             </Progress>
@@ -100,39 +109,39 @@ const status = (usagePercent >= 90) ? "error" : "success";
             <Icon className="text-typography-500 mr-2" as={HardDrive} />
             <Text
               className="color-[#9AA4B8]"
-              style={{fontFamily: "Inter_700Regular"}}
+              style={{fontFamily: "Inter_400Regular"}}
             >
-              Usado / Total:{" "}
+              Used / Total:{" "}
             </Text>
             <Text
               className="text-typography-900"
               style={{fontFamily: "Inter_700Bold"}}
             >
-              {usageUsedGB} GB / {usageTotalGB} GB
+              {usageUsedGB} GB / {usageTotalGB} GB{" "}
             </Text>
           </Box>
           <Box className="flex flex-row mt-2 items-center">
             <Icon className="text-typography-500 mr-2" as={Download} />
             <Text
               className="color-[#9AA4B8]"
-              style={{fontFamily: "Inter_700Regular"}}
+              style={{fontFamily: "Inter_400Regular"}}
             >
-              Livre:{" "}
+              Free:{" "}
             </Text>
             <Text
               className="text-typography-900"
               style={{fontFamily: "Inter_700Bold"}}
             >
-              {usageTotalGB - usageUsedGB} GB
+              {usageTotalGB - usageUsedGB} GB{" "}
             </Text>
 
             <Box className="ml-9 flex flex-row items-center">
               <Icon className="text-typography-500 mr-2" as={Laptop} />
               <Text
                 className="color-[#9AA4B8]"
-                style={{fontFamily: "Inter_700Regular"}}
+                style={{fontFamily: "Inter_400Regular"}}
               >
-                Host:{" "}
+                Host:{"  "}
                 <Text
                   className="text-typography-900"
                   style={{fontFamily: "Inter_700Bold"}}
@@ -147,18 +156,18 @@ const status = (usagePercent >= 90) ? "error" : "success";
           <Button
             variant="solid"
             size="md"
-            action="primary"
+            action="secondary"
             className="w-full rounded-lg md:w-auto"
           >
-            <ButtonText>Ver Detalhes</ButtonText>
+            <ButtonText>See Details</ButtonText>
           </Button>
           <Button
             variant="solid"
             size="md"
-            action="secondary"
+            action="primary"
             className="w-full rounded-lg md:w-auto"
           >
-            <ButtonText>Desmontar</ButtonText>
+            <ButtonText>UMount</ButtonText>
           </Button>
         </Box>
       </Box>

@@ -26,13 +26,23 @@ export default function Home() {
             usageTotalGB={100}
             usageUsedGB={90}
             host="slave1"
+            working={true}
           />
           <Mount
             name="nome2"
             path="fwedf/2"
             usageTotalGB={2024}
-            usageUsedGB={980}
+            usageUsedGB={1050}
             host="slave2"
+            working={false}
+          />
+          <Mount
+            name="nome3"
+            path="fwedf/3"
+            usageTotalGB={2024}
+            usageUsedGB={50}
+            host="slave3"
+            working={true}
           />
         </ScrollView>
       </Box>
