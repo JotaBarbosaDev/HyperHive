@@ -134,12 +134,12 @@ export default function Mount({NfsShare, Status, onDelete}: MountProps) {
           >
             Usage
           </Text>
-          <Text
+            <Text
             className="color-[#9AA4B8]"
             style={{fontFamily: "Inter_400Regular"}}
-          >
-            {usagePercent}%
-          </Text>
+            >
+            {isNaN(usagePercent) ? 0 : usagePercent}%
+            </Text>
         </Box>
         <Box className="flex">
           <Progress
@@ -177,7 +177,7 @@ export default function Mount({NfsShare, Status, onDelete}: MountProps) {
             className="text-typography-900"
             style={{fontFamily: "Inter_700Bold"}}
           >
-            {usageUsedGB} GB / {usageTotalGB} GB{" "}
+            {isNaN(usageUsedGB) ? 0 : usageUsedGB} GB / {isNaN(usageTotalGB) ? 0 : usageTotalGB} GB{" "}
           </Text>
         </Box>
         <Box className="flex flex-row mt-2 items-center">
@@ -192,7 +192,7 @@ export default function Mount({NfsShare, Status, onDelete}: MountProps) {
             className="text-typography-900"
             style={{fontFamily: "Inter_700Bold"}}
           >
-            {usageTotalGB - usageUsedGB} GB{" "}
+            {isNaN(Status.spaceFreeGB) ? 0 : Status.spaceFreeGB.toFixed(2)} GB{" "}
           </Text>
 
           <Box className="ml-9 flex flex-row items-center">
