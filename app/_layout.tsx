@@ -128,6 +128,7 @@ function RootLayoutNav() {
   const [hostNormalMount, setHostNormalMount] = React.useState(false);
   const [createError, setCreateError] = React.useState<string | null>(null);
   const [isCreating, setIsCreating] = React.useState(false);
+  const [machines, setMachines] = React.useState<any[]>([]);
   const router = useRouter();
 
   const computeNextPath = React.useCallback(
@@ -143,6 +144,26 @@ function RootLayoutNav() {
     },
     []
   );
+
+  const machineList = React.useCallback(async () => {
+    try {
+      const machines = await fetch("https://hyperhive.maruqes.com/protocol/list", {
+        headers: {
+          method: "GET",
+          Authorization: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJhcGkiLCJhdHRycyI6eyJpZCI6Mn0sInNjb3BlIjpbInVzZXIiXSwiZXhwaXJlc0luIjoiMWQiLCJqdGkiOiJVNWpLYm0xMHZhdEMxaFduIiwiaWF0IjoxNzYxNzMyNjk4LCJleHAiOjE3NjE4MTkwOTh9.bvAmlfqYkd8gbZevHPexzDl7LIpDbZocjWGxsiFAknkumclFaf6oK05KThbQEJ-olOg0M-5LSMl4207633dFs6iZ4bSStCuaX8ZfaR1FeG95ajcqBNDiUIaEoq904YaZt5DOTDyPjXdNkssTzvhOVFqlJLulvXU5-iZgcIF5LGGfOYusUbKFNHv-wtCV80B70oUUUaPdhwX822ISyxs5TOdotVSk6CzOByAjaWZlpkU1ULmfK5syOBqNZMmgn-vUxGSfob7nccwFzjTqZuIeDdudYpgc0DidgUpRT9tWXuDCccD17kiu4dbAzCg9MpMADNK9F9CEpBEK4hz-qk0WHA"
+        }
+      });
+      const data = await machines.json();
+      setMachines(data);
+      return data;
+    } catch (error) {
+      console.error("Error fetching machine list:", error);
+      return null;
+    }
+  }, []);
+  
+
+  console.log(machines);
 
   const dirFolder = React.useCallback(
     async (customPath?: string) => {
@@ -353,6 +374,7 @@ function RootLayoutNav() {
                   onPress={() => {
                     handleCloseDrawer();
                     setShowDrawer(true);
+                    machineList();
                   }}
                 >
                   <ButtonIcon as={EditIcon} />
@@ -429,14 +451,13 @@ function RootLayoutNav() {
                                   <SelectDragIndicatorWrapper>
                                     <SelectDragIndicator />
                                   </SelectDragIndicatorWrapper>
-                                  <SelectItem
-                                    label="marques512sv"
-                                    value="marques512sv"
-                                  />
-                                  <SelectItem
-                                    label="marques2673sv"
-                                    value="marques2673sv"
-                                  />
+                                  {machines.map((machine) => (
+                                    <SelectItem
+                                      label={machine.MachineName}
+                                      value={machine.MachineName}
+                                      key={machine.index}
+                                    />
+                                  ))}
                                 </SelectContent>
                               </SelectPortal>
                             </Select>
