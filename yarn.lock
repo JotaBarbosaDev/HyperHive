@@ -2512,6 +2512,11 @@
   resolved "https://registry.npmjs.org/@react-native/normalize-colors/-/normalize-colors-0.74.89.tgz"
   integrity sha512-qoMMXddVKVhZ8PA1AbUCk83trpd6N+1nF2A6k1i6LsQObyS92fELuk8kU/lQs6M7BsMHwqyLCpQJ1uFgNvIQXg==
 
+"@react-native/normalize-colors@0.74.85":
+  version "0.74.85"
+  resolved "https://registry.npmjs.org/@react-native/normalize-colors/-/normalize-colors-0.74.85.tgz"
+  integrity sha512-pcE4i0X7y3hsAE0SpIl7t6dUc0B0NZLd1yv7ssm4FrLhWG+CGyIq4eFDXpmPU1XHmL5PPySxTAjEMiwv6tAmOw==
+
 "@react-native/normalize-colors@0.81.4":
   version "0.81.4"
   resolved "https://registry.npmjs.org/@react-native/normalize-colors/-/normalize-colors-0.81.4.tgz"
@@ -4541,6 +4546,14 @@ expo-modules-core@3.0.21:
   integrity sha512-KJRzm0FEt/lfPNG+C6UUq+ta9PO10QPwY1HGCNkzPiRCIMJmQP4xRYK4Z7AxiYEYsPqr5OdjRW55kGZ4c5pzgA==
   dependencies:
     invariant "^2.2.4"
+
+expo-navigation-bar@~3.0.6:
+  version "3.0.7"
+  resolved "https://registry.npmjs.org/expo-navigation-bar/-/expo-navigation-bar-3.0.7.tgz"
+  integrity sha512-KCNHyZ58zoN4xdy7D1lUdJvveCYNVQHGSX4M6xO/SZypvI6GZbLzKSN6Lx4GDGEFxG6Kb+EAckZl48tSiNeGYQ==
+  dependencies:
+    "@react-native/normalize-colors" "0.74.85"
+    debug "^4.3.2"
 
 expo-router@~6.0.4:
   version "6.0.12"
@@ -8447,3 +8460,8 @@ zod@^3.25.76:
   version "3.25.76"
   resolved "https://registry.npmjs.org/zod/-/zod-3.25.76.tgz"
   integrity sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==
+
+zustand@^5.0.8:
+  version "5.0.8"
+  resolved "https://registry.npmjs.org/zustand/-/zustand-5.0.8.tgz"
+  integrity sha512-gyPKpIaxY9XcO2vSMrLbiER7QMAMGOQZVRdJ6Zi782jkbzZygq5GI9nG8g+sMgitRtndwaBSl7uiqC49o1SSiw==

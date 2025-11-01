@@ -23,6 +23,10 @@
       },
       "edgeToEdgeEnabled": true
     },
+    "androidNavigationBar": {
+      "visible": "sticky-immersive",
+      "backgroundColor": "#00000000"
+    },
     "web": {
       "bundler": "metro",
       "output": "static",
