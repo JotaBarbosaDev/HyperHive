@@ -1,195 +1,236 @@
 import React from "react";
+import {KeyboardAvoidingView, Platform, ScrollView} from "react-native";
+import {useRouter} from "expo-router";
 import {Box} from "@/components/ui/box";
-import {View, Button, Text} from "react-native";
-import {RefreshControl, ScrollView, useColorScheme} from "react-native";
-import Mount, {MountType} from "../components/mount";
-import {Skeleton, SkeletonText} from "@/components/ui/skeleton";
-import {HStack} from "@/components/ui/hstack";
+import {
+  FormControl,
+  FormControlError,
+  FormControlErrorIcon,
+  FormControlErrorText,
+  FormControlLabel,
+  FormControlLabelText,
+} from "@/components/ui/form-control";
+import {VStack} from "@/components/ui/vstack";
+import {Heading} from "@/components/ui/heading";
+import {Text} from "@/components/ui/text";
+import {Input, InputField, InputIcon, InputSlot} from "@/components/ui/input";
+import {Button, ButtonSpinner, ButtonText} from "@/components/ui/button";
+import {AlertCircleIcon, EyeIcon, EyeOffIcon} from "@/components/ui/icon";
+import Logo from "@/assets/icons/Logo";
 
+export default function LoginScreen() {
+  const router = useRouter();
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
+  const [emailError, setEmailError] = React.useState("");
+  const [passwordError, setPasswordError] = React.useState("");
 
-export default function Home() {
-  const [mounts, setMounts] = React.useState<MountType[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
-  const isMountedRef = React.useRef(true);
-  const colorScheme = useColorScheme();
-  const refreshControlTint = colorScheme === "dark" ? "#F8FAFC" : "#0F172A";
-  const refreshControlBackground = colorScheme === "dark" ? "#0E1524" : "#E2E8F0";
-  const [authToken, setAuthToken] = React.useState<string>(
-    "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJhcGkiLCJhdHRycyI6eyJpZCI6Mn0sInNjb3BlIjpbInVzZXIiXSwiZXhwaXJlc0luIjoiMWQiLCJqdGkiOiJJWm1ObG92RUVieExELytaIiwiaWF0IjoxNzYxOTA4MTAwLCJleHAiOjE3NjE5OTQ1MDB9.xJUEc8CS5dBV4oc0MPHnbAtZPxtxB9p-7DyNQL14GneQ4thrJ4GgUog3H8WCXoejWIczVgVphRbtQEq4vrMSvN3nNxgRCjd_SUlXHbBQHyqHEXZi9Kx2eWNF7b5UQpADYBRFxjhWlk6Zl_aSwPAryI81_V2OhHBsW-mwGcmiXdOgZaNFCiVQ8LGStunppz2xCkWdfrJY5lbD88cEGDWhaozz6-JXib8zFZpwRGpAyKOwgTtQ7CPAwlNgvAQkL3TpRkAd_9JzgG0tBoamSv80nbZGxbMKve1ArEYuQdivaTzGiuU0K5trYKG1G69Qvllhdo3OzHaUl7oB8Db78Zf2ng"
-  );
-
-  const loadMounts = React.useCallback(
-    async ({showSkeleton = false}: {showSkeleton?: boolean} = {}) => {
-      if (showSkeleton) {
-        if (isMountedRef.current) setIsLoading(true);
-      } else {
-        if (isMountedRef.current) setIsRefreshing(true);
-      }
-
-      try {
-        const response = await fetch("https://hyperhive.maruqes.com/nfs/list", {
-          headers: {
-            Authorization: authToken,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`Request failed with status ${response.status}`);
-        }
-
-        const json = (await response.json()) as MountType[];
-
-        if (!isMountedRef.current) return;
-        setMounts(json);
-        setError(null);
-      } catch (err) {
-        if (!isMountedRef.current) return;
-        const message =
-          err instanceof Error ? err.message : "Não foi possível carregar os mounts.";
-        setError(message);
-      } finally {
-        if (!isMountedRef.current) return;
-        if (showSkeleton) {
-          setIsLoading(false);
-        } else {
-          setIsRefreshing(false);
-        }
-      }
-    },
-    [authToken]
-  );
-
-  React.useEffect(() => {
-    isMountedRef.current = true;
-    loadMounts({showSkeleton: true});
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, [loadMounts]);
-
-  const handleRefresh = React.useCallback(() => {
-    loadMounts({showSkeleton: false});
-  }, [loadMounts]);
-
-  const handleMountRemoved = React.useCallback((share: MountType["NfsShare"]) => {
-    setMounts((prev) =>
-      prev.filter(
-        (mount) =>
-          !(
-            mount.NfsShare.MachineName === share.MachineName &&
-            mount.NfsShare.FolderPath === share.FolderPath
-          )
-      )
-    );
+  const togglePasswordVisibility = React.useCallback(() => {
+    setShowPassword((prev) => !prev);
   }, []);
 
- 
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleSubmit = React.useCallback(async () => {
+    // Reset errors
+    setError("");
+    setEmailError("");
+    setPasswordError("");
+
+    // Validate fields
+    let hasError = false;
+
+    if (!email.trim()) {
+      setEmailError("Email é obrigatório");
+      hasError = true;
+    } else if (!validateEmail(email)) {
+      setEmailError("Email inválido");
+      hasError = true;
+    }
+
+    if (!password.trim()) {
+      setPasswordError("Password é obrigatória");
+      hasError = true;
+    } else if (password.length < 6) {
+      setPasswordError("Password deve ter pelo menos 6 caracteres");
+      hasError = true;
+    }
+
+    if (hasError) return;
+
+    // Simulate login
+    setIsLoading(true);
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      router.replace("/mounts");
+    } catch (err) {
+      setError("Erro ao fazer login. Tenta novamente.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [email, password, router]);
 
   return (
-    <Box className="flex min-h-screen flex-col bg-background-50 p-3 dark:bg-[#070D19] gap-4 web:bg-background-0 web:px-10 web:py-10">
-      <Box className="flex w-full items-center web:mx-auto web:max-w-7xl">
-        <Text
-          className="text-2xl text-typography-900 dark:text-typography-900 web:text-[32px]"
-          style={{fontFamily: "Inter_700Bold"}}
-        >
-          Mounts
-        </Text>
-        
-      </Box>
-      <Box className="mt-6 flex-1 w-full min-h-0 overflow-hidden web:mx-auto web:max-w-7xl">
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{paddingBottom: 64}}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={handleRefresh}
-              tintColor={refreshControlTint}
-              colors={[refreshControlTint]}
-              progressBackgroundColor={refreshControlBackground}
-            />
-          }
-        >
-          <Box className="flex flex-col gap-5 web:grid web:grid-cols-2 web:md:grid-cols-3 web:lg:grid-cols-4 web:gap-6 web:items-stretch">
-            {isLoading ? (
-              <>
-                <Box className="w-[300px] gap-4 p-3 rounded-md bg-background-100 web:w-[360px]">
-                  <Skeleton variant="sharp" className="h-[100px]" />
-                  <SkeletonText _lines={3} className="h-2" />
-                  <HStack className="gap-1 align-middle">
-                    <Skeleton
-                      variant="circular"
-                      className="h-[24px] w-[28px] mr-2"
-                    />
-                    <SkeletonText _lines={2} gap={1} className="h-2 w-2/5" />
-                  </HStack>
-                </Box>
-                <Box className="w-[300px] gap-4 p-3 rounded-md bg-background-100 web:w-[360px]">
-                  <Skeleton variant="sharp" className="h-[100px]" />
-                  <SkeletonText _lines={3} className="h-2" />
-                  <HStack className="gap-1 align-middle">
-                    <Skeleton
-                      variant="circular"
-                      className="h-[24px] w-[28px] mr-2"
-                    />
-                    <SkeletonText _lines={2} gap={1} className="h-2 w-2/5" />
-                  </HStack>
-                </Box>
-                <Box className="w-[300px] gap-4 p-3 rounded-md bg-background-100 web:w-[360px]">
-                  <Skeleton variant="sharp" className="h-[100px]" />
-                  <SkeletonText _lines={3} className="h-2" />
-                  <HStack className="gap-1 align-middle">
-                    <Skeleton
-                      variant="circular"
-                      className="h-[24px] w-[28px] mr-2"
-                    />
-                    <SkeletonText _lines={2} gap={1} className="h-2 w-2/5" />
-                  </HStack>
-                </Box>
-                <Box className="w-[300px] gap-4 p-3 rounded-md bg-background-100 web:w-[360px]">
-                  <Skeleton variant="sharp" className="h-[100px]" />
-                  <SkeletonText _lines={3} className="h-2" />
-                  <HStack className="gap-1 align-middle">
-                    <Skeleton
-                      variant="circular"
-                      className="h-[24px] w-[28px] mr-2"
-                    />
-                    <SkeletonText _lines={2} gap={1} className="h-2 w-2/5" />
-                  </HStack>
-                </Box>
-              </>
-            ) : error ? (
-              <Box className="p-3 web:rounded-2xl web:bg-background-0/80">
-                <Text
-                  className="text-[#EF4444]"
-                  style={{fontFamily: "Inter_400Regular"}}
-                >
-                  Erro ao carregar mounts: {error}
-                </Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={{flex: 1}}
+    >
+      <ScrollView
+        contentContainerStyle={{flexGrow: 1}}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Box className="flex-1 bg-background-50 dark:bg-[#070D19] px-6 py-10 items-center justify-center web:px-10">
+          <Box className="w-full max-w-md">
+            {/* Logo */}
+            <Box className="items-center mb-8 web:mb-10">
+              <Box className="mb-4 web:mb-6">
+                <Logo />
               </Box>
-            ) : mounts.length === 0 ? (
-              <Box className="p-3 web:rounded-2xl web:bg-background-0/80">
-                <Text
-                  className="color-[#9AA4B8] web:text-base"
-                  style={{fontFamily: "Inter_400Regular"}}
+              <Heading
+                size="2xl"
+                className="text-typography-900 dark:text-typography-0 font-heading text-center web:text-4xl"
+              >
+                HyperHive
+              </Heading>
+              <Text className="text-typography-500 dark:text-typography-400 text-sm text-center mt-2 web:text-base">
+                Gestão de Mounts Simplificada
+              </Text>
+            </Box>
+
+            {/* Login Form */}
+            <Box className="w-full rounded-2xl border border-outline-200 bg-background-0 p-6 shadow-soft-3 dark:border-[#1F2937] dark:bg-[#0E1524] web:p-8">
+              <VStack className="gap-6">
+                <Box>
+                  <Heading
+                    size="lg"
+                    className="text-typography-900 dark:text-typography-0 font-heading web:text-2xl"
+                  >
+                    Bem-vindo de volta
+                  </Heading>
+                  <Text className="text-typography-500 dark:text-typography-400 text-sm font-body mt-2 web:text-base">
+                    Entra com as tuas credenciais para acederes ao painel de mounts.
+                  </Text>
+                </Box>
+
+                {/* General Error */}
+                {error && (
+                  <Box className="p-3 bg-error-50 dark:bg-error-900/20 rounded-xl border border-error-300 dark:border-error-700">
+                    <Text className="text-error-700 dark:text-error-400 text-sm">
+                      {error}
+                    </Text>
+                  </Box>
+                )}
+
+                {/* Email Field */}
+                <FormControl isInvalid={!!emailError}>
+                  <FormControlLabel>
+                    <FormControlLabelText className="text-sm text-typography-600 dark:text-typography-300 font-semibold web:text-base">
+                      Email
+                    </FormControlLabelText>
+                  </FormControlLabel>
+                  <Input
+                    className="mt-2"
+                    variant="outline"
+                    isInvalid={!!emailError}
+                  >
+                    <InputField
+                      type="text"
+                      value={email}
+                      onChangeText={(text) => {
+                        setEmail(text);
+                        setEmailError("");
+                        setError("");
+                      }}
+                      placeholder="nome@exemplo.com"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      className="web:text-base"
+                    />
+                  </Input>
+                  {emailError && (
+                    <FormControlError>
+                      <FormControlErrorIcon as={AlertCircleIcon} />
+                      <FormControlErrorText>{emailError}</FormControlErrorText>
+                    </FormControlError>
+                  )}
+                </FormControl>
+
+                {/* Password Field */}
+                <FormControl isInvalid={!!passwordError}>
+                  <FormControlLabel>
+                    <FormControlLabelText className="text-sm text-typography-600 dark:text-typography-300 font-semibold web:text-base">
+                      Password
+                    </FormControlLabelText>
+                  </FormControlLabel>
+                  <Input
+                    className="mt-2"
+                    variant="outline"
+                    isInvalid={!!passwordError}
+                  >
+                    <InputField
+                      value={password}
+                      onChangeText={(text) => {
+                        setPassword(text);
+                        setPasswordError("");
+                        setError("");
+                      }}
+                      secureTextEntry={!showPassword}
+                      placeholder="••••••••"
+                      className="web:text-base"
+                    />
+                    <InputSlot className="pr-3" onPress={togglePasswordVisibility}>
+                      <InputIcon
+                        as={showPassword ? EyeOffIcon : EyeIcon}
+                        className="text-typography-500 dark:text-typography-400"
+                      />
+                    </InputSlot>
+                  </Input>
+                  {passwordError && (
+                    <FormControlError>
+                      <FormControlErrorIcon as={AlertCircleIcon} />
+                      <FormControlErrorText>{passwordError}</FormControlErrorText>
+                    </FormControlError>
+                  )}
+                </FormControl>
+
+                {/* Submit Button */}
+                <Button
+                  className="mt-2 h-12 rounded-xl web:h-14"
+                  onPress={handleSubmit}
+                  action="primary"
+                  isDisabled={isLoading}
                 >
-                  Nenhum mount encontrado.
-                </Text>
-              </Box>
-            ) : (
-              mounts.map((mount) => (
-                <Mount
-                  key={mount.NfsShare.Id}
-                  {...mount}
-                  onDelete={handleMountRemoved}
-                />
-              ))
-            )}
+                  {isLoading ? (
+                    <>
+                      <ButtonSpinner />
+                      <ButtonText className="text-base font-semibold ml-2 web:text-lg">
+                        A entrar...
+                      </ButtonText>
+                    </>
+                  ) : (
+                    <ButtonText className="text-base font-semibold web:text-lg">
+                      Entrar
+                    </ButtonText>
+                  )}
+                </Button>
+              </VStack>
+            </Box>
+
+            {/* Footer */}
+            <Text className="text-typography-500 dark:text-typography-400 text-xs text-center mt-6 web:text-sm">
+              © 2025 HyperHive. Todos os direitos reservados.
+            </Text>
           </Box>
-        </ScrollView>
-      </Box>
-    </Box>
+        </Box>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
