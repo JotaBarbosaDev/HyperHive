@@ -1,15 +1,11 @@
-import {DEFAULT_AUTH_TOKEN} from "@/config/apiConfig";
 import {DirectoryListing} from "@/types/directory";
 import {Machine} from "@/types/machine";
 import {Mount, MountShare} from "@/types/mount";
-import {apiFetch} from "./api-client";
-
-export type ListMountsOptions = {
-  token?: string;
-};
+import {LoginPayload, LoginResponse} from "@/types/auth";
+import {apiFetch, setAuthToken, triggerUnauthorized} from "./api-client";
+import {loadAuthToken} from "./auth-storage";
 
 export type DeleteMountOptions = {
-  token?: string;
   force?: boolean;
 };
 
@@ -20,28 +16,30 @@ export type CreateMountInput = {
   hostNormalMount: boolean;
 };
 
-export type CreateMountOptions = {
-  token?: string;
+const resolveToken = async () => {
+  const storedToken = await loadAuthToken();
+  if (!storedToken) {
+    setAuthToken(null);
+    triggerUnauthorized();
+    throw new Error("Token de autenticação inválida.");
+  }
+  setAuthToken(storedToken);
+  return storedToken;
 };
 
-export type ListDirectoryOptions = {
-  token?: string;
-  path: string;
-};
-
-export async function listMounts(
-  {token = DEFAULT_AUTH_TOKEN}: ListMountsOptions = {}
-): Promise<Mount[]> {
-  return apiFetch<Mount[]>("/nfs/list", {token});
+export async function listMounts(): Promise<Mount[]> {
+  const authToken = await resolveToken();
+  return apiFetch<Mount[]>("/nfs/list", {token: authToken});
 }
 
 export async function deleteMount(
   share: Pick<MountShare, "MachineName" | "FolderPath">,
-  {token = DEFAULT_AUTH_TOKEN, force = false}: DeleteMountOptions = {}
+  {force = false}: DeleteMountOptions = {}
 ): Promise<void> {
+  const authToken = await resolveToken();
   await apiFetch<void>(`/nfs/delete?force=${force}`, {
     method: "DELETE",
-    token,
+    token: authToken,
     body: {
       machine_name: share.MachineName,
       folder_path: share.FolderPath,
@@ -50,12 +48,12 @@ export async function deleteMount(
 }
 
 export async function createMount(
-  input: CreateMountInput,
-  {token = DEFAULT_AUTH_TOKEN}: CreateMountOptions = {}
+  input: CreateMountInput
 ): Promise<void> {
+  const authToken = await resolveToken();
   await apiFetch<void>("/nfs/create", {
     method: "POST",
-    token,
+    token: authToken,
     body: {
       machine_name: input.machineName,
       folder_path: input.folderPath,
@@ -65,19 +63,27 @@ export async function createMount(
   });
 }
 
-export async function listMachines(
-  token: string = DEFAULT_AUTH_TOKEN
-): Promise<Machine[]> {
-  return apiFetch<Machine[]>("/protocol/list", {token});
+export async function login(input: LoginPayload): Promise<LoginResponse> {
+  return apiFetch<LoginResponse>("/login", {
+    method: "POST",
+    token: null,
+    body: input,
+  });
+}
+
+export async function listMachines(): Promise<Machine[]> {
+  const authToken = await resolveToken();
+  return apiFetch<Machine[]>("/protocol/list", {token: authToken});
 }
 
 export async function listDirectory(
   machineName: string,
-  {token = DEFAULT_AUTH_TOKEN, path}: ListDirectoryOptions
+  path: string
 ): Promise<DirectoryListing> {
+  const authToken = await resolveToken();
   return apiFetch<DirectoryListing>(`/nfs/contents/${machineName}`, {
     method: "POST",
-    token,
+    token: authToken,
     body: {path},
   });
 }

@@ -1,15 +1,14 @@
 import {useCallback, useEffect, useRef, useState} from "react";
-import {DEFAULT_AUTH_TOKEN} from "@/config/apiConfig";
 import {Mount, MountShare} from "@/types/mount";
 import {listMounts} from "@/services/hyperhive";
 
 type FetchMode = "initial" | "refresh";
 
 export type UseMountsOptions = {
-  token?: string;
+  token?: string | null;
 };
 
-export function useMounts({token = DEFAULT_AUTH_TOKEN}: UseMountsOptions = {}) {
+export function useMounts({token}: UseMountsOptions = {}) {
   const [mounts, setMounts] = useState<Mount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -18,6 +17,16 @@ export function useMounts({token = DEFAULT_AUTH_TOKEN}: UseMountsOptions = {}) {
 
   const fetchMounts = useCallback(
     async (mode: FetchMode = "refresh") => {
+      if (!token) {
+        if (!isMountedRef.current) return;
+        if (mode === "initial") {
+          setIsLoading(false);
+        } else {
+          setIsRefreshing(false);
+        }
+        return;
+      }
+
       if (mode === "initial") {
         setIsLoading(true);
       } else {
@@ -25,7 +34,7 @@ export function useMounts({token = DEFAULT_AUTH_TOKEN}: UseMountsOptions = {}) {
       }
 
       try {
-        const response = await listMounts({token});
+        const response = await listMounts();
         if (!isMountedRef.current) return;
         setMounts(response);
         setError(null);

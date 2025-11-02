@@ -9,8 +9,15 @@ import {HStack} from "@/components/ui/hstack";
 import {Icon} from "@/components/ui/icon";
 import {Mail, Phone, MapPin, Calendar} from "lucide-react-native";
 import {Divider} from "@/components/ui/divider";
+import {useAuthGuard} from "@/hooks/useAuthGuard";
 
 export default function ProfileScreen() {
+  const {token, isChecking} = useAuthGuard();
+
+  if (isChecking || !token) {
+    return null;
+  }
+
   return (
     <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
@@ -21,7 +28,7 @@ export default function ProfileScreen() {
           {/* Header */}
           <Heading
             size="2xl"
-            className="text-typography-900 dark:text-typography-0 mb-6 web:text-4xl"
+            className="text-typography-900 dark:text-[#E8EBF0] mb-6 web:text-4xl"
             style={{fontFamily: "Inter_700Bold"}}
           >
             Profile
@@ -36,7 +43,7 @@ export default function ProfileScreen() {
                   size="2xl"
                   className="border-4 border-outline-100 dark:border-[#2A3B52] web:w-32 web:h-32"
                 >
-                  <AvatarFallbackText className="text-typography-900 dark:text-typography-0 web:text-4xl">
+                  <AvatarFallbackText className="text-typography-900 dark:text-[#E8EBF0] web:text-4xl">
                     User
                   </AvatarFallbackText>
                   <AvatarImage
@@ -47,7 +54,7 @@ export default function ProfileScreen() {
                 </Avatar>
                 <Heading
                   size="xl"
-                  className="text-typography-900 dark:text-typography-0 mt-4 web:text-3xl"
+                  className="text-typography-900 dark:text-[#E8EBF0] mt-4 web:text-3xl"
                   style={{fontFamily: "Inter_700Bold"}}
                 >
                   User Name
@@ -62,7 +69,7 @@ export default function ProfileScreen() {
               {/* Contact Information */}
               <VStack className="gap-4">
                 <Text
-                  className="text-typography-900 dark:text-typography-0 text-lg font-semibold web:text-xl"
+                  className="text-typography-900 dark:text-[#E8EBF0] text-lg font-semibold web:text-xl"
                   style={{fontFamily: "Inter_600SemiBold"}}
                 >
                   Contact Information
@@ -84,7 +91,7 @@ export default function ProfileScreen() {
                       Email
                     </Text>
                     <Text
-                      className="text-typography-900 dark:text-typography-0 text-sm web:text-base"
+                      className="text-typography-900 dark:text-[#E8EBF0] text-sm web:text-base"
                       style={{fontFamily: "Inter_400Regular"}}
                     >
                       abc@gmail.com
@@ -108,7 +115,7 @@ export default function ProfileScreen() {
                       Phone
                     </Text>
                     <Text
-                      className="text-typography-900 dark:text-typography-0 text-sm web:text-base"
+                      className="text-typography-900 dark:text-[#E8EBF0] text-sm web:text-base"
                       style={{fontFamily: "Inter_400Regular"}}
                     >
                       +351 123 456 789
@@ -132,7 +139,7 @@ export default function ProfileScreen() {
                       Location
                     </Text>
                     <Text
-                      className="text-typography-900 dark:text-typography-0 text-sm web:text-base"
+                      className="text-typography-900 dark:text-[#E8EBF0] text-sm web:text-base"
                       style={{fontFamily: "Inter_400Regular"}}
                     >
                       Porto, Portugal
@@ -156,7 +163,7 @@ export default function ProfileScreen() {
                       Member Since
                     </Text>
                     <Text
-                      className="text-typography-900 dark:text-typography-0 text-sm web:text-base"
+                      className="text-typography-900 dark:text-[#E8EBF0] text-sm web:text-base"
                       style={{fontFamily: "Inter_400Regular"}}
                     >
                       Janeiro 2025

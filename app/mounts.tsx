@@ -3,11 +3,11 @@ import {RefreshControl, ScrollView, Text, useColorScheme} from "react-native";
 import {Box} from "@/components/ui/box";
 import MountCard, {MountSkeletonGrid} from "@/components/mount";
 import {useMounts} from "@/hooks/useMounts";
-import {DEFAULT_AUTH_TOKEN} from "@/config/apiConfig";
 import {MountShare} from "@/types/mount";
+import {useAuthGuard} from "@/hooks/useAuthGuard";
 
 export default function MountsScreen() {
-  const token = DEFAULT_AUTH_TOKEN;
+  const {token, isChecking} = useAuthGuard();
   const {mounts, error, isLoading, isRefreshing, refresh, removeMount} = useMounts({
     token,
   });
@@ -23,20 +23,24 @@ export default function MountsScreen() {
     [removeMount]
   );
 
+  if (isChecking || !token) {
+    return null;
+  }
+
   return (
     <Box className="flex min-h-screen flex-col bg-background-50 p-3 pt-16 dark:bg-[#070D19] gap-4 web:bg-background-0 web:px-10 web:py-10">
       <Box className="flex w-full items-center web:mx-auto web:max-w-7xl">
         <Text
-          className="text-2xl text-typography-900 dark:text-typography-900 web:text-[32px]"
+          className="text-2xl text-typography-900 dark:text-[#E8EBF0] web:text-[32px]"
           style={{fontFamily: "Inter_700Bold"}}
         >
           Mounts
         </Text>
       </Box>
-      <Box className="mt-6 flex-1 w-full min-h-0 overflow-hidden web:mx-auto web:max-w-7xl">
+      <Box className="mt-6 flex-1 w-full min-h-0 web:mx-auto web:max-w-7xl">
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{paddingBottom: 64}}
+          contentContainerStyle={{paddingBottom: 64, paddingTop: 8, paddingHorizontal: 8}}
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}

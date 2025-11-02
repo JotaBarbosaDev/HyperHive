@@ -20,7 +20,6 @@ import {Checkbox, CheckboxIndicator, CheckboxLabel} from "@/components/ui/checkb
 import {Box} from "@/components/ui/box";
 import {Text} from "@/components/ui/text";
 import {Tooltip, TooltipContent, TooltipText} from "@/components/ui/tooltip";
-import {DEFAULT_AUTH_TOKEN} from "@/config/apiConfig";
 import {createMount, listDirectory, listMachines} from "@/services/hyperhive";
 import {Machine} from "@/types/machine";
 import {DirectoryListing} from "@/types/directory";
@@ -31,7 +30,6 @@ export type CreateMountDrawerProps = {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
-  token?: string;
 };
 
 const hostInfoDescription =
@@ -62,7 +60,6 @@ export function CreateMountDrawer({
   isOpen,
   onClose,
   onSuccess,
-  token = DEFAULT_AUTH_TOKEN,
 }: CreateMountDrawerProps) {
   const [machines, setMachines] = React.useState<Machine[]>([]);
   const [machineName, setMachineName] = React.useState<string>("");
@@ -100,7 +97,7 @@ export function CreateMountDrawer({
     let isCancelled = false;
     const loadMachines = async () => {
       try {
-        const data = await listMachines(token);
+        const data = await listMachines();
         if (!isCancelled) {
           setMachines(data);
         }
@@ -113,7 +110,7 @@ export function CreateMountDrawer({
     return () => {
       isCancelled = true;
     };
-  }, [isOpen, resetState, token]);
+  }, [isOpen, resetState]);
 
   const handleHostInfoPress = React.useCallback(() => {
     if (Platform.OS === "web") {
@@ -146,10 +143,7 @@ export function CreateMountDrawer({
       setSelectedDirectory(null);
 
       try {
-        const data = await listDirectory(machineName.trim(), {
-          path: normalizedPath,
-          token,
-        });
+        const data = await listDirectory(machineName.trim(), normalizedPath);
         setDirListing(data);
         setPath(normalizedPath);
         return data;
@@ -165,7 +159,7 @@ export function CreateMountDrawer({
         setIsFetchingDir(false);
       }
     },
-    [machineName, path, token]
+    [machineName, path]
   );
 
   const handleOpenDirectoryModal = React.useCallback(async () => {
@@ -213,15 +207,12 @@ export function CreateMountDrawer({
     setIsCreating(true);
 
     try {
-      await createMount(
-        {
-          machineName: trimmedMachine,
-          folderPath: path,
-          name: trimmedName,
-          hostNormalMount,
-        },
-        {token}
-      );
+      await createMount({
+        machineName: trimmedMachine,
+        folderPath: path,
+        name: trimmedName,
+        hostNormalMount,
+      });
 
       onClose();
       onSuccess?.();
@@ -231,7 +222,7 @@ export function CreateMountDrawer({
     } finally {
       setIsCreating(false);
     }
-  }, [hostNormalMount, isCreating, machineName, mountName, onClose, onSuccess, path, token]);
+  }, [hostNormalMount, isCreating, machineName, mountName, onClose, onSuccess, path]);
 
   return (
     <>
@@ -249,7 +240,7 @@ export function CreateMountDrawer({
             <DrawerHeader className="pb-4 border-b border-outline-100 dark:border-[#2A3647] mb-4 web:pb-6 web:border-b web:border-outline-100 dark:web:border-[#2A3647] web:mb-6">
               <Heading
                 size="lg"
-                className="text-typography-900 text-xl font-bold web:text-3xl web:font-bold"
+                className="text-typography-900 dark:text-[#E8EBF0] text-xl font-bold web:text-3xl web:font-bold"
               >
                 Create Mount
               </Heading>
@@ -271,7 +262,7 @@ export function CreateMountDrawer({
                   size="md"
                 >
                   <FormControlLabel className="mb-2 web:mb-2">
-                    <FormControlLabelText className="text-typography-900 text-sm font-semibold web:text-sm web:font-semibold web:tracking-wide">
+                    <FormControlLabelText className="text-typography-900 dark:text-[#E8EBF0] text-sm font-semibold web:text-sm web:font-semibold web:tracking-wide">
                       Name
                     </FormControlLabelText>
                   </FormControlLabel>
@@ -296,7 +287,7 @@ export function CreateMountDrawer({
                   size="md"
                 >
                   <FormControlLabel className="mb-2 web:mb-2">
-                    <FormControlLabelText className="text-typography-900 text-sm font-semibold web:text-sm web:font-semibold web:tracking-wide">
+                    <FormControlLabelText className="text-typography-900 dark:text-[#E8EBF0] text-sm font-semibold web:text-sm web:font-semibold web:tracking-wide">
                       Machine
                     </FormControlLabelText>
                   </FormControlLabel>
@@ -358,7 +349,7 @@ export function CreateMountDrawer({
                 </FormControl>
                 <FormControl size="md">
                   <FormControlLabel className="mb-2 web:mb-2">
-                    <FormControlLabelText className="text-typography-900 text-sm font-semibold web:text-sm web:font-semibold web:tracking-wide">
+                    <FormControlLabelText className="text-typography-900 dark:text-[#E8EBF0] text-sm font-semibold web:text-sm web:font-semibold web:tracking-wide">
                       Path
                     </FormControlLabelText>
                   </FormControlLabel>
@@ -404,7 +395,7 @@ export function CreateMountDrawer({
                 <VStack className="gap-3 rounded-xl border border-outline-100 dark:border-[#2A3647] bg-background-50 dark:bg-[#0E1524] p-4">
                   <Box className="flex flex-row items-start justify-between">
                     <VStack className="gap-1.5">
-                      <Text className="text-sm font-semibold text-typography-900 dark:text-typography-0">
+                      <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
                         Host Normal Mount
                       </Text>
                       <Text className="text-xs text-typography-500 dark:text-typography-400">
@@ -448,7 +439,7 @@ export function CreateMountDrawer({
                     <CheckboxIndicator className="mr-2 border-outline-300 dark:border-[#2A3B52] bg-transparent dark:bg-transparent">
                       <Icon as={CheckIcon} className="text-typography-0 dark:text-typography-900" />
                     </CheckboxIndicator>
-                    <CheckboxLabel className="text-sm text-typography-900 dark:text-typography-0">
+                    <CheckboxLabel className="text-sm text-typography-900 dark:text-[#E8EBF0]">
                       Enable host normal mount
                     </CheckboxLabel>
                   </Checkbox>

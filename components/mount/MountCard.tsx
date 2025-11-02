@@ -8,21 +8,17 @@ import {Toast, ToastTitle, useToast} from "@/components/ui/toast";
 import {Divider} from "@/components/ui/divider";
 import {Mount, MountShare} from "@/types/mount";
 import {deleteMount as deleteMountService} from "@/services/hyperhive";
-import {DEFAULT_AUTH_TOKEN} from "@/config/apiConfig";
 import {MountUsageGauge} from "./MountUsageGauge";
 import {MountDeleteModal} from "@/components/modals/MountDeleteModal";
 import {MountDetailsModal} from "@/components/modals/MountDetailsModal";
-
 export type MountCardProps = Mount & {
   onDelete?: (share: MountShare) => void;
-  token?: string;
 };
 
 export function MountCard({
   NfsShare,
   Status,
   onDelete,
-  token = DEFAULT_AUTH_TOKEN,
 }: MountCardProps) {
   const {MachineName, FolderPath, Name} = NfsShare;
   const {spaceOccupiedGB: usageUsedGB, spaceTotalGB: usageTotalGB} = Status;
@@ -45,7 +41,6 @@ export function MountCard({
           FolderPath,
         },
         {
-          token,
           force: false,
         }
       );
@@ -74,7 +69,7 @@ export function MountCard({
       setIsDeleting(false);
       setShowDeleteModal(false);
     }
-  }, [MachineName, FolderPath, NfsShare, onDelete, toast, token]);
+  }, [MachineName, FolderPath, NfsShare, onDelete, toast]);
 
   return (
     <>

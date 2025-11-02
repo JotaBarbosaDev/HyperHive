@@ -20,6 +20,8 @@ import {
 import {Icon} from "@/components/ui/icon";
 import {User, Home, ShoppingCart, Wallet, LogOut} from "lucide-react-native";
 import {usePathname, useRouter} from "expo-router";
+import {clearAuthToken} from "@/services/auth-storage";
+import {setAuthToken} from "@/services/api-client";
 
 export type AppSidebarProps = {
   isOpen: boolean;
@@ -52,6 +54,18 @@ const MENU_ITEMS = [
 export function AppSidebar({isOpen, onClose}: AppSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
+
+  const handleLogout = React.useCallback(async () => {
+    onClose();
+    try {
+      await clearAuthToken();
+    } catch (err) {
+      console.warn("Failed to clear auth token during logout", err);
+    } finally {
+      setAuthToken(null);
+      router.replace("/");
+    }
+  }, [onClose, router]);
 
   const handleNavigate = React.useCallback(
     (route: string) => {
@@ -110,13 +124,10 @@ export function AppSidebar({isOpen, onClose}: AppSidebarProps) {
             className="w-full gap-2 h-12 rounded-xl"
             variant="outline"
             action="secondary"
-            onPress={() => {
-              onClose();
-              router.replace("/");
-            }}
+            onPress={handleLogout}
           >
             <ButtonIcon as={LogOut} className="text-typography-700 dark:text-typography-300" />
-            <ButtonText className="text-base font-semibold dark:text-typography-0">
+            <ButtonText className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
               Logout
             </ButtonText>
           </Button>

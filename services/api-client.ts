@@ -1,11 +1,44 @@
-import {API_BASE_URL, DEFAULT_AUTH_TOKEN} from "@/config/apiConfig";
+import {API_BASE_URL} from "@/config/apiConfig";
 
 export type ApiRequestOptions = {
   method?: string;
-  token?: string;
+  token?: string | null;
   headers?: Record<string, string>;
   body?: unknown;
 };
+
+let currentAuthToken: string | null = null;
+
+type UnauthorizedListener = () => void;
+
+const unauthorizedListeners = new Set<UnauthorizedListener>();
+
+export const onUnauthorized = (listener: UnauthorizedListener) => {
+  unauthorizedListeners.add(listener);
+  return () => {
+    unauthorizedListeners.delete(listener);
+  };
+};
+
+const notifyUnauthorized = () => {
+  unauthorizedListeners.forEach((listener) => {
+    try {
+      listener();
+    } catch (err) {
+      console.error("Unauthorized listener threw an error", err);
+    }
+  });
+};
+
+export const triggerUnauthorized = () => {
+  notifyUnauthorized();
+};
+
+export const setAuthToken = (token: string | null) => {
+  currentAuthToken = token ?? null;
+};
+
+export const getAuthToken = () => currentAuthToken;
 
 export class ApiError extends Error {
   status: number;
@@ -49,13 +82,21 @@ const serializeBody = (body: unknown, headers: Record<string, string>) => {
 
 export async function apiFetch<T = unknown>(
   path: string,
-  {method = "GET", token = DEFAULT_AUTH_TOKEN, headers = {}, body}: ApiRequestOptions = {}
+  {method = "GET", token, headers = {}, body}: ApiRequestOptions = {}
 ): Promise<T> {
+  const effectiveToken =
+    token === undefined ? currentAuthToken : token ?? null;
+
   const finalHeaders: Record<string, string> = {
     Accept: "application/json",
-    Authorization: token,
     ...headers,
   };
+
+  if (effectiveToken) {
+    finalHeaders.Authorization = effectiveToken;
+  } else {
+    delete finalHeaders.Authorization;
+  }
 
   const serializedBody = serializeBody(body, finalHeaders);
 
@@ -79,6 +120,10 @@ export async function apiFetch<T = unknown>(
     } catch {
       errorPayload = null;
     }
+    if (response.status === 401) {
+      notifyUnauthorized();
+    }
+
     throw new ApiError(
       response.statusText || `Request failed with status ${response.status}`,
       response.status,

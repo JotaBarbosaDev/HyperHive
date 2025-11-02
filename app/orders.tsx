@@ -6,8 +6,15 @@ import {Heading} from "@/components/ui/heading";
 import {VStack} from "@/components/ui/vstack";
 import {Icon} from "@/components/ui/icon";
 import {ShoppingCart} from "lucide-react-native";
+import {useAuthGuard} from "@/hooks/useAuthGuard";
 
 export default function OrdersScreen() {
+  const {token, isChecking} = useAuthGuard();
+
+  if (isChecking || !token) {
+    return null;
+  }
+
   return (
     <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
@@ -18,7 +25,7 @@ export default function OrdersScreen() {
           {/* Header */}
           <Heading
             size="2xl"
-            className="text-typography-900 dark:text-typography-0 mb-6 web:text-4xl"
+            className="text-typography-900 dark:text-[#E8EBF0] mb-6 web:text-4xl"
             style={{fontFamily: "Inter_700Bold"}}
           >
             Orders
@@ -37,7 +44,7 @@ export default function OrdersScreen() {
               <VStack className="gap-2 items-center">
                 <Heading
                   size="lg"
-                  className="text-typography-900 dark:text-typography-0 text-center web:text-2xl"
+                  className="text-typography-900 dark:text-[#E8EBF0] text-center web:text-2xl"
                   style={{fontFamily: "Inter_600SemiBold"}}
                 >
                   No Orders Yet

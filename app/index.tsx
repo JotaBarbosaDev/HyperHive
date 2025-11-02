@@ -1,5 +1,12 @@
 import React from "react";
-import {KeyboardAvoidingView, Platform, ScrollView} from "react-native";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  TextInput,
+  type NativeSyntheticEvent,
+  type TextInputSubmitEditingEventData,
+} from "react-native";
 import {useRouter} from "expo-router";
 import {Box} from "@/components/ui/box";
 import {
@@ -17,6 +24,9 @@ import {Input, InputField, InputIcon, InputSlot} from "@/components/ui/input";
 import {Button, ButtonSpinner, ButtonText} from "@/components/ui/button";
 import {AlertCircleIcon, EyeIcon, EyeOffIcon} from "@/components/ui/icon";
 import Logo from "@/assets/icons/Logo";
+import {login, listMachines} from "@/services/hyperhive";
+import {ApiError, getAuthToken, setAuthToken} from "@/services/api-client";
+import {saveAuthToken} from "@/services/auth-storage";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -27,6 +37,9 @@ export default function LoginScreen() {
   const [error, setError] = React.useState("");
   const [emailError, setEmailError] = React.useState("");
   const [passwordError, setPasswordError] = React.useState("");
+  const passwordInputRef = React.useRef<TextInput | null>(null);
+  const formRef = React.useRef<HTMLFormElement | null>(null);
+  const isWeb = Platform.OS === "web";
 
   const togglePasswordVisibility = React.useCallback(() => {
     setShowPassword((prev) => !prev);
@@ -36,6 +49,29 @@ export default function LoginScreen() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
+
+  React.useEffect(() => {
+    let isActive = true;
+    const redirectIfAuthenticated = async () => {
+      const token = getAuthToken();
+      if (!token) {
+        return;
+      }
+      try {
+        await listMachines();
+        if (!isActive) return;
+        router.replace("/mounts");
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          // Handled globally via unauthorized listeners.
+        }
+      }
+    };
+    redirectIfAuthenticated();
+    return () => {
+      isActive = false;
+    };
+  }, [router]);
 
   const handleSubmit = React.useCallback(async () => {
     // Reset errors
@@ -64,18 +100,214 @@ export default function LoginScreen() {
 
     if (hasError) return;
 
-    // Simulate login
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const normalizedEmail = email.trim();
+      const {token} = await login({
+        email: normalizedEmail,
+        password,
+      });
+
+      if (!token) {
+        throw new Error("Token inválida devolvida pela API.");
+      }
+
+      setAuthToken(token);
+      await saveAuthToken(token);
       router.replace("/mounts");
     } catch (err) {
-      setError("Erro ao fazer login. Tenta novamente.");
+      let message = "Erro ao fazer login. Tenta novamente.";
+      if (err instanceof ApiError) {
+        if (typeof err.data === "string" && err.data.trim().length > 0) {
+          message = err.data;
+        } else if (
+          typeof err.data === "object" &&
+          err.data !== null &&
+          "message" in err.data &&
+          typeof (err.data as {message?: unknown}).message === "string"
+        ) {
+          message = (err.data as {message: string}).message;
+        } else if (err.message) {
+          message = err.message;
+        }
+      } else if (err instanceof Error && err.message) {
+        message = err.message;
+      }
+
+      setError(message);
     } finally {
       setIsLoading(false);
     }
   }, [email, password, router]);
+
+  const handleFormSubmit = React.useCallback(
+    (event?: React.FormEvent<HTMLFormElement>) => {
+      event?.preventDefault();
+      if (!isLoading) {
+        void handleSubmit();
+      }
+    },
+    [handleSubmit, isLoading]
+  );
+
+  const handleEmailSubmit = React.useCallback(
+    (_event: NativeSyntheticEvent<TextInputSubmitEditingEventData>) => {
+      passwordInputRef.current?.focus();
+    },
+    []
+  );
+
+  const formFields = (
+    <VStack className="gap-6">
+      <Box>
+        <Heading
+          size="lg"
+          className="text-typography-900 dark:text-[#E8EBF0] font-heading web:text-2xl"
+        >
+          Bem-vindo de volta
+        </Heading>
+        <Text className="text-typography-500 dark:text-typography-400 text-sm font-body mt-2 web:text-base">
+          Entra com as tuas credenciais para acederes ao painel de mounts.
+        </Text>
+      </Box>
+
+      {error ? (
+        <Box className="p-3 bg-error-50 dark:bg-error-900/20 rounded-xl border border-error-300 dark:border-error-700">
+          <Text className="text-error-700 dark:text-error-400 text-sm">
+            {error}
+          </Text>
+        </Box>
+      ) : null}
+
+      <FormControl isInvalid={!!emailError}>
+        <FormControlLabel>
+          <FormControlLabelText className="text-sm text-typography-600 dark:text-typography-300 font-semibold web:text-base">
+            Email
+          </FormControlLabelText>
+        </FormControlLabel>
+        <Input
+          className="mt-2"
+          variant="outline"
+          isInvalid={!!emailError}
+        >
+          <InputField
+            value={email}
+            onChangeText={(text) => {
+              setEmail(text);
+              setEmailError("");
+              setError("");
+            }}
+            placeholder="nome@exemplo.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="username"
+            textContentType="username"
+            importantForAutofill="yes"
+            inputMode="email"
+            returnKeyType="next"
+            enablesReturnKeyAutomatically
+            nativeID="login-email"
+            onSubmitEditing={handleEmailSubmit}
+            className="web:text-base"
+          />
+        </Input>
+        {emailError ? (
+          <FormControlError>
+            <FormControlErrorIcon as={AlertCircleIcon} />
+            <FormControlErrorText>{emailError}</FormControlErrorText>
+          </FormControlError>
+        ) : null}
+      </FormControl>
+
+      <FormControl isInvalid={!!passwordError}>
+        <FormControlLabel>
+          <FormControlLabelText className="text-sm text-typography-600 dark:text-typography-300 font-semibold web:text-base">
+            Password
+          </FormControlLabelText>
+        </FormControlLabel>
+        <Input
+          className="mt-2"
+          variant="outline"
+          isInvalid={!!passwordError}
+        >
+          <InputField
+            ref={(node) => {
+              passwordInputRef.current = node as unknown as TextInput | null;
+            }}
+            value={password}
+            onChangeText={(text) => {
+              setPassword(text);
+              setPasswordError("");
+              setError("");
+            }}
+            secureTextEntry={!showPassword}
+            placeholder="••••••••"
+            autoComplete="current-password"
+            textContentType="password"
+            importantForAutofill="yes"
+            returnKeyType="go"
+            enablesReturnKeyAutomatically
+            nativeID="login-password"
+            onSubmitEditing={() => {
+              if (isWeb) {
+                if (formRef.current?.requestSubmit) {
+                  formRef.current.requestSubmit();
+                } else {
+                  handleFormSubmit();
+                }
+              } else if (!isLoading) {
+                void handleSubmit();
+              }
+            }}
+            className="web:text-base"
+          />
+          <InputSlot className="pr-3" onPress={togglePasswordVisibility}>
+            <InputIcon
+              as={showPassword ? EyeOffIcon : EyeIcon}
+              className="text-typography-500 dark:text-typography-400"
+            />
+          </InputSlot>
+        </Input>
+        {passwordError ? (
+          <FormControlError>
+            <FormControlErrorIcon as={AlertCircleIcon} />
+            <FormControlErrorText>{passwordError}</FormControlErrorText>
+          </FormControlError>
+        ) : null}
+      </FormControl>
+
+      <Button
+        className="mt-2 h-12 rounded-xl web:h-14"
+        onPress={() => {
+          if (isWeb) {
+            if (formRef.current?.requestSubmit) {
+              formRef.current.requestSubmit();
+            } else {
+              handleFormSubmit();
+            }
+          } else {
+            handleSubmit();
+          }
+        }}
+        action="primary"
+        isDisabled={isLoading}
+      >
+        {isLoading ? (
+          <>
+            <ButtonSpinner />
+            <ButtonText className="text-base font-semibold ml-2 web:text-lg">
+              A entrar...
+            </ButtonText>
+          </>
+        ) : (
+          <ButtonText className="text-base font-semibold web:text-lg">
+            Entrar
+          </ButtonText>
+        )}
+      </Button>
+    </VStack>
+  );
 
   return (
     <KeyboardAvoidingView
@@ -95,7 +327,7 @@ export default function LoginScreen() {
               </Box>
               <Heading
                 size="2xl"
-                className="text-typography-900 dark:text-typography-0 font-heading text-center web:text-4xl"
+                className="text-typography-900 dark:text-[#E8EBF0] font-heading text-center web:text-4xl"
               >
                 HyperHive
               </Heading>
@@ -105,124 +337,22 @@ export default function LoginScreen() {
             </Box>
 
             {/* Login Form */}
-            <Box className="w-full rounded-2xl border border-outline-200 bg-background-0 p-6 shadow-soft-3 dark:border-[#1F2937] dark:bg-[#0E1524] web:p-8">
-              <VStack className="gap-6">
-                <Box>
-                  <Heading
-                    size="lg"
-                    className="text-typography-900 dark:text-typography-0 font-heading web:text-2xl"
-                  >
-                    Bem-vindo de volta
-                  </Heading>
-                  <Text className="text-typography-500 dark:text-typography-400 text-sm font-body mt-2 web:text-base">
-                    Entra com as tuas credenciais para acederes ao painel de mounts.
-                  </Text>
+            {isWeb ? (
+              <form
+                ref={formRef}
+                onSubmit={handleFormSubmit}
+                autoComplete="on"
+                className="contents"
+              >
+                <Box className="w-full rounded-2xl border border-outline-200 bg-background-0 p-6 shadow-soft-3 dark:border-[#1F2937] dark:bg-[#0E1524] web:p-8">
+                  {formFields}
                 </Box>
-
-                {/* General Error */}
-                {error && (
-                  <Box className="p-3 bg-error-50 dark:bg-error-900/20 rounded-xl border border-error-300 dark:border-error-700">
-                    <Text className="text-error-700 dark:text-error-400 text-sm">
-                      {error}
-                    </Text>
-                  </Box>
-                )}
-
-                {/* Email Field */}
-                <FormControl isInvalid={!!emailError}>
-                  <FormControlLabel>
-                    <FormControlLabelText className="text-sm text-typography-600 dark:text-typography-300 font-semibold web:text-base">
-                      Email
-                    </FormControlLabelText>
-                  </FormControlLabel>
-                  <Input
-                    className="mt-2"
-                    variant="outline"
-                    isInvalid={!!emailError}
-                  >
-                    <InputField
-                      type="text"
-                      value={email}
-                      onChangeText={(text) => {
-                        setEmail(text);
-                        setEmailError("");
-                        setError("");
-                      }}
-                      placeholder="nome@exemplo.com"
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      className="web:text-base"
-                    />
-                  </Input>
-                  {emailError && (
-                    <FormControlError>
-                      <FormControlErrorIcon as={AlertCircleIcon} />
-                      <FormControlErrorText>{emailError}</FormControlErrorText>
-                    </FormControlError>
-                  )}
-                </FormControl>
-
-                {/* Password Field */}
-                <FormControl isInvalid={!!passwordError}>
-                  <FormControlLabel>
-                    <FormControlLabelText className="text-sm text-typography-600 dark:text-typography-300 font-semibold web:text-base">
-                      Password
-                    </FormControlLabelText>
-                  </FormControlLabel>
-                  <Input
-                    className="mt-2"
-                    variant="outline"
-                    isInvalid={!!passwordError}
-                  >
-                    <InputField
-                      value={password}
-                      onChangeText={(text) => {
-                        setPassword(text);
-                        setPasswordError("");
-                        setError("");
-                      }}
-                      secureTextEntry={!showPassword}
-                      placeholder="••••••••"
-                      className="web:text-base"
-                    />
-                    <InputSlot className="pr-3" onPress={togglePasswordVisibility}>
-                      <InputIcon
-                        as={showPassword ? EyeOffIcon : EyeIcon}
-                        className="text-typography-500 dark:text-typography-400"
-                      />
-                    </InputSlot>
-                  </Input>
-                  {passwordError && (
-                    <FormControlError>
-                      <FormControlErrorIcon as={AlertCircleIcon} />
-                      <FormControlErrorText>{passwordError}</FormControlErrorText>
-                    </FormControlError>
-                  )}
-                </FormControl>
-
-                {/* Submit Button */}
-                <Button
-                  className="mt-2 h-12 rounded-xl web:h-14"
-                  onPress={handleSubmit}
-                  action="primary"
-                  isDisabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <ButtonSpinner />
-                      <ButtonText className="text-base font-semibold ml-2 web:text-lg">
-                        A entrar...
-                      </ButtonText>
-                    </>
-                  ) : (
-                    <ButtonText className="text-base font-semibold web:text-lg">
-                      Entrar
-                    </ButtonText>
-                  )}
-                </Button>
-              </VStack>
-            </Box>
+              </form>
+            ) : (
+              <Box className="w-full rounded-2xl border border-outline-200 bg-background-0 p-6 shadow-soft-3 dark:border-[#1F2937] dark:bg-[#0E1524] web:p-8">
+                {formFields}
+              </Box>
+            )}
 
             {/* Footer */}
             <Text className="text-typography-500 dark:text-typography-400 text-xs text-center mt-6 web:text-sm">

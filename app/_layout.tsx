@@ -22,10 +22,12 @@ import {EditIcon} from "@/components/ui/icon";
 import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context";
 import React from "react";
 import {CreateMountDrawer} from "@/components/drawers/CreateMountDrawer";
-import {DEFAULT_AUTH_TOKEN} from "@/config/apiConfig";
 import {AppSidebar} from "@/components/navigation/AppSidebar";
 import {Box} from "@/components/ui/box";
 import {Menu} from "lucide-react-native";
+import {loadAuthToken, clearAuthToken, AUTH_TOKEN_STORAGE_KEY} from "@/services/auth-storage";
+import {ApiError, onUnauthorized, setAuthToken} from "@/services/api-client";
+import {listMachines} from "@/services/hyperhive";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -103,8 +105,27 @@ function RootLayoutNav() {
   const statusBarBackground = colorMode === "dark" ? "#070D19" : "#F8FAFC";
   const [showDrawer, setShowDrawer] = React.useState(false);
   const [showSidebar, setShowSidebar] = React.useState(false);
-  const [authToken] = React.useState(DEFAULT_AUTH_TOKEN);
+  const isSigningOutRef = React.useRef(false);
 
+  const signOut = React.useCallback(async () => {
+    if (isSigningOutRef.current) {
+      return;
+    }
+    isSigningOutRef.current = true;
+    try {
+      await clearAuthToken();
+    } catch (storageErr) {
+      console.warn("Failed to clear stored auth token", storageErr);
+    } finally {
+      setAuthToken(null);
+      setShowDrawer(false);
+      setShowSidebar(false);
+      if (pathname !== "/") {
+        router.replace("/");
+      }
+      isSigningOutRef.current = false;
+    }
+  }, [pathname, router]);
   useEffect(() => {
     if (Platform.OS === "web") {
       return;
@@ -127,6 +148,80 @@ function RootLayoutNav() {
     doc.documentElement.style.colorScheme =
       colorMode === "dark" ? "dark" : "light";
   }, [colorMode]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const restoreToken = async () => {
+      const storedToken = await loadAuthToken();
+      if (storedToken && isMounted) {
+        setAuthToken(storedToken);
+      }
+    };
+    restoreToken();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onUnauthorized(() => {
+      signOut();
+    });
+    return unsubscribe;
+  }, [signOut]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const handleStorage = async (event: StorageEvent) => {
+      if (!event.key || event.key === AUTH_TOKEN_STORAGE_KEY) {
+        const storedToken = await loadAuthToken();
+        if (!storedToken) {
+          await signOut();
+          return;
+        }
+        setAuthToken(storedToken);
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [signOut]);
+
+  useEffect(() => {
+    let isActive = true;
+    const enforceAuth = async () => {
+      const storedToken = await loadAuthToken();
+      setAuthToken(storedToken ?? null);
+
+      if (!storedToken) {
+        if (pathname !== "/") {
+          await signOut();
+        }
+        return;
+      }
+
+      try {
+        await listMachines();
+        if (!isActive) return;
+        if (pathname === "/") {
+          router.replace("/mounts");
+        }
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          await signOut();
+        }
+      }
+    };
+    enforceAuth();
+    return () => {
+      isActive = false;
+    };
+  }, [pathname, router, signOut]);
 
   const handleOpenDrawer = React.useCallback(() => {
     setShowDrawer(true);
@@ -210,7 +305,6 @@ function RootLayoutNav() {
                 isOpen={showDrawer}
                 onClose={handleCloseDrawer}
                 onSuccess={handleMountCreated}
-                token={authToken}
               />
             )}
           </SafeAreaView>
