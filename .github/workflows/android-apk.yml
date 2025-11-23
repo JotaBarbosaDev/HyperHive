@@ -24,14 +24,12 @@ jobs:
           cache: 'npm'
 
       - name: Install JS deps
-        # Use `npm install` here to update/generate lockfile if package.json and
-        # package-lock.json are out of sync. For a stricter reproducible build,
-        # regenerate and commit `package-lock.json` locally and revert to
-        # `npm ci` (recommended long-term).
+        # Usa npm install por agora; quando o lockfile estiver estável podes trocar para npm ci
         run: npm install
 
-      - name: Install Expo CLI
-        run: npm install -g expo-cli
+      # Não precisas do expo-cli global, usamos sempre npx
+      # - name: Install Expo CLI
+      #   run: npm install -g expo-cli
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -44,6 +42,43 @@ jobs:
 
       - name: Prebuild Android (Expo -> projeto nativo)
         run: npx expo prebuild --platform android --non-interactive
+
+      - name: Fix duplicated AppTheme in styles.xml
+        run: |
+          python - << 'EOF'
+          import re
+          from pathlib import Path
+
+          path = Path("android/app/src/main/res/values/styles.xml")
+          if not path.exists():
+              raise SystemExit(0)
+
+          text = path.read_text(encoding="utf-8")
+
+          # Apanha todos os blocos <style name="AppTheme"> ... </style>
+          pattern = re.compile(r'(<style\s+name="AppTheme"[\s\S]*?</style>)', re.MULTILINE)
+          matches = list(pattern.finditer(text))
+
+          if len(matches) <= 1:
+              # Nada a fazer
+              raise SystemExit(0)
+
+          # Mantém o primeiro bloco e remove os restantes
+          first = matches[0]
+          new_text_parts = []
+          new_text_parts.append(text[:first.end()])
+
+          last_idx = first.end()
+          for m in matches[1:]:
+              # tudo entre o fim do último bloco e o início deste
+              new_text_parts.append(text[last_idx:m.start()])
+              last_idx = m.end()
+
+          # resto do ficheiro depois do último <style AppTheme>
+          new_text_parts.append(text[last_idx:])
+
+          path.write_text("".join(new_text_parts), encoding="utf-8")
+          EOF
 
       - name: Make gradlew executable
         working-directory: android
