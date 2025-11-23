@@ -24,7 +24,11 @@ jobs:
           cache: 'npm'
 
       - name: Install JS deps
-        run: npm ci
+        # Use `npm install` here to update/generate lockfile if package.json and
+        # package-lock.json are out of sync. For a stricter reproducible build,
+        # regenerate and commit `package-lock.json` locally and revert to
+        # `npm ci` (recommended long-term).
+        run: npm install
 
       - name: Install Expo CLI
         run: npm install -g expo-cli
