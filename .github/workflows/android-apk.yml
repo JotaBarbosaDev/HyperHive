@@ -41,18 +41,6 @@ jobs:
       - name: Prebuild Android (Expo -> projeto nativo)
         run: npx expo prebuild --platform android --non-interactive
 
-      - name: Bundle JS assets for Android (expo-router)
-        # Garante que o JS da app fica dentro do APK
-        run: |
-          mkdir -p android/app/src/main/assets
-          mkdir -p android/app/src/main/res
-          npx react-native bundle \
-            --platform android \
-            --dev false \
-            --entry-file node_modules/expo-router/entry.js \
-            --bundle-output android/app/src/main/assets/index.android.bundle \
-            --assets-dest android/app/src/main/res/
-
       - name: Fix duplicated AppTheme in styles.xml
         run: |
           python - << 'EOF'
@@ -70,8 +58,8 @@ jobs:
           matches = list(pattern.finditer(text))
 
           if len(matches) <= 1:
-            # Nada a fazer
-            raise SystemExit(0)
+              # Nada a fazer
+              raise SystemExit(0)
 
           # Mantém o primeiro bloco e remove os restantes
           first = matches[0]
@@ -80,9 +68,9 @@ jobs:
 
           last_idx = first.end()
           for m in matches[1:]:
-            # tudo entre o fim do último bloco e o início deste
-            new_text_parts.append(text[last_idx:m.start()])
-            last_idx = m.end()
+              # tudo entre o fim do último bloco e o início deste
+              new_text_parts.append(text[last_idx:m.start()])
+              last_idx = m.end()
 
           # resto do ficheiro depois do último <style AppTheme>
           new_text_parts.append(text[last_idx:])
