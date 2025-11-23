@@ -43,13 +43,6 @@ jobs:
       - name: Prebuild Android (Expo -> projeto nativo)
         run: npx expo prebuild --platform android --non-interactive
 
-      - name: Bundle JS assets for Android
-        # Ensure JS is bundled into the APK so it does not require Metro at runtime
-        run: |
-          mkdir -p android/app/src/main/assets
-          mkdir -p android/app/src/main/res
-          npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res/
-
       - name: Fix duplicated AppTheme in styles.xml
         run: |
           python - << 'EOF'
@@ -91,13 +84,12 @@ jobs:
         working-directory: android
         run: chmod +x ./gradlew
 
-      - name: Build Release APK (unsigned)
+      - name: Build Debug APK
         working-directory: android
-        # assembleRelease will include the bundled JS assets created above
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleDebug
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-debug-apk
-          path: android/app/build/outputs/apk/release/*.apk
+          path: android/app/build/outputs/apk/debug/*.apk
