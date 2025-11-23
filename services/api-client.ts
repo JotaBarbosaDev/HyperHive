@@ -1,4 +1,4 @@
-import {API_BASE_URL} from "@/config/apiConfig";
+import {getApiBaseUrl} from "@/config/apiConfig";
 
 export type ApiRequestOptions = {
   method?: string;
@@ -56,7 +56,11 @@ const withBaseUrl = (path: string) => {
   if (/^https?:\/\//.test(path)) {
     return path;
   }
-  const normalizedBase = API_BASE_URL.replace(/\/+$/, "");
+  const baseUrl = getApiBaseUrl();
+  if (!baseUrl) {
+    throw new Error("API base URL is not configured.");
+  }
+  const normalizedBase = baseUrl.replace(/\/+$/, "");
   const normalizedPath = path.replace(/^\/+/, "");
   return `${normalizedBase}/${normalizedPath}`;
 };

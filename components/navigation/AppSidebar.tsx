@@ -18,9 +18,10 @@ import {
   AvatarImage,
 } from "@/components/ui/avatar";
 import {Icon} from "@/components/ui/icon";
-import {User, Home, ShoppingCart, Wallet, LogOut} from "lucide-react-native";
+import {HardDrive, Home, ShoppingCart, Wallet, LogOut} from "lucide-react-native";
 import {usePathname, useRouter} from "expo-router";
-import {clearAuthToken} from "@/services/auth-storage";
+import {setApiBaseUrl} from "@/config/apiConfig";
+import {clearApiBaseUrl, clearAuthToken} from "@/services/auth-storage";
 import {setAuthToken} from "@/services/api-client";
 
 export type AppSidebarProps = {
@@ -35,8 +36,8 @@ const MENU_ITEMS = [
     route: "/mounts",
   },
   {
-    label: "My Profile",
-    icon: User,
+    label: "ISO Downloads",
+    icon: HardDrive,
     route: "/profile",
   },
   {
@@ -58,11 +59,12 @@ export function AppSidebar({isOpen, onClose}: AppSidebarProps) {
   const handleLogout = React.useCallback(async () => {
     onClose();
     try {
-      await clearAuthToken();
+      await Promise.all([clearAuthToken(), clearApiBaseUrl()]);
     } catch (err) {
-      console.warn("Failed to clear auth token during logout", err);
+      console.warn("Failed to clear stored session during logout", err);
     } finally {
       setAuthToken(null);
+      setApiBaseUrl(null);
       router.replace("/");
     }
   }, [onClose, router]);

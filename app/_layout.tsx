@@ -13,7 +13,7 @@ import * as SplashScreen from "expo-splash-screen";
 import {useEffect} from "react";
 import {useColorScheme} from "@/components/useColorScheme";
 import {Slot, usePathname, useRouter} from "expo-router";
-import {StatusBar} from "expo-status-bar";
+import {StatusBar, setStatusBarHidden} from "expo-status-bar";
 import {AppState, Platform} from "react-native";
 import * as SystemUI from "expo-system-ui";
 import * as NavigationBar from "expo-navigation-bar";
@@ -25,7 +25,15 @@ import {CreateMountDrawer} from "@/components/drawers/CreateMountDrawer";
 import {AppSidebar} from "@/components/navigation/AppSidebar";
 import {Box} from "@/components/ui/box";
 import {Menu} from "lucide-react-native";
-import {loadAuthToken, clearAuthToken, AUTH_TOKEN_STORAGE_KEY} from "@/services/auth-storage";
+import {setApiBaseUrl} from "@/config/apiConfig";
+import {
+  API_BASE_URL_STORAGE_KEY,
+  AUTH_TOKEN_STORAGE_KEY,
+  clearApiBaseUrl,
+  clearAuthToken,
+  loadApiBaseUrl,
+  loadAuthToken,
+} from "@/services/auth-storage";
 import {ApiError, onUnauthorized, setAuthToken} from "@/services/api-client";
 import {listMachines} from "@/services/hyperhive";
 
@@ -61,28 +69,29 @@ export default function RootLayout() {
       return;
     }
 
-    const hideNavigationBar = async () => {
+    const hideSystemUi = async () => {
       try {
         await NavigationBar.setPositionAsync("absolute");
         await NavigationBar.setBehaviorAsync("overlay-swipe");
         await NavigationBar.setVisibilityAsync("hidden");
+        setStatusBarHidden(true, "fade");
       } catch (navError) {
-        console.warn("Failed to configure Android navigation bar", navError);
+        console.warn("Failed to configure Android system UI", navError);
       }
     };
 
-    hideNavigationBar();
+    hideSystemUi();
 
     const subscription = AppState.addEventListener("change", (status) => {
       if (status === "active") {
-        hideNavigationBar();
+        hideSystemUi();
       }
     });
 
     const visibilitySubscription = NavigationBar.addVisibilityListener(
       ({visibility}) => {
         if (visibility !== "hidden") {
-          hideNavigationBar();
+          hideSystemUi();
         }
       }
     );
@@ -113,11 +122,12 @@ function RootLayoutNav() {
     }
     isSigningOutRef.current = true;
     try {
-      await clearAuthToken();
+      await Promise.all([clearAuthToken(), clearApiBaseUrl()]);
     } catch (storageErr) {
-      console.warn("Failed to clear stored auth token", storageErr);
+      console.warn("Failed to clear stored session", storageErr);
     } finally {
       setAuthToken(null);
+      setApiBaseUrl(null);
       setShowDrawer(false);
       setShowSidebar(false);
       if (pathname !== "/") {
@@ -151,13 +161,20 @@ function RootLayoutNav() {
 
   useEffect(() => {
     let isMounted = true;
-    const restoreToken = async () => {
-      const storedToken = await loadAuthToken();
-      if (storedToken && isMounted) {
+    const restoreSession = async () => {
+      const [storedToken, storedBaseUrl] = await Promise.all([
+        loadAuthToken(),
+        loadApiBaseUrl(),
+      ]);
+      if (!isMounted) {
+        return;
+      }
+      setApiBaseUrl(storedBaseUrl ?? null);
+      if (storedToken) {
         setAuthToken(storedToken);
       }
     };
-    restoreToken();
+    restoreSession();
     return () => {
       isMounted = false;
     };
@@ -171,13 +188,25 @@ function RootLayoutNav() {
   }, [signOut]);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
+    if (
+      typeof window === "undefined" ||
+      typeof window.addEventListener !== "function" ||
+      typeof window.removeEventListener !== "function"
+    ) {
       return;
     }
 
     const handleStorage = async (event: StorageEvent) => {
-      if (!event.key || event.key === AUTH_TOKEN_STORAGE_KEY) {
-        const storedToken = await loadAuthToken();
+      if (
+        !event.key ||
+        event.key === AUTH_TOKEN_STORAGE_KEY ||
+        event.key === API_BASE_URL_STORAGE_KEY
+      ) {
+        const [storedToken, storedBaseUrl] = await Promise.all([
+          loadAuthToken(),
+          loadApiBaseUrl(),
+        ]);
+        setApiBaseUrl(storedBaseUrl ?? null);
         if (!storedToken) {
           await signOut();
           return;
@@ -195,6 +224,8 @@ function RootLayoutNav() {
   useEffect(() => {
     let isActive = true;
     const enforceAuth = async () => {
+      const storedBaseUrl = await loadApiBaseUrl();
+      setApiBaseUrl(storedBaseUrl ?? null);
       const storedToken = await loadAuthToken();
       setAuthToken(storedToken ?? null);
 
@@ -262,6 +293,7 @@ function RootLayoutNav() {
               style={statusBarStyle}
               backgroundColor={statusBarBackground}
               animated
+              hidden={Platform.OS === "android"}
             />
             <Box className="flex-1">
               <Slot />

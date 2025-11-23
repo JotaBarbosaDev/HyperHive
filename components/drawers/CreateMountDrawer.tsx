@@ -257,10 +257,7 @@ export function CreateMountDrawer({
             </DrawerHeader>
             <DrawerBody className="flex-1 overflow-y-auto py-2 web:flex-1 web:overflow-y-auto web:pr-2 web:py-2">
               <VStack className="gap-4 web:gap-6">
-                <FormControl
-                  isInvalid={Boolean(createError)}
-                  size="md"
-                >
+                <FormControl isInvalid={Boolean(createError)} size="md">
                   <FormControlLabel className="mb-2 web:mb-2">
                     <FormControlLabelText className="text-typography-900 dark:text-[#E8EBF0] text-sm font-semibold web:text-sm web:font-semibold web:tracking-wide">
                       Name
@@ -282,10 +279,7 @@ export function CreateMountDrawer({
                     />
                   </Input>
                 </FormControl>
-                <FormControl
-                  isInvalid={Boolean(dirError)}
-                  size="md"
-                >
+                <FormControl isInvalid={Boolean(dirError)} size="md">
                   <FormControlLabel className="mb-2 web:mb-2">
                     <FormControlLabelText className="text-typography-900 dark:text-[#E8EBF0] text-sm font-semibold web:text-sm web:font-semibold web:tracking-wide">
                       Machine
@@ -311,10 +305,7 @@ export function CreateMountDrawer({
                         placeholder="Select machine"
                         className="text-base px-3 web:text-base web:px-4"
                       />
-                      <SelectIcon
-                        className="mr-3"
-                        as={ChevronDownIcon}
-                      />
+                      <SelectIcon className="mr-3" as={ChevronDownIcon} />
                     </SelectTrigger>
                     <SelectPortal>
                       <SelectBackdrop />
@@ -371,24 +362,28 @@ export function CreateMountDrawer({
                         );
                         setDirError(null);
                       }}
-                      className="text-base px-3 web:text-base web:px-4"
+                      className="text-base px-3 web:text-base web:px-4 pb-3"
                       autoCapitalize="none"
                       autoCorrect={false}
                     />
                   </Input>
                   <Button
                     variant="link"
-                    className="mt-2 self-start px-0"
+                    className="mt-2 self-start bg-background-50 dark:bg-[#0E1524] border border-[#0E1524] p-2 rounded-xl"
                     onPress={handleOpenDirectoryModal}
                     isDisabled={!machineName.trim() || isFetchingDir}
                   >
                     {isFetchingDir ? (
                       <>
                         <ButtonSpinner size="small" />
-                        <ButtonText className="ml-2 text-sm">Loading directories...</ButtonText>
+                        <ButtonText className="ml-2 text-sm ">
+                          Loading directories...
+                        </ButtonText>
                       </>
                     ) : (
-                      <ButtonText className="text-sm">Browse directories</ButtonText>
+                      <ButtonText className="text-sm text-[#0E1524] dark:text-[#E8EBF0]">
+                        Browse directories 
+                      </ButtonText>
                     )}
                   </Button>
                 </FormControl>
@@ -399,7 +394,8 @@ export function CreateMountDrawer({
                         Host Normal Mount
                       </Text>
                       <Text className="text-xs text-typography-500 dark:text-typography-400">
-                        Allow the host to access storage directly for better performance.
+                        Allow the host to access storage directly for better
+                        performance.
                       </Text>
                     </VStack>
                     <Tooltip
@@ -437,7 +433,10 @@ export function CreateMountDrawer({
                     className="items-start"
                   >
                     <CheckboxIndicator className="mr-2 border-outline-300 dark:border-[#2A3B52] bg-transparent dark:bg-transparent">
-                      <Icon as={CheckIcon} className="text-typography-0 dark:text-typography-900" />
+                      <Icon
+                        as={CheckIcon}
+                        className="text-typography-0 dark:text-typography-900"
+                      />
                     </CheckboxIndicator>
                     <CheckboxLabel className="text-sm text-typography-900 dark:text-[#E8EBF0]">
                       Enable host normal mount

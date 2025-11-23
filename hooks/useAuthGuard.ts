@@ -1,7 +1,15 @@
 import {useEffect, useMemo, useState} from "react";
 import {usePathname, useRouter} from "expo-router";
+import {setApiBaseUrl} from "@/config/apiConfig";
 import {ApiError, setAuthToken} from "@/services/api-client";
-import {AUTH_TOKEN_STORAGE_KEY, clearAuthToken, loadAuthToken} from "@/services/auth-storage";
+import {
+  API_BASE_URL_STORAGE_KEY,
+  AUTH_TOKEN_STORAGE_KEY,
+  clearApiBaseUrl,
+  clearAuthToken,
+  loadApiBaseUrl,
+  loadAuthToken,
+} from "@/services/auth-storage";
 import {listMachines} from "@/services/hyperhive";
 
 export type UseAuthGuardResult = {
@@ -35,11 +43,12 @@ export function useAuthGuard(
 
     const signOutAndRedirect = async () => {
       try {
-        await clearAuthToken();
+        await Promise.all([clearAuthToken(), clearApiBaseUrl()]);
       } catch (err) {
-        console.warn("Failed to clear stored auth token", err);
+        console.warn("Failed to clear stored session credentials", err);
       } finally {
         setAuthToken(null);
+        setApiBaseUrl(null);
         if (isActive) {
           setState({token: null, isChecking: false});
           redirectIfNeeded();
@@ -48,6 +57,8 @@ export function useAuthGuard(
     };
 
     const resolveSession = async () => {
+      const storedBaseUrl = await loadApiBaseUrl();
+      setApiBaseUrl(storedBaseUrl ?? null);
       const storedToken = await loadAuthToken();
       setAuthToken(storedToken ?? null);
 
@@ -79,9 +90,18 @@ export function useAuthGuard(
     resolveSession();
 
     let storageHandler: ((event: StorageEvent) => void) | undefined;
-    if (typeof window !== "undefined") {
+    const canListenToStorageEvents =
+      typeof window !== "undefined" &&
+      typeof window.addEventListener === "function" &&
+      typeof window.removeEventListener === "function";
+
+    if (canListenToStorageEvents) {
       storageHandler = (event: StorageEvent) => {
-        if (!event.key || event.key === AUTH_TOKEN_STORAGE_KEY) {
+        if (
+          !event.key ||
+          event.key === AUTH_TOKEN_STORAGE_KEY ||
+          event.key === API_BASE_URL_STORAGE_KEY
+        ) {
           resolveSession();
         }
       };
@@ -90,7 +110,7 @@ export function useAuthGuard(
 
     return () => {
       isActive = false;
-      if (storageHandler && typeof window !== "undefined") {
+      if (storageHandler && canListenToStorageEvents) {
         window.removeEventListener("storage", storageHandler);
       }
     };

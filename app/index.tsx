@@ -24,19 +24,23 @@ import {Input, InputField, InputIcon, InputSlot} from "@/components/ui/input";
 import {Button, ButtonSpinner, ButtonText} from "@/components/ui/button";
 import {AlertCircleIcon, EyeIcon, EyeOffIcon} from "@/components/ui/icon";
 import Logo from "@/assets/icons/Logo";
+import {normalizeApiBaseUrl, setApiBaseUrl} from "@/config/apiConfig";
 import {login, listMachines} from "@/services/hyperhive";
 import {ApiError, getAuthToken, setAuthToken} from "@/services/api-client";
-import {saveAuthToken} from "@/services/auth-storage";
+import {loadApiBaseUrl, saveApiBaseUrl, saveAuthToken} from "@/services/auth-storage";
 
 export default function LoginScreen() {
   const router = useRouter();
   const [showPassword, setShowPassword] = React.useState(false);
+  const [baseUrl, setBaseUrl] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [baseUrlError, setBaseUrlError] = React.useState("");
   const [emailError, setEmailError] = React.useState("");
   const [passwordError, setPasswordError] = React.useState("");
+  const emailInputRef = React.useRef<TextInput | null>(null);
   const passwordInputRef = React.useRef<TextInput | null>(null);
   const formRef = React.useRef<HTMLFormElement | null>(null);
   const isWeb = Platform.OS === "web";
@@ -49,6 +53,21 @@ export default function LoginScreen() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
+
+  React.useEffect(() => {
+    let isActive = true;
+    const hydrateBaseUrl = async () => {
+      const storedBase = await loadApiBaseUrl();
+      if (storedBase && isActive) {
+        setBaseUrl(storedBase);
+        setApiBaseUrl(storedBase);
+      }
+    };
+    hydrateBaseUrl();
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   React.useEffect(() => {
     let isActive = true;
@@ -76,11 +95,24 @@ export default function LoginScreen() {
   const handleSubmit = React.useCallback(async () => {
     // Reset errors
     setError("");
+    setBaseUrlError("");
     setEmailError("");
     setPasswordError("");
 
     // Validate fields
     let hasError = false;
+    let normalizedBaseUrl: string | null = null;
+
+    if (!baseUrl.trim()) {
+      setBaseUrlError("Domínio ou API base é obrigatório");
+      hasError = true;
+    } else {
+      normalizedBaseUrl = normalizeApiBaseUrl(baseUrl);
+      if (!normalizedBaseUrl) {
+        setBaseUrlError("Domínio ou API base inválido");
+        hasError = true;
+      }
+    }
 
     if (!email.trim()) {
       setEmailError("Email é obrigatório");
@@ -98,7 +130,9 @@ export default function LoginScreen() {
       hasError = true;
     }
 
-    if (hasError) return;
+    if (hasError || !normalizedBaseUrl) return;
+
+    setApiBaseUrl(normalizedBaseUrl);
 
     setIsLoading(true);
     try {
@@ -113,7 +147,7 @@ export default function LoginScreen() {
       }
 
       setAuthToken(token);
-      await saveAuthToken(token);
+      await Promise.all([saveAuthToken(token), saveApiBaseUrl(normalizedBaseUrl)]);
       router.replace("/mounts");
     } catch (err) {
       let message = "Erro ao fazer login. Tenta novamente.";
@@ -138,7 +172,7 @@ export default function LoginScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [email, password, router]);
+  }, [baseUrl, email, password, router]);
 
   const handleFormSubmit = React.useCallback(
     (event?: React.FormEvent<HTMLFormElement>) => {
@@ -179,6 +213,44 @@ export default function LoginScreen() {
         </Box>
       ) : null}
 
+      <FormControl isInvalid={!!baseUrlError}>
+        <FormControlLabel>
+          <FormControlLabelText className="text-sm text-typography-600 dark:text-typography-300 font-semibold web:text-base">
+            Domínio ou API Base
+          </FormControlLabelText>
+        </FormControlLabel>
+        <Input className="mt-2" variant="outline" isInvalid={!!baseUrlError}>
+          <InputField
+            value={baseUrl}
+            onChangeText={(text) => {
+              setBaseUrl(text);
+              setBaseUrlError("");
+              setError("");
+            }}
+            placeholder="https://hyperhive.maruqes.com"
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="off"
+            textContentType="URL"
+            inputMode="url"
+            keyboardType="url"
+            returnKeyType="next"
+            enablesReturnKeyAutomatically
+            nativeID="login-base-url"
+            onSubmitEditing={() => {
+              emailInputRef.current?.focus();
+            }}
+            className="web:text-base"
+          />
+        </Input>
+        {baseUrlError ? (
+          <FormControlError>
+            <FormControlErrorIcon as={AlertCircleIcon} />
+            <FormControlErrorText>{baseUrlError}</FormControlErrorText>
+          </FormControlError>
+        ) : null}
+      </FormControl>
+
       <FormControl isInvalid={!!emailError}>
         <FormControlLabel>
           <FormControlLabelText className="text-sm text-typography-600 dark:text-typography-300 font-semibold web:text-base">
@@ -191,6 +263,9 @@ export default function LoginScreen() {
           isInvalid={!!emailError}
         >
           <InputField
+            ref={(node) => {
+              emailInputRef.current = node as unknown as TextInput | null;
+            }}
             value={email}
             onChangeText={(text) => {
               setEmail(text);

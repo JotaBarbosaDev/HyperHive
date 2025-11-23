@@ -44,7 +44,7 @@ export function DirectoryPickerModal({
   return (
     <Modal isOpen={isOpen} onClose={onCancel}>
       <ModalBackdrop className="bg-background-950/50 dark:bg-black/70" />
-      <ModalContent className="max-w-[340px] web:max-w-[440px] p-5 web:p-7 rounded-2xl dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52]">
+      <ModalContent className="max-w-full web:max-w-full p-5 web:p-7 rounded-2xl dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52]">
         <ModalHeader className="pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
           <Heading
             size="md"
@@ -55,7 +55,7 @@ export function DirectoryPickerModal({
           </Heading>
           
         </ModalHeader>
-        <ModalBody className="pt-4 web:max-h-[340px] web:overflow-y-auto web:pr-2">
+        <ModalBody className="pt- web:max-h-[340px] web:overflow-y-auto web:pr-2">
           {isLoading ? (
             <VStack className="items-center justify-center py-6 gap-3">
               <Spinner color="#2DD4BF" />

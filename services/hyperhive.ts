@@ -2,8 +2,9 @@ import {DirectoryListing} from "@/types/directory";
 import {Machine} from "@/types/machine";
 import {Mount, MountShare} from "@/types/mount";
 import {LoginPayload, LoginResponse} from "@/types/auth";
+import {getApiBaseUrl, setApiBaseUrl} from "@/config/apiConfig";
 import {apiFetch, setAuthToken, triggerUnauthorized} from "./api-client";
-import {loadAuthToken} from "./auth-storage";
+import {loadAuthToken, loadApiBaseUrl} from "./auth-storage";
 
 export type DeleteMountOptions = {
   force?: boolean;
@@ -16,7 +17,37 @@ export type CreateMountInput = {
   hostNormalMount: boolean;
 };
 
+export type IsoRaw = Record<string, unknown> | string;
+
+export type IsoApiResponse = IsoRaw[] | Record<string, unknown> | string;
+
+export type ListIsosOptions = {
+  token?: string | null;
+};
+
+export type DownloadIsoInput = {
+  url: string;
+  isoName: string;
+  nfsShareId: number;
+};
+
+const ensureApiBaseUrl = async () => {
+  let baseUrl = getApiBaseUrl();
+  if (baseUrl) {
+    return baseUrl;
+  }
+  const storedBaseUrl = await loadApiBaseUrl();
+  if (storedBaseUrl) {
+    baseUrl = setApiBaseUrl(storedBaseUrl) ?? null;
+  }
+  if (!baseUrl) {
+    throw new Error("Domínio/API base não configurado. Inicia sessão novamente.");
+  }
+  return baseUrl;
+};
+
 const resolveToken = async () => {
+  await ensureApiBaseUrl();
   const storedToken = await loadAuthToken();
   if (!storedToken) {
     setAuthToken(null);
@@ -85,5 +116,34 @@ export async function listDirectory(
     method: "POST",
     token: authToken,
     body: {path},
+  });
+}
+
+export async function listIsos({token}: ListIsosOptions = {}): Promise<IsoApiResponse> {
+  const authToken = token ?? (await resolveToken());
+  return apiFetch<IsoApiResponse>("/isos/", {
+    token: authToken,
+  });
+}
+
+export async function downloadIso(input: DownloadIsoInput): Promise<void> {
+  const authToken = await resolveToken();
+  await apiFetch<void>("/isos/download", {
+    method: "POST",
+    token: authToken,
+    body: {
+      url: input.url,
+      iso_name: input.isoName,
+      nfs_share_id: input.nfsShareId,
+    },
+    
+  });
+}
+
+export async function deleteIso(id: string): Promise<void> {
+  const authToken = await resolveToken();
+  await apiFetch<void>(`/isos/${id}`, {
+    method: "DELETE",
+    token: authToken,
   });
 }

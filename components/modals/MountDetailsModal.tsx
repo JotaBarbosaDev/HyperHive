@@ -46,7 +46,10 @@ export function MountDetailsModal({isOpen, mount, onClose}: MountDetailsModalPro
               >
                 {Name}
               </Heading>
-              <Text size="sm" className="text-typography-500 dark:text-[#8A94A8] web:text-base mt-1">
+              <Text
+                size="sm"
+                className="text-typography-500 dark:text-[#8A94A8] web:text-base mt-1"
+              >
                 Mount details and configuration
               </Text>
             </Box>
@@ -75,82 +78,152 @@ export function MountDetailsModal({isOpen, mount, onClose}: MountDetailsModalPro
           </Box>
         </ModalHeader>
         <ModalBody className="pt-6 space-y-5">
-          <Box className="flex flex-col gap-3 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
-            <Text className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide" style={{fontFamily: "Inter_700Bold"}}>
+          <Box className="flex flex-col gap-3 mb-4 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
+            <Text
+              className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide"
+              style={{fontFamily: "Inter_700Bold"}}
+            >
               Machine
             </Text>
             <Box className="flex items-center gap-2">
-              <Icon className="text-typography-600 dark:text-[#8A94A8]" as={Laptop} size="sm" />
-              <Text className="text-sm text-typography-900 dark:text-[#E8EBF0] font-semibold web:text-base" style={{fontFamily: "Inter_600SemiBold"}}>
+              <Icon
+                className="text-typography-600 dark:text-[#8A94A8]"
+                as={Laptop}
+                size="sm"
+              />
+              <Text
+                className="text-sm text-typography-900 dark:text-[#E8EBF0] font-semibold web:text-base"
+                style={{fontFamily: "Inter_600SemiBold"}}
+              >
                 {MachineName}
               </Text>
             </Box>
           </Box>
-          <Box className="flex flex-col gap-3 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
-            <Text className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide" style={{fontFamily: "Inter_700Bold"}}>
+          <Box className="flex flex-col gap-3 mb-4 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
+            <Text
+              className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide"
+              style={{fontFamily: "Inter_700Bold"}}
+            >
               Folder Path
             </Text>
-            <Text className="text-sm text-typography-900 dark:text-[#E8EBF0] web:text-base break-all" style={{fontFamily: "Inter_400Regular"}}>
+            <Text
+              className="text-sm text-typography-900 dark:text-[#E8EBF0] web:text-base break-all"
+              style={{fontFamily: "Inter_400Regular"}}
+            >
               {FolderPath}
             </Text>
           </Box>
           <Box className="grid grid-cols-1 web:grid-cols-2 gap-4">
-            <Box className="flex flex-col gap-3 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
-              <Text className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide" style={{fontFamily: "Inter_700Bold"}}>
+            <Box className="flex flex-col gap-3 mb-4 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
+              <Text
+                className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide"
+                style={{fontFamily: "Inter_700Bold"}}
+              >
                 Source
               </Text>
-              <Text className="text-sm text-typography-900 dark:text-[#E8EBF0] web:text-base break-all" style={{fontFamily: "Inter_400Regular"}}>
+              <Text
+                className="text-sm text-typography-900 dark:text-[#E8EBF0] web:text-base break-all"
+                style={{fontFamily: "Inter_400Regular"}}
+              >
                 {Source || "-"}
               </Text>
             </Box>
-            <Box className="flex flex-col gap-3 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
-              <Text className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide" style={{fontFamily: "Inter_700Bold"}}>
+            <Box className="flex flex-col gap-3 mb-4 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
+              <Text
+                className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide"
+                style={{fontFamily: "Inter_700Bold"}}
+              >
                 Target
               </Text>
-              <Text className="text-sm text-typography-900 dark:text-[#E8EBF0] web:text-base break-all" style={{fontFamily: "Inter_400Regular"}}>
+              <Text
+                className="text-sm text-typography-900 dark:text-[#E8EBF0] web:text-base break-all"
+                style={{fontFamily: "Inter_400Regular"}}
+              >
                 {Target || "-"}
               </Text>
             </Box>
           </Box>
-          <Box className="flex flex-col gap-3 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
-            <Text className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide" style={{fontFamily: "Inter_700Bold"}}>
+          <Box className="flex flex-col gap-3 mb-4 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
+            <Text
+              className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide"
+              style={{fontFamily: "Inter_700Bold"}}
+            >
               Storage Information
             </Text>
-            <Box className="grid grid-cols-3 gap-4">
+            <Box className="grid grid-cols-3 gap-4 flex-row justify-between">
               <Box className="flex flex-col items-center gap-1.5">
-                <Icon className="text-typography-500 dark:text-[#8A94A8]" as={HardDrive} size="sm" />
-                <Text className="text-[9px] font-medium uppercase text-typography-500 dark:text-[#8A94A8]" style={{fontFamily: "Inter_500Medium"}}>
+                <Icon
+                  className="text-typography-500 dark:text-[#8A94A8]"
+                  as={HardDrive}
+                  size="sm"
+                />
+                <Text
+                  className="text-[9px] font-medium uppercase text-typography-500 dark:text-[#8A94A8]"
+                  style={{fontFamily: "Inter_500Medium"}}
+                >
                   Used
                 </Text>
-                <Text className="text-sm text-typography-900 dark:text-[#E8EBF0] font-bold" style={{fontFamily: "Inter_700Bold"}}>
+                <Text
+                  className="text-sm text-typography-900 dark:text-[#E8EBF0] font-bold"
+                  style={{fontFamily: "Inter_700Bold"}}
+                >
                   {isNaN(usageUsedGB) ? "0" : usageUsedGB} GB
                 </Text>
               </Box>
               <Box className="flex flex-col items-center gap-1.5">
-                <Icon className="text-typography-500 dark:text-[#8A94A8]" as={Download} size="sm" />
-                <Text className="text-[9px] font-medium uppercase text-typography-500 dark:text-[#8A94A8]" style={{fontFamily: "Inter_500Medium"}}>
+                <Icon
+                  className="text-typography-500 dark:text-[#8A94A8]"
+                  as={Download}
+                  size="sm"
+                />
+                <Text
+                  className="text-[9px] font-medium uppercase text-typography-500 dark:text-[#8A94A8]"
+                  style={{fontFamily: "Inter_500Medium"}}
+                >
                   Free
                 </Text>
-                <Text className="text-sm text-typography-900 dark:text-[#E8EBF0] font-bold" style={{fontFamily: "Inter_700Bold"}}>
-                  {isNaN(Status.spaceFreeGB) ? "0" : Status.spaceFreeGB.toFixed(2)} GB
+                <Text
+                  className="text-sm text-typography-900 dark:text-[#E8EBF0] font-bold"
+                  style={{fontFamily: "Inter_700Bold"}}
+                >
+                  {isNaN(Status.spaceFreeGB)
+                    ? "0"
+                    : Status.spaceFreeGB.toFixed(2)}{" "}
+                  GB
                 </Text>
               </Box>
               <Box className="flex flex-col items-center gap-1.5">
-                <Icon className="text-typography-500 dark:text-[#8A94A8]" as={HardDrive} size="sm" />
-                <Text className="text-[9px] font-medium uppercase text-typography-500 dark:text-[#8A94A8]" style={{fontFamily: "Inter_500Medium"}}>
+                <Icon
+                  className="text-typography-500 dark:text-[#8A94A8]"
+                  as={HardDrive}
+                  size="sm"
+                />
+                <Text
+                  className="text-[9px] font-medium uppercase text-typography-500 dark:text-[#8A94A8]"
+                  style={{fontFamily: "Inter_500Medium"}}
+                >
                   Total
                 </Text>
-                <Text className="text-sm text-typography-900 dark:text-[#E8EBF0] font-bold" style={{fontFamily: "Inter_700Bold"}}>
+                <Text
+                  className="text-sm text-typography-900 dark:text-[#E8EBF0] font-bold"
+                  style={{fontFamily: "Inter_700Bold"}}
+                >
                   {isNaN(usageTotalGB) ? "0" : usageTotalGB} GB
                 </Text>
               </Box>
             </Box>
           </Box>
           <Box className="flex flex-col gap-3 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
-            <Text className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide" style={{fontFamily: "Inter_700Bold"}}>
+            <Text
+              className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide"
+              style={{fontFamily: "Inter_700Bold"}}
+            >
               Host Normal Mount
             </Text>
-            <Text className="text-sm text-typography-900 dark:text-[#E8EBF0] font-semibold web:text-base" style={{fontFamily: "Inter_600SemiBold"}}>
+            <Text
+              className="text-sm text-typography-900 dark:text-[#E8EBF0] font-semibold web:text-base"
+              style={{fontFamily: "Inter_600SemiBold"}}
+            >
               {HostNormalMount ? "Enabled" : "Disabled"}
             </Text>
           </Box>
