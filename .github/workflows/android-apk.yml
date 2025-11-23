@@ -1,10 +1,10 @@
 name: Build Android APK (Expo)
 
 on:
-  workflow_dispatch: {}   # podes correr à mão
+  workflow_dispatch: {}
   push:
     tags:
-      - 'android-v*'      # opcional: corre quando fizeres tag tipo android-v1.0.0
+      - 'android-v*'
 
 jobs:
   build-android:
@@ -17,19 +17,13 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Node
-        # Node para correr Expo / npm
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
       - name: Install JS deps
-        # Usa npm install por agora; quando o lockfile estiver estável podes trocar para npm ci
         run: npm install
-
-      # Não precisas do expo-cli global, usamos sempre npx
-      # - name: Install Expo CLI
-      #   run: npm install -g expo-cli
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -43,6 +37,19 @@ jobs:
       - name: Prebuild Android (Expo -> projeto nativo)
         run: npx expo prebuild --platform android --non-interactive
 
+      # OPCIONAL – só se quiseres forçar o bundle manualmente
+      - name: Bundle JS assets for Android
+        run: |
+          mkdir -p android/app/src/main/assets
+          mkdir -p android/app/src/main/res
+          # se o teu entry não for index.js, muda aqui
+          npx react-native bundle \
+            --platform android \
+            --dev false \
+            --entry-file index.js \
+            --bundle-output android/app/src/main/assets/index.android.bundle \
+            --assets-dest android/app/src/main/res/
+
       - name: Fix duplicated AppTheme in styles.xml
         run: |
           python - << 'EOF'
@@ -55,28 +62,21 @@ jobs:
 
           text = path.read_text(encoding="utf-8")
 
-          # Apanha todos os blocos <style name="AppTheme"> ... </style>
           pattern = re.compile(r'(<style\s+name="AppTheme"[\s\S]*?</style>)', re.MULTILINE)
           matches = list(pattern.finditer(text))
 
           if len(matches) <= 1:
-              # Nada a fazer
               raise SystemExit(0)
 
-          # Mantém o primeiro bloco e remove os restantes
           first = matches[0]
-          new_text_parts = []
-          new_text_parts.append(text[:first.end()])
-
+          new_text_parts = [text[:first.end()]]
           last_idx = first.end()
+
           for m in matches[1:]:
-              # tudo entre o fim do último bloco e o início deste
               new_text_parts.append(text[last_idx:m.start()])
               last_idx = m.end()
 
-          # resto do ficheiro depois do último <style AppTheme>
           new_text_parts.append(text[last_idx:])
-
           path.write_text("".join(new_text_parts), encoding="utf-8")
           EOF
 
@@ -84,12 +84,12 @@ jobs:
         working-directory: android
         run: chmod +x ./gradlew
 
-      - name: Build Debug APK
+      - name: Build Release APK (unsigned)
         working-directory: android
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleRelease
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: android-debug-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          name: android-release-apk
+          path: android/app/build/outputs/apk/release/*.apk

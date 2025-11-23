@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "starter-kit-expo",
-    "slug": "starter-kit-expo",
+    "name": "HyperHive",
+    "slug": "hyperhive",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "starterkitexpo",
+    "scheme": "hyperhive",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
