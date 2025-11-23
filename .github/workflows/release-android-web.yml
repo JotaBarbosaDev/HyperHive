@@ -1,0 +1,162 @@
+name: Release Android + Web (Expo)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag da release (ex: v1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Marcar como pre-release?'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install JS deps
+        run: npm install
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Prebuild Android (Expo -> projeto nativo)
+        run: npx expo prebuild --platform android --non-interactive
+
+      - name: Fix duplicated AppTheme in styles.xml
+        run: |
+          python - << 'EOF'
+          import re
+          from pathlib import Path
+
+          path = Path("android/app/src/main/res/values/styles.xml")
+          if not path.exists():
+              raise SystemExit(0)
+
+          text = path.read_text(encoding="utf-8")
+
+          pattern = re.compile(r'(<style\s+name="AppTheme"[\s\S]*?</style>)', re.MULTILINE)
+          matches = list(pattern.finditer(text))
+
+          if len(matches) <= 1:
+              raise SystemExit(0)
+
+          first = matches[0]
+          new_text_parts = [text[:first.end()]]
+          last_idx = first.end()
+
+          for m in matches[1:]:
+              new_text_parts.append(text[last_idx:m.start()])
+              last_idx = m.end()
+
+          new_text_parts.append(text[last_idx:])
+          path.write_text("".join(new_text_parts), encoding="utf-8")
+          EOF
+
+      - name: Make gradlew executable
+        working-directory: android
+        run: chmod +x ./gradlew
+
+      - name: Build Release APK (unsigned)
+        working-directory: android
+        run: ./gradlew assembleRelease
+
+      - name: Upload Android artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
+
+  build-web:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install JS deps
+        run: npm install
+
+      - name: Build web bundle (Expo)
+        run: |
+          npx expo export --platform web --output-dir dist
+
+      - name: Upload web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: dist
+
+  create-release:
+    runs-on: ubuntu-latest
+    needs:
+      - build-android
+    # Se quiseres obrigar a ter SEMPRE web também, mete: - build-web
+      - build-web
+
+    steps:
+      - name: Download Android artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: android-release-apk
+          path: artifacts/android
+
+      - name: Download Web artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: artifacts/web
+
+      - name: Zip web-dist
+        run: |
+          cd artifacts/web
+          zip -r ../../web-dist.zip .
+
+      - name: List files to upload
+        run: |
+          echo "APK files:"
+          ls -R artifacts/android
+          echo "Web zip:"
+          ls -l web-dist.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.tag }}
+          name: "HyperHive ${{ github.event.inputs.tag }}"
+          draft: false
+          prerelease: ${{ github.event.inputs.prerelease }}
+          files: |
+            artifacts/android/*.apk
+            web-dist.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
