@@ -1,0 +1,56 @@
+name: Build Android APK (Expo)
+
+on:
+  workflow_dispatch: {}   # podes correr à mão
+  push:
+    tags:
+      - 'android-v*'      # opcional: corre quando fizeres tag tipo android-v1.0.0
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        # Node para correr Expo / npm
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install JS deps
+        run: npm ci
+
+      - name: Install Expo CLI
+        run: npm install -g expo-cli
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Prebuild Android (Expo -> projeto nativo)
+        run: npx expo prebuild --platform android --non-interactive
+
+      - name: Make gradlew executable
+        working-directory: android
+        run: chmod +x ./gradlew
+
+      - name: Build Debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
