@@ -1,0 +1,38 @@
+name: Build Web (Expo)
+
+on:
+  workflow_dispatch: {}   # podes correr à mão no GitHub
+  push:
+    tags:
+      - 'web-v*'          # opcional: corre quando fizeres tag tipo web-v1.0.0
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install JS deps
+        # Se tiveres o package-lock direito podes trocar para `npm ci`
+        run: npm install
+
+      - name: Build web bundle (Expo)
+        # Gera ficheiros estáticos para web
+        run: |
+          npx expo export --platform web --output-dir dist
+
+      - name: Upload web build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: dist
