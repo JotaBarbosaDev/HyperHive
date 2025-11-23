@@ -28,8 +28,6 @@ jobs:
         run: npm install
 
       # Não precisas do expo-cli global, usamos sempre npx
-      # - name: Install Expo CLI
-      #   run: npm install -g expo-cli
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -42,6 +40,18 @@ jobs:
 
       - name: Prebuild Android (Expo -> projeto nativo)
         run: npx expo prebuild --platform android --non-interactive
+
+      - name: Bundle JS assets for Android (expo-router)
+        # Garante que o JS da app fica dentro do APK
+        run: |
+          mkdir -p android/app/src/main/assets
+          mkdir -p android/app/src/main/res
+          npx react-native bundle \
+            --platform android \
+            --dev false \
+            --entry-file node_modules/expo-router/entry.js \
+            --bundle-output android/app/src/main/assets/index.android.bundle \
+            --assets-dest android/app/src/main/res/
 
       - name: Fix duplicated AppTheme in styles.xml
         run: |
@@ -60,8 +70,8 @@ jobs:
           matches = list(pattern.finditer(text))
 
           if len(matches) <= 1:
-              # Nada a fazer
-              raise SystemExit(0)
+            # Nada a fazer
+            raise SystemExit(0)
 
           # Mantém o primeiro bloco e remove os restantes
           first = matches[0]
@@ -70,9 +80,9 @@ jobs:
 
           last_idx = first.end()
           for m in matches[1:]:
-              # tudo entre o fim do último bloco e o início deste
-              new_text_parts.append(text[last_idx:m.start()])
-              last_idx = m.end()
+            # tudo entre o fim do último bloco e o início deste
+            new_text_parts.append(text[last_idx:m.start()])
+            last_idx = m.end()
 
           # resto do ficheiro depois do último <style AppTheme>
           new_text_parts.append(text[last_idx:])
@@ -84,12 +94,12 @@ jobs:
         working-directory: android
         run: chmod +x ./gradlew
 
-      - name: Build Debug APK
+      - name: Build Release APK (unsigned)
         working-directory: android
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleRelease
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: android-debug-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          name: android-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
