@@ -38,7 +38,7 @@ const MENU_ITEMS = [
   {
     label: "ISO Downloads",
     icon: HardDrive,
-    route: "/profile",
+    route: "/isos",
   },
   {
     label: "Orders",
@@ -59,12 +59,11 @@ export function AppSidebar({isOpen, onClose}: AppSidebarProps) {
   const handleLogout = React.useCallback(async () => {
     onClose();
     try {
-      await Promise.all([clearAuthToken(), clearApiBaseUrl()]);
+      await Promise.all([clearAuthToken()]);
     } catch (err) {
       console.warn("Failed to clear stored session during logout", err);
     } finally {
       setAuthToken(null);
-      setApiBaseUrl(null);
       router.replace("/");
     }
   }, [onClose, router]);

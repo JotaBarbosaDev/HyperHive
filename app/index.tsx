@@ -1,4 +1,6 @@
 import React from "react";
+import * as SecureStore from "expo-secure-store";
+import { API_BASE_URL_STORAGE_KEY } from "@/services/auth-storage";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -24,7 +26,7 @@ import { Input, InputField, InputIcon, InputSlot } from "@/components/ui/input";
 import { Button, ButtonSpinner, ButtonText } from "@/components/ui/button";
 import { AlertCircleIcon, EyeIcon, EyeOffIcon } from "@/components/ui/icon";
 import Logo from "@/assets/icons/Logo";
-import { normalizeApiBaseUrl, setApiBaseUrl } from "@/config/apiConfig";
+import { getApiBaseUrl, normalizeApiBaseUrl, setApiBaseUrl } from "@/config/apiConfig";
 import { login, listMachines } from "@/services/hyperhive";
 import { ApiError, getAuthToken, setAuthToken } from "@/services/api-client";
 import { loadApiBaseUrl, saveApiBaseUrl, saveAuthToken } from "@/services/auth-storage";
@@ -33,6 +35,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const [showPassword, setShowPassword] = React.useState(false);
   const [baseUrl, setBaseUrl] = React.useState("");
+  const [baseUrlInputRef, setBaseUrlInputRef] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
@@ -53,6 +56,7 @@ export default function LoginScreen() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
+  
 
   React.useEffect(() => {
     let isActive = true;
@@ -221,7 +225,7 @@ export default function LoginScreen() {
         </FormControlLabel>
         <Input className="mt-2" variant="outline" isInvalid={!!baseUrlError}>
           <InputField
-            value={baseUrl}
+            value={baseUrl ?? ""}
             onChangeText={(text) => {
               setBaseUrl(text);
               setBaseUrlError("");
@@ -257,11 +261,7 @@ export default function LoginScreen() {
             Email
           </FormControlLabelText>
         </FormControlLabel>
-        <Input
-          className="mt-2"
-          variant="outline"
-          isInvalid={!!emailError}
-        >
+        <Input className="mt-2" variant="outline" isInvalid={!!emailError}>
           <InputField
             ref={(node) => {
               emailInputRef.current = node as unknown as TextInput | null;
@@ -301,11 +301,7 @@ export default function LoginScreen() {
             Password
           </FormControlLabelText>
         </FormControlLabel>
-        <Input
-          className="mt-2"
-          variant="outline"
-          isInvalid={!!passwordError}
-        >
+        <Input className="mt-2" variant="outline" isInvalid={!!passwordError}>
           <InputField
             ref={(node) => {
               passwordInputRef.current = node as unknown as TextInput | null;

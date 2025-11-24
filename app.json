@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/images/android-chrome-512x512.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#ffffff" 
     },
     "ios": {
       "supportsTablet": true
@@ -21,7 +21,8 @@
         "foregroundImage": "./assets/images/android-chrome-512x512.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "resize"
     },
     "androidNavigationBar": {
       "visible": "sticky-immersive",

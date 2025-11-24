@@ -51,6 +51,7 @@ export const saveApiBaseUrl = async (baseUrl: string) => {
   }
 };
 
+
 export const loadAuthToken = async (): Promise<string | null> => {
   if (Platform.OS === "web") {
     const storage = getWebStorage();
