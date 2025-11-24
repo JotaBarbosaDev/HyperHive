@@ -13,6 +13,10 @@ on:
         type: boolean
         default: false
 
+# Precisamos de poder criar releases
+permissions:
+  contents: write
+
 jobs:
   build-android:
     runs-on: ubuntu-latest
@@ -30,6 +34,7 @@ jobs:
           cache: 'npm'
 
       - name: Install JS deps
+        # Quando o lockfile estiver estável podes trocar para `npm ci`
         run: npm install
 
       - name: Setup Java
@@ -56,21 +61,28 @@ jobs:
 
           text = path.read_text(encoding="utf-8")
 
+          # Apanha todos os blocos <style name="AppTheme"> ... </style>
           pattern = re.compile(r'(<style\s+name="AppTheme"[\s\S]*?</style>)', re.MULTILINE)
           matches = list(pattern.finditer(text))
 
           if len(matches) <= 1:
+              # Nada a fazer
               raise SystemExit(0)
 
+          # Mantém o primeiro bloco e remove os restantes
           first = matches[0]
-          new_text_parts = [text[:first.end()]]
-          last_idx = first.end()
+          new_text_parts = []
+          new_text_parts.append(text[:first.end()])
 
+          last_idx = first.end()
           for m in matches[1:]:
+              # tudo entre o fim do último bloco e o início deste
               new_text_parts.append(text[last_idx:m.start()])
               last_idx = m.end()
 
+          # resto do ficheiro depois do último <style AppTheme>
           new_text_parts.append(text[last_idx:])
+
           path.write_text("".join(new_text_parts), encoding="utf-8")
           EOF
 
@@ -107,6 +119,7 @@ jobs:
         run: npm install
 
       - name: Build web bundle (Expo)
+        # Gera ficheiros estáticos para web em dist/
         run: |
           npx expo export --platform web --output-dir dist
 
@@ -120,7 +133,6 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build-android
-    # Se quiseres obrigar a ter SEMPRE web também, mete: - build-web
       - build-web
 
     steps:
