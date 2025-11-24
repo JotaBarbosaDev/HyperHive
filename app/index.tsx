@@ -104,29 +104,29 @@ export default function LoginScreen() {
     let normalizedBaseUrl: string | null = null;
 
     if (!baseUrl.trim()) {
-      setBaseUrlError("Domínio ou API base é obrigatório");
+      setBaseUrlError("Domain or API base is required");
       hasError = true;
     } else {
       normalizedBaseUrl = normalizeApiBaseUrl(baseUrl);
       if (!normalizedBaseUrl) {
-        setBaseUrlError("Domínio ou API base inválido");
+        setBaseUrlError("Invalid domain or API base");
         hasError = true;
       }
     }
 
     if (!email.trim()) {
-      setEmailError("Email é obrigatório");
+      setEmailError("Email is required");
       hasError = true;
     } else if (!validateEmail(email)) {
-      setEmailError("Email inválido");
+      setEmailError("Invalid email");
       hasError = true;
     }
 
     if (!password.trim()) {
-      setPasswordError("Password é obrigatória");
+      setPasswordError("Password is required");
       hasError = true;
     } else if (password.length < 6) {
-      setPasswordError("Password deve ter pelo menos 6 caracteres");
+      setPasswordError("Password must be at least 6 characters");
       hasError = true;
     }
 
@@ -143,14 +143,14 @@ export default function LoginScreen() {
       });
 
       if (!token) {
-        throw new Error("Token inválida devolvida pela API.");
+        throw new Error("Invalid token returned by the API.");
       }
 
       setAuthToken(token);
       await Promise.all([saveAuthToken(token), saveApiBaseUrl(normalizedBaseUrl)]);
       router.replace("/mounts");
     } catch (err) {
-      let message = "Erro ao fazer login. Tenta novamente.";
+      let message = "Error signing in. Please try again.";
       if (err instanceof ApiError) {
         if (typeof err.data === "string" && err.data.trim().length > 0) {
           message = err.data;
@@ -198,10 +198,10 @@ export default function LoginScreen() {
           size="lg"
           className="text-typography-900 dark:text-[#E8EBF0] font-heading web:text-2xl"
         >
-          Bem-vindo de volta
+          Welcome back
         </Heading>
         <Text className="text-typography-500 dark:text-typography-400 text-sm font-body mt-2 web:text-base">
-          Entra com as tuas credenciais para acederes ao painel de mounts.
+          Sign in with your credentials to access the mounts dashboard.
         </Text>
       </Box>
 
@@ -216,7 +216,7 @@ export default function LoginScreen() {
       <FormControl isInvalid={!!baseUrlError}>
         <FormControlLabel>
           <FormControlLabelText className="text-sm text-typography-600 dark:text-typography-300 font-semibold web:text-base">
-            Domínio ou API Base
+            Domain or API Base
           </FormControlLabelText>
         </FormControlLabel>
         <Input className="mt-2" variant="outline" isInvalid={!!baseUrlError}>
@@ -272,7 +272,7 @@ export default function LoginScreen() {
               setEmailError("");
               setError("");
             }}
-            placeholder="nome@exemplo.com"
+            placeholder="name@example.com"
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -372,12 +372,12 @@ export default function LoginScreen() {
           <>
             <ButtonSpinner />
             <ButtonText className="text-base font-semibold ml-2 web:text-lg">
-              A entrar...
+              Signing in...
             </ButtonText>
           </>
         ) : (
           <ButtonText className="text-base font-semibold web:text-lg">
-            Entrar
+            Sign in
           </ButtonText>
         )}
       </Button>
@@ -407,7 +407,7 @@ export default function LoginScreen() {
                 HyperHive
               </Heading>
               <Text className="text-typography-500 dark:text-typography-400 text-sm text-center mt-2 web:text-base">
-                Gestão de Mounts Simplificada
+                Simplified Mounts Management
               </Text>
             </Box>
 
@@ -431,7 +431,7 @@ export default function LoginScreen() {
 
             {/* Footer */}
             <Text className="text-typography-500 dark:text-typography-400 text-xs text-center mt-6 web:text-sm">
-              © 2025 HyperHive. Todos os direitos reservados.
+              © 2025 HyperHive. All rights reserved.
             </Text>
           </Box>
         </Box>
