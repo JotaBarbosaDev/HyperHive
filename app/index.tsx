@@ -7,8 +7,8 @@ import {
   type NativeSyntheticEvent,
   type TextInputSubmitEditingEventData,
 } from "react-native";
-import {useRouter} from "expo-router";
-import {Box} from "@/components/ui/box";
+import { useRouter } from "expo-router";
+import { Box } from "@/components/ui/box";
 import {
   FormControl,
   FormControlError,
@@ -17,17 +17,17 @@ import {
   FormControlLabel,
   FormControlLabelText,
 } from "@/components/ui/form-control";
-import {VStack} from "@/components/ui/vstack";
-import {Heading} from "@/components/ui/heading";
-import {Text} from "@/components/ui/text";
-import {Input, InputField, InputIcon, InputSlot} from "@/components/ui/input";
-import {Button, ButtonSpinner, ButtonText} from "@/components/ui/button";
-import {AlertCircleIcon, EyeIcon, EyeOffIcon} from "@/components/ui/icon";
+import { VStack } from "@/components/ui/vstack";
+import { Heading } from "@/components/ui/heading";
+import { Text } from "@/components/ui/text";
+import { Input, InputField, InputIcon, InputSlot } from "@/components/ui/input";
+import { Button, ButtonSpinner, ButtonText } from "@/components/ui/button";
+import { AlertCircleIcon, EyeIcon, EyeOffIcon } from "@/components/ui/icon";
 import Logo from "@/assets/icons/Logo";
-import {normalizeApiBaseUrl, setApiBaseUrl} from "@/config/apiConfig";
-import {login, listMachines} from "@/services/hyperhive";
-import {ApiError, getAuthToken, setAuthToken} from "@/services/api-client";
-import {loadApiBaseUrl, saveApiBaseUrl, saveAuthToken} from "@/services/auth-storage";
+import { normalizeApiBaseUrl, setApiBaseUrl } from "@/config/apiConfig";
+import { login, listMachines } from "@/services/hyperhive";
+import { ApiError, getAuthToken, setAuthToken } from "@/services/api-client";
+import { loadApiBaseUrl, saveApiBaseUrl, saveAuthToken } from "@/services/auth-storage";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -137,7 +137,7 @@ export default function LoginScreen() {
     setIsLoading(true);
     try {
       const normalizedEmail = email.trim();
-      const {token} = await login({
+      const { token } = await login({
         email: normalizedEmail,
         password,
       });
@@ -158,9 +158,9 @@ export default function LoginScreen() {
           typeof err.data === "object" &&
           err.data !== null &&
           "message" in err.data &&
-          typeof (err.data as {message?: unknown}).message === "string"
+          typeof (err.data as { message?: unknown }).message === "string"
         ) {
-          message = (err.data as {message: string}).message;
+          message = (err.data as { message: string }).message;
         } else if (err.message) {
           message = err.message;
         }
@@ -227,7 +227,7 @@ export default function LoginScreen() {
               setBaseUrlError("");
               setError("");
             }}
-            placeholder="https://hyperhive.maruqes.com"
+            placeholder="https://hyperhiveapi.domain.com"
             autoCapitalize="none"
             autoCorrect={false}
             autoComplete="off"
@@ -387,10 +387,10 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={{flex: 1}}
+      style={{ flex: 1 }}
     >
       <ScrollView
-        contentContainerStyle={{flexGrow: 1}}
+        contentContainerStyle={{ flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
       >
         <Box className="flex-1 bg-background-50 dark:bg-[#070D19] px-6 py-10 items-center justify-center web:px-10">
