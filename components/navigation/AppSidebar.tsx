@@ -56,14 +56,14 @@ const MENU_ITEMS: MenuItem[] = [
     ],
   },
   {
-    label: "ISOs",
-    icon: Disc,
-    route: "/isos",
-  },
-  {
     label: "NFS",
     icon: Share2,
     route: "/mounts",
+  },
+  {
+    label: "ISOs",
+    icon: Disc,
+    route: "/isos",
   },
   {
     label: "VMs",

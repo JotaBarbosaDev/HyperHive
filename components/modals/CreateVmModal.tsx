@@ -1,0 +1,803 @@
+import React, { useState } from "react";
+import {
+  Modal,
+  ModalBackdrop,
+  ModalContent,
+  ModalHeader,
+  ModalCloseButton,
+  ModalBody,
+  ModalFooter,
+} from "@/components/ui/modal";
+import { VStack } from "@/components/ui/vstack";
+import { HStack } from "@/components/ui/hstack";
+import { Box } from "@/components/ui/box";
+import { Text } from "@/components/ui/text";
+import { Heading } from "@/components/ui/heading";
+import { Button, ButtonText, ButtonIcon, ButtonSpinner } from "@/components/ui/button";
+import { Input, InputField } from "@/components/ui/input";
+import {
+  Select,
+  SelectTrigger,
+  SelectInput,
+  SelectIcon,
+  SelectPortal,
+  SelectBackdrop,
+  SelectContent,
+  SelectDragIndicatorWrapper,
+  SelectDragIndicator,
+  SelectItem,
+} from "@/components/ui/select";
+import { Checkbox, CheckboxIndicator, CheckboxIcon, CheckboxLabel } from "@/components/ui/checkbox";
+import { Textarea, TextareaInput } from "@/components/ui/textarea";
+import { Badge, BadgeText } from "@/components/ui/badge";
+import { ScrollView, Platform } from "react-native";
+import { Cpu, X, Copy, Trash2, ChevronDown, Check } from "lucide-react-native";
+import { useToast, Toast, ToastTitle, ToastDescription } from "@/components/ui/toast";
+
+// Try/catch para lidar com expo-clipboard
+let Clipboard: any;
+try {
+  Clipboard = require("expo-clipboard");
+} catch (e) {
+  // Fallback se expo-clipboard não estiver disponível
+  Clipboard = {
+    setStringAsync: async (text: string) => {
+      console.log("Clipboard não disponível:", text);
+    },
+  };
+}
+
+interface CreateVmModalProps {
+  showModal: boolean;
+  setShowModal: (show: boolean) => void;
+  onSuccess?: () => void;
+}
+
+export default function CreateVmModal({
+  showModal,
+  setShowModal,
+  onSuccess,
+}: CreateVmModalProps) {
+  // Estados básicos da VM
+  const [name, setName] = useState("");
+  const [slave, setSlave] = useState("slave-01");
+  const [vcpu, setVcpu] = useState("2");
+  const [memory, setMemory] = useState("4096");
+  const [disk, setDisk] = useState("50");
+  const [iso, setIso] = useState("");
+  const [nfsShare, setNfsShare] = useState("");
+  const [network, setNetwork] = useState("default");
+  const [vncPassword, setVncPassword] = useState("");
+
+  // Estados de checkboxes
+  const [autoStart, setAutoStart] = useState(false);
+  const [isWindows, setIsWindows] = useState(false);
+  const [live, setLive] = useState(false);
+
+  // Estados para CPU XML
+  const [selectedSlaves, setSelectedSlaves] = useState<string[]>([]);
+  const [currentSlaveSelect, setCurrentSlaveSelect] = useState("");
+  const [cpuXml, setCpuXml] = useState("");
+  const [loadingCPU, setLoadingCPU] = useState(false);
+
+  const toast = useToast();
+
+  // Mock de slaves disponíveis
+  const mockSlaves = ["slave-01", "slave-02", "slave-03", "slave-04", "slave-05"];
+  const availableSlaves = mockSlaves.filter((s) => !selectedSlaves.includes(s));
+
+  const handleGetMutualCPUs = async () => {
+    if (selectedSlaves.length === 0) {
+      toast.show({
+        placement: "top",
+        render: ({ id }) => (
+          <Toast
+            nativeID={"toast-" + id}
+            className="px-5 py-3 gap-3 shadow-soft-1"
+            action="error"
+          >
+            <ToastTitle size="sm">Erro</ToastTitle>
+            <ToastDescription size="sm">
+              Selecione pelo menos um slave
+            </ToastDescription>
+          </Toast>
+        ),
+      });
+      return;
+    }
+
+    setLoadingCPU(true);
+
+    try {
+      // Mock XML - aqui seria a chamada real à API
+      const mockXml = `<cpu mode='custom' match='exact' check='partial'>
+  <model fallback='forbid'>Skylake-Client-IBRS</model>
+  <vendor>Intel</vendor>
+  <feature policy='require' name='vme'/>
+  <feature policy='require' name='ss'/>
+  <feature policy='require' name='vmx'/>
+  <feature policy='require' name='pcid'/>
+  <feature policy='require' name='hypervisor'/>
+  <feature policy='require' name='arat'/>
+  <feature policy='require' name='tsc_adjust'/>
+  <feature policy='require' name='umip'/>
+  <feature policy='require' name='md-clear'/>
+  <feature policy='require' name='arch-capabilities'/>
+  <feature policy='require' name='xsaveopt'/>
+  <feature policy='require' name='pdpe1gb'/>
+  <feature policy='require' name='invtsc'/>
+  <feature policy='require' name='ibpb'/>
+  <feature policy='require' name='ibrs'/>
+</cpu>`;
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      setCpuXml(mockXml);
+
+      toast.show({
+        placement: "top",
+        render: ({ id }) => (
+          <Toast
+            nativeID={"toast-" + id}
+            className="px-5 py-3 gap-3 shadow-soft-1"
+            action="success"
+          >
+            <ToastTitle size="sm">Sucesso</ToastTitle>
+            <ToastDescription size="sm">
+              CPUs mútuas obtidas com sucesso
+            </ToastDescription>
+          </Toast>
+        ),
+      });
+    } catch (error) {
+      toast.show({
+        placement: "top",
+        render: ({ id }) => (
+          <Toast
+            nativeID={"toast-" + id}
+            className="px-5 py-3 gap-3 shadow-soft-1"
+            action="error"
+          >
+            <ToastTitle size="sm">Erro</ToastTitle>
+            <ToastDescription size="sm">Erro ao obter CPUs</ToastDescription>
+          </Toast>
+        ),
+      });
+    } finally {
+      setLoadingCPU(false);
+    }
+  };
+
+  const handleCreate = async () => {
+    if (!name || !nfsShare) {
+      toast.show({
+        placement: "top",
+        render: ({ id }) => (
+          <Toast
+            nativeID={"toast-" + id}
+            className="px-5 py-3 gap-3 shadow-soft-1"
+            action="error"
+          >
+            <ToastTitle size="sm">Erro</ToastTitle>
+            <ToastDescription size="sm">
+              Nome e NFS Share são obrigatórios
+            </ToastDescription>
+          </Toast>
+        ),
+      });
+      return;
+    }
+
+    try {
+      const vmData = {
+        machine_name: slave,
+        name,
+        memory: parseInt(memory),
+        vcpu: parseInt(vcpu),
+        disk_sizeGB: parseInt(disk),
+        iso_id: iso ? parseInt(iso) : undefined,
+        nfs_share_id: parseInt(nfsShare),
+        network,
+        VNC_password: vncPassword,
+        live,
+        cpu_xml:
+          cpuXml ||
+          "<cpu mode='custom' match='exact'> <model fallback='allow'>Broadwell-IBRS</model> <vendor>Intel</vendor></cpu>",
+        auto_start: autoStart,
+        is_windows: isWindows,
+      };
+
+      // Aqui seria a chamada real à API
+      // await api.post('/vms', vmData);
+      console.log("VM Data:", vmData);
+
+      toast.show({
+        placement: "top",
+        render: ({ id }) => (
+          <Toast
+            nativeID={"toast-" + id}
+            className="px-5 py-3 gap-3 shadow-soft-1"
+            action="success"
+          >
+            <ToastTitle size="sm">VM criada com sucesso</ToastTitle>
+          </Toast>
+        ),
+      });
+
+      if (onSuccess) onSuccess();
+      setShowModal(false);
+      
+      // Reset form
+      setName("");
+      setSlave("slave-01");
+      setVcpu("2");
+      setMemory("4096");
+      setDisk("50");
+      setIso("");
+      setNfsShare("");
+      setNetwork("default");
+      setVncPassword("");
+      setAutoStart(false);
+      setIsWindows(false);
+      setLive(false);
+      setSelectedSlaves([]);
+      setCpuXml("");
+    } catch (error) {
+      toast.show({
+        placement: "top",
+        render: ({ id }) => (
+          <Toast
+            nativeID={"toast-" + id}
+            className="px-5 py-3 gap-3 shadow-soft-1"
+            action="error"
+          >
+            <ToastTitle size="sm">Erro ao criar VM</ToastTitle>
+            <ToastDescription size="sm">{String(error)}</ToastDescription>
+          </Toast>
+        ),
+      });
+    }
+  };
+
+  const handleCopyXml = async () => {
+    if (cpuXml) {
+      await Clipboard.setStringAsync(cpuXml);
+      toast.show({
+        placement: "top",
+        render: ({ id }) => (
+          <Toast
+            nativeID={"toast-" + id}
+            className="px-5 py-3 gap-3 shadow-soft-1"
+            action="success"
+          >
+            <ToastTitle size="sm">XML copiado</ToastTitle>
+          </Toast>
+        ),
+      });
+    }
+  };
+
+  return (
+    <Modal
+      isOpen={showModal}
+      onClose={() => setShowModal(false)}
+      size="full"
+    >
+      <ModalBackdrop />
+      <ModalContent className="max-w-[90%] max-h-[90%] web:max-w-4xl">
+        <ModalHeader className="border-b border-outline-100 dark:border-[#2A3B52]">
+          <Heading
+            size="lg"
+            className="text-typography-900 dark:text-[#E8EBF0]"
+            style={{ fontFamily: "Inter_700Bold" }}
+          >
+            Criar Virtual Machine
+          </Heading>
+          <ModalCloseButton>
+            <X className="text-typography-700 dark:text-[#E8EBF0]" />
+          </ModalCloseButton>
+        </ModalHeader>
+
+        <ModalBody className="bg-background-50 dark:bg-[#0A1628]">
+          <ScrollView showsVerticalScrollIndicator={true}>
+            <Box className="p-4 web:p-6">
+              {/* SEÇÃO 1: CAMPOS BÁSICOS */}
+              <VStack className="gap-4 web:grid web:grid-cols-2 web:gap-4">
+                {/* Nome da VM */}
+                <VStack className="gap-2">
+                  <Text
+                    className="text-sm text-typography-700 dark:text-typography-300"
+                    style={{ fontFamily: "Inter_600SemiBold" }}
+                  >
+                    Nome da VM
+                  </Text>
+                  <Input
+                    variant="outline"
+                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                  >
+                    <InputField
+                      value={name}
+                      onChangeText={setName}
+                      placeholder="vm-web-01"
+                      className="text-typography-900 dark:text-[#E8EBF0]"
+                    />
+                  </Input>
+                </VStack>
+
+                {/* Slave */}
+                <VStack className="gap-2">
+                  <Text
+                    className="text-sm text-typography-700 dark:text-typography-300"
+                    style={{ fontFamily: "Inter_600SemiBold" }}
+                  >
+                    Slave
+                  </Text>
+                  <Select selectedValue={slave} onValueChange={setSlave}>
+                    <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
+                      <SelectInput
+                        placeholder="Selecione..."
+                        className="text-typography-900 dark:text-[#E8EBF0]"
+                      />
+                      <SelectIcon as={ChevronDown} className="mr-3" />
+                    </SelectTrigger>
+                    <SelectPortal>
+                      <SelectBackdrop />
+                      <SelectContent className="bg-background-0 dark:bg-[#151F30]">
+                        <SelectDragIndicatorWrapper>
+                          <SelectDragIndicator />
+                        </SelectDragIndicatorWrapper>
+                        {mockSlaves.map((s) => (
+                          <SelectItem
+                            key={s}
+                            label={s}
+                            value={s}
+                            className="text-typography-900 dark:text-[#E8EBF0]"
+                          />
+                        ))}
+                      </SelectContent>
+                    </SelectPortal>
+                  </Select>
+                </VStack>
+
+                {/* vCPU */}
+                <VStack className="gap-2">
+                  <Text
+                    className="text-sm text-typography-700 dark:text-typography-300"
+                    style={{ fontFamily: "Inter_600SemiBold" }}
+                  >
+                    vCPU
+                  </Text>
+                  <Input
+                    variant="outline"
+                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                  >
+                    <InputField
+                      value={vcpu}
+                      onChangeText={setVcpu}
+                      keyboardType="numeric"
+                      placeholder="2"
+                      className="text-typography-900 dark:text-[#E8EBF0]"
+                    />
+                  </Input>
+                </VStack>
+
+                {/* Memória */}
+                <VStack className="gap-2">
+                  <Text
+                    className="text-sm text-typography-700 dark:text-typography-300"
+                    style={{ fontFamily: "Inter_600SemiBold" }}
+                  >
+                    Memória (MB)
+                  </Text>
+                  <Input
+                    variant="outline"
+                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                  >
+                    <InputField
+                      value={memory}
+                      onChangeText={setMemory}
+                      keyboardType="numeric"
+                      placeholder="4096"
+                      className="text-typography-900 dark:text-[#E8EBF0]"
+                    />
+                  </Input>
+                </VStack>
+
+                {/* Disco */}
+                <VStack className="gap-2">
+                  <Text
+                    className="text-sm text-typography-700 dark:text-typography-300"
+                    style={{ fontFamily: "Inter_600SemiBold" }}
+                  >
+                    Disco (GB)
+                  </Text>
+                  <Input
+                    variant="outline"
+                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                  >
+                    <InputField
+                      value={disk}
+                      onChangeText={setDisk}
+                      keyboardType="numeric"
+                      placeholder="50"
+                      className="text-typography-900 dark:text-[#E8EBF0]"
+                    />
+                  </Input>
+                </VStack>
+
+                {/* Network */}
+                <VStack className="gap-2">
+                  <Text
+                    className="text-sm text-typography-700 dark:text-typography-300"
+                    style={{ fontFamily: "Inter_600SemiBold" }}
+                  >
+                    Network
+                  </Text>
+                  <Input
+                    variant="outline"
+                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                  >
+                    <InputField
+                      value={network}
+                      onChangeText={setNetwork}
+                      placeholder="default"
+                      className="text-typography-900 dark:text-[#E8EBF0]"
+                    />
+                  </Input>
+                </VStack>
+
+                {/* NFS Share ID */}
+                <VStack className="gap-2">
+                  <Text
+                    className="text-sm text-typography-700 dark:text-typography-300"
+                    style={{ fontFamily: "Inter_600SemiBold" }}
+                  >
+                    NFS Share ID
+                  </Text>
+                  <Input
+                    variant="outline"
+                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                  >
+                    <InputField
+                      value={nfsShare}
+                      onChangeText={setNfsShare}
+                      keyboardType="numeric"
+                      placeholder="54"
+                      className="text-typography-900 dark:text-[#E8EBF0]"
+                    />
+                  </Input>
+                </VStack>
+
+                {/* ISO ID */}
+                <VStack className="gap-2">
+                  <Text
+                    className="text-sm text-typography-700 dark:text-typography-300"
+                    style={{ fontFamily: "Inter_600SemiBold" }}
+                  >
+                    ISO ID (Opcional)
+                  </Text>
+                  <Input
+                    variant="outline"
+                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                  >
+                    <InputField
+                      value={iso}
+                      onChangeText={setIso}
+                      keyboardType="numeric"
+                      placeholder="46"
+                      className="text-typography-900 dark:text-[#E8EBF0]"
+                    />
+                  </Input>
+                </VStack>
+              </VStack>
+
+              {/* SEÇÃO 2: CHECKBOXES */}
+              <VStack className="gap-3 mt-6">
+                <Checkbox
+                  value="autostart"
+                  isChecked={autoStart}
+                  onChange={setAutoStart}
+                  className="gap-2"
+                >
+                  <CheckboxIndicator className="border-outline-300 dark:border-[#2A3B52]">
+                    <CheckboxIcon as={Check} />
+                  </CheckboxIndicator>
+                  <CheckboxLabel className="text-typography-700 dark:text-typography-300">
+                    Auto-start ao boot do slave
+                  </CheckboxLabel>
+                </Checkbox>
+
+                <Checkbox
+                  value="windows"
+                  isChecked={isWindows}
+                  onChange={setIsWindows}
+                  className="gap-2"
+                >
+                  <CheckboxIndicator className="border-outline-300 dark:border-[#2A3B52]">
+                    <CheckboxIcon as={Check} />
+                  </CheckboxIndicator>
+                  <CheckboxLabel className="text-typography-700 dark:text-typography-300">
+                    Windows VM
+                  </CheckboxLabel>
+                </Checkbox>
+
+                <Checkbox
+                  value="live"
+                  isChecked={live}
+                  onChange={setLive}
+                  className="gap-2"
+                >
+                  <CheckboxIndicator className="border-outline-300 dark:border-[#2A3B52]">
+                    <CheckboxIcon as={Check} />
+                  </CheckboxIndicator>
+                  <CheckboxLabel className="text-typography-700 dark:text-typography-300">
+                    Live VM
+                  </CheckboxLabel>
+                </Checkbox>
+              </VStack>
+
+              {/* SEÇÃO 3: VNC PASSWORD */}
+              <VStack className="gap-2 mt-6">
+                <Text
+                  className="text-sm text-typography-700 dark:text-typography-300"
+                  style={{ fontFamily: "Inter_600SemiBold" }}
+                >
+                  VNC Password
+                </Text>
+                <Input
+                  variant="outline"
+                  className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                >
+                  <InputField
+                    value={vncPassword}
+                    onChangeText={setVncPassword}
+                    placeholder="Deixe vazio para gerar automaticamente"
+                    secureTextEntry={true}
+                    className="text-typography-900 dark:text-[#E8EBF0]"
+                  />
+                </Input>
+              </VStack>
+
+              {/* SEÇÃO 4: CONFIGURAÇÃO AVANÇADA DE CPU */}
+              {live && (
+                <Box className="mt-6 p-4 bg-background-0 dark:bg-[#0F1A2E] border border-outline-200 dark:border-[#2A3B52] rounded-xl">
+                  {/* Header */}
+                  <HStack className="gap-2 items-center mb-3">
+                    <Cpu size={20} className="text-typography-700 dark:text-[#E8EBF0]" />
+                    <Heading
+                      size="sm"
+                      className="text-typography-900 dark:text-[#E8EBF0]"
+                      style={{ fontFamily: "Inter_700Bold" }}
+                    >
+                      Configuração Avançada de CPU
+                    </Heading>
+                  </HStack>
+
+                  <Text className="text-sm text-typography-600 dark:text-typography-400 mb-4">
+                    Selecione slaves para comparar e obter a configuração de CPU
+                    compatível entre eles.
+                  </Text>
+
+                  {/* Lista de Slaves Selecionados */}
+                  <VStack className="gap-2 mb-4">
+                    <Text
+                      className="text-sm text-typography-700 dark:text-typography-300"
+                      style={{ fontFamily: "Inter_600SemiBold" }}
+                    >
+                      Slaves selecionados ({selectedSlaves.length})
+                    </Text>
+
+                    <Box className="p-3 bg-background-50 dark:bg-[#0A1628] border border-outline-200 dark:border-[#1E2F47] rounded-lg min-h-[60px]">
+                      {selectedSlaves.length === 0 ? (
+                        <Text className="text-sm text-typography-400 dark:text-typography-500 text-center">
+                          Nenhum slave selecionado
+                        </Text>
+                      ) : (
+                        <HStack className="gap-2 flex-wrap">
+                          {selectedSlaves.map((slaveName) => (
+                            <Badge
+                              key={slaveName}
+                              variant="solid"
+                              className="rounded-full bg-typography-100 dark:bg-[#1E2F47]"
+                            >
+                              <HStack className="gap-1 items-center">
+                                <BadgeText className="text-typography-900 dark:text-[#E8EBF0]">
+                                  {slaveName}
+                                </BadgeText>
+                                <Button
+                                  size="xs"
+                                  variant="link"
+                                  onPress={() => {
+                                    setSelectedSlaves(
+                                      selectedSlaves.filter((s) => s !== slaveName)
+                                    );
+                                  }}
+                                  className="p-0 min-w-0 h-4"
+                                >
+                                  <ButtonIcon
+                                    as={X}
+                                    size="xs"
+                                    className="text-typography-700 dark:text-[#E8EBF0]"
+                                  />
+                                </Button>
+                              </HStack>
+                            </Badge>
+                          ))}
+                        </HStack>
+                      )}
+                    </Box>
+                  </VStack>
+
+                  {/* Dropdown Adicionar Slaves */}
+                  <VStack className="gap-2 mb-4">
+                    <Text
+                      className="text-sm text-typography-700 dark:text-typography-300"
+                      style={{ fontFamily: "Inter_600SemiBold" }}
+                    >
+                      Adicionar slave à comparação
+                    </Text>
+
+                    <Select
+                      selectedValue={currentSlaveSelect}
+                      onValueChange={(value) => {
+                        if (value && !selectedSlaves.includes(value)) {
+                          setSelectedSlaves([...selectedSlaves, value]);
+                          setCurrentSlaveSelect("");
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
+                        <SelectInput
+                          placeholder="Selecione um slave..."
+                          className="text-typography-900 dark:text-[#E8EBF0]"
+                        />
+                        <SelectIcon as={ChevronDown} className="mr-3" />
+                      </SelectTrigger>
+                      <SelectPortal>
+                        <SelectBackdrop />
+                        <SelectContent className="bg-background-0 dark:bg-[#151F30]">
+                          <SelectDragIndicatorWrapper>
+                            <SelectDragIndicator />
+                          </SelectDragIndicatorWrapper>
+
+                          {availableSlaves.length === 0 ? (
+                            <SelectItem
+                              label="Todos os slaves já foram adicionados"
+                              value=""
+                              isDisabled
+                            />
+                          ) : (
+                            availableSlaves.map((s) => (
+                              <SelectItem
+                                key={s}
+                                label={s}
+                                value={s}
+                                className="text-typography-900 dark:text-[#E8EBF0]"
+                              />
+                            ))
+                          )}
+                        </SelectContent>
+                      </SelectPortal>
+                    </Select>
+                  </VStack>
+
+                  {/* Botão Get Mutual CPUs */}
+                  <Button
+                    variant="outline"
+                    onPress={handleGetMutualCPUs}
+                    disabled={selectedSlaves.length === 0 || loadingCPU}
+                    className="rounded-lg mb-4 border-outline-200 dark:border-[#2A3B52]"
+                  >
+                    {loadingCPU ? (
+                      <>
+                        <ButtonSpinner className="mr-2" />
+                        <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                          Obtendo CPUs...
+                        </ButtonText>
+                      </>
+                    ) : (
+                      <>
+                        <ButtonIcon
+                          as={Cpu}
+                          className="mr-2 text-typography-900 dark:text-[#E8EBF0]"
+                        />
+                        <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                          Get Mutual CPUs
+                        </ButtonText>
+                      </>
+                    )}
+                  </Button>
+
+                  {/* XML TextArea */}
+                  <VStack className="gap-2">
+                    <HStack className="justify-between items-center">
+                      <Text
+                        className="text-sm text-typography-700 dark:text-typography-300"
+                        style={{ fontFamily: "Inter_600SemiBold" }}
+                      >
+                        XML de Configuração da CPU
+                      </Text>
+
+                      <HStack className="gap-2">
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          onPress={handleCopyXml}
+                          disabled={!cpuXml}
+                          className="rounded-md border-outline-200 dark:border-[#2A3B52]"
+                        >
+                          <ButtonIcon
+                            as={Copy}
+                            size="xs"
+                            className="text-typography-700 dark:text-[#E8EBF0]"
+                          />
+                        </Button>
+
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          onPress={() => setCpuXml("")}
+                          disabled={!cpuXml}
+                          className="rounded-md border-red-300 dark:border-red-700"
+                        >
+                          <ButtonIcon
+                            as={Trash2}
+                            size="xs"
+                            className="text-red-600 dark:text-red-400"
+                          />
+                        </Button>
+                      </HStack>
+                    </HStack>
+
+                    <Text className="text-xs text-typography-500 dark:text-typography-400">
+                      Este XML será usado para configurar a CPU da VM. Você pode
+                      editá-lo manualmente se necessário.
+                    </Text>
+
+                    <Textarea
+                      size="md"
+                      className="h-60 bg-[#0F172A] dark:bg-[#0A0E1A] border-outline-300 dark:border-[#1E2F47] rounded-lg"
+                    >
+                      <TextareaInput
+                        value={cpuXml}
+                        onChangeText={setCpuXml}
+                        placeholder="O XML das CPUs mútuas aparecerá aqui após clicar em 'Get Mutual CPUs'..."
+                        style={{ 
+                          fontFamily: "Courier",
+                          color: cpuXml ? "#22C55E" : undefined
+                        }}
+                        className="text-xs"
+                      />
+                    </Textarea>
+                  </VStack>
+                </Box>
+              )}
+            </Box>
+          </ScrollView>
+        </ModalBody>
+
+        <ModalFooter className="border-t border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E]">
+          <HStack className="gap-3 w-full">
+            <Button
+              variant="outline"
+              className="flex-1 rounded-lg border-outline-200 dark:border-[#2A3B52]"
+              onPress={() => setShowModal(false)}
+            >
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                Cancelar
+              </ButtonText>
+            </Button>
+
+            <Button
+              className="flex-1 rounded-lg bg-typography-900 dark:bg-[#E8EBF0]"
+              onPress={handleCreate}
+            >
+              <ButtonText className="text-background-0 dark:text-typography-900">
+                Criar VM
+              </ButtonText>
+            </Button>
+          </HStack>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  );
+}
