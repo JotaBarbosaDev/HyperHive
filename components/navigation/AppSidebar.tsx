@@ -45,44 +45,44 @@ const MENU_ITEMS: MenuItem[] = [
   {
     label: "Dashboard",
     icon: LayoutDashboard,
-    route: "/mounts",
+    route: "/dashboard",
   },
   {
     label: "Storage",
     icon: HardDrive,
     children: [
-      {label: "BTRFS / RAIDs", route: "/isos"},
-      {label: "SmartDisk", route: "/public-isos"},
+      {label: "BTRFS / RAIDs", route: "/btrfs-raids"},
+      {label: "SmartDisk", route: "/smartdisk"},
     ],
   },
   {
     label: "ISOs",
     icon: Disc,
-    route: "/orders",
+    route: "/isos",
   },
   {
     label: "NFS",
     icon: Share2,
-    route: "/nfs",
+    route: "/mounts",
   },
   {
     label: "VMs",
     icon: Server,
     children: [
-      {label: "Virtual Machines", route: "/isos"},
-      {label: "Backups", route: "/public-isos"},
-      {label: "Auto-Backups", route: "/public-isos"},
+      {label: "Virtual Machines", route: "/vms"},
+      {label: "Backups", route: "/backups"},
+      {label: "Auto-Backups", route: "/autobackups"},
     ],
   },
   {
     label: "WireGuard VPN",
     icon: Shield,
-    route: "/orders",
+    route: "/wireguard",
   },
   {
     label: "Updates",
     icon: RefreshCw,
-    route: "/cards",
+    route: "/updates",
   },
   {
     label: "Logs",

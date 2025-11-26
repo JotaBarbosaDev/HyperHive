@@ -28,8 +28,8 @@ export function MountUsageGauge({
     safePercent >= 90 ? "#EF4444" : safePercent >= 50 ? "#FBBF24" : "#2DD4BF";
 
   return (
-    <Box className="relative flex flex-col items-center" style={{height: 135}}>
-      <Text className="text-[#9AA4B8] dark:text-[#8A94A8] text-[8px] web:text-[9px] font-medium uppercase tracking-wide mb-1" style={{fontFamily: "Inter_500Medium"}}>
+    <Box className="relative flex flex-col items-center" style={{height: 150}}>
+      <Text className="text-[#9AA4B8] dark:text-[#8A94A8] text-[8px] web:text-[9px] font-medium uppercase tracking-wide mb-2" style={{fontFamily: "Inter_500Medium"}}>
         Storage Usage
       </Text>
 
@@ -83,13 +83,13 @@ export function MountUsageGauge({
         </Svg>
       </Box>
 
-      <Box className="absolute top-[54px] web:top-[62px] left-1/2 -translate-x-1/2 flex flex-col items-center">
+      <Box className="absolute top-[60px] web:top-[68px] left-1/2 -translate-x-1/2 flex flex-col items-center z-10">
         <Text className="text-typography-900 dark:text-[#E8EBF0] text-xl web:text-2xl font-bold leading-none" style={{fontFamily: "Inter_700Bold"}}>
           {safePercent}%
         </Text>
       </Box>
 
-      <Box className="absolute bottom-[12px] web:bottom-[14px] left-[8px] web:left-[10px] flex flex-col items-start">
+      <Box className="absolute bottom-[18px] web:bottom-[0px] left-[8px] web:left-[10px] flex flex-col items-start">
         <Text className="text-[#9AA4B8] dark:text-[#8A94A8] text-[8px] web:text-[9px] font-medium uppercase" style={{fontFamily: "Inter_500Medium"}}>
           Used
         </Text>
@@ -98,7 +98,7 @@ export function MountUsageGauge({
         </Text>
       </Box>
 
-      <Box className="absolute bottom-[12px] web:bottom-[14px] right-[8px] web:right-[10px] flex flex-col items-end">
+      <Box className="absolute bottom-[18px] web:bottom-[0px] right-[8px] web:right-[10px] flex flex-col items-end">
         <Text className="text-[#9AA4B8] dark:text-[#8A94A8] text-[8px] web:text-[9px] font-medium uppercase" style={{fontFamily: "Inter_500Medium"}}>
           Total
         </Text>
@@ -107,7 +107,7 @@ export function MountUsageGauge({
         </Text>
       </Box>
 
-      <Box className="absolute bottom-[12px] web:bottom-[14px] left-1/2 -translate-x-1/2 flex items-center gap-1">
+      <Box className="absolute bottom-[2px] web:bottom-[4px] left-1/2 -translate-x-1/2 flex items-center gap-1">
         <Text className="text-[#9AA4B8] dark:text-[#8A94A8] text-[8px] web:text-[9px] font-medium" style={{fontFamily: "Inter_500Medium"}}>
           Free:
         </Text>
