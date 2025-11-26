@@ -29,6 +29,7 @@ import {Toast, ToastTitle, useToast} from "@/components/ui/toast";
 import {AlertDialog, AlertDialogBackdrop, AlertDialogContent, AlertDialogHeader, AlertDialogBody, AlertDialogFooter, AlertDialogCloseButton} from "@/components/ui/alert-dialog";
 import {Input, InputField} from "@/components/ui/input";
 import {Select, SelectTrigger, SelectInput, SelectItem, SelectIcon} from "@/components/ui/select";
+import {getAllVMs, listSlaves, VirtualMachine} from "@/services/vms-client";
 let Haptics: any;
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -72,14 +73,23 @@ import {
 // Interfaces TypeScript
 interface VM {
   name: string;
-  machine_name: string;
+  machineName: string;
   state: number;
-  vcpu: number;
-  memory: number;
-  disk_sizeGB: number;
+  DefinedCPUS: number;
+  DefinedRam: number;
+  memoryMB: number;
+  diskSizeGB: number;
+  AllocatedGb: number;
   network: string;
-  auto_start: boolean;
-  nfs_share_id: number;
+  autoStart: boolean;
+  diskPath: string;
+  ip: string[];
+  novnclink: string;
+  novncPort: string;
+  currentCpuUsage: number;
+  currentMemoryUsageMB: number;
+  cpuCount: number;
+  isLive: boolean;
 }
 
 interface VMState {
@@ -101,80 +111,32 @@ const VM_STATES: Record<number, VMState> = {
   8: {label: "No State", color: "bg-gray-300", badgeVariant: "outline"},
 };
 
-// Mock data
-const MOCK_VMS: VM[] = [
-  {
-    name: "vm-web-01",
-    machine_name: "slave-01",
-    state: 1,
-    vcpu: 4,
-    memory: 8192,
-    disk_sizeGB: 100,
-    network: "br0",
-    auto_start: true,
-    nfs_share_id: 1,
-  },
-  {
-    name: "vm-db-01",
-    machine_name: "slave-01",
-    state: 1,
-    vcpu: 8,
-    memory: 16384,
-    disk_sizeGB: 200,
-    network: "br0",
-    auto_start: true,
-    nfs_share_id: 1,
-  },
-  {
-    name: "vm-cache-01",
-    machine_name: "slave-01",
-    state: 5,
-    vcpu: 2,
-    memory: 4096,
-    disk_sizeGB: 50,
-    network: "br0",
-    auto_start: false,
-    nfs_share_id: 1,
-  },
-  {
-    name: "vm-api-01",
-    machine_name: "slave-02",
-    state: 1,
-    vcpu: 4,
-    memory: 8192,
-    disk_sizeGB: 80,
-    network: "br1",
-    auto_start: true,
-    nfs_share_id: 2,
-  },
-  {
-    name: "vm-worker-01",
-    machine_name: "slave-02",
-    state: 3,
-    vcpu: 6,
-    memory: 12288,
-    disk_sizeGB: 120,
-    network: "br1",
-    auto_start: false,
-    nfs_share_id: 2,
-  },
-  {
-    name: "vm-test-01",
-    machine_name: "slave-02",
-    state: 5,
-    vcpu: 2,
-    memory: 4096,
-    disk_sizeGB: 40,
-    network: "br1",
-    auto_start: false,
-    nfs_share_id: 2,
-  },
-];
+// Função para mapear VirtualMachine para VM
+const mapVirtualMachineToVM = (vm: VirtualMachine): VM => ({
+  name: vm.name,
+  machineName: vm.machineName,
+  state: vm.state,
+  DefinedCPUS: vm.DefinedCPUS,
+  DefinedRam: vm.DefinedRam,
+  memoryMB: vm.memoryMB,
+  diskSizeGB: vm.diskSizeGB,
+  AllocatedGb: vm.AllocatedGb,
+  network: vm.network,
+  autoStart: vm.autoStart,
+  diskPath: vm.diskPath,
+  ip: vm.ip,
+  novnclink: vm.novnclink,
+  novncPort: vm.novncPort,
+  currentCpuUsage: vm.currentCpuUsage,
+  currentMemoryUsageMB: vm.currentMemoryUsageMB,
+  cpuCount: vm.cpuCount,
+  isLive: vm.isLive,
+});
 
 export default function VirtualMachinesScreen() {
   const colorScheme = useColorScheme();
-  const [vms, setVms] = React.useState<VM[]>(MOCK_VMS);
-  const [loading, setLoading] = React.useState(false);
+  const [vms, setVms] = React.useState<VM[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [loadingVm, setLoadingVm] = React.useState<string | null>(null);
   const [openMenuFor, setOpenMenuFor] = React.useState<string | null>(null);
   const [detailsVm, setDetailsVm] = React.useState<VM | null>(null);
@@ -189,14 +151,37 @@ export default function VirtualMachinesScreen() {
   const [restoreVm, setRestoreVm] = React.useState<VM | null>(null);
   const toast = useToast();
 
+  // Fetch inicial de VMs
+  React.useEffect(() => {
+    const fetchVMs = async () => {
+      try {
+        const data = await getAllVMs();
+        setVms(data.map(mapVirtualMachineToVM));
+      } catch (error) {
+        console.error("Erro ao carregar VMs:", error);
+        toast.show({ 
+          placement: "top", 
+          render: ({id}) => (
+            <Toast nativeID={"toast-"+id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="error">
+              <ToastTitle size="sm">Erro ao carregar VMs</ToastTitle>
+            </Toast>
+          )
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchVMs();
+  }, []);
+
   // Agrupar VMs por slave
   const vmsBySlave = React.useMemo(() => {
     const grouped: Record<string, VM[]> = {};
     vms.forEach((vm) => {
-      if (!grouped[vm.machine_name]) {
-        grouped[vm.machine_name] = [];
+      if (!grouped[vm.machineName]) {
+        grouped[vm.machineName] = [];
       }
-      grouped[vm.machine_name].push(vm);
+      grouped[vm.machineName].push(vm);
     });
     return grouped;
   }, [vms]);
@@ -210,8 +195,8 @@ export default function VirtualMachinesScreen() {
     const running = vms.filter((vm) => vm.state === 1).length;
     const stopped = vms.filter((vm) => vm.state === 5).length;
     const paused = vms.filter((vm) => vm.state === 3).length;
-    const totalVcpu = vms.reduce((sum, vm) => sum + vm.vcpu, 0);
-    const totalMemoryGB = (vms.reduce((sum, vm) => sum + vm.memory, 0) / 1024).toFixed(1);
+    const totalVcpu = vms.reduce((sum, vm) => sum + vm.DefinedCPUS, 0);
+    const totalMemoryGB = (vms.reduce((sum, vm) => sum + vm.DefinedRam, 0) / 1024).toFixed(1);
     return {total, running, stopped, paused, totalVcpu, totalMemoryGB};
   }, [vms]);
 
@@ -219,13 +204,23 @@ export default function VirtualMachinesScreen() {
     setLoading(true);
     try {
       Haptics.selectionAsync();
-      // Simulação de fetch
-      await new Promise((res) => setTimeout(res, 800));
+      const data = await getAllVMs();
+      setVms(data.map(mapVirtualMachineToVM));
       toast.show({ placement: "top", render: ({id}) => (
         <Toast nativeID={"toast-"+id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="success">
           <ToastTitle size="sm">Atualizado</ToastTitle>
         </Toast>
       )});
+    } catch (error) {
+      console.error("Erro ao atualizar VMs:", error);
+      toast.show({ 
+        placement: "top", 
+        render: ({id}) => (
+          <Toast nativeID={"toast-"+id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="error">
+            <ToastTitle size="sm">Erro ao atualizar</ToastTitle>
+          </Toast>
+        )
+      });
     } finally {
       setLoading(false);
     }
@@ -249,7 +244,7 @@ export default function VirtualMachinesScreen() {
   };
 
   const handleToggleAutostart = (vm: VM, checked: boolean) => {
-    setVms((prev) => prev.map((v) => v.name === vm.name ? {...v, auto_start: checked} : v));
+    setVms((prev) => prev.map((v) => v.name === vm.name ? {...v, autoStart: checked} : v));
     Haptics.selectionAsync();
     toast.show({ placement: "top", render: ({id}) => (
       <Toast nativeID={"toast-"+id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="success">
@@ -445,11 +440,11 @@ export default function VirtualMachinesScreen() {
                   (vm) => vm.state === 1
                 ).length;
                 const slaveVcpu = slaveVms.reduce(
-                  (sum, vm) => sum + vm.vcpu,
+                  (sum, vm) => sum + vm.DefinedCPUS,
                   0
                 );
                 const slaveMemoryMB = slaveVms.reduce(
-                  (sum, vm) => sum + vm.memory,
+                  (sum, vm) => sum + vm.DefinedRam,
                   0
                 );
                 const slaveMemoryGB = (slaveMemoryMB / 1024).toFixed(1);
@@ -576,16 +571,24 @@ export default function VirtualMachinesScreen() {
                                       className="text-xs text-typography-900 dark:text-[#E8EBF0]"
                                       style={{fontFamily: "Inter_500Medium"}}
                                     >
-                                      {vm.vcpu} cores
+                                      {vm.DefinedCPUS} cores
                                     </Text>
                                   </Box>
                                   <Progress
-                                    value={80}
+                                    value={vm.currentCpuUsage}
                                     size="xs"
                                     orientation="horizontal"
                                     className="mb-5 mt-2"
                                   >
-                                    <ProgressFilledTrack />
+                                    <ProgressFilledTrack
+                                      className={
+                                        vm.currentCpuUsage >= 75
+                                          ? "bg-red-500"
+                                          : vm.currentCpuUsage >= 50
+                                          ? "bg-amber-500"
+                                          : ""
+                                      }
+                                    />
                                   </Progress>
                                 </HStack>
                                 <HStack className="flex flex-col">
@@ -600,16 +603,29 @@ export default function VirtualMachinesScreen() {
                                       className="text-xs text-typography-900 dark:text-[#E8EBF0]"
                                       style={{fontFamily: "Inter_500Medium"}}
                                     >
-                                      {formatMemory(vm.memory)}
+                                      {formatMemory(vm.DefinedRam)}
                                     </Text>
                                   </Box>
                                   <Progress
-                                    value={40}
+                                    value={
+                                      (vm.currentMemoryUsageMB * 100) /
+                                      vm.DefinedRam
+                                    }
                                     size="xs"
                                     orientation="horizontal"
-                                    className="mb-5 mt-2"
+                                    className="mb-5 mt-2" 
                                   >
-                                    <ProgressFilledTrack />
+                                    <ProgressFilledTrack
+                                      className={
+                                        vm.currentMemoryUsageMB >=
+                                        vm.DefinedRam * 0.75
+                                          ? "bg-red-500"
+                                          : vm.currentMemoryUsageMB >=
+                                            vm.DefinedRam * 0.5
+                                          ? "bg-amber-500"
+                                          : ""
+                                      }
+                                    />
                                   </Progress>
                                 </HStack>
                                 <HStack className="flex flex-col">
@@ -624,16 +640,27 @@ export default function VirtualMachinesScreen() {
                                       className="text-xs text-typography-900 dark:text-[#E8EBF0]"
                                       style={{fontFamily: "Inter_500Medium"}}
                                     >
-                                      {vm.disk_sizeGB} GB
+                                      {vm.diskSizeGB} GB
                                     </Text>
                                   </Box>
                                   <Progress
-                                    value={48}
+                                    value={
+                                      (vm.AllocatedGb * 100) / vm.diskSizeGB
+                                    }
                                     size="xs"
                                     orientation="horizontal"
                                     className="mb-5 mt-2"
                                   >
-                                    <ProgressFilledTrack />
+                                    <ProgressFilledTrack
+                                      className={
+                                        vm.AllocatedGb >= vm.diskSizeGB * 0.75
+                                          ? "bg-red-500"
+                                          : vm.AllocatedGb >=
+                                            vm.diskSizeGB * 0.5
+                                          ? "bg-amber-500"
+                                          : ""
+                                      }
+                                    />
                                   </Progress>
                                 </HStack>
                                 <HStack className="justify-between">
@@ -785,19 +812,19 @@ export default function VirtualMachinesScreen() {
                       <HStack className="justify-between">
                         <Text className="text-sm text-gray-600">vCPU</Text>
                         <Text className="text-sm text-gray-900">
-                          {detailsVm.vcpu} cores
+                          {detailsVm.DefinedCPUS} cores
                         </Text>
                       </HStack>
                       <HStack className="justify-between">
                         <Text className="text-sm text-gray-600">RAM</Text>
                         <Text className="text-sm text-gray-900">
-                          {detailsVm.memory} MB
+                          {formatMemory(detailsVm.DefinedRam)}
                         </Text>
                       </HStack>
                       <HStack className="justify-between">
                         <Text className="text-sm text-gray-600">Disco</Text>
                         <Text className="text-sm text-gray-900">
-                          {detailsVm.disk_sizeGB} GB
+                          {detailsVm.diskSizeGB} GB (Alocado: {detailsVm.AllocatedGb} GB)
                         </Text>
                       </HStack>
                       <HStack className="justify-between">
@@ -807,17 +834,25 @@ export default function VirtualMachinesScreen() {
                         </Text>
                       </HStack>
                       <HStack className="justify-between">
-                        <Text className="text-sm text-gray-600">NFS Share</Text>
-                        <Text className="text-sm text-gray-900">
-                          {detailsVm.nfs_share_id}
+                        <Text className="text-sm text-gray-600">Caminho do Disco</Text>
+                        <Text className="text-sm text-gray-900 truncate max-w-[200px]">
+                          {detailsVm.diskPath}
                         </Text>
                       </HStack>
+                      {detailsVm.ip.length > 0 && (
+                        <HStack className="justify-between">
+                          <Text className="text-sm text-gray-600">IP</Text>
+                          <Text className="text-sm text-gray-900">
+                            {detailsVm.ip.join(", ")}
+                          </Text>
+                        </HStack>
+                      )}
                       <HStack className="justify-between">
                         <Text className="text-sm text-gray-600">
                           Auto-start
                         </Text>
                         <Text className="text-sm text-gray-900">
-                          {detailsVm.auto_start ? "Sim" : "Não"}
+                          {detailsVm.autoStart ? "Sim" : "Não"}
                         </Text>
                       </HStack>
                     </VStack>
@@ -1060,7 +1095,7 @@ export default function VirtualMachinesScreen() {
                       setVms((prev) =>
                         prev.map((v) =>
                           v.name === migrateVm.name
-                            ? {...v, machine_name: targetSlave}
+                            ? {...v, machineName: targetSlave}
                             : v
                         )
                       );
@@ -1234,13 +1269,13 @@ export default function VirtualMachinesScreen() {
                 <Pressable
                 onPress={() => {
                   if (!selectedVm) return;
-                  handleToggleAutostart(selectedVm, !selectedVm.auto_start);
+                  handleToggleAutostart(selectedVm, !selectedVm.autoStart);
                   setShowActionsheet(false);
                 } }
                 className="px-3 py-3 hover:bg-background-50 rounded-md"
               >
                 <HStack className="items-center gap-2">
-                  {selectedVm?.auto_start && (
+                  {selectedVm?.autoStart && (
                     <Check size={16} className="text-typography-900" />
                   )}
                   <Text className="text-typography-900">
@@ -1387,12 +1422,12 @@ export default function VirtualMachinesScreen() {
         <ActionsheetItem
           onPress={() => {
             if (!selectedVm) return;
-            handleToggleAutostart(selectedVm, !selectedVm.auto_start);
+            handleToggleAutostart(selectedVm, !selectedVm.autoStart);
             setShowActionsheet(false);
           }}
         >
           <ActionsheetItemText>
-            {(selectedVm?.auto_start ? "✓ " : "") +
+            {(selectedVm?.autoStart ? "✓ " : "") +
           "Auto-start na inicialização"}
           </ActionsheetItemText>
         </ActionsheetItem>
@@ -1501,9 +1536,9 @@ export default function VirtualMachinesScreen() {
 
 // Forms Components
 function EditVmForm({vm, onCancel, onSave}: {vm: VM; onCancel: () => void; onSave: (vm: VM) => void}) {
-  const [vcpu, setVcpu] = React.useState(vm.vcpu);
-  const [memory, setMemory] = React.useState(vm.memory);
-  const [disk, setDisk] = React.useState(vm.disk_sizeGB);
+  const [vcpu, setVcpu] = React.useState(vm.DefinedCPUS);
+  const [memory, setMemory] = React.useState(vm.DefinedRam);
+  const [disk, setDisk] = React.useState(vm.diskSizeGB);
   const isValid = vcpu > 0 && memory > 0 && disk > 0;
   return (
     <VStack className="gap-3">
@@ -1526,7 +1561,7 @@ function EditVmForm({vm, onCancel, onSave}: {vm: VM; onCancel: () => void; onSav
       </Input>
       <HStack className="justify-end gap-2 mt-2">
         <Button variant="outline" className="rounded-md px-4 py-2" onPress={onCancel}><ButtonText>Cancelar</ButtonText></Button>
-        <Button className="rounded-md px-4 py-2" disabled={!isValid} onPress={() => onSave({...vm, vcpu, memory, disk_sizeGB: disk})}>
+        <Button className="rounded-md px-4 py-2" disabled={!isValid} onPress={() => onSave({...vm, DefinedCPUS: vcpu, DefinedRam: memory, diskSizeGB: disk})}>
           <ButtonText>Salvar</ButtonText>
         </Button>
       </HStack>
@@ -1536,9 +1571,9 @@ function EditVmForm({vm, onCancel, onSave}: {vm: VM; onCancel: () => void; onSav
 
 function CloneVmForm({vm, onCancel, onClone}: {vm: VM; onCancel: () => void; onClone: (vm: VM) => void}) {
   const [name, setName] = React.useState(vm.name + "-clone");
-  const [vcpu, setVcpu] = React.useState(vm.vcpu);
-  const [memory, setMemory] = React.useState(vm.memory);
-  const [disk, setDisk] = React.useState(vm.disk_sizeGB);
+  const [vcpu, setVcpu] = React.useState(vm.DefinedCPUS);
+  const [memory, setMemory] = React.useState(vm.DefinedRam);
+  const [disk, setDisk] = React.useState(vm.diskSizeGB);
   const isValid = name.trim().length > 0 && vcpu > 0 && memory > 0 && disk > 0;
   return (
     <VStack className="gap-3">
@@ -1564,7 +1599,26 @@ function CloneVmForm({vm, onCancel, onClone}: {vm: VM; onCancel: () => void; onC
       </Input>
       <HStack className="justify-end gap-2 mt-2">
         <Button variant="outline" className="rounded-md px-4 py-2" onPress={onCancel}><ButtonText>Cancelar</ButtonText></Button>
-        <Button className="rounded-md px-4 py-2" disabled={!isValid} onPress={() => onClone({name, machine_name: vm.machine_name, state: 5, vcpu, memory, disk_sizeGB: disk, network: vm.network, auto_start: vm.auto_start, nfs_share_id: vm.nfs_share_id})}>
+        <Button className="rounded-md px-4 py-2" disabled={!isValid} onPress={() => onClone({
+          name,
+          machineName: vm.machineName,
+          state: 5,
+          DefinedCPUS: vcpu,
+          DefinedRam: memory,
+          memoryMB: 0,
+          diskSizeGB: disk,
+          AllocatedGb: 0,
+          network: vm.network,
+          autoStart: vm.autoStart,
+          diskPath: vm.diskPath,
+          ip: [],
+          novnclink: "",
+          novncPort: "",
+          currentCpuUsage: 0,
+          currentMemoryUsageMB: 0,
+          cpuCount: 0,
+          isLive: false,
+        })}>
           <ButtonText>Clonar</ButtonText>
         </Button>
       </HStack>
@@ -1573,10 +1627,10 @@ function CloneVmForm({vm, onCancel, onClone}: {vm: VM; onCancel: () => void; onC
 }
 
 function MigrateVmForm({vm, slaves, onCancel, onMigrate}: {vm: VM; slaves: string[]; onCancel: () => void; onMigrate: (targetSlave: string) => void}) {
-  const [target, setTarget] = React.useState(slaves.find((s) => s !== vm.machine_name) || vm.machine_name);
+  const [target, setTarget] = React.useState(slaves.find((s) => s !== vm.machineName) || vm.machineName);
   return (
     <VStack className="gap-3">
-      <Text className="text-gray-700">Migrar {vm.name} de {vm.machine_name} para:</Text>
+      <Text className="text-gray-700">Migrar {vm.name} de {vm.machineName} para:</Text>
       <Select>
         <SelectTrigger>
           <SelectInput value={target} />
@@ -1596,17 +1650,17 @@ function MigrateVmForm({vm, slaves, onCancel, onMigrate}: {vm: VM; slaves: strin
   );
 }
 
-function MoveDiskForm({vm, onCancel, onMove}: {vm: VM; onCancel: () => void; onMove: (shareId: number) => void}) {
-  const [shareId, setShareId] = React.useState(vm.nfs_share_id);
+function MoveDiskForm({vm, onCancel, onMove}: {vm: VM; onCancel: () => void; onMove: (diskPath: string) => void}) {
+  const [diskPath, setDiskPath] = React.useState(vm.diskPath);
   return (
     <VStack className="gap-3">
-      <Text className="text-gray-700">Mover disco de {vm.name} para NFS Share ID:</Text>
+      <Text className="text-gray-700">Mover disco de {vm.name} para novo caminho:</Text>
       <Input variant="outline" className="rounded-md">
-        <InputField placeholder="NFS Share ID" keyboardType="numeric" value={String(shareId)} onChangeText={(t) => setShareId(Number(t) || 0)} />
+        <InputField placeholder="Caminho do disco" value={diskPath} onChangeText={setDiskPath} />
       </Input>
       <HStack className="justify-end gap-2 mt-2">
         <Button variant="outline" className="rounded-md px-4 py-2" onPress={onCancel}><ButtonText>Cancelar</ButtonText></Button>
-        <Button className="rounded-md px-4 py-2" disabled={shareId <= 0} onPress={() => onMove(shareId)}>
+        <Button className="rounded-md px-4 py-2" disabled={diskPath.trim().length === 0} onPress={() => onMove(diskPath)}>
           <ButtonText>Mover</ButtonText>
         </Button>
       </HStack>
