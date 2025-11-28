@@ -276,24 +276,23 @@ export default function VirtualMachinesScreen() {
         }
       >
         <Box className="p-4 pt-16 web:p-10 web:max-w-7xl web:mx-auto web:w-full">
-          <Heading
-            size="2xl"
-            className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
-            style={{fontFamily: "Inter_700Bold"}}
-          >
-            Virtual Machines
-          </Heading>
-          <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl mb-6">
-            Gestão completa de máquinas virtuais distribuídas por slave com
-            controle de recursos e monitoramento.
-          </Text>
-
-          <HStack className="justify-between items-center mb-6">
-            <VStack className="flex-1" />
+          <HStack className="justify-between items-start mb-3">
+            <VStack className="flex-1">
+              <Heading
+                size="2xl"
+                className="text-typography-900 dark:text-[#E8EBF0] web:text-4xl"
+                style={{fontFamily: "Inter_700Bold"}}
+              >
+                Virtual Machines
+              </Heading>
+              <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl mt-2">
+                Gestão completa de máquinas virtuais distribuídas por slave com controle de recursos e monitoramento.
+              </Text>
+            </VStack>
             <HStack className="gap-2">
               <Button
                 variant="outline"
-                size="sm"
+                size="md"
                 onPress={handleRefresh}
                 disabled={loading}
                 className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
@@ -308,7 +307,7 @@ export default function VirtualMachinesScreen() {
                 )}
               </Button>
               <Button
-                size="sm"
+                size="md"
                 onPress={handleNewVM}
                 className="rounded-lg bg-typography-900 dark:bg-[#E8EBF0]"
               >
@@ -324,7 +323,118 @@ export default function VirtualMachinesScreen() {
           </HStack>
 
           {/* Stats Overview */}
-          <HStack className="mb-6 gap-4 flex-wrap">
+          <HStack className="mb-6 mt-6 gap-4 flex-wrap web:grid web:grid-cols-6">
+            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
+              <HStack className="items-center gap-2 mb-2">
+                <Server size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
+                <Text
+                  className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
+                  style={{fontFamily: "Inter_500Medium"}}
+                >
+                  Total VMs
+                </Text>
+              </HStack>
+              <Text
+                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
+                style={{fontFamily: "Inter_700Bold"}}
+              >
+                {loading ? "..." : stats.total}
+              </Text>
+            </Box>
+
+            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
+              <HStack className="items-center gap-2 mb-2">
+                <Play size={16} className="text-[#2DD4BF] dark:text-[#5EEAD4]" />
+                <Text
+                  className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
+                  style={{fontFamily: "Inter_500Medium"}}
+                >
+                  Running
+                </Text>
+              </HStack>
+              <Text
+                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
+                style={{fontFamily: "Inter_700Bold"}}
+              >
+                {loading ? "..." : stats.running}
+              </Text>
+            </Box>
+
+            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
+              <HStack className="items-center gap-2 mb-2">
+                <Square size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
+                <Text
+                  className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
+                  style={{fontFamily: "Inter_500Medium"}}
+                >
+                  Stopped
+                </Text>
+              </HStack>
+              <Text
+                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
+                style={{fontFamily: "Inter_700Bold"}}
+              >
+                {loading ? "..." : stats.stopped}
+              </Text>
+            </Box>
+
+            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
+              <HStack className="items-center gap-2 mb-2">
+                <Pause size={16} className="text-[#FBBF24] dark:text-[#FCD34D]" />
+                <Text
+                  className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
+                  style={{fontFamily: "Inter_500Medium"}}
+                >
+                  Paused
+                </Text>
+              </HStack>
+              <Text
+                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
+                style={{fontFamily: "Inter_700Bold"}}
+              >
+                {loading ? "..." : stats.paused}
+              </Text>
+            </Box>
+
+            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
+              <HStack className="items-center gap-2 mb-2">
+                <Cpu size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
+                <Text
+                  className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
+                  style={{fontFamily: "Inter_500Medium"}}
+                >
+                  Total vCPUs
+                </Text>
+              </HStack>
+              <Text
+                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
+                style={{fontFamily: "Inter_700Bold"}}
+              >
+                {loading ? "..." : stats.totalVcpu}
+              </Text>
+            </Box>
+
+            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
+              <HStack className="items-center gap-2 mb-2">
+                <MemoryStick size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
+                <Text
+                  className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
+                  style={{fontFamily: "Inter_500Medium"}}
+                >
+                  Total RAM
+                </Text>
+              </HStack>
+              <Text
+                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
+                style={{fontFamily: "Inter_700Bold"}}
+              >
+                {loading ? "..." : stats.totalMemoryGB} GB
+              </Text>
+            </Box>
+          </HStack>
+
+          {/* Linha separadora removida - stats inline antigos */}
+          <HStack className="mb-6 gap-4 flex-wrap hidden">
             <HStack className="gap-2 items-center">
               <Text
                 className="text-typography-600 dark:text-typography-400 text-sm"
