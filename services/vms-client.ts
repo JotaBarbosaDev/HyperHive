@@ -1,8 +1,8 @@
-import {apiFetch} from "./api-client";
-import {loadAuthToken} from "./auth-storage";
-import {setAuthToken, triggerUnauthorized} from "./api-client";
-import {getApiBaseUrl, setApiBaseUrl} from "@/config/apiConfig";
-import {loadApiBaseUrl} from "./auth-storage";
+import { apiFetch } from "./api-client";
+import { loadAuthToken } from "./auth-storage";
+import { setAuthToken, triggerUnauthorized } from "./api-client";
+import { getApiBaseUrl, setApiBaseUrl } from "@/config/apiConfig";
+import { loadApiBaseUrl } from "./auth-storage";
 
 export type Slave = {
   Addr: string;
@@ -11,6 +11,18 @@ export type Slave = {
   LastSeen: string;
   EntryTime: string;
 };
+
+export enum VmState {
+  UNKNOWN = 0,
+  RUNNING = 1,
+  BLOCKED = 2,
+  PAUSED = 3,
+  SHUTDOWN = 4,
+  SHUTOFF = 5,
+  CRASHED = 6,
+  PMSUSPENDED = 7,
+  NOSTATE = 8,
+}
 
 export type VirtualMachine = {
   AllocatedGb: number;
@@ -33,7 +45,7 @@ export type VirtualMachine = {
   novncPort: string;
   novnclink: string;
   spritePort: string;
-  state: number;
+  state: VmState;
 };
 
 const ensureApiBaseUrl = async () => {
@@ -51,7 +63,7 @@ const ensureApiBaseUrl = async () => {
   return baseUrl;
 };
 
-const resolveToken = async () => {
+export const resolveToken = async () => {
   await ensureApiBaseUrl();
   const storedToken = await loadAuthToken();
   if (!storedToken) {
@@ -65,10 +77,74 @@ const resolveToken = async () => {
 
 export async function listSlaves(): Promise<Slave[]> {
   const authToken = await resolveToken();
-  return apiFetch<Slave[]>("/protocol/list", {token: authToken});
+  return apiFetch<Slave[]>("/protocol/list", { token: authToken });
 }
 
 export async function getAllVMs(): Promise<VirtualMachine[]> {
   const authToken = await resolveToken();
-  return apiFetch<VirtualMachine[]>("/virsh/getallvms", {token: authToken});
+  return apiFetch<VirtualMachine[]>("/virsh/getallvms", { token: authToken });
+}
+
+export async function pauseVM(vmName: string) {
+  const authToken = await resolveToken();
+  await apiFetch<void>(`/virsh/pausevm/${vmName}`, {
+    method: "POST",
+    token: authToken,
+  });
+
+}
+
+export async function resumeVM(vmName: string) {
+  const authToken = await resolveToken();
+  await apiFetch<void>(`/virsh/resumevm/${vmName}`, {
+    method: "POST",
+    token: authToken,
+  });
+}
+
+export async function restartVM(vmName: string) {
+  const authToken = await resolveToken();
+  await apiFetch<void>(`/virsh/restartvm/${vmName}`, {
+    method: "POST",
+    token: authToken,
+  });
+}
+
+export async function shutdownVM(vmName: string) {
+  const authToken = await resolveToken();
+  await apiFetch<void>(`/virsh/shutdownvm/${vmName}`, {
+    method: "POST",
+    token: authToken,
+  });
+}
+
+export async function startVM(vmName: string) {
+  const authToken = await resolveToken();
+  await apiFetch<void>(`/virsh/startvm/${vmName}`, {
+    method: "POST",
+    token: authToken,
+  });
+}
+
+export async function forceShutdownVM(vmName: string) {
+  const authToken = await resolveToken();
+  await apiFetch<void>(`/virsh/forceshutdownvm/${vmName}`, {
+    method: "POST",
+    token: authToken,
+  });
+}
+
+export type IsoApiResponse = {
+  Id: number;
+  MachineName: string;
+  FilePath: string;
+  Name: string;
+  available_on_slaves: Record<string, boolean>;
+}[];
+
+export async function listIsos(): Promise<IsoApiResponse> {
+  const authToken = await resolveToken();
+  return apiFetch<IsoApiResponse>("/isos/", {
+    token: authToken,
+  });
 }

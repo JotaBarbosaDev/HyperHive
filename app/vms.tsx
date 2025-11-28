@@ -11,9 +11,7 @@ import {Modal, ModalBackdrop, ModalContent, ModalHeader, ModalBody, ModalFooter,
 import {Divider} from "@/components/ui/divider";
 import {Progress, ProgressFilledTrack} from "@/components/ui/progress";
 import {Platform} from "react-native";
-import { Switch } from "@/components/ui/switch";
 import { Heading } from '@/components/ui/heading';
-import { Icon, CloseIcon } from '@/components/ui/icon';
 import CreateVmModal from "@/components/modals/CreateVmModal";
 import {
   Actionsheet,
@@ -29,7 +27,17 @@ import {Toast, ToastTitle, useToast} from "@/components/ui/toast";
 import {AlertDialog, AlertDialogBackdrop, AlertDialogContent, AlertDialogHeader, AlertDialogBody, AlertDialogFooter, AlertDialogCloseButton} from "@/components/ui/alert-dialog";
 import {Input, InputField} from "@/components/ui/input";
 import {Select, SelectTrigger, SelectInput, SelectItem, SelectIcon} from "@/components/ui/select";
-import {getAllVMs, listSlaves, VirtualMachine} from "@/services/vms-client";
+import {
+  getAllVMs,
+  VirtualMachine,
+  VmState,
+  pauseVM,
+  resumeVM,
+  restartVM,
+  shutdownVM,
+  forceShutdownVM,
+  startVM,
+} from "@/services/vms-client";
 let Haptics: any;
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -46,19 +54,14 @@ try {
 import {
   Cpu,
   MemoryStick,
-  PauseCircle,
-  Power,
   Server,
   Square,
   RefreshCw,
   Plus,
   Play,
   Pause,
-  RotateCw,
   Monitor,
   Zap,
-  Disc,
-  Download,
   MoreVertical,
   Settings,
   Copy,
@@ -66,7 +69,6 @@ import {
   HardDrive,
   Trash2,
   Check,
-  MonitorPause,
   RefreshCcw,
 } from "lucide-react-native";
 
@@ -74,7 +76,7 @@ import {
 interface VM {
   name: string;
   machineName: string;
-  state: number;
+  state: VmState;
   DefinedCPUS: number;
   DefinedRam: number;
   memoryMB: number;
@@ -99,16 +101,16 @@ interface VMState {
 }
 
 // Estados das VMs
-const VM_STATES: Record<number, VMState> = {
-  0: {label: "Unknown", color: "bg-gray-400", badgeVariant: "outline"},
-  1: {label: "Running", color: "bg-green-500", badgeVariant: "solid"},
-  2: {label: "Blocked", color: "bg-red-500", badgeVariant: "solid"},
-  3: {label: "Paused", color: "bg-yellow-500", badgeVariant: "solid"},
-  4: {label: "Shutdown", color: "bg-orange-500", badgeVariant: "solid"},
-  5: {label: "Shutoff", color: "bg-gray-400", badgeVariant: "outline"},
-  6: {label: "Crashed", color: "bg-red-600", badgeVariant: "solid"},
-  7: {label: "PM Suspended", color: "bg-blue-400", badgeVariant: "solid"},
-  8: {label: "No State", color: "bg-gray-300", badgeVariant: "outline"},
+const VM_STATES: Record<VmState, VMState> = {
+  [VmState.UNKNOWN]: {label: "Unknown", color: "bg-gray-400", badgeVariant: "outline"},
+  [VmState.RUNNING]: {label: "Running", color: "bg-green-500", badgeVariant: "solid"},
+  [VmState.BLOCKED]: {label: "Blocked", color: "bg-red-500", badgeVariant: "solid"},
+  [VmState.PAUSED]: {label: "Paused", color: "bg-yellow-500", badgeVariant: "solid"},
+  [VmState.SHUTDOWN]: {label: "Shutdown", color: "bg-orange-500", badgeVariant: "solid"},
+  [VmState.SHUTOFF]: {label: "Shutoff", color: "bg-gray-400", badgeVariant: "outline"},
+  [VmState.CRASHED]: {label: "Crashed", color: "bg-red-600", badgeVariant: "solid"},
+  [VmState.PMSUSPENDED]: {label: "PM Suspended", color: "bg-blue-400", badgeVariant: "solid"},
+  [VmState.NOSTATE]: {label: "No State", color: "bg-gray-300", badgeVariant: "outline"},
 };
 
 // Função para mapear VirtualMachine para VM
@@ -151,12 +153,17 @@ export default function VirtualMachinesScreen() {
   const [restoreVm, setRestoreVm] = React.useState<VM | null>(null);
   const toast = useToast();
 
+  const fetchAndSetVms = React.useCallback(async () => {
+    const data = await getAllVMs();
+    setVms(data.map(mapVirtualMachineToVM));
+    return data;
+  }, []);
+
   // Fetch inicial de VMs
   React.useEffect(() => {
     const fetchVMs = async () => {
       try {
-        const data = await getAllVMs();
-        setVms(data.map(mapVirtualMachineToVM));
+        await fetchAndSetVms();
       } catch (error) {
         console.error("Erro ao carregar VMs:", error);
         toast.show({ 
@@ -172,7 +179,7 @@ export default function VirtualMachinesScreen() {
       }
     };
     fetchVMs();
-  }, []);
+  }, [fetchAndSetVms, toast]);
 
   // Agrupar VMs por slave
   const vmsBySlave = React.useMemo(() => {
@@ -192,9 +199,9 @@ export default function VirtualMachinesScreen() {
 
   const stats = React.useMemo(() => {
     const total = vms.length;
-    const running = vms.filter((vm) => vm.state === 1).length;
-    const stopped = vms.filter((vm) => vm.state === 5).length;
-    const paused = vms.filter((vm) => vm.state === 3).length;
+    const running = vms.filter((vm) => vm.state === VmState.RUNNING).length;
+    const stopped = vms.filter((vm) => vm.state === VmState.SHUTOFF).length;
+    const paused = vms.filter((vm) => vm.state === VmState.PAUSED).length;
     const totalVcpu = vms.reduce((sum, vm) => sum + vm.DefinedCPUS, 0);
     const totalMemoryGB = (vms.reduce((sum, vm) => sum + vm.DefinedRam, 0) / 1024).toFixed(1);
     return {total, running, stopped, paused, totalVcpu, totalMemoryGB};
@@ -204,8 +211,7 @@ export default function VirtualMachinesScreen() {
     setLoading(true);
     try {
       Haptics.selectionAsync();
-      const data = await getAllVMs();
-      setVms(data.map(mapVirtualMachineToVM));
+      await fetchAndSetVms();
       toast.show({ placement: "top", render: ({id}) => (
         <Toast nativeID={"toast-"+id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="success">
           <ToastTitle size="sm">Atualizado</ToastTitle>
@@ -230,17 +236,43 @@ export default function VirtualMachinesScreen() {
     setOpenCreate(true);
   };
 
-  const handleVmAction = (vmName: string, action: string) => {
+  const handleVmAction = async (vmName: string, action: string) => {
     setLoadingVm(vmName);
     Haptics.selectionAsync();
-    setTimeout(() => {
-      setLoadingVm(null);
+    try {
+      if (action === "pause") {
+        await pauseVM(vmName);
+      } else if (action === "resume") {
+        await resumeVM(vmName);
+      } else if (action === "restart") {
+        await restartVM(vmName);
+      } else if (action === "shutdown") {
+        await shutdownVM(vmName);
+      } else if (action === "force-shutdown") {
+        await forceShutdownVM(vmName);
+      } else if (action === "start") {
+        await startVM(vmName);
+      }
+
+      await fetchAndSetVms();
       toast.show({ placement: "top", render: ({id}) => (
         <Toast nativeID={"toast-"+id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="success">
           <ToastTitle size="sm">{action} executado</ToastTitle>
         </Toast>
       )});
-    }, 800);
+    } catch (error) {
+      console.error("Erro ao executar ação na VM:", error);
+      toast.show({ 
+        placement: "top", 
+        render: ({id}) => (
+          <Toast nativeID={"toast-"+id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="error">
+            <ToastTitle size="sm">Erro ao executar ação</ToastTitle>
+          </Toast>
+        )
+      });
+    } finally {
+      setLoadingVm(null);
+    }
   };
 
   const handleToggleAutostart = (vm: VM, checked: boolean) => {
@@ -547,7 +579,7 @@ export default function VirtualMachinesScreen() {
             <VStack className="gap-6">
               {Object.entries(vmsBySlave).map(([slaveName, slaveVms]) => {
                 const slaveRunning = slaveVms.filter(
-                  (vm) => vm.state === 1
+                  (vm) => vm.state === VmState.RUNNING
                 ).length;
                 const slaveVcpu = slaveVms.reduce(
                   (sum, vm) => sum + vm.DefinedCPUS,
@@ -587,9 +619,9 @@ export default function VirtualMachinesScreen() {
                       <VStack className="gap-4 web:grid web:grid-cols-1 web:gap-4 web:sm:grid-cols-2 web:lg:grid-cols-3">
                         {slaveVms.map((vm) => {
                           const vmState = VM_STATES[vm.state];
-                          const isRunning = vm.state === 1;
-                          const isPaused = vm.state === 3;
-                          const isStopped = vm.state === 5;
+                          const isRunning = vm.state === VmState.RUNNING;
+                          const isPaused = vm.state === VmState.PAUSED;
+                          const isStopped = vm.state === VmState.SHUTOFF;
                           const isLoading = loadingVm === vm.name;
 
                           return (
@@ -1461,7 +1493,7 @@ export default function VirtualMachinesScreen() {
               </Pressable>
 
               {/* Force Shutdown */}
-              {selectedVm?.state === 1 && (
+              {selectedVm?.state === VmState.RUNNING && (
                 <Pressable
                   onPress={() => {
                     if (!selectedVm) return;
@@ -1599,7 +1631,7 @@ export default function VirtualMachinesScreen() {
         </ActionsheetItem>
 
         {/* Force Shutdown */}
-        {selectedVm?.state === 1 && (
+        {selectedVm?.state === VmState.RUNNING && (
           <ActionsheetItem
             onPress={() => {
           if (!selectedVm) return;
@@ -1712,7 +1744,7 @@ function CloneVmForm({vm, onCancel, onClone}: {vm: VM; onCancel: () => void; onC
         <Button className="rounded-md px-4 py-2" disabled={!isValid} onPress={() => onClone({
           name,
           machineName: vm.machineName,
-          state: 5,
+          state: VmState.SHUTOFF,
           DefinedCPUS: vcpu,
           DefinedRam: memory,
           memoryMB: 0,

@@ -31,8 +31,11 @@ import { Checkbox, CheckboxIndicator, CheckboxIcon, CheckboxLabel } from "@/comp
 import { Textarea, TextareaInput } from "@/components/ui/textarea";
 import { Badge, BadgeText } from "@/components/ui/badge";
 import { ScrollView, Platform } from "react-native";
-import { Cpu, X, Copy, Trash2, ChevronDown, Check } from "lucide-react-native";
+import { Cpu, X, Copy, Trash2, ChevronDown, Check, ChevronDownIcon } from "lucide-react-native";
 import { useToast, Toast, ToastTitle, ToastDescription } from "@/components/ui/toast";
+import { resolveToken, listIsos, IsoApiResponse } from "@/services/vms-client"
+import { listMounts } from "@/services/hyperhive"
+import { Mount } from "@/types/mount"
 
 // Try/catch para lidar com expo-clipboard
 let Clipboard: any;
@@ -52,6 +55,21 @@ interface CreateVmModalProps {
   setShowModal: (show: boolean) => void;
   onSuccess?: () => void;
 }
+
+let isos: IsoApiResponse = [];
+let mounts: Mount[] = [];
+
+(async () => {
+  try {
+    const [fetchedIsos, fetchedMounts] = await Promise.all([listIsos(), listMounts()]);
+    isos = fetchedIsos;
+    mounts = fetchedMounts;
+  } catch (err) {
+    console.error("Failed to list ISOs or mounts:", err);
+  }
+})()
+
+
 
 export default function CreateVmModal({
   showModal,
@@ -225,7 +243,7 @@ export default function CreateVmModal({
 
       if (onSuccess) onSuccess();
       setShowModal(false);
-      
+
       // Reset form
       setName("");
       setSlave("slave-01");
@@ -453,18 +471,25 @@ export default function CreateVmModal({
                   >
                     NFS Share ID
                   </Text>
-                  <Input
-                    variant="outline"
-                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
-                  >
-                    <InputField
-                      value={nfsShare}
-                      onChangeText={setNfsShare}
-                      keyboardType="numeric"
-                      placeholder="54"
-                      className="text-typography-900 dark:text-[#E8EBF0]"
-                    />
-                  </Input>
+                  <Select>
+                    <SelectTrigger variant="outline" size="md">
+                      <SelectInput placeholder="Select NFS" />
+                      <SelectIcon className="mr-3" as={ChevronDownIcon} />
+                    </SelectTrigger>
+                    <SelectPortal>
+                      <SelectBackdrop />
+                      <SelectContent>
+                        {mounts.map((s) => (
+                          <SelectItem
+                            key={s.NfsShare.Id}
+                            label={s.NfsShare.Name}
+                            value={String(s.NfsShare.Id)}
+                            className="text-typography-900 dark:text-[#E8EBF0]"
+                          />
+                        ))}
+                      </SelectContent>
+                    </SelectPortal>
+                  </Select>
                 </VStack>
 
                 {/* ISO ID */}
@@ -475,18 +500,25 @@ export default function CreateVmModal({
                   >
                     ISO ID (Opcional)
                   </Text>
-                  <Input
-                    variant="outline"
-                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
-                  >
-                    <InputField
-                      value={iso}
-                      onChangeText={setIso}
-                      keyboardType="numeric"
-                      placeholder="46"
-                      className="text-typography-900 dark:text-[#E8EBF0]"
-                    />
-                  </Input>
+                  <Select>
+                    <SelectTrigger variant="outline" size="md">
+                      <SelectInput placeholder="Select ISO" />
+                      <SelectIcon className="mr-3" as={ChevronDownIcon} />
+                    </SelectTrigger>
+                    <SelectPortal>
+                      <SelectBackdrop />
+                      <SelectContent>
+                        {isos.map((s) => (
+                          <SelectItem
+                            key={s.Id}
+                            label={s.Name}
+                            value={String(s.Id)}
+                            className="text-typography-900 dark:text-[#E8EBF0]"
+                          />
+                        ))}
+                      </SelectContent>
+                    </SelectPortal>
+                  </Select>
                 </VStack>
               </VStack>
 
@@ -550,7 +582,7 @@ export default function CreateVmModal({
                   <InputField
                     value={vncPassword}
                     onChangeText={setVncPassword}
-                    placeholder="Deixe vazio para gerar automaticamente"
+                    placeholder="Insert NoVNC Password (optional)"
                     secureTextEntry={true}
                     className="text-typography-900 dark:text-[#E8EBF0]"
                   />
@@ -761,7 +793,7 @@ export default function CreateVmModal({
                         value={cpuXml}
                         onChangeText={setCpuXml}
                         placeholder="O XML das CPUs mútuas aparecerá aqui após clicar em 'Get Mutual CPUs'..."
-                        style={{ 
+                        style={{
                           fontFamily: "Courier",
                           color: cpuXml ? "#22C55E" : undefined
                         }}

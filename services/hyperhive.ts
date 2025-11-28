@@ -1,10 +1,10 @@
-import {DirectoryListing} from "@/types/directory";
-import {Machine} from "@/types/machine";
-import {Mount, MountShare} from "@/types/mount";
-import {LoginPayload, LoginResponse} from "@/types/auth";
-import {getApiBaseUrl, setApiBaseUrl} from "@/config/apiConfig";
-import {apiFetch, setAuthToken, triggerUnauthorized} from "./api-client";
-import {loadAuthToken, loadApiBaseUrl} from "./auth-storage";
+import { DirectoryListing } from "@/types/directory";
+import { Machine } from "@/types/machine";
+import { Mount, MountShare } from "@/types/mount";
+import { LoginPayload, LoginResponse } from "@/types/auth";
+import { getApiBaseUrl, setApiBaseUrl } from "@/config/apiConfig";
+import { apiFetch, setAuthToken, triggerUnauthorized } from "./api-client";
+import { loadAuthToken, loadApiBaseUrl } from "./auth-storage";
 
 export type DeleteMountOptions = {
   force?: boolean;
@@ -60,12 +60,12 @@ const resolveToken = async () => {
 
 export async function listMounts(): Promise<Mount[]> {
   const authToken = await resolveToken();
-  return apiFetch<Mount[]>("/nfs/list", {token: authToken});
+  return apiFetch<Mount[]>("/nfs/list", { token: authToken });
 }
 
 export async function deleteMount(
   share: Pick<MountShare, "MachineName" | "FolderPath">,
-  {force = false}: DeleteMountOptions = {}
+  { force = false }: DeleteMountOptions = {}
 ): Promise<void> {
   const authToken = await resolveToken();
   await apiFetch<void>(`/nfs/delete?force=${force}`, {
@@ -77,6 +77,8 @@ export async function deleteMount(
     },
   });
 }
+
+
 
 export async function createMount(
   input: CreateMountInput
@@ -104,7 +106,7 @@ export async function login(input: LoginPayload): Promise<LoginResponse> {
 
 export async function listMachines(): Promise<Machine[]> {
   const authToken = await resolveToken();
-  return apiFetch<Machine[]>("/protocol/list", {token: authToken});
+  return apiFetch<Machine[]>("/protocol/list", { token: authToken });
 }
 
 export async function listDirectory(
@@ -115,11 +117,11 @@ export async function listDirectory(
   return apiFetch<DirectoryListing>(`/nfs/contents/${machineName}`, {
     method: "POST",
     token: authToken,
-    body: {path},
+    body: { path },
   });
 }
 
-export async function listIsos({token}: ListIsosOptions = {}): Promise<IsoApiResponse> {
+export async function listIsos({ token }: ListIsosOptions = {}): Promise<IsoApiResponse> {
   const authToken = token ?? (await resolveToken());
   return apiFetch<IsoApiResponse>("/isos/", {
     token: authToken,
@@ -136,7 +138,7 @@ export async function downloadIso(input: DownloadIsoInput): Promise<void> {
       iso_name: input.isoName,
       nfs_share_id: input.nfsShareId,
     },
-    
+
   });
 }
 
@@ -148,25 +150,25 @@ export async function deleteIso(id: string): Promise<void> {
   });
 }
 
-export async function listLogs(options: {limit?: number; level?: number} = {}): Promise<any[]> {
+export async function listLogs(options: { limit?: number; level?: number } = {}): Promise<any[]> {
   const authToken = await resolveToken();
   const params = new URLSearchParams();
-  
+
   console.log('listLogs called with options:', options);
-  
+
   if (options.limit !== undefined) {
     params.append("limit", options.limit.toString());
   }
-  
+
   if (options.level !== undefined) {
     params.append("level", options.level.toString());
   }
-  
+
   const queryString = params.toString();
   const path = queryString ? `/logs/list?${queryString}` : "/logs/list";
-  
+
   console.log('API path:', path);
-  
+
   return apiFetch<any[]>(path, {
     token: authToken,
   });
