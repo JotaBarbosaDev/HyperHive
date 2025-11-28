@@ -20,98 +20,84 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import {Icon, ChevronDownIcon} from "@/components/ui/icon";
-import {AlertCircle, AlertTriangle, CheckCircle, Info, Search} from "lucide-react-native";
+import {AlertCircle, AlertTriangle, CheckCircle, Info, Search, Settings2} from "lucide-react-native";
 import {Toast, ToastTitle, useToast} from "@/components/ui/toast";
-
-// Tipos de Log
-type LogLevel = "error" | "warning" | "success" | "info";
-
-interface LogEntry {
-  id: string;
-  timestamp: string;
-  level: LogLevel;
-  machine: string;
-  message: string;
-}
-
-// Mock Data Realista
-const MOCK_LOGS: LogEntry[] = [
-  {
-    id: "log-001",
-    timestamp: "2025-11-28 14:32:15",
-    level: "error",
-    machine: "node-01",
-    message: "Failed to scrub RAID: disk /dev/sdb not responding",
-  },
-  {
-    id: "log-002",
-    timestamp: "2025-11-28 14:28:03",
-    level: "success",
-    machine: "node-02",
-    message: "VM vm-web-01 started successfully",
-  },
-  {
-    id: "log-003",
-    timestamp: "2025-11-28 14:15:42",
-    level: "warning",
-    machine: "node-01",
-    message: "Disk /dev/sdc temperature: 45°C (high)",
-  },
-  {
-    id: "log-004",
-    timestamp: "2025-11-28 13:58:21",
-    level: "info",
-    machine: "node-03",
-    message: "Automatic backup completed for vm-db-01",
-  },
-  {
-    id: "log-005",
-    timestamp: "2025-11-28 13:45:09",
-    level: "error",
-    machine: "node-02",
-    message: "Network timeout: failed to mount NFS share //10.0.0.5/backups",
-  },
-  {
-    id: "log-006",
-    timestamp: "2025-11-28 13:30:55",
-    level: "info",
-    machine: "node-01",
-    message: "Scheduled maintenance completed: system updated to latest version",
-  },
-];
+import {useLogs} from "@/hooks/useLogs";
+import {LogEntry, LogLevel, LOG_LEVEL_MAP} from "@/types/log";
+import {useAuthGuard} from "@/hooks/useAuthGuard";
+import {Spinner} from "@/components/ui/spinner";
 
 export default function LogsScreen() {
   const colorScheme = useColorScheme();
   const toast = useToast();
-  const [logs, setLogs] = React.useState<LogEntry[]>(MOCK_LOGS);
-  const [loading, setLoading] = React.useState(false);
+  const {token} = useAuthGuard();
+  
+  // Configurações de filtro
+  const [limit, setLimit] = React.useState(200);
+  const [levelFilter, setLevelFilter] = React.useState<string>("all");
   const [searchTerm, setSearchTerm] = React.useState("");
-  const [levelFilter, setLevelFilter] = React.useState<LogLevel | "all">("all");
+  
+  // Handler para mudança de nível
+  const handleLevelChange = (value: string) => {
+    console.log('Level dropdown changed to:', value);
+    setLevelFilter(value);
+  };
+  
+  // Converter levelFilter para número ou undefined
+  const levelNumber = levelFilter === "all" ? undefined : parseInt(levelFilter);
+  
+  // Buscar logs com os filtros
+  const {logs, isLoading, isRefreshing, error, refresh} = useLogs({
+    token,
+    limit,
+    level: levelNumber,
+  });
+
+  // Filtro de busca local
+  const filteredLogs = React.useMemo(() => {
+    return logs.filter((log) => {
+      if (searchTerm === "") return true;
+      
+      const search = searchTerm.toLowerCase();
+      return (
+        log.message.toLowerCase().includes(search) ||
+        log.machine.toLowerCase().includes(search) ||
+        log.timestamp.toLowerCase().includes(search)
+      );
+    });
+  }, [logs, searchTerm]);
+
+  // Debug
+  React.useEffect(() => {
+    console.log('Level filter changed:', {levelFilter, levelNumber});
+    console.log('Total logs loaded:', logs.length);
+  }, [levelFilter, levelNumber, logs.length]);
 
   // Helper: Retorna ícone colorido por nível
   const getLevelIcon = (level: LogLevel) => {
     switch (level) {
       case "error":
         return <AlertCircle size={16} className="text-[#DC2626]" />;
-      case "warning":
+      case "warn":
         return <AlertTriangle size={16} className="text-[#EAB308]" />;
-      case "success":
+      case "debug":
         return <CheckCircle size={16} className="text-[#16A34A]" />;
       case "info":
+      default:
         return <Info size={16} className="text-[#3B82F6]" />;
     }
   };
 
   // Helper: Retorna badge colorido por nível
   const getLevelBadge = (level: LogLevel) => {
-    const configs = {
+    const configs: Record<LogLevel, {bg: string; text: string; label: string}> = {
       error: {bg: "#FEE2E2", text: "#991B1B", label: "ERROR"},
-      warning: {bg: "#FEF3C7", text: "#92400E", label: "WARNING"},
-      success: {bg: "#DCFCE7", text: "#166534", label: "SUCCESS"},
+      warn: {bg: "#FEF3C7", text: "#92400E", label: "WARN"},
+      debug: {bg: "#DCFCE7", text: "#166534", label: "DEBUG"},
       info: {bg: "#DBEAFE", text: "#1E40AF", label: "INFO"},
     };
 
-    const config = configs[level];
+    const config = configs[level] || configs.info;
     return (
       <Badge
         size="sm"
@@ -126,20 +112,8 @@ export default function LogsScreen() {
     );
   };
 
-  // Filtros Combinados
-  const filteredLogs = logs.filter((log) => {
-    const matchesLevel = levelFilter === "all" || log.level === levelFilter;
-    const matchesSearch =
-      searchTerm === "" ||
-      log.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.machine.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesLevel && matchesSearch;
-  });
-
   const handleRefresh = async () => {
-    setLoading(true);
-    await new Promise((res) => setTimeout(res, 800));
-    setLoading(false);
+    await refresh();
     toast.show({
       placement: "top",
       render: ({id}) => (
@@ -164,7 +138,7 @@ export default function LogsScreen() {
         contentContainerStyle={{paddingBottom: 32}}
         refreshControl={
           <RefreshControl
-            refreshing={loading}
+            refreshing={isRefreshing}
             onRefresh={handleRefresh}
             tintColor={refreshControlTint}
             colors={[refreshControlTint]}
@@ -186,56 +160,126 @@ export default function LogsScreen() {
           </Text>
 
           {/* Filtros Responsivos */}
-          <VStack className="gap-3 mb-6 web:flex-row web:items-center">
-            {/* Search Input */}
-            <Input
-              variant="outline"
-              size="md"
-              className="flex-1 rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]"
-            >
-              <InputSlot className="pl-3">
-                <InputIcon as={Search} className="text-typography-400" />
-              </InputSlot>
-              <InputField
-                placeholder="Buscar por mensagem ou máquina..."
-                value={searchTerm}
-                onChangeText={setSearchTerm}
-                className="text-typography-900 dark:text-[#E8EBF0]"
-              />
-            </Input>
-
-            {/* Select Nível */}
-            <Select selectedValue={levelFilter} onValueChange={(value) => setLevelFilter(value as LogLevel | "all")}>
-              <SelectTrigger
+          <VStack className="gap-3 mb-6">
+            <HStack className="gap-3 web:items-center flex-wrap">
+              {/* Search Input */}
+              <Input
                 variant="outline"
                 size="md"
-                className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628] web:w-[200px]"
+                className="flex-1 min-w-[200px] rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]"
               >
-                <SelectInput
-                  placeholder="Todos os níveis"
+                <InputSlot className="pl-3">
+                  <InputIcon as={Search} className="text-typography-400" />
+                </InputSlot>
+                <InputField
+                  placeholder="Buscar por mensagem ou máquina..."
+                  value={searchTerm}
+                  onChangeText={setSearchTerm}
                   className="text-typography-900 dark:text-[#E8EBF0]"
-                  style={{fontFamily: "Inter_400Regular"}}
                 />
-                <SelectIcon className="mr-3" as={ChevronDownIcon} />
-              </SelectTrigger>
-              <SelectPortal>
-                <SelectBackdrop />
-                <SelectContent className="bg-background-0 dark:bg-[#151F30] border border-outline-100 dark:border-[#2A3B52] rounded-xl">
-                  <SelectDragIndicatorWrapper>
-                    <SelectDragIndicator />
-                  </SelectDragIndicatorWrapper>
-                  <SelectItem label="Todos os níveis" value="all" />
-                  <SelectItem label="Error" value="error" />
-                  <SelectItem label="Warning" value="warning" />
-                  <SelectItem label="Success" value="success" />
-                  <SelectItem label="Info" value="info" />
-                </SelectContent>
-              </SelectPortal>
-            </Select>
+              </Input>
+
+              {/* Select Nível */}
+              <Select 
+                selectedValue={levelFilter} 
+                onValueChange={handleLevelChange}
+              >
+                <SelectTrigger
+                  variant="outline"
+                  size="md"
+                  className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628] web:w-[180px]"
+                >
+                  <SelectInput
+                    placeholder="Nível"
+                    className="text-typography-900 dark:text-[#E8EBF0]"
+                    style={{fontFamily: "Inter_400Regular"}}
+                  />
+                  <SelectIcon className="mr-3" as={ChevronDownIcon} />
+                </SelectTrigger>
+                <SelectPortal>
+                  <SelectBackdrop />
+                  <SelectContent className="bg-background-0 dark:bg-[#151F30] border border-outline-100 dark:border-[#2A3B52] rounded-xl">
+                    <SelectDragIndicatorWrapper>
+                      <SelectDragIndicator />
+                    </SelectDragIndicatorWrapper>
+                    <SelectItem label="Todos os níveis" value="all" />
+                    <SelectItem label="Info" value="0" />
+                    <SelectItem label="Error" value="1" />
+                    <SelectItem label="Warn" value="2" />
+                    <SelectItem label="Debug" value="3" />
+                  </SelectContent>
+                </SelectPortal>
+              </Select>
+
+              {/* Select Limite */}
+              <Select 
+                selectedValue={limit.toString()} 
+                onValueChange={(value) => setLimit(parseInt(value))}
+              >
+                <SelectTrigger
+                  variant="outline"
+                  size="md"
+                  className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628] web:w-[150px]"
+                >
+                  <SelectInput
+                    placeholder="Limite"
+                    className="text-typography-900 dark:text-[#E8EBF0]"
+                    style={{fontFamily: "Inter_400Regular"}}
+                  />
+                  <SelectIcon className="mr-3" as={ChevronDownIcon} />
+                </SelectTrigger>
+                <SelectPortal>
+                  <SelectBackdrop />
+                  <SelectContent className="bg-background-0 dark:bg-[#151F30] border border-outline-100 dark:border-[#2A3B52] rounded-xl">
+                    <SelectDragIndicatorWrapper>
+                      <SelectDragIndicator />
+                    </SelectDragIndicatorWrapper>
+                    <SelectItem label="50 logs" value="50" />
+                    <SelectItem label="100 logs" value="100" />
+                    <SelectItem label="200 logs" value="200" />
+                    <SelectItem label="500 logs" value="500" />
+                  </SelectContent>
+                </SelectPortal>
+              </Select>
+            </HStack>
+            
+            {/* Indicador de filtros ativos */}
+            {!isLoading && (
+              <HStack className="gap-2 items-center">
+                <Text
+                  className="text-xs text-typography-500 dark:text-typography-400"
+                  style={{fontFamily: "Inter_400Regular"}}
+                >
+                  {filteredLogs.length} {filteredLogs.length === 1 ? 'log encontrado' : 'logs encontrados'}
+                  {levelFilter !== "all" && ` • Filtrando por: ${levelFilter === "0" ? "Info" : levelFilter === "1" ? "Error" : levelFilter === "2" ? "Warn" : "Debug"}`}
+                  {searchTerm && ` • Busca: "${searchTerm}"`}
+                </Text>
+              </HStack>
+            )}
           </VStack>
 
-          {/* Lista de Cards de Log */}
-          {filteredLogs.length === 0 ? (
+          {/* Loading State */}
+          {isLoading ? (
+            <Box className="py-12 items-center">
+              <Spinner size="large" className="text-typography-600 dark:text-typography-400" />
+              <Text
+                className="text-sm text-typography-500 dark:text-typography-400 mt-4"
+                style={{fontFamily: "Inter_400Regular"}}
+              >
+                Carregando logs...
+              </Text>
+            </Box>
+          ) : error ? (
+            <Box className="py-12 items-center">
+              <AlertCircle size={48} className="text-red-500 mb-4" />
+              <Text
+                className="text-sm text-red-500 dark:text-red-400"
+                style={{fontFamily: "Inter_500Medium"}}
+              >
+                {error}
+              </Text>
+            </Box>
+          ) : filteredLogs.length === 0 ? (
             <Box className="py-12 items-center">
               <Text
                 className="text-sm text-typography-500 dark:text-typography-400"
@@ -284,7 +328,7 @@ export default function LogsScreen() {
                           className="text-sm text-typography-900 dark:text-[#E8EBF0]"
                           style={{fontFamily: "Inter_400Regular"}}
                         >
-                          {log.message}
+                          {typeof log.message === 'string' ? log.message : JSON.stringify(log.message)}
                         </Text>
                       </VStack>
                     </HStack>

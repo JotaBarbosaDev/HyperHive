@@ -147,3 +147,27 @@ export async function deleteIso(id: string): Promise<void> {
     token: authToken,
   });
 }
+
+export async function listLogs(options: {limit?: number; level?: number} = {}): Promise<any[]> {
+  const authToken = await resolveToken();
+  const params = new URLSearchParams();
+  
+  console.log('listLogs called with options:', options);
+  
+  if (options.limit !== undefined) {
+    params.append("limit", options.limit.toString());
+  }
+  
+  if (options.level !== undefined) {
+    params.append("level", options.level.toString());
+  }
+  
+  const queryString = params.toString();
+  const path = queryString ? `/logs/list?${queryString}` : "/logs/list";
+  
+  console.log('API path:', path);
+  
+  return apiFetch<any[]>(path, {
+    token: authToken,
+  });
+}
