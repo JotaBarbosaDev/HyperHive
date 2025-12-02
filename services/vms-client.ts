@@ -126,11 +126,112 @@ export async function startVM(vmName: string) {
   });
 }
 
+export async function migrateVM(vmName: string, targetMachineName: string) {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  const encodedTarget = encodeURIComponent(targetMachineName);
+  return apiFetch<void>(`/virsh/migratevm/${encodedVmName}/${encodedTarget}`, {
+    method: "POST",
+    token: authToken,
+  });
+}
+
+export async function coldMigrateVM(vmName: string, targetMachineName: string) {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  const encodedTarget = encodeURIComponent(targetMachineName);
+  return apiFetch<void>(`/virsh/coldMigrate/${encodedVmName}/${encodedTarget}`, {
+    method: "POST",
+    token: authToken,
+  });
+}
+
+export async function moveDisk(vmName: string, destNfsId: string, destDiskPath?: string) {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  const encodedNfs = encodeURIComponent(destNfsId);
+  return apiFetch<void>(`/virsh/moveDisk/${encodedVmName}/${encodedNfs}`, {
+    method: "POST",
+    token: authToken,
+    body: destDiskPath ? {dest_disk_path: destDiskPath} : undefined,
+  });
+}
+
+export async function deleteVM(vmName: string) {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  await apiFetch<void>(`/virsh/deletevm/${encodedVmName}`, {
+    method: "DELETE",
+    token: authToken,
+  });
+}
+
 export async function forceShutdownVM(vmName: string) {
   const authToken = await resolveToken();
   await apiFetch<void>(`/virsh/forceshutdownvm/${vmName}`, {
     method: "POST",
     token: authToken,
+  });
+}
+
+export async function cloneVm(
+  vmName: string,
+  destNfs: string,
+  destMachineName: string,
+  newName: string
+) {
+  const authToken = await resolveToken();
+  const encodedVm = encodeURIComponent(vmName);
+  const encodedNfs = encodeURIComponent(destNfs);
+  const encodedMachine = encodeURIComponent(destMachineName);
+  return apiFetch<void>(
+    `/virsh/cloneVM/${encodedVm}/${encodedNfs}/${encodedMachine}`,
+    {
+      method: "POST",
+      token: authToken,
+      body: {new_name: newName},
+    }
+  );
+}
+
+export type EditVmPayload = {
+  memory: number;
+  vcpu: number;
+  disk_sizeGB: number;
+};
+
+export async function editVmResources(vmName: string, payload: EditVmPayload) {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  return apiFetch<void>(`/virsh/editvm/${encodedVmName}`, {
+    method: "POST",
+    token: authToken,
+    body: payload,
+  });
+}
+
+export type CreateVmPayload = {
+  machine_name: string;
+  name: string;
+  memory: number;
+  vcpu: number;
+  disk_sizeGB: number;
+  iso_id?: number;
+  nfs_share_id: number;
+  network: string;
+  VNC_password: string;
+  live: boolean;
+  cpu_xml: string;
+  auto_start: boolean;
+  is_windows: boolean;
+};
+
+export async function createVm(payload: CreateVmPayload) {
+  const authToken = await resolveToken();
+  return apiFetch<void>("/virsh/createvm", {
+    method: "POST",
+    token: authToken,
+    body: payload,
   });
 }
 

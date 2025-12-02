@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Modal,
   ModalBackdrop,
@@ -33,9 +33,9 @@ import { Badge, BadgeText } from "@/components/ui/badge";
 import { ScrollView, Platform } from "react-native";
 import { Cpu, X, Copy, Trash2, ChevronDown, Check, ChevronDownIcon } from "lucide-react-native";
 import { useToast, Toast, ToastTitle, ToastDescription } from "@/components/ui/toast";
-import { resolveToken, listIsos, IsoApiResponse } from "@/services/vms-client"
-import { listMounts } from "@/services/hyperhive"
-import { Mount } from "@/types/mount"
+import { createVm, listIsos, listSlaves, IsoApiResponse, Slave } from "@/services/vms-client";
+import { listMounts } from "@/services/hyperhive";
+import { Mount } from "@/types/mount";
 
 // Try/catch para lidar com expo-clipboard
 let Clipboard: any;
@@ -53,23 +53,8 @@ try {
 interface CreateVmModalProps {
   showModal: boolean;
   setShowModal: (show: boolean) => void;
-  onSuccess?: () => void;
+  onSuccess?: (createdName?: string) => void;
 }
-
-let isos: IsoApiResponse = [];
-let mounts: Mount[] = [];
-
-(async () => {
-  try {
-    const [fetchedIsos, fetchedMounts] = await Promise.all([listIsos(), listMounts()]);
-    isos = fetchedIsos;
-    mounts = fetchedMounts;
-  } catch (err) {
-    console.error("Failed to list ISOs or mounts:", err);
-  }
-})()
-
-
 
 export default function CreateVmModal({
   showModal,
@@ -97,12 +82,59 @@ export default function CreateVmModal({
   const [currentSlaveSelect, setCurrentSlaveSelect] = useState("");
   const [cpuXml, setCpuXml] = useState("");
   const [loadingCPU, setLoadingCPU] = useState(false);
+  const [isoOptions, setIsoOptions] = useState<IsoApiResponse>([]);
+  const [mountOptions, setMountOptions] = useState<Mount[]>([]);
+  const [slaveOptions, setSlaveOptions] = useState<Slave[]>([]);
+  const [loadingOptions, setLoadingOptions] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const toast = useToast();
 
-  // Mock de slaves disponíveis
-  const mockSlaves = ["slave-01", "slave-02", "slave-03", "slave-04", "slave-05"];
-  const availableSlaves = mockSlaves.filter((s) => !selectedSlaves.includes(s));
+  const availableSlaves = slaveOptions
+    .map((s) => s.MachineName)
+    .filter((s) => !selectedSlaves.includes(s));
+
+  useEffect(() => {
+    const fetchOptions = async () => {
+      setLoadingOptions(true);
+      try {
+        const [fetchedIsos, fetchedMounts, fetchedSlaves] = await Promise.all([
+          listIsos(),
+          listMounts(),
+          listSlaves(),
+        ]);
+        setIsoOptions(fetchedIsos);
+        setMountOptions(fetchedMounts);
+        setSlaveOptions(fetchedSlaves);
+        if (!slave && fetchedSlaves.length > 0) {
+          setSlave(fetchedSlaves[0].MachineName);
+        }
+      } catch (err) {
+        console.error("Failed to list ISOs or mounts:", err);
+        toast.show({
+          placement: "top",
+          render: ({ id }) => (
+            <Toast
+              nativeID={"toast-" + id}
+              className="px-5 py-3 gap-3 shadow-soft-1"
+              action="error"
+            >
+              <ToastTitle size="sm">Erro ao carregar listas</ToastTitle>
+              <ToastDescription size="sm">
+                Não foi possível listar ISOs/NFS. Verifique conexão e tente novamente.
+              </ToastDescription>
+            </Toast>
+          ),
+        });
+      } finally {
+        setLoadingOptions(false);
+      }
+    };
+
+    if (showModal && isoOptions.length === 0 && mountOptions.length === 0) {
+      fetchOptions();
+    }
+  }, [showModal, isoOptions.length, mountOptions.length, toast]);
 
   const handleGetMutualCPUs = async () => {
     if (selectedSlaves.length === 0) {
@@ -186,7 +218,11 @@ export default function CreateVmModal({
   };
 
   const handleCreate = async () => {
-    if (!name || !nfsShare) {
+    const parsedMemory = parseInt(memory, 10);
+    const parsedVcpu = parseInt(vcpu, 10);
+    const parsedDisk = parseInt(disk, 10);
+
+    if (!name || !nfsShare || !parsedMemory || !parsedVcpu || !parsedDisk) {
       toast.show({
         placement: "top",
         render: ({ id }) => (
@@ -197,7 +233,7 @@ export default function CreateVmModal({
           >
             <ToastTitle size="sm">Erro</ToastTitle>
             <ToastDescription size="sm">
-              Nome e NFS Share são obrigatórios
+              Nome, NFS Share, vCPU, Memória e Disco são obrigatórios
             </ToastDescription>
           </Toast>
         ),
@@ -205,13 +241,14 @@ export default function CreateVmModal({
       return;
     }
 
+    setCreating(true);
     try {
       const vmData = {
         machine_name: slave,
         name,
-        memory: parseInt(memory),
-        vcpu: parseInt(vcpu),
-        disk_sizeGB: parseInt(disk),
+        memory: parsedMemory,
+        vcpu: parsedVcpu,
+        disk_sizeGB: parsedDisk,
         iso_id: iso ? parseInt(iso) : undefined,
         nfs_share_id: parseInt(nfsShare),
         network,
@@ -224,9 +261,7 @@ export default function CreateVmModal({
         is_windows: isWindows,
       };
 
-      // Aqui seria a chamada real à API
-      // await api.post('/vms', vmData);
-      console.log("VM Data:", vmData);
+      await createVm(vmData);
 
       toast.show({
         placement: "top",
@@ -260,6 +295,7 @@ export default function CreateVmModal({
       setSelectedSlaves([]);
       setCpuXml("");
     } catch (error) {
+      console.error("Erro ao criar VM:", error);
       toast.show({
         placement: "top",
         render: ({ id }) => (
@@ -269,11 +305,14 @@ export default function CreateVmModal({
             action="error"
           >
             <ToastTitle size="sm">Erro ao criar VM</ToastTitle>
-            <ToastDescription size="sm">{String(error)}</ToastDescription>
+            <ToastDescription size="sm">
+              {error instanceof Error ? error.message : String(error)}
+            </ToastDescription>
           </Toast>
         ),
       });
     }
+    setCreating(false);
   };
 
   const handleCopyXml = async () => {
@@ -349,10 +388,14 @@ export default function CreateVmModal({
                   >
                     Slave
                   </Text>
-                  <Select selectedValue={slave} onValueChange={setSlave}>
+                  <Select
+                    selectedValue={slave}
+                    onValueChange={setSlave}
+                    isDisabled={loadingOptions || slaveOptions.length === 0}
+                  >
                     <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
                       <SelectInput
-                        placeholder="Selecione..."
+                        placeholder={loadingOptions ? "Carregando..." : "Selecione..."}
                         className="text-typography-900 dark:text-[#E8EBF0]"
                       />
                       <SelectIcon as={ChevronDown} className="mr-3" />
@@ -363,14 +406,22 @@ export default function CreateVmModal({
                         <SelectDragIndicatorWrapper>
                           <SelectDragIndicator />
                         </SelectDragIndicatorWrapper>
-                        {mockSlaves.map((s) => (
+                        {slaveOptions.length === 0 ? (
                           <SelectItem
-                            key={s}
-                            label={s}
-                            value={s}
-                            className="text-typography-900 dark:text-[#E8EBF0]"
+                            label={loadingOptions ? "Carregando..." : "Nenhum slave encontrado"}
+                            value=""
+                            isDisabled
                           />
-                        ))}
+                        ) : (
+                          slaveOptions.map((s) => (
+                            <SelectItem
+                              key={s.MachineName}
+                              label={s.MachineName}
+                              value={s.MachineName}
+                              className="text-typography-900 dark:text-[#E8EBF0]"
+                            />
+                          ))
+                        )}
                       </SelectContent>
                     </SelectPortal>
                   </Select>
@@ -471,22 +522,30 @@ export default function CreateVmModal({
                   >
                     NFS Share ID
                   </Text>
-                  <Select>
+                  <Select selectedValue={nfsShare} onValueChange={setNfsShare} isDisabled={loadingOptions || mountOptions.length === 0}>
                     <SelectTrigger variant="outline" size="md">
-                      <SelectInput placeholder="Select NFS" />
+                      <SelectInput placeholder={loadingOptions ? "Carregando..." : "Select NFS"} />
                       <SelectIcon className="mr-3" as={ChevronDownIcon} />
                     </SelectTrigger>
                     <SelectPortal>
                       <SelectBackdrop />
                       <SelectContent>
-                        {mounts.map((s) => (
+                        {mountOptions.length === 0 ? (
                           <SelectItem
-                            key={s.NfsShare.Id}
-                            label={s.NfsShare.Name}
-                            value={String(s.NfsShare.Id)}
-                            className="text-typography-900 dark:text-[#E8EBF0]"
+                            label={loadingOptions ? "Carregando..." : "Nenhum NFS encontrado"}
+                            value=""
+                            isDisabled
                           />
-                        ))}
+                        ) : (
+                          mountOptions.map((s) => (
+                            <SelectItem
+                              key={s.NfsShare.Id}
+                              label={s.NfsShare.Name}
+                              value={String(s.NfsShare.Id)}
+                              className="text-typography-900 dark:text-[#E8EBF0]"
+                            />
+                          ))
+                        )}
                       </SelectContent>
                     </SelectPortal>
                   </Select>
@@ -500,22 +559,30 @@ export default function CreateVmModal({
                   >
                     ISO ID (Opcional)
                   </Text>
-                  <Select>
+                  <Select selectedValue={iso} onValueChange={setIso} isDisabled={loadingOptions || isoOptions.length === 0}>
                     <SelectTrigger variant="outline" size="md">
-                      <SelectInput placeholder="Select ISO" />
+                      <SelectInput placeholder={loadingOptions ? "Carregando..." : "Select ISO"} />
                       <SelectIcon className="mr-3" as={ChevronDownIcon} />
                     </SelectTrigger>
                     <SelectPortal>
                       <SelectBackdrop />
                       <SelectContent>
-                        {isos.map((s) => (
+                        {isoOptions.length === 0 ? (
                           <SelectItem
-                            key={s.Id}
-                            label={s.Name}
-                            value={String(s.Id)}
-                            className="text-typography-900 dark:text-[#E8EBF0]"
+                            label={loadingOptions ? "Carregando..." : "Nenhuma ISO encontrada"}
+                            value=""
+                            isDisabled
                           />
-                        ))}
+                        ) : (
+                          isoOptions.map((s) => (
+                            <SelectItem
+                              key={s.Id}
+                              label={s.Name}
+                              value={String(s.Id)}
+                              className="text-typography-900 dark:text-[#E8EBF0]"
+                            />
+                          ))
+                        )}
                       </SelectContent>
                     </SelectPortal>
                   </Select>
@@ -671,15 +738,16 @@ export default function CreateVmModal({
                     <Select
                       selectedValue={currentSlaveSelect}
                       onValueChange={(value) => {
-                        if (value && !selectedSlaves.includes(value)) {
+                        if (value && slaveOptions.find((s) => s.MachineName === value) && !selectedSlaves.includes(value)) {
                           setSelectedSlaves([...selectedSlaves, value]);
                           setCurrentSlaveSelect("");
                         }
                       }}
+                      isDisabled={loadingOptions || availableSlaves.length === 0}
                     >
                       <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
                         <SelectInput
-                          placeholder="Selecione um slave..."
+                          placeholder={loadingOptions ? "Carregando..." : "Selecione um slave..."}
                           className="text-typography-900 dark:text-[#E8EBF0]"
                         />
                         <SelectIcon as={ChevronDown} className="mr-3" />
@@ -813,6 +881,7 @@ export default function CreateVmModal({
               variant="outline"
               className="flex-1 rounded-lg border-outline-200 dark:border-[#2A3B52]"
               onPress={() => setShowModal(false)}
+              disabled={creating}
             >
               <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
                 Cancelar
@@ -822,7 +891,9 @@ export default function CreateVmModal({
             <Button
               className="flex-1 rounded-lg bg-typography-900 dark:bg-[#E8EBF0]"
               onPress={handleCreate}
+              disabled={creating}
             >
+              {creating ? <ButtonSpinner className="mr-2" /> : null}
               <ButtonText className="text-background-0 dark:text-typography-900">
                 Criar VM
               </ButtonText>

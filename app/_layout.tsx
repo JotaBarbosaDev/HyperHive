@@ -34,8 +34,9 @@ import {
   loadApiBaseUrl,
   loadAuthToken,
 } from "@/services/auth-storage";
-import {ApiError, onUnauthorized, setAuthToken} from "@/services/api-client";
+import {ApiError, onApiResult, onUnauthorized, setAuthToken} from "@/services/api-client";
 import {listMachines} from "@/services/hyperhive";
+import {useToast, Toast, ToastTitle, ToastDescription} from "@/components/ui/toast";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -115,6 +116,7 @@ function RootLayoutNav() {
   const [showDrawer, setShowDrawer] = React.useState(false);
   const [showSidebar, setShowSidebar] = React.useState(false);
   const isSigningOutRef = React.useRef(false);
+  const toast = useToast();
 
   const signOut = React.useCallback(async () => {
     if (isSigningOutRef.current) {
@@ -186,6 +188,32 @@ function RootLayoutNav() {
     });
     return unsubscribe;
   }, [signOut]);
+
+  useEffect(() => {
+    const unsubscribe = onApiResult((result) => {
+      if (result.ok) {
+        console.info("[API OK]", result.method, result.path, result.status);
+        return;
+      }
+      console.error("[API ERROR]", result.method, result.path, result.status, result.error);
+      toast.show({
+        placement: "top",
+        render: ({id}) => (
+          <Toast
+            nativeID={"toast-" + id}
+            className="px-5 py-3 gap-3 shadow-soft-1"
+            action="error"
+          >
+            <ToastTitle size="sm">Erro na API ({result.status ?? "?"})</ToastTitle>
+            <ToastDescription size="sm">
+              {result.path?.replace(/^https?:\/\//, "") || "Request"}
+            </ToastDescription>
+          </Toast>
+        ),
+      });
+    });
+    return unsubscribe;
+  }, [toast]);
 
   useEffect(() => {
     if (

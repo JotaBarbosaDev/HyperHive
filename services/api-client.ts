@@ -12,11 +12,27 @@ let currentAuthToken: string | null = null;
 type UnauthorizedListener = () => void;
 
 const unauthorizedListeners = new Set<UnauthorizedListener>();
+type ApiResult = {
+  ok: boolean;
+  method: string;
+  path: string;
+  status?: number;
+  error?: unknown;
+};
+type ApiResultListener = (result: ApiResult) => void;
+const apiResultListeners = new Set<ApiResultListener>();
 
 export const onUnauthorized = (listener: UnauthorizedListener) => {
   unauthorizedListeners.add(listener);
   return () => {
     unauthorizedListeners.delete(listener);
+  };
+};
+
+export const onApiResult = (listener: ApiResultListener) => {
+  apiResultListeners.add(listener);
+  return () => {
+    apiResultListeners.delete(listener);
   };
 };
 
@@ -103,12 +119,32 @@ export async function apiFetch<T = unknown>(
   }
 
   const serializedBody = serializeBody(body, finalHeaders);
+  const requestPath = withBaseUrl(path);
 
-  const response = await fetch(withBaseUrl(path), {
-    method,
-    headers: finalHeaders,
-    body: serializedBody,
-  });
+  let response: Response;
+  try {
+    response = await fetch(requestPath, {
+      method,
+      headers: finalHeaders,
+      body: serializedBody,
+    });
+  } catch (networkErr) {
+    console.error("[API ERROR]", method, requestPath, networkErr);
+    apiResultListeners.forEach((listener) => {
+      try {
+        listener({
+          ok: false,
+          method,
+          path: requestPath,
+          status: undefined,
+          error: networkErr,
+        });
+      } catch (err) {
+        console.error("API result listener threw an error", err);
+      }
+    });
+    throw networkErr;
+  }
 
   if (!response.ok) {
     let errorPayload: unknown = null;
@@ -128,12 +164,36 @@ export async function apiFetch<T = unknown>(
       notifyUnauthorized();
     }
 
+    console.error("[API]", method, requestPath, "->", response.status, errorPayload);
+    apiResultListeners.forEach((listener) => {
+      try {
+        listener({
+          ok: false,
+          method,
+          path: requestPath,
+          status: response.status,
+          error: errorPayload,
+        });
+      } catch (err) {
+        console.error("API result listener threw an error", err);
+      }
+    });
+
     throw new ApiError(
       response.statusText || `Request failed with status ${response.status}`,
       response.status,
       errorPayload
     );
   }
+
+  console.info("[API]", method, requestPath, "->", response.status);
+  apiResultListeners.forEach((listener) => {
+    try {
+      listener({ok: true, method, path: requestPath, status: response.status});
+    } catch (err) {
+      console.error("API result listener threw an error", err);
+    }
+  });
 
   const contentType = response.headers.get("content-type");
 
