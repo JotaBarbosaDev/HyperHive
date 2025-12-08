@@ -1,344 +1,477 @@
 import React from "react";
-import {ScrollView, RefreshControl, useColorScheme, Pressable} from "react-native";
-import {Box} from "@/components/ui/box";
-import {Text} from "@/components/ui/text";
-import {Heading} from "@/components/ui/heading";
-import {VStack} from "@/components/ui/vstack";
-import {HStack} from "@/components/ui/hstack";
-import {Input, InputField, InputSlot, InputIcon} from "@/components/ui/input";
-import {Badge, BadgeText} from "@/components/ui/badge";
 import {
-  Select,
-  SelectTrigger,
-  SelectInput,
-  SelectIcon,
-  SelectPortal,
-  SelectBackdrop,
-  SelectContent,
-  SelectDragIndicatorWrapper,
-  SelectDragIndicator,
-  SelectItem,
-} from "@/components/ui/select";
-import {Icon, ChevronDownIcon} from "@/components/ui/icon";
-import {AlertCircle, AlertTriangle, CheckCircle, Info, Search, Settings2} from "lucide-react-native";
-import {Toast, ToastTitle, useToast} from "@/components/ui/toast";
-import {useLogs} from "@/hooks/useLogs";
-import {LogEntry, LogLevel, LOG_LEVEL_MAP} from "@/types/log";
+  ActivityIndicator,
+  FlatList,
+  Platform,
+  RefreshControl,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  View,
+} from "react-native";
 import {useAuthGuard} from "@/hooks/useAuthGuard";
-import {Spinner} from "@/components/ui/spinner";
+import {useLogs} from "@/hooks/useLogs";
+import {LogEntry, LogLevel} from "@/types/log";
+import {useAppTheme} from "@/hooks/useAppTheme";
+
+const LEVEL_LABEL: Record<LogLevel, string> = {
+  error: "ERROR",
+  warn: "WARN",
+  info: "INFO",
+  debug: "DEBUG",
+};
+
+const LEVEL_COLOR: Record<LogLevel, string> = {
+  error: "#EF4444",
+  warn: "#F59E0B",
+  info: "#3B82F6",
+  debug: "#22C55E",
+};
+
+const formatTime = (ts: string) => {
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return ts;
+  return d.toLocaleTimeString("pt-PT", {hour: "2-digit", minute: "2-digit", second: "2-digit"});
+};
+
+type Theme = {
+  bg: string;
+  card: string;
+  cardAlt: string;
+  border: string;
+  text: string;
+  muted: string;
+  subtle: string;
+  accent: string;
+  accentText: string;
+};
+
+const makeStyles = (theme: Theme) =>
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: theme.bg,
+      paddingHorizontal: 16,
+      paddingTop: 56,
+    },
+    title: {
+      fontSize: 26,
+      fontWeight: "700",
+      color: theme.text,
+      marginBottom: 6,
+    },
+    subtitle: {
+      color: theme.muted,
+      marginBottom: 12,
+    },
+    card: {
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 14,
+      padding: 12,
+      marginBottom: 12,
+    },
+    sectionTitle: {
+      color: theme.text,
+      fontWeight: "700",
+      marginBottom: 8,
+      fontSize: 14,
+    },
+    filters: {
+      marginBottom: 12,
+    },
+    filterRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      marginBottom: 8,
+    },
+    filterItem: {
+      marginBottom: 10,
+    },
+    flexItem: {
+      flex: 1,
+      marginRight: 10,
+    },
+    smallColumn: {
+      width: 150,
+      marginRight: 10,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: Platform.OS === "ios" ? 12 : 10,
+      color: theme.text,
+      backgroundColor: theme.cardAlt,
+    },
+    smallInput: {
+      width: 120,
+    },
+    rowInline: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 6,
+    },
+    toggleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginTop: 4,
+    },
+    toggleItem: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    label: {
+      color: theme.muted,
+      marginRight: 8,
+    },
+    button: {
+      backgroundColor: theme.accent,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 10,
+    },
+    buttonText: {
+      color: theme.accentText,
+      fontWeight: "600",
+    },
+    headerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      backgroundColor: theme.subtle,
+      borderRadius: 10,
+      marginBottom: 6,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    headerText: {
+      color: theme.muted,
+      fontWeight: "700",
+      fontSize: 12,
+    },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+      backgroundColor: theme.card,
+    },
+    listContainer: {
+      flex: 1,
+    },
+    listCard: {
+      flex: 1,
+    },
+    list: {
+      flex: 1,
+    },
+    levelDot: {
+      width: 6,
+      height: 16,
+      borderRadius: 4,
+      marginRight: 8,
+    },
+    time: {
+      width: 96,
+      color: theme.muted,
+      fontSize: 12,
+    },
+    machine: {
+      width: 112,
+      color: theme.text,
+      fontSize: 12,
+    },
+    levelTag: {
+      borderWidth: 1,
+      borderRadius: 6,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      marginRight: 8,
+    },
+    levelTagText: {
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    message: {
+      flex: 1,
+      color: theme.text,
+      fontSize: 13,
+    },
+    center: {
+      paddingVertical: 20,
+      alignItems: "center",
+    },
+    errorText: {
+      color: "#DC2626",
+    },
+    empty: {
+      color: theme.muted,
+      textAlign: "center",
+      paddingVertical: 20,
+    },
+    detailHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 6,
+    },
+    detailTitle: {
+      fontWeight: "700",
+      color: theme.text,
+      fontSize: 16,
+    },
+    detailMeta: {
+      color: theme.muted,
+      fontSize: 12,
+      marginBottom: 6,
+    },
+    detailBodyScroll: {
+      maxHeight: 220,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 10,
+      backgroundColor: theme.cardAlt,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+    },
+    detailBodyContent: {
+      paddingBottom: 4,
+    },
+    detailBody: {
+      color: theme.text,
+      lineHeight: 20,
+    },
+    close: {
+      color: theme.accent,
+      fontWeight: "700",
+    },
+  });
 
 export default function LogsScreen() {
-  const colorScheme = useColorScheme();
-  const toast = useToast();
-  const {token} = useAuthGuard();
-  
-  // Configurações de filtro
-  const [limit, setLimit] = React.useState(200);
-  const [levelFilter, setLevelFilter] = React.useState<string>("all");
-  const [searchTerm, setSearchTerm] = React.useState("");
-  
-  // Handler para mudança de nível
-  const handleLevelChange = (value: string) => {
-    console.log('Level dropdown changed to:', value);
-    setLevelFilter(value);
-  };
-  
-  // Converter levelFilter para número ou undefined
-  const levelNumber = levelFilter === "all" ? undefined : parseInt(levelFilter);
-  
-  // Buscar logs com os filtros
+  const {token, isChecking} = useAuthGuard();
+  const {resolvedMode} = useAppTheme();
+  const isDark = resolvedMode === "dark";
+  const theme: Theme = React.useMemo(
+    () => ({
+      bg: isDark ? "#070D19" : "#F8FAFC",
+      card: isDark ? "#0F172A" : "#FFFFFF",
+      cardAlt: isDark ? "#0B1424" : "#F8FAFC",
+      border: isDark ? "#1E2B3C" : "#E2E8F0",
+      text: isDark ? "#E8EBF0" : "#0F172A",
+      muted: isDark ? "#9AA4B8" : "#475569",
+      subtle: isDark ? "#0B1424" : "#F1F5F9",
+      accent: "#2563EB",
+      accentText: "#FFFFFF",
+    }),
+    [isDark]
+  );
+  const styles = React.useMemo(() => makeStyles(theme), [theme]);
+
+  const [search, setSearch] = React.useState("");
+  const [limitInput, setLimitInput] = React.useState("100");
+  const [limit, setLimit] = React.useState(5000);
+  const [apiLevel, setApiLevel] = React.useState<string>("all");
+  const [machineFilter, setMachineFilter] = React.useState<string>("all");
+  const [showInfo, setShowInfo] = React.useState(false);
+  const [showDebug, setShowDebug] = React.useState(false);
+  const [selected, setSelected] = React.useState<LogEntry | null>(null);
+
+  const levelNumber = apiLevel === "all" ? undefined : parseInt(apiLevel);
+
   const {logs, isLoading, isRefreshing, error, refresh} = useLogs({
     token,
     limit,
     level: levelNumber,
   });
 
-  // Filtro de busca local
-  const filteredLogs = React.useMemo(() => {
+  const visibleLogs = React.useMemo(() => {
     return logs.filter((log) => {
-      if (searchTerm === "") return true;
-      
-      const search = searchTerm.toLowerCase();
+      if (!showInfo && log.level === "info") return false;
+      if (!showDebug && log.level === "debug") return false;
+      if (machineFilter !== "all" && log.machine !== machineFilter) return false;
+      if (!search.trim()) return true;
+      const term = search.toLowerCase();
       return (
-        log.message.toLowerCase().includes(search) ||
-        log.machine.toLowerCase().includes(search) ||
-        log.timestamp.toLowerCase().includes(search)
+        log.message.toLowerCase().includes(term) ||
+        log.machine.toLowerCase().includes(term) ||
+        log.timestamp.toLowerCase().includes(term)
       );
     });
-  }, [logs, searchTerm]);
+  }, [logs, showInfo, showDebug, machineFilter, search]);
 
-  // Debug
-  React.useEffect(() => {
-    console.log('Level filter changed:', {levelFilter, levelNumber});
-    console.log('Total logs loaded:', logs.length);
-  }, [levelFilter, levelNumber, logs.length]);
+  const refreshControl =
+    Platform.OS === "web"
+      ? undefined
+      : (
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={refresh}
+          tintColor={theme.text}
+          colors={[theme.text]}
+        />
+      );
 
-  // Helper: Retorna ícone colorido por nível
-  const getLevelIcon = (level: LogLevel) => {
-    switch (level) {
-      case "error":
-        return <AlertCircle size={16} className="text-[#DC2626]" />;
-      case "warn":
-        return <AlertTriangle size={16} className="text-[#EAB308]" />;
-      case "debug":
-        return <CheckCircle size={16} className="text-[#16A34A]" />;
-      case "info":
-      default:
-        return <Info size={16} className="text-[#3B82F6]" />;
+  const applyLimit = () => {
+    const parsed = parseInt(limitInput);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      setLimit(parsed);
     }
   };
 
-  // Helper: Retorna badge colorido por nível
-  const getLevelBadge = (level: LogLevel) => {
-    const configs: Record<LogLevel, {bg: string; text: string; label: string}> = {
-      error: {bg: "#FEE2E2", text: "#991B1B", label: "ERROR"},
-      warn: {bg: "#FEF3C7", text: "#92400E", label: "WARN"},
-      debug: {bg: "#DCFCE7", text: "#166534", label: "DEBUG"},
-      info: {bg: "#DBEAFE", text: "#1E40AF", label: "INFO"},
-    };
+  const renderItem = ({item}: {item: LogEntry}) => (
+    <TouchableOpacity onPress={() => setSelected(item)} activeOpacity={0.6}>
+      <View style={styles.row}>
+        <View style={[styles.levelDot, {backgroundColor: LEVEL_COLOR[item.level]}]} />
+        <Text style={styles.time}>{formatTime(item.timestamp)}</Text>
+        <Text style={styles.machine} numberOfLines={1}>
+          {item.machine}
+        </Text>
+        <View style={[styles.levelTag, {borderColor: LEVEL_COLOR[item.level]}]}>
+          <Text style={[styles.levelTagText, {color: LEVEL_COLOR[item.level]}]}>{LEVEL_LABEL[item.level]}</Text>
+        </View>
+        <Text style={styles.message} numberOfLines={1}>
+          {item.message}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
 
-    const config = configs[level] || configs.info;
-    return (
-      <Badge
-        size="sm"
-        variant="solid"
-        className="rounded-sm px-2 py-0.5"
-        style={{backgroundColor: config.bg}}
-      >
-        <BadgeText className="text-xs" style={{color: config.text, fontFamily: "Inter_600SemiBold"}}>
-          {config.label}
-        </BadgeText>
-      </Badge>
-    );
-  };
-
-  const handleRefresh = async () => {
-    await refresh();
-    toast.show({
-      placement: "top",
-      render: ({id}) => (
-        <Toast
-          nativeID={"toast-" + id}
-          className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-          action="success"
-        >
-          <ToastTitle size="sm">Logs atualizados</ToastTitle>
-        </Toast>
-      ),
-    });
-  };
-
-  const refreshControlTint = colorScheme === "dark" ? "#F8FAFC" : "#0F172A";
-  const refreshControlBackground = colorScheme === "dark" ? "#0E1524" : "#E2E8F0";
+  if (isChecking || !token) {
+    return null;
+  }
 
   return (
-    <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{paddingBottom: 32}}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            tintColor={refreshControlTint}
-            colors={[refreshControlTint]}
-            progressBackgroundColor={refreshControlBackground}
+    <View style={styles.screen}>
+      <Text style={styles.title}>Logs</Text>
+      <Text style={styles.subtitle}>
+        Visualização em linha, ordenada dos mais recentes para os mais antigos. Toque numa linha para ver detalhe.
+      </Text>
+
+      <View style={[styles.card, styles.filters]}>
+        <Text style={styles.sectionTitle}>Filtros e controlos</Text>
+
+        <View style={styles.filterItem}>
+          <Text style={styles.label}>Pesquisa rápida</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Filtrar por mensagem, máquina ou timestamp..."
+            placeholderTextColor={theme.muted}
+            value={search}
+            onChangeText={setSearch}
           />
-        }
-      >
-        <Box className="p-4 pt-16 web:p-10 web:max-w-7xl web:mx-auto web:w-full">
-          <Heading
-            size="2xl"
-            className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
-            style={{fontFamily: "Inter_700Bold"}}
-          >
-            Logs
-          </Heading>
-          <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl mb-6">
-            Visualize logs do sistema em tempo real com filtros por nível de severidade e busca por mensagem ou
-            máquina.
-          </Text>
+        </View>
 
-          {/* Filtros Responsivos */}
-          <VStack className="gap-3 mb-6">
-            <HStack className="gap-3 web:items-center flex-wrap">
-              {/* Search Input */}
-              <Input
-                variant="outline"
-                size="md"
-                className="flex-1 min-w-[200px] rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]"
-              >
-                <InputSlot className="pl-3">
-                  <InputIcon as={Search} className="text-typography-400" />
-                </InputSlot>
-                <InputField
-                  placeholder="Buscar por mensagem ou máquina..."
-                  value={searchTerm}
-                  onChangeText={setSearchTerm}
-                  className="text-typography-900 dark:text-[#E8EBF0]"
-                />
-              </Input>
+        <View style={styles.filterRow}>
+          <View style={[styles.filterItem, styles.flexItem]}>
+            <Text style={styles.label}>Máquina</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="all para todas"
+              placeholderTextColor={theme.muted}
+              value={machineFilter}
+              onChangeText={setMachineFilter}
+            />
+          </View>
+          <View style={[styles.filterItem, styles.smallColumn]}>
+            <Text style={styles.label}>Nível (API)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="all/0/1/2/3"
+              placeholderTextColor={theme.muted}
+              value={apiLevel}
+              onChangeText={setApiLevel}
+            />
+          </View>
+          <View style={[styles.filterItem, styles.smallColumn]}>
+            <Text style={styles.label}>Limite</Text>
+            <TextInput
+              style={styles.input}
+              keyboardType="numeric"
+              value={limitInput}
+              onChangeText={setLimitInput}
+              onBlur={applyLimit}
+              onSubmitEditing={applyLimit}
+            />
+          </View>
+        </View>
 
-              {/* Select Nível */}
-              <Select 
-                selectedValue={levelFilter} 
-                onValueChange={handleLevelChange}
-              >
-                <SelectTrigger
-                  variant="outline"
-                  size="md"
-                  className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628] web:w-[180px]"
-                >
-                  <SelectInput
-                    placeholder="Nível"
-                    className="text-typography-900 dark:text-[#E8EBF0]"
-                    style={{fontFamily: "Inter_400Regular"}}
-                  />
-                  <SelectIcon className="mr-3" as={ChevronDownIcon} />
-                </SelectTrigger>
-                <SelectPortal>
-                  <SelectBackdrop />
-                  <SelectContent className="bg-background-0 dark:bg-[#151F30] border border-outline-100 dark:border-[#2A3B52] rounded-xl">
-                    <SelectDragIndicatorWrapper>
-                      <SelectDragIndicator />
-                    </SelectDragIndicatorWrapper>
-                    <SelectItem label="Todos os níveis" value="all" />
-                    <SelectItem label="Info" value="0" />
-                    <SelectItem label="Error" value="1" />
-                    <SelectItem label="Warn" value="2" />
-                    <SelectItem label="Debug" value="3" />
-                  </SelectContent>
-                </SelectPortal>
-              </Select>
+        <View style={styles.toggleRow}>
+          <View style={styles.toggleItem}>
+            <Text style={styles.label}>Mostrar INFO</Text>
+            <Switch value={showInfo} onValueChange={setShowInfo} />
+          </View>
+          <View style={styles.toggleItem}>
+            <Text style={styles.label}>Mostrar DEBUG</Text>
+            <Switch value={showDebug} onValueChange={setShowDebug} />
+          </View>
+          <TouchableOpacity style={styles.button} onPress={refresh} activeOpacity={0.7}>
+            <Text style={styles.buttonText}>Recarregar</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-              {/* Select Limite */}
-              <Select 
-                selectedValue={limit.toString()} 
-                onValueChange={(value) => setLimit(parseInt(value))}
-              >
-                <SelectTrigger
-                  variant="outline"
-                  size="md"
-                  className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628] web:w-[150px]"
-                >
-                  <SelectInput
-                    placeholder="Limite"
-                    className="text-typography-900 dark:text-[#E8EBF0]"
-                    style={{fontFamily: "Inter_400Regular"}}
-                  />
-                  <SelectIcon className="mr-3" as={ChevronDownIcon} />
-                </SelectTrigger>
-                <SelectPortal>
-                  <SelectBackdrop />
-                  <SelectContent className="bg-background-0 dark:bg-[#151F30] border border-outline-100 dark:border-[#2A3B52] rounded-xl">
-                    <SelectDragIndicatorWrapper>
-                      <SelectDragIndicator />
-                    </SelectDragIndicatorWrapper>
-                    <SelectItem label="50 logs" value="50" />
-                    <SelectItem label="100 logs" value="100" />
-                    <SelectItem label="200 logs" value="200" />
-                    <SelectItem label="500 logs" value="500" />
-                  </SelectContent>
-                </SelectPortal>
-              </Select>
-            </HStack>
-            
-            {/* Indicador de filtros ativos */}
-            {!isLoading && (
-              <HStack className="gap-2 items-center">
-                <Text
-                  className="text-xs text-typography-500 dark:text-typography-400"
-                  style={{fontFamily: "Inter_400Regular"}}
-                >
-                  {filteredLogs.length} {filteredLogs.length === 1 ? 'log encontrado' : 'logs encontrados'}
-                  {levelFilter !== "all" && ` • Filtrando por: ${levelFilter === "0" ? "Info" : levelFilter === "1" ? "Error" : levelFilter === "2" ? "Warn" : "Debug"}`}
-                  {searchTerm && ` • Busca: "${searchTerm}"`}
-                </Text>
-              </HStack>
-            )}
-          </VStack>
+      <View style={styles.headerRow}>
+        <Text style={{width: 6}} />
+        <Text style={[styles.headerText, {width: 96}]}>Hora</Text>
+        <Text style={[styles.headerText, {width: 112}]}>Máquina</Text>
+        <Text style={[styles.headerText, {width: 64}]}>Nível</Text>
+        <Text style={[styles.headerText, {flex: 1}]}>Mensagem</Text>
+      </View>
 
-          {/* Loading State */}
+      <View style={styles.listContainer}>
+        <View style={[styles.card, styles.listCard]}>
           {isLoading ? (
-            <Box className="py-12 items-center">
-              <Spinner size="large" className="text-typography-600 dark:text-typography-400" />
-              <Text
-                className="text-sm text-typography-500 dark:text-typography-400 mt-4"
-                style={{fontFamily: "Inter_400Regular"}}
-              >
-                Carregando logs...
-              </Text>
-            </Box>
+            <View style={styles.center}>
+              <ActivityIndicator size="large" color={theme.text} />
+            </View>
           ) : error ? (
-            <Box className="py-12 items-center">
-              <AlertCircle size={48} className="text-red-500 mb-4" />
-              <Text
-                className="text-sm text-red-500 dark:text-red-400"
-                style={{fontFamily: "Inter_500Medium"}}
-              >
-                {error}
-              </Text>
-            </Box>
-          ) : filteredLogs.length === 0 ? (
-            <Box className="py-12 items-center">
-              <Text
-                className="text-sm text-typography-500 dark:text-typography-400"
-                style={{fontFamily: "Inter_400Regular"}}
-              >
-                Nenhum log encontrado
-              </Text>
-            </Box>
+            <View style={styles.center}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
           ) : (
-            <VStack className="gap-3">
-              {filteredLogs.map((log) => (
-                <Pressable key={log.id}>
-                  <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] p-4 active:bg-background-50 dark:active:bg-[#0A1628]">
-                    <HStack className="gap-3 items-start">
-                      {/* Ícone Colorido */}
-                      <Box className="mt-0.5">{getLevelIcon(log.level)}</Box>
-
-                      {/* Conteúdo */}
-                      <VStack className="flex-1 gap-2">
-                        {/* Linha 1: Timestamp + Badges */}
-                        <HStack className="items-center gap-2 flex-wrap">
-                          <Text
-                            className="text-xs text-typography-500 dark:text-typography-400"
-                            style={{fontFamily: "Inter_500Medium"}}
-                          >
-                            {log.timestamp}
-                          </Text>
-                          <Badge
-                            size="sm"
-                            variant="outline"
-                            action="muted"
-                            className="rounded-sm border-outline-200 dark:border-[#2A3B52]"
-                          >
-                            <BadgeText
-                              className="text-xs text-typography-600 dark:text-typography-400"
-                              style={{fontFamily: "Inter_400Regular"}}
-                            >
-                              {log.machine}
-                            </BadgeText>
-                          </Badge>
-                          {getLevelBadge(log.level)}
-                        </HStack>
-
-                        {/* Linha 2: Mensagem */}
-                        <Text
-                          className="text-sm text-typography-900 dark:text-[#E8EBF0]"
-                          style={{fontFamily: "Inter_400Regular"}}
-                        >
-                          {typeof log.message === 'string' ? log.message : JSON.stringify(log.message)}
-                        </Text>
-                      </VStack>
-                    </HStack>
-                  </Box>
-                </Pressable>
-              ))}
-            </VStack>
+            <FlatList
+              style={styles.list}
+              data={visibleLogs}
+              keyExtractor={(item) => item.id}
+              renderItem={renderItem}
+              ListEmptyComponent={<Text style={styles.empty}>Nenhum log encontrado</Text>}
+              refreshControl={refreshControl}
+              contentContainerStyle={{paddingBottom: 12}}
+            />
           )}
-        </Box>
-      </ScrollView>
-    </Box>
+        </View>
+      </View>
+
+      {selected ? (
+        <View style={styles.card}>
+          <View style={styles.detailHeader}>
+            <Text style={styles.detailTitle}>Detalhe do log</Text>
+            <TouchableOpacity onPress={() => setSelected(null)}>
+              <Text style={styles.close}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.detailMeta}>
+            {formatTime(selected.timestamp)} • {selected.machine} • {LEVEL_LABEL[selected.level]}
+          </Text>
+          <ScrollView
+            style={styles.detailBodyScroll}
+            contentContainerStyle={styles.detailBodyContent}
+            showsVerticalScrollIndicator
+          >
+            <Text style={styles.detailBody}>{selected.message}</Text>
+          </ScrollView>
+        </View>
+      ) : null}
+    </View>
   );
 }

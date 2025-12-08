@@ -13,6 +13,17 @@ import {Pressable} from "@/components/ui/pressable";
 import {Divider} from "@/components/ui/divider";
 import {Icon} from "@/components/ui/icon";
 import {
+  Modal,
+  ModalBackdrop,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalCloseButton,
+} from "@/components/ui/modal";
+import {Radio, RadioGroup} from "@/components/ui/radio";
+import {Heading} from "@/components/ui/heading";
+import {
   HardDrive,
   Disc,
   Server,
@@ -22,8 +33,9 @@ import {
   Shield,
   RefreshCw,
   FileText,
-  ChevronDown,
   ChevronRight,
+  Network,
+  Settings,
 } from "lucide-react-native";
 import {usePathname, useRouter} from "expo-router";
 import { clearAuthToken} from "@/services/auth-storage";
@@ -32,6 +44,8 @@ import {setAuthToken} from "@/services/api-client";
 export type AppSidebarProps = {
   isOpen: boolean;
   onClose: () => void;
+  themePreference: "light" | "dark" | "system";
+  onChangeThemePreference: (pref: "light" | "dark" | "system") => void;
 };
 
 type MenuItem = {
@@ -89,12 +103,24 @@ const MENU_ITEMS: MenuItem[] = [
     icon: FileText,
     route: "/logs",
   },
+  {
+    label: "Nginx",
+    icon: Network,
+    children: [
+      {label: "404", route: "/404"},
+      {label: "Certificates", route: "/certificates"},
+      {label: "Proxy", route: "/proxy"},
+      {label: "Redirection", route: "/redirection"},
+      {label: "Streams", route: "/streams"},
+    ],
+  },
 ];
 
-export function AppSidebar({isOpen, onClose}: AppSidebarProps) {
+export function AppSidebar({isOpen, onClose, themePreference, onChangeThemePreference}: AppSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [expandedParents, setExpandedParents] = React.useState<Record<string, boolean>>({});
+  const [showSettings, setShowSettings] = React.useState(false);
 
   const handleLogout = React.useCallback(async () => {
     onClose();
@@ -171,19 +197,22 @@ export function AppSidebar({isOpen, onClose}: AppSidebarProps) {
             style={{marginLeft: paddingLeft}}
             onPress={handlePress}
           >
-            {item.icon ? (
-              <Icon
-                as={item.icon}
-                size="lg"
-                className={
-                  isActive
-                    ? "text-typography-900 dark:text-[#E8EBF0]"
-                    : "text-typography-600 dark:text-typography-400"
-                }
-              />
-            ) : (
-              <Box className="w-6" />
-            )}
+            <Box
+              className="w-6 h-6 shrink-0 !items-center !justify-center"
+              style={{alignItems: "center", justifyContent: "center"}}
+            >
+              {item.icon ? (
+                <Icon
+                  as={item.icon}
+                  size="md"
+                  className={`shrink-0 ${
+                    isActive
+                      ? "text-typography-900 dark:text-[#E8EBF0]"
+                      : "text-typography-600 dark:text-typography-400"
+                  }`}
+                />
+              ) : null}
+            </Box>
             <Text
               className={`flex-1 text-base ${
                 isActive
@@ -226,6 +255,17 @@ export function AppSidebar({isOpen, onClose}: AppSidebarProps) {
         <Divider className="my-2 bg-outline-100 dark:bg-[#2A3B52]" />
         <DrawerFooter className="px-4 pb-6">
           <Button
+            className="w-full gap-2 h-12 rounded-xl mb-3"
+            variant="outline"
+            action="secondary"
+            onPress={() => setShowSettings(true)}
+          >
+            <ButtonIcon as={Settings} className="text-typography-700 dark:text-typography-300" />
+            <ButtonText className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
+              Definições
+            </ButtonText>
+          </Button>
+          <Button
             className="w-full gap-2 h-12 rounded-xl"
             variant="outline"
             action="secondary"
@@ -238,6 +278,45 @@ export function AppSidebar({isOpen, onClose}: AppSidebarProps) {
           </Button>
         </DrawerFooter>
       </DrawerContent>
+
+      <Modal isOpen={showSettings} onClose={() => setShowSettings(false)} size="md">
+        <ModalBackdrop />
+        <ModalContent className="bg-background-0 dark:bg-[#0E1524]">
+          <ModalHeader className="flex-row items-center justify-between">
+            <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
+              Definições
+            </Heading>
+            <ModalCloseButton />
+          </ModalHeader>
+          <ModalBody className="gap-4">
+            <Box>
+              <Text className="text-sm text-typography-600 dark:text-typography-300 mb-2">
+                Tema
+              </Text>
+              <RadioGroup
+                value={themePreference}
+                onChange={(val: any) => onChangeThemePreference(val)}
+                className="gap-3"
+              >
+                <Radio value="light" aria-label="Claro">
+                  <Text className="text-typography-900 dark:text-typography-100">Sempre claro</Text>
+                </Radio>
+                <Radio value="dark" aria-label="Escuro">
+                  <Text className="text-typography-900 dark:text-typography-100">Sempre escuro</Text>
+                </Radio>
+                <Radio value="system" aria-label="Sistema">
+                  <Text className="text-typography-900 dark:text-typography-100">Acompanhar sistema</Text>
+                </Radio>
+              </RadioGroup>
+            </Box>
+          </ModalBody>
+          <ModalFooter className="justify-end">
+            <Button variant="outline" action="secondary" className="rounded-xl" onPress={() => setShowSettings(false)}>
+              <ButtonText>Fechar</ButtonText>
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Drawer>
   );
 }

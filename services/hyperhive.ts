@@ -173,3 +173,32 @@ export async function listLogs(options: { limit?: number; level?: number } = {})
     token: authToken,
   });
 }
+
+export type PerformUpdateInput = {
+  pkgName?: string;
+  reboot?: boolean;
+};
+
+export async function getMachineUpdates(machineName: string): Promise<unknown> {
+  const authToken = await resolveToken();
+  const encodedMachine = encodeURIComponent(machineName);
+  return apiFetch<unknown>(`/extra/getUpdates/${encodedMachine}`, {
+    token: authToken,
+  });
+}
+
+export async function performMachineUpdate(
+  machineName: string,
+  {pkgName = "", reboot = true}: PerformUpdateInput = {}
+): Promise<unknown> {
+  const authToken = await resolveToken();
+  const encodedMachine = encodeURIComponent(machineName);
+  return apiFetch<unknown>(`/extra/performUpdate/${encodedMachine}`, {
+    method: "POST",
+    token: authToken,
+    body: {
+      pkgName: pkgName ?? "",
+      reboot: Boolean(reboot),
+    },
+  });
+}

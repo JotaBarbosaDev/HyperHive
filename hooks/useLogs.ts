@@ -35,6 +35,19 @@ const cleanMessageContent = (content: string): string => {
   return content.replace(/^\[([^\]]+)\]\s*/, '');
 };
 
+const parseTimestampMs = (value: unknown): number => {
+  if (!value) return Date.now();
+  if (typeof value === "number") {
+    const asNumber = Number(value);
+    return Number.isFinite(asNumber) ? asNumber : Date.now();
+  }
+  const parsed = Date.parse(String(value));
+  if (Number.isNaN(parsed)) {
+    return Date.now();
+  }
+  return parsed;
+};
+
 // Função para normalizar os dados recebidos da API
 const normalizeLogEntry = (rawLog: any, index: number): LogEntry => {
   // Se rawLog for uma string ou algo primitivo, converter para objeto
@@ -46,9 +59,12 @@ const normalizeLogEntry = (rawLog: any, index: number): LogEntry => {
   return {
     id: String(logObj.id || logObj._id || `log-${index}-${Date.now()}`),
     timestamp: logObj.ts || logObj.timestamp || logObj.time || logObj.date || new Date().toISOString(),
+    timestampMs: parseTimestampMs(logObj.ts || logObj.timestamp || logObj.time || logObj.date || Date.now()),
     level: normalizeLogLevel(logObj.level || logObj.severity),
     machine: extractMachineFromContent(content),
     message: cleanMessageContent(content),
+    rawContent: typeof content === "string" ? content : undefined,
+    raw: rawLog,
   };
 };
 
@@ -90,7 +106,8 @@ export function useLogs({token, limit = 200, level}: UseLogsOptions = {}) {
         
         console.log('Normalized logs:', normalizedLogs.length, 'entries');
         
-        setLogs(normalizedLogs);
+        const ordered = normalizedLogs.sort((a, b) => b.timestampMs - a.timestampMs);
+        setLogs(ordered);
         setError(null);
       } catch (err) {
         if (!isMountedRef.current) return;

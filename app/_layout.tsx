@@ -37,6 +37,8 @@ import {
 import {ApiError, onApiResult, onUnauthorized, setAuthToken} from "@/services/api-client";
 import {listMachines} from "@/services/hyperhive";
 import {useToast, Toast, ToastTitle, ToastDescription} from "@/components/ui/toast";
+import {AppThemeProvider} from "@/hooks/useAppTheme";
+import {ThemePreference, loadThemePreference, saveThemePreference} from "@/services/theme-preference";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -110,13 +112,25 @@ function RootLayoutNav() {
   const pathname = usePathname();
   const router = useRouter();
   const systemColorScheme = useColorScheme();
-  const colorMode = systemColorScheme === "dark" ? "dark" : "light";
-  const statusBarStyle = colorMode === "dark" ? "light" : "dark";
-  const statusBarBackground = colorMode === "dark" ? "#070D19" : "#F8FAFC";
+  const [themePreference, setThemePreference] = React.useState<ThemePreference>("system");
+  const resolvedMode = React.useMemo(
+    () => (themePreference === "system" ? (systemColorScheme === "dark" ? "dark" : "light") : themePreference),
+    [systemColorScheme, themePreference]
+  );
+  const statusBarStyle = resolvedMode === "dark" ? "light" : "dark";
+  const statusBarBackground = resolvedMode === "dark" ? "#070D19" : "#F8FAFC";
   const [showDrawer, setShowDrawer] = React.useState(false);
   const [showSidebar, setShowSidebar] = React.useState(false);
   const isSigningOutRef = React.useRef(false);
   const toast = useToast();
+
+  React.useEffect(() => {
+    loadThemePreference().then((pref) => {
+      if (pref) {
+        setThemePreference(pref);
+      }
+    });
+  }, []);
 
   const signOut = React.useCallback(async () => {
     if (isSigningOutRef.current) {
@@ -156,10 +170,10 @@ function RootLayoutNav() {
     if (Platform.OS !== "web") return;
     const doc = (globalThis as typeof globalThis & {document?: any}).document;
     if (!doc) return;
-    doc.documentElement.dataset.theme = colorMode;
+    doc.documentElement.dataset.theme = resolvedMode;
     doc.documentElement.style.colorScheme =
-      colorMode === "dark" ? "dark" : "light";
-  }, [colorMode]);
+      resolvedMode === "dark" ? "dark" : "light";
+  }, [resolvedMode]);
 
   useEffect(() => {
     let isMounted = true;
@@ -311,8 +325,8 @@ function RootLayoutNav() {
 
   return (
     <SafeAreaProvider>
-      <GluestackUIProvider mode={colorMode}>
-        <ThemeProvider value={colorMode === "dark" ? DarkTheme : DefaultTheme}>
+      <GluestackUIProvider mode={resolvedMode}>
+        <ThemeProvider value={resolvedMode === "dark" ? DarkTheme : DefaultTheme}>
           <SafeAreaView
             style={{flex: 1, backgroundColor: statusBarBackground}}
             edges={["top", "right", "bottom", "left"]}
@@ -323,9 +337,20 @@ function RootLayoutNav() {
               animated
               hidden={Platform.OS === "android"}
             />
-            <Box className="flex-1">
-              <Slot />
-            </Box>
+            <AppThemeProvider
+              preference={themePreference}
+              resolvedMode={resolvedMode}
+              setPreference={(pref) => {
+                setThemePreference(pref);
+                saveThemePreference(pref).catch((err) =>
+                  console.warn("Failed to persist theme preference", err)
+                );
+              }}
+            >
+              <Box className="flex-1">
+                <Slot />
+              </Box>
+            </AppThemeProvider>
             {pathname !== "/" && (
                 <Button
                 size="md"
@@ -358,6 +383,13 @@ function RootLayoutNav() {
               <AppSidebar
                 isOpen={showSidebar}
                 onClose={() => setShowSidebar(false)}
+                themePreference={themePreference}
+                onChangeThemePreference={(pref) => {
+                  setThemePreference(pref);
+                  saveThemePreference(pref).catch((err) =>
+                    console.warn("Failed to persist theme preference", err)
+                  );
+                }}
               />
             )}
             {pathname === "/mounts" && (

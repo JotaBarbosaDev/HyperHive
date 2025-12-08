@@ -3,9 +3,12 @@ export type LogLevel = "info" | "error" | "warn" | "debug";
 export interface LogEntry {
   id: string;
   timestamp: string;
+  timestampMs: number;
   level: LogLevel;
   machine: string;
   message: string;
+  rawContent?: string;
+  raw?: unknown;
 }
 
 export interface ListLogsOptions {
