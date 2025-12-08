@@ -1,16 +1,328 @@
 import React from "react";
-import {ScrollView} from "react-native";
+import {RefreshControl, ScrollView} from "react-native";
 import {Box} from "@/components/ui/box";
 import {Text} from "@/components/ui/text";
 import {Heading} from "@/components/ui/heading";
 import {VStack} from "@/components/ui/vstack";
+import {HStack} from "@/components/ui/hstack";
+import {Button, ButtonIcon, ButtonSpinner, ButtonText} from "@/components/ui/button";
+import {Badge, BadgeText} from "@/components/ui/badge";
+import {Input, InputField} from "@/components/ui/input";
+import {Switch} from "@/components/ui/switch";
+import {Textarea, TextareaInput} from "@/components/ui/textarea";
+import {
+  Modal,
+  ModalBackdrop,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalCloseButton,
+} from "@/components/ui/modal";
+import {
+  AlertDialog,
+  AlertDialogBackdrop,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogCloseButton,
+} from "@/components/ui/alert-dialog";
+import {
+  FormControl,
+  FormControlLabel,
+  FormControlLabelText,
+  FormControlHelper,
+  FormControlHelperText,
+} from "@/components/ui/form-control";
+import {Toast, ToastDescription, ToastTitle, useToast} from "@/components/ui/toast";
+import {ProxyHost, ProxyPayload, ProxyLocation} from "@/types/proxy";
+import {
+  createProxyHost,
+  deleteProxyHost,
+  disableProxyHost,
+  editProxyHost,
+  enableProxyHost,
+  listProxyHosts,
+} from "@/services/proxy";
+import {Skeleton, SkeletonText} from "@/components/ui/skeleton";
+import {Badge as IconBadge} from "@/components/ui/badge";
+import {Pressable} from "@/components/ui/pressable";
+import {
+  AlertTriangle,
+  Globe,
+  Lock,
+  Network,
+  Pencil,
+  Plus,
+  Power,
+  Shield,
+  Trash2,
+} from "lucide-react-native";
 
-export default function ProfileScreen() {
+type FilterTab = "all" | "active" | "inactive";
+
+const DEFAULT_LOCATION: ProxyLocation = {
+  path: "/",
+  forward_scheme: "http",
+  forward_host: "",
+  forward_port: 80,
+};
+
+const DEFAULT_FORM: ProxyPayload = {
+  domain_names: [],
+  forward_scheme: "http",
+  forward_host: "",
+  forward_port: 80,
+  caching_enabled: false,
+  block_exploits: false,
+  allow_websocket_upgrade: true,
+  access_list_id: "0",
+  certificate_id: 0,
+  meta: {},
+  advanced_config: "",
+  locations: [],
+  http2_support: true,
+  hsts_enabled: false,
+  hsts_subdomains: false,
+  ssl_forced: false,
+  enabled: true,
+};
+
+const parseDomains = (raw: string) =>
+  raw
+    .split(/,|\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+const isEnabled = (host: ProxyHost) => host.enabled !== false;
+
+const StatusChip = ({label, action = "muted"}: {label: string; action?: "muted" | "info" | "success" | "error"}) => (
+  <Badge className="rounded-full px-3 py-1" size="sm" action={action} variant="solid">
+    <BadgeText className={`text-xs ${action === "muted" ? "text-typography-800" : ""}`}>{label}</BadgeText>
+  </Badge>
+);
+
+export default function ProxyHostsScreen() {
+  const toast = useToast();
+  const [hosts, setHosts] = React.useState<ProxyHost[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [filter, setFilter] = React.useState<FilterTab>("all");
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [form, setForm] = React.useState<ProxyPayload>(DEFAULT_FORM);
+  const [domainsInput, setDomainsInput] = React.useState("");
+  const [locations, setLocations] = React.useState<ProxyLocation[]>([]);
+  const [editingHost, setEditingHost] = React.useState<ProxyHost | null>(null);
+  const [saving, setSaving] = React.useState(false);
+  const [togglingId, setTogglingId] = React.useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = React.useState<ProxyHost | null>(null);
+  const [deletingId, setDeletingId] = React.useState<number | null>(null);
+
+  const showToast = React.useCallback(
+    (title: string, description: string, action: "success" | "error" = "success") => {
+      toast.show({
+        placement: "top",
+        render: ({id}) => (
+          <Toast
+            nativeID={"toast-" + id}
+            className="px-5 py-3 gap-3 shadow-soft-1 items-start flex-row"
+            action={action}
+          >
+            <ToastTitle size="sm">{title}</ToastTitle>
+            {description ? <ToastDescription size="sm">{description}</ToastDescription> : null}
+          </Toast>
+        ),
+      });
+    },
+    [toast]
+  );
+
+  const loadHosts = React.useCallback(
+    async (mode: "full" | "refresh" | "silent" = "full") => {
+      if (mode === "full") setLoading(true);
+      if (mode === "refresh") setRefreshing(true);
+      try {
+        const data = await listProxyHosts();
+        setHosts(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Failed to load proxy hosts", err);
+        showToast("Erro ao carregar", "Não foi possível obter os proxies.", "error");
+      } finally {
+        if (mode === "full") setLoading(false);
+        if (mode === "refresh") setRefreshing(false);
+      }
+    },
+    [showToast]
+  );
+
+  React.useEffect(() => {
+    loadHosts();
+  }, [loadHosts]);
+
+  const filteredHosts = React.useMemo(() => {
+    if (filter === "active") return hosts.filter((h) => isEnabled(h));
+    if (filter === "inactive") return hosts.filter((h) => !isEnabled(h));
+    return hosts;
+  }, [filter, hosts]);
+
+  const stats = React.useMemo(() => {
+    const active = hosts.filter((h) => isEnabled(h)).length;
+    const inactive = hosts.length - active;
+    return {total: hosts.length, active, inactive};
+  }, [hosts]);
+
+  const openCreateModal = () => {
+    setEditingHost(null);
+    setForm(DEFAULT_FORM);
+    setDomainsInput("");
+    setLocations([]);
+    setModalOpen(true);
+  };
+
+  const openEditModal = (host: ProxyHost) => {
+    setEditingHost(host);
+    setForm({
+      domain_names: host.domain_names ?? [],
+      forward_scheme: host.forward_scheme ?? "http",
+      forward_host: host.forward_host ?? "",
+      forward_port: host.forward_port ?? 80,
+      caching_enabled: Boolean(host.caching_enabled),
+      block_exploits: Boolean(host.block_exploits),
+      allow_websocket_upgrade: Boolean(host.allow_websocket_upgrade),
+      access_list_id: host.access_list_id ?? "0",
+      certificate_id: host.certificate_id ?? 0,
+      meta: host.meta ?? {},
+      advanced_config: host.advanced_config ?? "",
+      locations: host.locations ?? [],
+      http2_support: Boolean(host.http2_support),
+      hsts_enabled: Boolean(host.hsts_enabled),
+      hsts_subdomains: Boolean(host.hsts_subdomains),
+      ssl_forced: Boolean(host.ssl_forced),
+      enabled: isEnabled(host),
+    });
+    setDomainsInput((host.domain_names ?? []).join(", "));
+    setLocations(host.locations ?? []);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    if (saving) return;
+    setModalOpen(false);
+    setEditingHost(null);
+  };
+
+  const handleSave = async () => {
+    const domain_names = parseDomains(domainsInput);
+    if (!domain_names.length) {
+      showToast("Domínios obrigatórios", "Informe ao menos um domínio.", "error");
+      return;
+    }
+    if (!form.forward_host) {
+      showToast("Host obrigatório", "Informe o host de destino.", "error");
+      return;
+    }
+    const payload: ProxyPayload = {
+      ...form,
+      domain_names,
+      locations,
+      access_list_id: "0",
+      certificate_id: Number(form.certificate_id) || 0,
+      forward_port: Number(form.forward_port) || 80,
+    };
+
+    setSaving(true);
+    try {
+      if (editingHost?.id) {
+        await editProxyHost(editingHost.id, payload);
+        showToast("Proxy atualizado", "Configuração atualizada.");
+      } else {
+        await createProxyHost(payload);
+        showToast("Proxy criado", "Host proxy adicionado.");
+      }
+      setModalOpen(false);
+      setEditingHost(null);
+      await loadHosts("silent");
+    } catch (err) {
+      console.error("Failed to save proxy", err);
+      showToast("Erro ao salvar", "Verifique os dados e tente novamente.", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggle = async (host: ProxyHost) => {
+    if (!host.id) return;
+    const enabled = isEnabled(host);
+    setTogglingId(host.id);
+    try {
+      if (enabled) {
+        await disableProxyHost(host.id);
+        showToast("Proxy desativado", "Host desativado.");
+      } else {
+        await enableProxyHost(host.id);
+        showToast("Proxy ativado", "Host ativado.");
+      }
+      await loadHosts("silent");
+    } catch (err) {
+      console.error("Failed to toggle proxy", err);
+      showToast("Erro ao alterar status", "Não foi possível atualizar o host.", "error");
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget?.id) return;
+    setDeletingId(deleteTarget.id);
+    try {
+      await deleteProxyHost(deleteTarget.id);
+      showToast("Proxy removido", "Host removido.");
+      setDeleteTarget(null);
+      await loadHosts("silent");
+    } catch (err) {
+      console.error("Failed to delete proxy", err);
+      showToast("Erro ao apagar", "Não foi possível remover o host.", "error");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const addLocation = () => {
+    setLocations((prev) => [...prev, {...DEFAULT_LOCATION}]);
+  };
+
+  const updateLocation = (index: number, key: keyof ProxyLocation, value: string) => {
+    setLocations((prev) =>
+      prev.map((loc, idx) => (idx === index ? {...loc, [key]: key === "forward_port" ? Number(value) || 0 : value} : loc))
+    );
+  };
+
+  const removeLocation = (index: number) => {
+    setLocations((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const renderLoading = () => (
+    <VStack className="gap-3 mt-6">
+      {[1, 2].map((idx) => (
+        <Box key={idx} className="p-5 rounded-2xl bg-background-0 shadow-soft-1 border border-background-100">
+          <Skeleton className="h-5 w-2/3 mb-3" />
+          <SkeletonText className="w-1/2" />
+          <HStack className="gap-2 mt-4">
+            <Skeleton className="h-8 w-24" />
+            <Skeleton className="h-8 w-20" />
+          </HStack>
+        </Box>
+      ))}
+    </VStack>
+  );
+
   return (
     <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{paddingBottom: 32}}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadHosts("refresh")} />}
       >
         <Box className="p-4 pt-16 web:p-10 web:max-w-6xl web:mx-auto web:w-full">
           <Heading
@@ -18,16 +330,380 @@ export default function ProfileScreen() {
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
             style={{fontFamily: "Inter_700Bold"}}
           >
-            Proxy
+            Proxy Hosts
           </Heading>
           <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
-            Browse all ISOs available for your VMs and add new images by
-            downloading them straight to the cluster.
+            Gerencie hosts de proxy reverso para rotear tráfego para seus serviços internos.
           </Text>
 
-          <VStack className="mt-6 gap-4 web:flex-row web:items-end"></VStack>
+          <HStack className="mt-6 items-center justify-between flex-wrap gap-3">
+            <HStack className="gap-2 flex-wrap">
+              {[
+                {key: "all" as FilterTab, label: `Todos (${stats.total})`},
+                {key: "active" as FilterTab, label: `Ativos (${stats.active})`},
+                {key: "inactive" as FilterTab, label: `Inativos (${stats.inactive})`},
+              ].map((tab) => {
+                const active = filter === tab.key;
+                return (
+                  <Pressable
+                    key={tab.key}
+                    onPress={() => setFilter(tab.key)}
+                    className={`px-4 py-2 rounded-full border ${
+                      active ? "bg-typography-900 border-typography-900" : "bg-background-0 border-background-200"
+                    }`}
+                  >
+                    <Text
+                      className={`text-sm ${active ? "text-background-0" : "text-typography-700"}`}
+                      style={{fontFamily: active ? "Inter_700Bold" : "Inter_500Medium"}}
+                    >
+                      {tab.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </HStack>
+            <Button action="primary" variant="solid" size="md" onPress={openCreateModal} className="rounded-full px-5">
+              <ButtonIcon as={Plus} size="sm" />
+              <ButtonText>Adicionar Proxy Host</ButtonText>
+            </Button>
+          </HStack>
+
+          {loading ? (
+            renderLoading()
+          ) : filteredHosts.length === 0 ? (
+            <Box className="mt-10 p-6 border border-dashed border-background-300 rounded-2xl bg-background-0 items-center">
+              <Text className="text-typography-700 font-semibold text-base">Nenhum proxy encontrado</Text>
+              <Text className="text-typography-500 text-sm mt-1 text-center">
+                Clique em &quot;Adicionar Proxy Host&quot; para criar o primeiro host de proxy reverso.
+              </Text>
+            </Box>
+          ) : (
+            <VStack className="mt-6 gap-4">
+              {filteredHosts.map((host) => {
+                const enabled = isEnabled(host);
+                return (
+                  <Box
+                    key={host.id}
+                    className="bg-background-0 rounded-2xl p-5 border border-background-100 shadow-soft-1"
+                  >
+                    <HStack className="items-start justify-between gap-4 flex-wrap">
+                      <VStack className="gap-2 flex-1">
+                        <HStack className="items-center gap-2 flex-wrap">
+                          <Box className={`h-2.5 w-2.5 rounded-full ${enabled ? "bg-success-500" : "bg-outline-400"}`} />
+                          <Text
+                            className="text-typography-900 text-base"
+                            style={{fontFamily: "Inter_700Bold"}}
+                          >
+                            {(host.domain_names ?? []).join(", ")}
+                          </Text>
+                        </HStack>
+                        <HStack className="items-center gap-3 flex-wrap">
+                          <HStack className="items-center gap-1">
+                            <Globe size={16} color="#0f172a" />
+                            <Text className="text-typography-800 text-sm">
+                              {host.forward_scheme}://{host.forward_host}:{host.forward_port}
+                            </Text>
+                          </HStack>
+                          {host.ssl_forced ? (
+                            <HStack className="items-center gap-1">
+                              <Lock size={16} color="#16a34a" />
+                              <Text className="text-success-600 text-sm">SSL (Forçado)</Text>
+                            </HStack>
+                          ) : (
+                            <HStack className="items-center gap-1">
+                              <Shield size={16} color="#9ca3af" />
+                              <Text className="text-typography-600 text-sm">SSL</Text>
+                            </HStack>
+                          )}
+                        </HStack>
+                        <HStack className="gap-2 flex-wrap">
+                          {host.certificate_id ? <StatusChip label="Certificate" /> : null}
+                          {host.block_exploits ? <StatusChip label="Block Exploits" /> : null}
+                          {host.allow_websocket_upgrade ? <StatusChip label="WebSockets" /> : null}
+                        </HStack>
+                      </VStack>
+
+                      <HStack className="gap-2 items-center">
+                        <Button
+                          action="default"
+                          variant="outline"
+                          size="sm"
+                          onPress={() => handleToggle(host)}
+                          isDisabled={togglingId === host.id}
+                          className="border-background-300"
+                        >
+                          {togglingId === host.id ? <ButtonSpinner /> : <ButtonIcon as={Power} size="sm" />}
+                          <ButtonText>{enabled ? "Desativar" : "Ativar"}</ButtonText>
+                        </Button>
+                        <Button
+                          action="default"
+                          variant="outline"
+                          size="sm"
+                          onPress={() => openEditModal(host)}
+                          className="border-background-300 px-3"
+                        >
+                          <ButtonIcon as={Pencil} size="sm" />
+                        </Button>
+                        <Button
+                          action="negative"
+                          variant="solid"
+                          size="sm"
+                          onPress={() => setDeleteTarget(host)}
+                          className="px-3"
+                        >
+                          <ButtonIcon as={Trash2} size="sm" />
+                        </Button>
+                      </HStack>
+                    </HStack>
+                  </Box>
+                );
+              })}
+            </VStack>
+          )}
         </Box>
       </ScrollView>
+
+      <Modal isOpen={modalOpen} onClose={closeModal} size="lg">
+        <ModalBackdrop />
+        <ModalContent className="max-w-2xl">
+          <ModalHeader className="flex-row items-start justify-between">
+            <Heading size="md" className="text-typography-900">
+              {editingHost ? "Editar Proxy Host" : "Adicionar Proxy Host"}
+            </Heading>
+            <ModalCloseButton />
+          </ModalHeader>
+          <ModalBody className="gap-4">
+            <FormControl isRequired>
+              <FormControlLabel>
+                <FormControlLabelText>Domínios</FormControlLabelText>
+              </FormControlLabel>
+              <Input>
+                <InputField
+                  value={domainsInput}
+                  onChangeText={setDomainsInput}
+                  placeholder="ex: app.hyperhive.local, www.app.hyperhive.local"
+                  autoCapitalize="none"
+                />
+              </Input>
+              <FormControlHelper>
+                <FormControlHelperText>Separe por vírgula ou quebra de linha.</FormControlHelperText>
+              </FormControlHelper>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormControlLabel>
+                <FormControlLabelText>Destino</FormControlLabelText>
+              </FormControlLabel>
+              <HStack className="gap-3">
+                <Input className="flex-1">
+                  <InputField
+                    value={form.forward_scheme}
+                    onChangeText={(val) => setForm((prev) => ({...prev, forward_scheme: val || "http"}))}
+                    autoCapitalize="none"
+                    placeholder="http"
+                  />
+                </Input>
+                <Input className="flex-1">
+                  <InputField
+                    value={form.forward_host}
+                    onChangeText={(val) => setForm((prev) => ({...prev, forward_host: val}))}
+                    autoCapitalize="none"
+                    placeholder="192.168.1.100"
+                  />
+                </Input>
+                <Input className="w-24">
+                  <InputField
+                    value={String(form.forward_port)}
+                    onChangeText={(val) => setForm((prev) => ({...prev, forward_port: Number(val) || 0}))}
+                    keyboardType="number-pad"
+                    placeholder="80"
+                  />
+                </Input>
+              </HStack>
+            </FormControl>
+
+            <FormControl>
+              <FormControlLabel>
+                <FormControlLabelText>ID do Certificado</FormControlLabelText>
+              </FormControlLabel>
+              <Input>
+                <InputField
+                  value={String(form.certificate_id ?? 0)}
+                  onChangeText={(val) => setForm((prev) => ({...prev, certificate_id: Number(val.replace(/[^0-9]/g, "")) || 0}))}
+                  keyboardType="number-pad"
+                  placeholder="0 (sem certificado)"
+                />
+              </Input>
+              <FormControlHelper>
+                <FormControlHelperText>Use 0 para sem certificado.</FormControlHelperText>
+              </FormControlHelper>
+            </FormControl>
+
+            <Textarea size="md">
+              <TextareaInput
+                value={form.advanced_config}
+                onChangeText={(text) => setForm((prev) => ({...prev, advanced_config: text}))}
+                placeholder="Configuração Nginx adicional (opcional)..."
+              />
+            </Textarea>
+
+            <HStack className="flex-wrap gap-4">
+              <HStack className="items-center gap-2">
+                <Switch
+                  value={form.ssl_forced}
+                  onValueChange={(val) => setForm((prev) => ({...prev, ssl_forced: val}))}
+                />
+                <Text className="text-typography-800">Forçar SSL</Text>
+              </HStack>
+              <HStack className="items-center gap-2">
+                <Switch
+                  value={form.allow_websocket_upgrade}
+                  onValueChange={(val) => setForm((prev) => ({...prev, allow_websocket_upgrade: val}))}
+                />
+                <Text className="text-typography-800">WebSockets</Text>
+              </HStack>
+              <HStack className="items-center gap-2">
+                <Switch
+                  value={form.block_exploits}
+                  onValueChange={(val) => setForm((prev) => ({...prev, block_exploits: val}))}
+                />
+                <Text className="text-typography-800">Block Exploits</Text>
+              </HStack>
+              <HStack className="items-center gap-2">
+                <Switch
+                  value={form.caching_enabled}
+                  onValueChange={(val) => setForm((prev) => ({...prev, caching_enabled: val}))}
+                />
+                <Text className="text-typography-800">Caching</Text>
+              </HStack>
+              <HStack className="items-center gap-2">
+                <Switch
+                  value={form.http2_support}
+                  onValueChange={(val) => setForm((prev) => ({...prev, http2_support: val}))}
+                />
+                <Text className="text-typography-800">HTTP/2</Text>
+              </HStack>
+              <HStack className="items-center gap-2">
+                <Switch
+                  value={form.hsts_enabled}
+                  onValueChange={(val) => setForm((prev) => ({...prev, hsts_enabled: val}))}
+                />
+                <Text className="text-typography-800">HSTS</Text>
+              </HStack>
+              <HStack className="items-center gap-2">
+                <Switch
+                  value={form.hsts_subdomains}
+                  onValueChange={(val) => setForm((prev) => ({...prev, hsts_subdomains: val}))}
+                  isDisabled={!form.hsts_enabled}
+                />
+                <Text className={`text-typography-800 ${!form.hsts_enabled ? "text-typography-500" : ""}`}>
+                  HSTS Subdomínios
+                </Text>
+              </HStack>
+            </HStack>
+
+            <VStack className="gap-3">
+              <HStack className="items-center justify-between">
+                <Text className="text-typography-900 font-semibold">Locations</Text>
+                <Button action="primary" variant="outline" size="sm" onPress={addLocation}>
+                  <ButtonText>Adicionar Location</ButtonText>
+                </Button>
+              </HStack>
+              {locations.length === 0 ? (
+                <Text className="text-typography-600 text-sm">Nenhum location definido.</Text>
+              ) : (
+                locations.map((loc, idx) => (
+                  <Box key={`${loc.path}-${idx}`} className="p-3 rounded-xl border border-background-200 bg-background-50 gap-3">
+                    <FormControl>
+                      <FormControlLabel>
+                        <FormControlLabelText>Caminho</FormControlLabelText>
+                      </FormControlLabel>
+                      <Input>
+                        <InputField
+                          value={loc.path}
+                          onChangeText={(val) => updateLocation(idx, "path", val)}
+                          autoCapitalize="none"
+                          placeholder="/api"
+                        />
+                      </Input>
+                    </FormControl>
+                    <HStack className="gap-3">
+                      <Input className="flex-1">
+                        <InputField
+                          value={loc.forward_scheme}
+                          onChangeText={(val) => updateLocation(idx, "forward_scheme", val)}
+                          autoCapitalize="none"
+                          placeholder="http"
+                        />
+                      </Input>
+                      <Input className="flex-1">
+                        <InputField
+                          value={loc.forward_host}
+                          onChangeText={(val) => updateLocation(idx, "forward_host", val)}
+                          autoCapitalize="none"
+                          placeholder="192.168.1.100"
+                        />
+                      </Input>
+                      <Input className="w-24">
+                        <InputField
+                          value={String(loc.forward_port)}
+                          onChangeText={(val) => updateLocation(idx, "forward_port", val)}
+                          keyboardType="number-pad"
+                          placeholder="8080"
+                        />
+                      </Input>
+                    </HStack>
+                    <HStack className="justify-end">
+                      <Button action="negative" variant="outline" size="sm" onPress={() => removeLocation(idx)}>
+                        <ButtonText>Remover</ButtonText>
+                      </Button>
+                    </HStack>
+                  </Box>
+                ))
+              )}
+            </VStack>
+          </ModalBody>
+          <ModalFooter className="gap-3">
+            <Button variant="outline" action="default" onPress={closeModal} isDisabled={saving}>
+              <ButtonText>Cancelar</ButtonText>
+            </Button>
+            <Button action="primary" onPress={handleSave} isDisabled={saving}>
+              {saving ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
+              <ButtonText>{editingHost ? "Salvar alterações" : "Criar proxy"}</ButtonText>
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <AlertDialog isOpen={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)}>
+        <AlertDialogBackdrop />
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <Heading size="md" className="text-typography-900">
+              Remover proxy?
+            </Heading>
+          </AlertDialogHeader>
+          <AlertDialogBody>
+            <Text className="text-typography-700">
+              Esta ação apagará{" "}
+              <Text className="font-semibold">
+                {(deleteTarget?.domain_names ?? []).join(", ")}
+              </Text>
+              . Deseja continuar?
+            </Text>
+          </AlertDialogBody>
+          <AlertDialogFooter className="gap-3">
+            <Button variant="outline" action="default" onPress={() => setDeleteTarget(null)} isDisabled={Boolean(deletingId)}>
+              <ButtonText>Cancelar</ButtonText>
+            </Button>
+            <Button action="negative" onPress={handleDelete} isDisabled={Boolean(deletingId)}>
+              {deletingId ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
+              <ButtonText>Apagar</ButtonText>
+            </Button>
+          </AlertDialogFooter>
+          <AlertDialogCloseButton />
+        </AlertDialogContent>
+      </AlertDialog>
     </Box>
   );
 }

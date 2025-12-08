@@ -437,13 +437,12 @@ export default function WireGuardScreen() {
                             {peer.client_ip?.split("/")[0] ?? "—"}
                           </Text>
                           <HStack className="flex-1 min-w-[200px] items-center gap-2">
-                            <Text
-                              className="flex-1 text-sm text-typography-600 dark:text-typography-400"
-                              style={{fontFamily: "Inter_400Regular"}}
-                              numberOfLines={1}
-                            >
-                              {truncateMiddle(peer.public_key, 30)}
-                            </Text>
+                          <Text
+                            className="flex-1 text-sm text-typography-600 dark:text-typography-400"
+                            style={{fontFamily: "Inter_400Regular"}}
+                          >
+                            {truncateMiddle(peer.public_key, 30)}
+                          </Text>
                             <Button
                               variant="link"
                               size="xs"
