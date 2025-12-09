@@ -47,6 +47,61 @@ export {
 
 SplashScreen.preventAutoHideAsync();
 
+const APP_TITLE = "HyperHive";
+
+const ROUTE_TITLE_MAP: Record<string, string> = {
+  "/": "Login",
+  "/dashboard": "Dashboard",
+  "/btrfs-raids": "BTRFS / RAIDs",
+  "/smartdisk": "SmartDisk",
+  "/mounts": "NFS",
+  "/isos": "ISOs",
+  "/vms": "Virtual Machines",
+  "/backups": "Backups",
+  "/autobackups": "Auto-Backups",
+  "/wireguard": "WireGuard VPN",
+  "/updates": "Updates",
+  "/logs": "Logs",
+  "/404": "404",
+  "/certificates": "Certificates",
+  "/proxy": "Proxy",
+  "/redirection": "Redirection",
+  "/streams": "Streams",
+  "/cards": "Cards",
+  "/orders": "Orders",
+  "/modal": "Modal",
+  "/tabs": "Tabs",
+};
+
+const normalizePathname = (path: string) => {
+  if (!path) return "/";
+  const withoutQuery = path.split("?")[0] ?? "/";
+  if (withoutQuery === "/") return "/";
+  const trimmed = withoutQuery.replace(/^\/+|\/+$/g, "");
+  return trimmed ? `/${trimmed}` : "/";
+};
+
+const resolveWebTitle = (path: string) => {
+  const normalized = normalizePathname(path);
+  const exactMatch = ROUTE_TITLE_MAP[normalized];
+  if (exactMatch) {
+    return exactMatch;
+  }
+  const prefixMatch = Object.entries(ROUTE_TITLE_MAP).find(
+    ([route]) => route !== "/" && normalized.startsWith(`${route}/`)
+  );
+  if (prefixMatch) {
+    return prefixMatch[1];
+  }
+  const fallbackSegment = normalized.split("/").filter(Boolean).pop();
+  if (!fallbackSegment) {
+    return ROUTE_TITLE_MAP["/"];
+  }
+  return fallbackSegment
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
@@ -174,6 +229,14 @@ function RootLayoutNav() {
     doc.documentElement.style.colorScheme =
       resolvedMode === "dark" ? "dark" : "light";
   }, [resolvedMode]);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const doc = (globalThis as typeof globalThis & {document?: {title: string}}).document;
+    if (!doc) return;
+    const pageTitle = resolveWebTitle(pathname ?? "/");
+    doc.title = `${pageTitle} | ${APP_TITLE}`;
+  }, [pathname]);
 
   useEffect(() => {
     let isMounted = true;
