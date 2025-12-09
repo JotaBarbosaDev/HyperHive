@@ -4836,10 +4836,15 @@ expo-constants@~18.0.8, expo-constants@~18.0.9:
     "@expo/config" "~12.0.9"
     "@expo/env" "~2.0.7"
 
+expo-file-system@~17.0.1:
+  version "17.0.1"
+  resolved "https://registry.npmjs.org/expo-file-system/-/expo-file-system-17.0.1.tgz"
+  integrity sha512-dYpnZJqTGj6HCYJyXAgpFkQWsiCH3HY1ek2cFZVHFoEc5tLz9gmdEgTF6nFHurvmvfmXqxi7a5CXyVm0aFYJBw==
+
 expo-file-system@~19.0.17:
-  version "19.0.17"
-  resolved "https://registry.npmjs.org/expo-file-system/-/expo-file-system-19.0.17.tgz"
-  integrity sha512-WwaS01SUFrxBnExn87pg0sCTJjZpf2KAOzfImG0o8yhkU7fbYpihpl/oocXBEsNbj58a8hVt1Y4CVV5c1tzu/g==
+  version "19.0.20"
+  resolved "https://registry.npmjs.org/expo-file-system/-/expo-file-system-19.0.20.tgz"
+  integrity sha512-Jr/nNvJmUlptS3cHLKVBNyTyGMHNyxYBKRph1KRe0Nb3RzZza1gZLZXMG5Ky//sO2azTn+OaT0dv/lAyL0vJNA==
 
 expo-font@~14.0.9:
   version "14.0.9"
@@ -4931,6 +4936,11 @@ expo-server@^1.0.1:
   version "1.0.1"
   resolved "https://registry.npmjs.org/expo-server/-/expo-server-1.0.1.tgz"
   integrity sha512-J3JlpzNXOkkr4BbapTrcv6klBQcw6NzrBBVIU7qkNE2eU3U1on9rp27wi0+cihjG/QgxSIqQVkrga5z3HWnH0A==
+
+expo-sharing@~13.0.1:
+  version "13.0.1"
+  resolved "https://registry.npmjs.org/expo-sharing/-/expo-sharing-13.0.1.tgz"
+  integrity sha512-qych3Nw65wlFcnzE/gRrsdtvmdV0uF4U4qVMZBJYPG90vYyWh2QM9rp1gVu0KWOBc7N8CC2dSVYn4/BXqJy6Xw==
 
 expo-splash-screen@~31.0.10:
   version "31.0.10"

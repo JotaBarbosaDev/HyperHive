@@ -1,7 +1,7 @@
-import {getApiBaseUrl, setApiBaseUrl} from "@/config/apiConfig";
-import {CreateWireguardPeerInput, WireguardListResponse, WireguardPeer, WireguardPeerId} from "@/types/wireguard";
-import {apiFetch, setAuthToken, triggerUnauthorized} from "./api-client";
-import {loadApiBaseUrl, loadAuthToken} from "./auth-storage";
+import { getApiBaseUrl, setApiBaseUrl } from "@/config/apiConfig";
+import { CreateWireguardPeerInput, WireguardListResponse, WireguardPeer, WireguardPeerId } from "@/types/wireguard";
+import { apiFetch, setAuthToken, triggerUnauthorized } from "./api-client";
+import { loadApiBaseUrl, loadAuthToken } from "./auth-storage";
 
 const ensureApiBaseUrl = async () => {
   let baseUrl = getApiBaseUrl();
@@ -46,13 +46,14 @@ export async function createWireguardVpn(): Promise<void> {
   });
 }
 
-export async function createWireguardPeer(input: CreateWireguardPeerInput): Promise<void> {
+export async function createWireguardPeer(input: CreateWireguardPeerInput): Promise<string> {
   const authToken = await resolveToken();
-  await apiFetch<void>("/wireguard/newPeer", {
+  const config = await apiFetch<string>("/wireguard/newPeer", {
     method: "POST",
     token: authToken,
     body: input,
   });
+  return config;
 }
 
 export async function deleteWireguardPeer(id: WireguardPeerId): Promise<void> {

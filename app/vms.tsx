@@ -1,17 +1,17 @@
 import React from "react";
-import {ScrollView, RefreshControl, useColorScheme} from "react-native";
-import {Box} from "@/components/ui/box";
-import {Text} from "@/components/ui/text";
-import {VStack} from "@/components/ui/vstack";
-import {HStack} from "@/components/ui/hstack";
-import {Button, ButtonText, ButtonIcon, ButtonSpinner} from "@/components/ui/button";
-import {Badge, BadgeText} from "@/components/ui/badge";
-import {Skeleton, SkeletonText} from "@/components/ui/skeleton";
-import {Pressable} from "@/components/ui/pressable";
-import {Modal, ModalBackdrop, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton} from "@/components/ui/modal";
-import {Divider} from "@/components/ui/divider";
-import {Progress, ProgressFilledTrack} from "@/components/ui/progress";
-import {Platform} from "react-native";
+import { ScrollView, RefreshControl, useColorScheme } from "react-native";
+import { Box } from "@/components/ui/box";
+import { Text } from "@/components/ui/text";
+import { VStack } from "@/components/ui/vstack";
+import { HStack } from "@/components/ui/hstack";
+import { Button, ButtonText, ButtonIcon, ButtonSpinner } from "@/components/ui/button";
+import { Badge, BadgeText } from "@/components/ui/badge";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
+import { Pressable } from "@/components/ui/pressable";
+import { Modal, ModalBackdrop, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton } from "@/components/ui/modal";
+import { Divider } from "@/components/ui/divider";
+import { Progress, ProgressFilledTrack } from "@/components/ui/progress";
+import { Platform } from "react-native";
 import { Heading } from '@/components/ui/heading';
 import CreateVmModal from "@/components/modals/CreateVmModal";
 import {
@@ -24,9 +24,9 @@ import {
   ActionsheetItemText,
   ActionsheetIcon,
 } from "@/components/ui/actionsheet";
-import {Toast, ToastDescription, ToastTitle, useToast} from "@/components/ui/toast";
-import {AlertDialog, AlertDialogBackdrop, AlertDialogContent, AlertDialogHeader, AlertDialogBody, AlertDialogFooter, AlertDialogCloseButton} from "@/components/ui/alert-dialog";
-import {Input, InputField} from "@/components/ui/input";
+import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
+import { AlertDialog, AlertDialogBackdrop, AlertDialogContent, AlertDialogHeader, AlertDialogBody, AlertDialogFooter, AlertDialogCloseButton } from "@/components/ui/alert-dialog";
+import { Input, InputField } from "@/components/ui/input";
 import {
   Select,
   SelectTrigger,
@@ -64,21 +64,23 @@ import {
   listSlaves,
   Slave,
   editVmResources,
+  changeVmNetwork,
+  removeAllIsos,
 } from "@/services/vms-client";
-import {listMounts} from "@/services/hyperhive";
-import {Mount} from "@/types/mount";
-import {ApiError} from "@/services/api-client";
+import { listMounts } from "@/services/hyperhive";
+import { Mount } from "@/types/mount";
+import { ApiError } from "@/services/api-client";
 let Haptics: any;
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   Haptics = require("expo-haptics");
 } catch (e) {
   Haptics = {
-    impactAsync: async () => {},
-    selectionAsync: async () => {},
-    notificationAsync: async () => {},
-    ImpactFeedbackStyle: {Light: "light", Medium: "medium"},
-    NotificationFeedbackType: {Success: "success", Warning: "warning"},
+    impactAsync: async () => { },
+    selectionAsync: async () => { },
+    notificationAsync: async () => { },
+    ImpactFeedbackStyle: { Light: "light", Medium: "medium" },
+    NotificationFeedbackType: { Success: "success", Warning: "warning" },
   };
 }
 import {
@@ -101,6 +103,7 @@ import {
   Check,
   RefreshCcw,
   AlertCircle,
+  Disc3,
 } from "lucide-react-native";
 
 // Interfaces TypeScript
@@ -133,15 +136,15 @@ interface VMState {
 
 // Estados das VMs
 const VM_STATES: Record<VmState, VMState> = {
-  [VmState.UNKNOWN]: {label: "Unknown", color: "bg-gray-400", badgeVariant: "outline"},
-  [VmState.RUNNING]: {label: "Running", color: "bg-green-500", badgeVariant: "solid"},
-  [VmState.BLOCKED]: {label: "Blocked", color: "bg-red-500", badgeVariant: "solid"},
-  [VmState.PAUSED]: {label: "Paused", color: "bg-yellow-500", badgeVariant: "solid"},
-  [VmState.SHUTDOWN]: {label: "Shutdown", color: "bg-orange-500", badgeVariant: "solid"},
-  [VmState.SHUTOFF]: {label: "Shutoff", color: "bg-gray-400", badgeVariant: "outline"},
-  [VmState.CRASHED]: {label: "Crashed", color: "bg-red-600", badgeVariant: "solid"},
-  [VmState.PMSUSPENDED]: {label: "PM Suspended", color: "bg-blue-400", badgeVariant: "solid"},
-  [VmState.NOSTATE]: {label: "No State", color: "bg-gray-300", badgeVariant: "outline"},
+  [VmState.UNKNOWN]: { label: "Unknown", color: "bg-gray-400", badgeVariant: "outline" },
+  [VmState.RUNNING]: { label: "Running", color: "bg-green-500", badgeVariant: "solid" },
+  [VmState.BLOCKED]: { label: "Blocked", color: "bg-red-500", badgeVariant: "solid" },
+  [VmState.PAUSED]: { label: "Paused", color: "bg-yellow-500", badgeVariant: "solid" },
+  [VmState.SHUTDOWN]: { label: "Shutdown", color: "bg-orange-500", badgeVariant: "solid" },
+  [VmState.SHUTOFF]: { label: "Shutoff", color: "bg-gray-400", badgeVariant: "outline" },
+  [VmState.CRASHED]: { label: "Crashed", color: "bg-red-600", badgeVariant: "solid" },
+  [VmState.PMSUSPENDED]: { label: "PM Suspended", color: "bg-blue-400", badgeVariant: "solid" },
+  [VmState.NOSTATE]: { label: "No State", color: "bg-gray-300", badgeVariant: "outline" },
 };
 
 // Função para mapear VirtualMachine para VM
@@ -175,7 +178,7 @@ export default function VirtualMachinesScreen() {
   const [detailsVm, setDetailsVm] = React.useState<VM | null>(null);
   const [showActionsheet, setShowActionsheet] = React.useState(false);
   const [selectedVm, setSelectedVm] = React.useState<VM | null>(null);
-  const [confirmAction, setConfirmAction] = React.useState<null | {type: "delete" | "force-shutdown"; vm: VM}>(null);
+  const [confirmAction, setConfirmAction] = React.useState<null | { type: "delete" | "force-shutdown"; vm: VM }>(null);
   const [openCreate, setOpenCreate] = React.useState(false);
   const [editVm, setEditVm] = React.useState<VM | null>(null);
   const [cloneVm, setCloneVm] = React.useState<VM | null>(null);
@@ -208,10 +211,10 @@ export default function VirtualMachinesScreen() {
         await fetchAndSetVms();
       } catch (error) {
         console.error("Erro ao carregar VMs:", error);
-        toast.show({ 
-          placement: "top", 
-          render: ({id}) => (
-            <Toast nativeID={"toast-"+id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="error">
+        toast.show({
+          placement: "top",
+          render: ({ id }) => (
+            <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="error">
               <ToastTitle size="sm">Erro ao carregar VMs</ToastTitle>
             </Toast>
           )
@@ -234,7 +237,7 @@ export default function VirtualMachinesScreen() {
         console.error("Erro ao carregar NFS/Slaves:", error);
         toast.show({
           placement: "top",
-          render: ({id}) => (
+          render: ({ id }) => (
             <Toast
               nativeID={"toast-" + id}
               className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
@@ -274,7 +277,7 @@ export default function VirtualMachinesScreen() {
     const paused = vms.filter((vm) => vm.state === VmState.PAUSED).length;
     const totalVcpu = vms.reduce((sum, vm) => sum + vm.DefinedCPUS, 0);
     const totalMemoryGB = (vms.reduce((sum, vm) => sum + vm.DefinedRam, 0) / 1024).toFixed(1);
-    return {total, running, stopped, paused, totalVcpu, totalMemoryGB};
+    return { total, running, stopped, paused, totalVcpu, totalMemoryGB };
   }, [vms]);
 
   const handleRefresh = async () => {
@@ -282,17 +285,19 @@ export default function VirtualMachinesScreen() {
     try {
       Haptics.selectionAsync();
       await fetchAndSetVms();
-      toast.show({ placement: "top", render: ({id}) => (
-        <Toast nativeID={"toast-"+id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="success">
-          <ToastTitle size="sm">Atualizado</ToastTitle>
-        </Toast>
-      )});
+      toast.show({
+        placement: "top", render: ({ id }) => (
+          <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="success">
+            <ToastTitle size="sm">Atualizado</ToastTitle>
+          </Toast>
+        )
+      });
     } catch (error) {
       console.error("Erro ao atualizar VMs:", error);
-      toast.show({ 
-        placement: "top", 
-        render: ({id}) => (
-          <Toast nativeID={"toast-"+id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="error">
+      toast.show({
+        placement: "top",
+        render: ({ id }) => (
+          <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="error">
             <ToastTitle size="sm">Erro ao atualizar</ToastTitle>
           </Toast>
         )
@@ -325,17 +330,19 @@ export default function VirtualMachinesScreen() {
       }
 
       await fetchAndSetVms();
-      toast.show({ placement: "top", render: ({id}) => (
-        <Toast nativeID={"toast-"+id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="success">
-          <ToastTitle size="sm">{action} executado</ToastTitle>
-        </Toast>
-      )});
+      toast.show({
+        placement: "top", render: ({ id }) => (
+          <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="success">
+            <ToastTitle size="sm">{action} executado</ToastTitle>
+          </Toast>
+        )
+      });
     } catch (error) {
       console.error("Erro ao executar ação na VM:", error);
-      toast.show({ 
-        placement: "top", 
-        render: ({id}) => (
-          <Toast nativeID={"toast-"+id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="error">
+      toast.show({
+        placement: "top",
+        render: ({ id }) => (
+          <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="error">
             <ToastTitle size="sm">Erro ao executar ação</ToastTitle>
           </Toast>
         )
@@ -346,17 +353,19 @@ export default function VirtualMachinesScreen() {
   };
 
   const handleToggleAutostart = (vm: VM, checked: boolean) => {
-    setVms((prev) => prev.map((v) => v.name === vm.name ? {...v, autoStart: checked} : v));
+    setVms((prev) => prev.map((v) => v.name === vm.name ? { ...v, autoStart: checked } : v));
     Haptics.selectionAsync();
-    toast.show({ placement: "top", render: ({id}) => (
-      <Toast nativeID={"toast-"+id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="success">
-        <ToastTitle size="sm">Auto-start {checked ? "ativado" : "desativado"}</ToastTitle>
-      </Toast>
-    )});
+    toast.show({
+      placement: "top", render: ({ id }) => (
+        <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="success">
+          <ToastTitle size="sm">Auto-start {checked ? "ativado" : "desativado"}</ToastTitle>
+        </Toast>
+      )
+    });
   };
 
   const handleDelete = (vm: VM) => {
-    setConfirmAction({type: "delete", vm});
+    setConfirmAction({ type: "delete", vm });
   };
 
   const refreshControlTint = colorScheme === "dark" ? "#F8FAFC" : "#0F172A";
@@ -366,7 +375,7 @@ export default function VirtualMachinesScreen() {
     <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{paddingBottom: 64}}
+        contentContainerStyle={{ paddingBottom: 64 }}
         refreshControl={
           <RefreshControl
             refreshing={loading}
@@ -383,7 +392,7 @@ export default function VirtualMachinesScreen() {
               <Heading
                 size="2xl"
                 className="text-typography-900 dark:text-[#E8EBF0] web:text-4xl"
-                style={{fontFamily: "Inter_700Bold"}}
+                style={{ fontFamily: "Inter_700Bold" }}
               >
                 Virtual Machines
               </Heading>
@@ -431,14 +440,14 @@ export default function VirtualMachinesScreen() {
                 <Server size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Total VMs
                 </Text>
               </HStack>
               <Text
                 className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{fontFamily: "Inter_700Bold"}}
+                style={{ fontFamily: "Inter_700Bold" }}
               >
                 {loading ? "..." : stats.total}
               </Text>
@@ -449,14 +458,14 @@ export default function VirtualMachinesScreen() {
                 <Play size={16} className="text-[#2DD4BF] dark:text-[#5EEAD4]" />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Running
                 </Text>
               </HStack>
               <Text
                 className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{fontFamily: "Inter_700Bold"}}
+                style={{ fontFamily: "Inter_700Bold" }}
               >
                 {loading ? "..." : stats.running}
               </Text>
@@ -467,14 +476,14 @@ export default function VirtualMachinesScreen() {
                 <Square size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Stopped
                 </Text>
               </HStack>
               <Text
                 className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{fontFamily: "Inter_700Bold"}}
+                style={{ fontFamily: "Inter_700Bold" }}
               >
                 {loading ? "..." : stats.stopped}
               </Text>
@@ -485,14 +494,14 @@ export default function VirtualMachinesScreen() {
                 <Pause size={16} className="text-[#FBBF24] dark:text-[#FCD34D]" />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Paused
                 </Text>
               </HStack>
               <Text
                 className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{fontFamily: "Inter_700Bold"}}
+                style={{ fontFamily: "Inter_700Bold" }}
               >
                 {loading ? "..." : stats.paused}
               </Text>
@@ -503,14 +512,14 @@ export default function VirtualMachinesScreen() {
                 <Cpu size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Total vCPUs
                 </Text>
               </HStack>
               <Text
                 className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{fontFamily: "Inter_700Bold"}}
+                style={{ fontFamily: "Inter_700Bold" }}
               >
                 {loading ? "..." : stats.totalVcpu}
               </Text>
@@ -521,14 +530,14 @@ export default function VirtualMachinesScreen() {
                 <MemoryStick size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Total RAM
                 </Text>
               </HStack>
               <Text
                 className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{fontFamily: "Inter_700Bold"}}
+                style={{ fontFamily: "Inter_700Bold" }}
               >
                 {loading ? "..." : stats.totalMemoryGB} GB
               </Text>
@@ -540,13 +549,13 @@ export default function VirtualMachinesScreen() {
             <HStack className="gap-2 items-center">
               <Text
                 className="text-typography-600 dark:text-typography-400 text-sm"
-                style={{fontFamily: "Inter_400Regular"}}
+                style={{ fontFamily: "Inter_400Regular" }}
               >
                 Total:
               </Text>
               <Text
                 className="text-typography-900 dark:text-[#E8EBF0] font-semibold"
-                style={{fontFamily: "Inter_600SemiBold"}}
+                style={{ fontFamily: "Inter_600SemiBold" }}
               >
                 {loading ? "..." : stats.total}
               </Text>
@@ -555,13 +564,13 @@ export default function VirtualMachinesScreen() {
               <Box className="w-2 h-2 rounded-full bg-[#2DD4BF] dark:bg-[#5EEAD4]" />
               <Text
                 className="text-typography-600 dark:text-typography-400 text-sm"
-                style={{fontFamily: "Inter_400Regular"}}
+                style={{ fontFamily: "Inter_400Regular" }}
               >
                 Running:
               </Text>
               <Text
                 className="text-typography-900 dark:text-[#E8EBF0] font-semibold"
-                style={{fontFamily: "Inter_600SemiBold"}}
+                style={{ fontFamily: "Inter_600SemiBold" }}
               >
                 {loading ? "..." : stats.running}
               </Text>
@@ -570,13 +579,13 @@ export default function VirtualMachinesScreen() {
               <Box className="w-2 h-2 rounded-full bg-[#94A3B8] dark:bg-[#64748B]" />
               <Text
                 className="text-typography-600 dark:text-typography-400 text-sm"
-                style={{fontFamily: "Inter_400Regular"}}
+                style={{ fontFamily: "Inter_400Regular" }}
               >
                 Stopped:
               </Text>
               <Text
                 className="text-typography-900 dark:text-[#E8EBF0] font-semibold"
-                style={{fontFamily: "Inter_600SemiBold"}}
+                style={{ fontFamily: "Inter_600SemiBold" }}
               >
                 {loading ? "..." : stats.stopped}
               </Text>
@@ -584,13 +593,13 @@ export default function VirtualMachinesScreen() {
             <HStack className="gap-2 items-center">
               <Text
                 className="text-typography-600 dark:text-typography-400 text-sm"
-                style={{fontFamily: "Inter_400Regular"}}
+                style={{ fontFamily: "Inter_400Regular" }}
               >
                 vCPU:
               </Text>
               <Text
                 className="text-typography-900 dark:text-[#E8EBF0] font-semibold"
-                style={{fontFamily: "Inter_600SemiBold"}}
+                style={{ fontFamily: "Inter_600SemiBold" }}
               >
                 {loading ? "..." : stats.totalVcpu}
               </Text>
@@ -598,13 +607,13 @@ export default function VirtualMachinesScreen() {
             <HStack className="gap-2 items-center">
               <Text
                 className="text-typography-600 dark:text-typography-400 text-sm"
-                style={{fontFamily: "Inter_400Regular"}}
+                style={{ fontFamily: "Inter_400Regular" }}
               >
                 RAM:
               </Text>
               <Text
                 className="text-typography-900 dark:text-[#E8EBF0] font-semibold"
-                style={{fontFamily: "Inter_600SemiBold"}}
+                style={{ fontFamily: "Inter_600SemiBold" }}
               >
                 {loading ? "..." : `${stats.totalMemoryGB} GB`}
               </Text>
@@ -629,13 +638,13 @@ export default function VirtualMachinesScreen() {
                 />
                 <Text
                   className="text-typography-900 dark:text-[#E8EBF0] text-lg text-center"
-                  style={{fontFamily: "Inter_600SemiBold"}}
+                  style={{ fontFamily: "Inter_600SemiBold" }}
                 >
                   Nenhuma VM encontrada
                 </Text>
                 <Text
                   className="text-[#9AA4B8] dark:text-[#8A94A8] text-center"
-                  style={{fontFamily: "Inter_400Regular"}}
+                  style={{ fontFamily: "Inter_400Regular" }}
                 >
                   Comece criando sua primeira máquina virtual
                 </Text>
@@ -682,13 +691,13 @@ export default function VirtualMachinesScreen() {
                       <Heading
                         size="lg"
                         className="text-typography-900 dark:text-[#E8EBF0] mb-2"
-                        style={{fontFamily: "Inter_700Bold"}}
+                        style={{ fontFamily: "Inter_700Bold" }}
                       >
                         {slaveName}
                       </Heading>
                       <Text
                         className="text-sm text-[#9AA4B8] dark:text-[#8A94A8]"
-                        style={{fontFamily: "Inter_400Regular"}}
+                        style={{ fontFamily: "Inter_400Regular" }}
                       >
                         {slaveVms.length} VMs • {slaveRunning} running •{" "}
                         {slaveVcpu} vCPU • {slaveMemoryGB} GB RAM
@@ -708,25 +717,23 @@ export default function VirtualMachinesScreen() {
                           return (
                             <Box
                               key={vm.name}
-                              className={`rounded-xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E] p-4 web:hover:shadow-lg transition-all duration-200 ${
-                                isRunning
-                                  ? "hover:border-[#2DD4BF] dark:border-[#5EEAD4] border"
-                                  : isPaused
+                              className={`rounded-xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E] p-4 web:hover:shadow-lg transition-all duration-200 ${isRunning
+                                ? "hover:border-[#2DD4BF] dark:border-[#5EEAD4] border"
+                                : isPaused
                                   ? "hover:border-[#FBBF24] dark:border-[#FCD34D] border"
                                   : "hover:border-[#94A3B8] dark:border-[#64748B] border"
-                              }`}
+                                }`}
                             >
                               {/* VM Header */}
                               <HStack className="justify-between items-start mb-3">
                                 <HStack className="items-center gap-2 flex-1 min-w-0">
                                   <Box
-                                    className={`w-2 h-2 rounded-full shrink-0 ${
-                                      isRunning
-                                        ? "bg-[#2DD4BF] dark:bg-[#5EEAD4]"
-                                        : isPaused
+                                    className={`w-2 h-2 rounded-full shrink-0 ${isRunning
+                                      ? "bg-[#2DD4BF] dark:bg-[#5EEAD4]"
+                                      : isPaused
                                         ? "bg-[#FBBF24] dark:bg-[#FCD34D]"
                                         : "bg-[#94A3B8] dark:bg-[#64748B]"
-                                    } ${isRunning ? "animate-pulse" : ""}`}
+                                      } ${isRunning ? "animate-pulse" : ""}`}
                                   />
                                   <Pressable
                                     onPress={() => setDetailsVm(vm)}
@@ -734,7 +741,7 @@ export default function VirtualMachinesScreen() {
                                   >
                                     <Text
                                       className="text-typography-900 dark:text-[#E8EBF0] truncate"
-                                      style={{fontFamily: "Inter_600SemiBold"}}
+                                      style={{ fontFamily: "Inter_600SemiBold" }}
                                     >
                                       {vm.name}
                                     </Text>
@@ -744,23 +751,21 @@ export default function VirtualMachinesScreen() {
                                   <Badge
                                     size="sm"
                                     variant="outline"
-                                    className={`rounded-full border px-2.5 py-1 ${
-                                      isRunning
-                                        ? "bg-[#2dd4be19] border-[#2DD4BF] dark:bg-[#2DD4BF25] dark:border-[#5EEAD4]"
-                                        : isPaused
+                                    className={`rounded-full border px-2.5 py-1 ${isRunning
+                                      ? "bg-[#2dd4be19] border-[#2DD4BF] dark:bg-[#2DD4BF25] dark:border-[#5EEAD4]"
+                                      : isPaused
                                         ? "bg-[#fbbf2419] border-[#FBBF24] dark:bg-[#FBBF2425] dark:border-[#FCD34D]"
                                         : "bg-[#94a3b819] border-[#94A3B8] dark:bg-[#94A3B825] dark:border-[#CBD5E1]"
-                                    }`}
+                                      }`}
                                   >
                                     <BadgeText
-                                      className={`text-xs ${
-                                        isRunning
-                                          ? "text-[#2DD4BF] dark:text-[#5EEAD4]"
-                                          : isPaused
+                                      className={`text-xs ${isRunning
+                                        ? "text-[#2DD4BF] dark:text-[#5EEAD4]"
+                                        : isPaused
                                           ? "text-[#FBBF24] dark:text-[#FCD34D]"
                                           : "text-[#64748B] dark:text-[#94A3B8]"
-                                      }`}
-                                      style={{fontFamily: "Inter_500Medium"}}
+                                        }`}
+                                      style={{ fontFamily: "Inter_500Medium" }}
                                     >
                                       {vmState.label}
                                     </BadgeText>
@@ -786,13 +791,13 @@ export default function VirtualMachinesScreen() {
                                   <Box className="flex flex-row justify-between">
                                     <Text
                                       className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                                      style={{fontFamily: "Inter_400Regular"}}
+                                      style={{ fontFamily: "Inter_400Regular" }}
                                     >
                                       CPU
                                     </Text>
                                     <Text
                                       className="text-xs text-typography-900 dark:text-[#E8EBF0]"
-                                      style={{fontFamily: "Inter_500Medium"}}
+                                      style={{ fontFamily: "Inter_500Medium" }}
                                     >
                                       {vm.DefinedCPUS} cores
                                     </Text>
@@ -808,8 +813,8 @@ export default function VirtualMachinesScreen() {
                                         vm.currentCpuUsage >= 75
                                           ? "bg-red-500"
                                           : vm.currentCpuUsage >= 50
-                                          ? "bg-amber-500"
-                                          : ""
+                                            ? "bg-amber-500"
+                                            : ""
                                       }
                                     />
                                   </Progress>
@@ -818,13 +823,13 @@ export default function VirtualMachinesScreen() {
                                   <Box className="flex flex-row justify-between">
                                     <Text
                                       className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                                      style={{fontFamily: "Inter_400Regular"}}
+                                      style={{ fontFamily: "Inter_400Regular" }}
                                     >
                                       RAM
                                     </Text>
                                     <Text
                                       className="text-xs text-typography-900 dark:text-[#E8EBF0]"
-                                      style={{fontFamily: "Inter_500Medium"}}
+                                      style={{ fontFamily: "Inter_500Medium" }}
                                     >
                                       {formatMemory(vm.DefinedRam)}
                                     </Text>
@@ -836,17 +841,17 @@ export default function VirtualMachinesScreen() {
                                     }
                                     size="xs"
                                     orientation="horizontal"
-                                    className="mb-5 mt-2" 
+                                    className="mb-5 mt-2"
                                   >
                                     <ProgressFilledTrack
                                       className={
                                         vm.currentMemoryUsageMB >=
-                                        vm.DefinedRam * 0.75
+                                          vm.DefinedRam * 0.75
                                           ? "bg-red-500"
                                           : vm.currentMemoryUsageMB >=
                                             vm.DefinedRam * 0.5
-                                          ? "bg-amber-500"
-                                          : ""
+                                            ? "bg-amber-500"
+                                            : ""
                                       }
                                     />
                                   </Progress>
@@ -855,13 +860,13 @@ export default function VirtualMachinesScreen() {
                                   <Box className="flex flex-row justify-between">
                                     <Text
                                       className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                                      style={{fontFamily: "Inter_400Regular"}}
+                                      style={{ fontFamily: "Inter_400Regular" }}
                                     >
                                       Disco
                                     </Text>
                                     <Text
                                       className="text-xs text-typography-900 dark:text-[#E8EBF0]"
-                                      style={{fontFamily: "Inter_500Medium"}}
+                                      style={{ fontFamily: "Inter_500Medium" }}
                                     >
                                       {vm.diskSizeGB} GB
                                     </Text>
@@ -880,8 +885,8 @@ export default function VirtualMachinesScreen() {
                                           ? "bg-red-500"
                                           : vm.AllocatedGb >=
                                             vm.diskSizeGB * 0.5
-                                          ? "bg-amber-500"
-                                          : ""
+                                            ? "bg-amber-500"
+                                            : ""
                                       }
                                     />
                                   </Progress>
@@ -889,13 +894,13 @@ export default function VirtualMachinesScreen() {
                                 <HStack className="justify-between">
                                   <Text
                                     className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                                    style={{fontFamily: "Inter_400Regular"}}
+                                    style={{ fontFamily: "Inter_400Regular" }}
                                   >
                                     Network
                                   </Text>
                                   <Text
                                     className="text-xs text-typography-900 dark:text-[#E8EBF0]"
-                                    style={{fontFamily: "Inter_500Medium"}}
+                                    style={{ fontFamily: "Inter_500Medium" }}
                                   >
                                     {vm.network}
                                   </Text>
@@ -1164,59 +1169,59 @@ export default function VirtualMachinesScreen() {
                 >
                   <ButtonText>Cancelar</ButtonText>
                 </Button>
-                  <Button
-                    onPress={async () => {
-                      if (!confirmAction) return;
-                      Haptics.notificationAsync(
-                        Haptics.NotificationFeedbackType.Warning
-                      );
-                      if (confirmAction.type === "delete") {
-                        try {
-                          setDeletingVm(confirmAction.vm.name);
-                          await deleteVM(confirmAction.vm.name);
-                          await fetchAndSetVms();
-                          setConfirmAction(null);
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                          toast.show({
-                            placement: "top",
-                            render: ({id}) => (
-                              <Toast
-                                nativeID={"toast-" + id}
-                                className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-                                action="success"
-                              >
-                                <ToastTitle size="sm">VM apagada</ToastTitle>
-                              </Toast>
-                            ),
-                          });
-                        } catch (error) {
-                          console.error("Erro ao apagar VM:", error);
-                          toast.show({
-                            placement: "top",
-                            render: ({id}) => (
-                              <Toast
-                                nativeID={"toast-" + id}
-                                className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-                                action="error"
-                              >
-                                <ToastTitle size="sm">Erro ao apagar VM</ToastTitle>
-                              </Toast>
-                            ),
-                          });
-                        } finally {
-                          setDeletingVm(null);
-                        }
-                      } else {
-                        await handleVmAction(confirmAction.vm.name, "force-shutdown");
+                <Button
+                  onPress={async () => {
+                    if (!confirmAction) return;
+                    Haptics.notificationAsync(
+                      Haptics.NotificationFeedbackType.Warning
+                    );
+                    if (confirmAction.type === "delete") {
+                      try {
+                        setDeletingVm(confirmAction.vm.name);
+                        await deleteVM(confirmAction.vm.name);
+                        await fetchAndSetVms();
                         setConfirmAction(null);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        toast.show({
+                          placement: "top",
+                          render: ({ id }) => (
+                            <Toast
+                              nativeID={"toast-" + id}
+                              className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+                              action="success"
+                            >
+                              <ToastTitle size="sm">VM apagada</ToastTitle>
+                            </Toast>
+                          ),
+                        });
+                      } catch (error) {
+                        console.error("Erro ao apagar VM:", error);
+                        toast.show({
+                          placement: "top",
+                          render: ({ id }) => (
+                            <Toast
+                              nativeID={"toast-" + id}
+                              className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+                              action="error"
+                            >
+                              <ToastTitle size="sm">Erro ao apagar VM</ToastTitle>
+                            </Toast>
+                          ),
+                        });
+                      } finally {
+                        setDeletingVm(null);
                       }
-                    }}
-                    className="rounded-md px-4 py-2"
-                    disabled={Boolean(deletingVm)}
-                  >
-                    {deletingVm ? <ButtonSpinner className="mr-2" /> : null}
-                    <ButtonText>Confirmar</ButtonText>
-                  </Button>
+                    } else {
+                      await handleVmAction(confirmAction.vm.name, "force-shutdown");
+                      setConfirmAction(null);
+                    }
+                  }}
+                  className="rounded-md px-4 py-2"
+                  disabled={Boolean(deletingVm)}
+                >
+                  {deletingVm ? <ButtonSpinner className="mr-2" /> : null}
+                  <ButtonText>Confirmar</ButtonText>
+                </Button>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -1239,33 +1244,40 @@ export default function VirtualMachinesScreen() {
           />
 
           {/* Modal: Editar Recursos */}
-          <Modal isOpen={!!editVm} onClose={() => setEditVm(null)}>
+          <Modal isOpen={!!editVm} onClose={() => setEditVm(null)} size="lg">
             <ModalBackdrop />
-            <ModalContent className="rounded-2xl border border-outline-100 shadow-soft-1 web:max-w-2xl w-full">
-              <ModalHeader>
-                <Heading size="md" className="text-gray-900">
+            <ModalContent className="rounded-2xl border border-outline-100 shadow-soft-1 web:max-w-2xl w-[90%] max-h-[85vh] web:max-h-[90vh]">
+              <ModalHeader className="border-b border-outline-100 dark:border-[#2A3B52]">
+                <Heading size="md" className="text-gray-900 dark:text-[#E8EBF0]">
                   Editar Recursos
                 </Heading>
                 <ModalCloseButton />
               </ModalHeader>
-              <ModalBody>
+              <ModalBody className="overflow-y-auto max-h-[calc(85vh-140px)] web:max-h-[calc(90vh-140px)]">
                 {editVm && (
                   <EditVmForm
                     vm={editVm}
                     onCancel={() => setEditVm(null)}
-                    onSave={async ({vcpu, memory, disk}) => {
+                    onSave={async ({ vcpu, memory, disk, network }) => {
                       try {
+                        // Atualizar recursos (CPU, RAM, Disco)
                         await editVmResources(editVm.name, {
                           memory,
                           vcpu,
                           disk_sizeGB: disk,
                         });
+
+                        // Atualizar rede se foi alterada
+                        if (network !== editVm.network) {
+                          await changeVmNetwork(editVm.name, network);
+                        }
+
                         await fetchAndSetVms();
                         setEditVm(null);
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         toast.show({
                           placement: "top",
-                          render: ({id}) => (
+                          render: ({ id }) => (
                             <Toast
                               nativeID={"toast-" + id}
                               className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
@@ -1281,7 +1293,7 @@ export default function VirtualMachinesScreen() {
                         console.error("Erro ao editar VM:", error);
                         toast.show({
                           placement: "top",
-                          render: ({id}) => (
+                          render: ({ id }) => (
                             <Toast
                               nativeID={"toast-" + id}
                               className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
@@ -1333,7 +1345,7 @@ export default function VirtualMachinesScreen() {
                     slaveOptions={slaveOptions}
                     loadingOptions={cloneOptionsLoading}
                     onCancel={() => setCloneVm(null)}
-                    onClone={async ({newName, destMachine, destNfs}) => {
+                    onClone={async ({ newName, destMachine, destNfs }) => {
                       try {
                         await cloneVmApi(cloneVm.name, destNfs, destMachine, newName);
                         setCloneVm(null);
@@ -1341,7 +1353,7 @@ export default function VirtualMachinesScreen() {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         toast.show({
                           placement: "top",
-                          render: ({id}) => (
+                          render: ({ id }) => (
                             <Toast
                               nativeID={"toast-" + id}
                               className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
@@ -1355,7 +1367,7 @@ export default function VirtualMachinesScreen() {
                         console.error("Erro ao clonar VM:", error);
                         toast.show({
                           placement: "top",
-                          render: ({id}) => (
+                          render: ({ id }) => (
                             <Toast
                               nativeID={"toast-" + id}
                               className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
@@ -1431,7 +1443,7 @@ export default function VirtualMachinesScreen() {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         toast.show({
                           placement: "top",
-                          render: ({id}) => (
+                          render: ({ id }) => (
                             <Toast
                               nativeID={"toast-" + id}
                               className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
@@ -1451,7 +1463,7 @@ export default function VirtualMachinesScreen() {
                               : "Verifique nome, estado da VM e destino.";
                         toast.show({
                           placement: "top",
-                          render: ({id}) => (
+                          render: ({ id }) => (
                             <Toast
                               nativeID={"toast-" + id}
                               className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
@@ -1504,7 +1516,7 @@ export default function VirtualMachinesScreen() {
                     mountOptions={mountOptions}
                     loadingOptions={cloneOptionsLoading}
                     onCancel={() => setMoveDiskVm(null)}
-                    onMove={async ({destNfsId, destDiskPath}) => {
+                    onMove={async ({ destNfsId, destDiskPath }) => {
                       try {
                         await moveDisk(moveDiskVm.name, destNfsId, destDiskPath);
                         await fetchAndSetVms();
@@ -1512,7 +1524,7 @@ export default function VirtualMachinesScreen() {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         toast.show({
                           placement: "top",
-                          render: ({id}) => (
+                          render: ({ id }) => (
                             <Toast
                               nativeID={"toast-" + id}
                               className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
@@ -1526,7 +1538,7 @@ export default function VirtualMachinesScreen() {
                         console.error("Erro ao mover disco:", error);
                         toast.show({
                           placement: "top",
-                          render: ({id}) => (
+                          render: ({ id }) => (
                             <Toast
                               nativeID={"toast-" + id}
                               className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
@@ -1588,7 +1600,7 @@ export default function VirtualMachinesScreen() {
                           );
                           toast.show({
                             placement: "top",
-                            render: ({id}) => (
+                            render: ({ id }) => (
                               <Toast
                                 nativeID={"toast-" + id}
                                 className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
@@ -1621,284 +1633,370 @@ export default function VirtualMachinesScreen() {
             setShowActionsheet(false);
             setSelectedVm(null);
           }}
+          size="lg"
         >
           <ModalBackdrop />
-          <ModalContent className="rounded-lg shadow-lg">
+          <ModalContent className="rounded-lg shadow-lg max-h-[85vh] web:max-h-[90vh]">
             <ModalHeader>
-              <Heading size="md" className="text-gray-900">
+              <Heading size="md" className="text-gray-900 dark:text-[#E8EBF0]">
                 {selectedVm?.name}
               </Heading>
               <ModalCloseButton />
             </ModalHeader>
-            <ModalBody>
+            <ModalBody className="overflow-y-auto max-h-[calc(85vh-140px)] web:max-h-[calc(90vh-140px)]">
               <VStack className="gap-1">
                 {/* Configurações */}
                 <Text className="text-xs text-typography-500 px-3 py-2 font-semibold">
                   CONFIGURAÇÕES
                 </Text>
                 <Pressable
+                  onPress={() => {
+                    if (!selectedVm) return;
+                    handleToggleAutostart(selectedVm, !selectedVm.autoStart);
+                    setShowActionsheet(false);
+                  }}
+                  className="px-3 py-3 hover:bg-background-50 rounded-md"
+                >
+                  <HStack className="items-center gap-2">
+                    {selectedVm?.autoStart && (
+                      <Check size={16} className="text-typography-900" />
+                    )}
+                    <Text className="text-typography-900">
+                      Auto-start na inicialização
+                    </Text>
+                  </HStack>
+                </Pressable>
+
+                <Divider className="my-2" />
+
+                {/* Operações */}
+                <Text className="text-xs text-typography-500 px-3 py-2 font-semibold">
+                  OPERAÇÕES
+                </Text>
+                <Pressable
+                  onPress={() => {
+                    if (!selectedVm) return;
+                    setEditVm(selectedVm);
+                    setShowActionsheet(false);
+                  }}
+                  className="px-3 py-3 hover:bg-background-50 rounded-md"
+                >
+                  <HStack className="items-center gap-3">
+                    <Settings size={18} className="text-typography-700" />
+                    <Text className="text-typography-900">Editar Recursos</Text>
+                  </HStack>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    if (!selectedVm) return;
+                    setCloneVm(selectedVm);
+                    setShowActionsheet(false);
+                  }}
+                  className="px-3 py-3 hover:bg-background-50 rounded-md"
+                >
+                  <HStack className="items-center gap-3">
+                    <Copy size={18} className="text-typography-700" />
+                    <Text className="text-typography-900">Clonar VM</Text>
+                  </HStack>
+                </Pressable>
+
+                <Divider className="my-2" />
+
+                {/* Migração & Disco */}
+                <Text className="text-xs text-typography-500 px-3 py-2 font-semibold">
+                  MIGRAÇÃO & DISCO
+                </Text>
+                <Pressable
+                  onPress={() => {
+                    if (!selectedVm) return;
+                    setMigrateVm(selectedVm);
+                    setShowActionsheet(false);
+                  }}
+                  className="px-3 py-3 hover:bg-background-50 rounded-md"
+                >
+                  <HStack className="items-center gap-3">
+                    <GitBranch size={18} className="text-typography-700" />
+                    <Text className="text-typography-900">Migrar VM (Cold/Hot)</Text>
+                  </HStack>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    if (!selectedVm) return;
+                    setMoveDiskVm(selectedVm);
+                    setShowActionsheet(false);
+                  }}
+                  className="px-3 py-3 hover:bg-background-50 rounded-md"
+                >
+                  <HStack className="items-center gap-3">
+                    <HardDrive size={18} className="text-typography-700" />
+                    <Text className="text-typography-900">Mover Disco</Text>
+                  </HStack>
+                </Pressable>
+
+                {/* Remove All ISOs */}
+                <Pressable
+                  onPress={async () => {
+                    if (!selectedVm) return;
+                    try {
+                      await removeAllIsos(selectedVm.name);
+                      toast.show({
+                        placement: "top",
+                        render: ({ id }) => (
+                          <Toast
+                            nativeID={"toast-" + id}
+                            className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+                            action="success"
+                          >
+                            <ToastTitle size="sm">ISOs removidas</ToastTitle>
+                          </Toast>
+                        ),
+                      });
+                    } catch (error) {
+                      console.error("Erro ao remover ISOs:", error);
+                      toast.show({
+                        placement: "top",
+                        render: ({ id }) => (
+                          <Toast
+                            nativeID={"toast-" + id}
+                            className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+                            action="error"
+                          >
+                            <ToastTitle size="sm">Erro ao remover ISOs</ToastTitle>
+                          </Toast>
+                        ),
+                      });
+                    }
+                    setShowActionsheet(false);
+                  }}
+                  className="px-3 py-3 hover:bg-background-50 rounded-md"
+                >
+                  <HStack className="items-center gap-3">
+                    <Disc3 size={18} className="text-typography-700 dark:text-[#E8EBF0]" />
+                    <Text className="text-typography-700 dark:text-[#E8EBF0]">Remove All ISOs</Text>
+                  </HStack>
+                </Pressable>
+
+                {/* Force Shutdown */}
+                {selectedVm?.state === VmState.RUNNING && (
+                  <Pressable
+                    onPress={() => {
+                      if (!selectedVm) return;
+                      handleVmAction(selectedVm.name, "force-shutdown");
+                      setShowActionsheet(false);
+                    }}
+                    className="px-3 py-3 hover:bg-orange-50 rounded-md"
+                  >
+                    <HStack className="items-center gap-3">
+                      <Zap size={18} className="text-orange-600" />
+                      <Text className="text-orange-600">Force Shutdown</Text>
+                    </HStack>
+                  </Pressable>
+                )}
+
+                {/* Apagar VM */}
+                <Pressable
+                  onPress={() => {
+                    if (!selectedVm) return;
+                    setConfirmAction({ type: "delete", vm: selectedVm });
+                    setShowActionsheet(false);
+                  }}
+                  className="px-3 py-3 hover:bg-red-50 rounded-md"
+                >
+                  <HStack className="items-center gap-3">
+                    <Trash2 size={18} className="text-red-600" />
+                    <Text className="text-red-600">Apagar VM</Text>
+                  </HStack>
+                </Pressable>
+              </VStack>
+            </ModalBody>
+            <ModalFooter>
+              <Button
+                variant="outline"
+                className="rounded-md px-4 py-2"
+                onPress={() => setShowActionsheet(false)}
+              >
+                <ButtonText>Cancelar</ButtonText>
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+      ) : (
+        <Actionsheet
+          isOpen={showActionsheet}
+          onClose={() => {
+            setShowActionsheet(false);
+            setSelectedVm(null);
+          }}
+        >
+          <ActionsheetBackdrop />
+          <ActionsheetContent className="max-h-[90vh]">
+            <ScrollView className="w-full" showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: 20 }}>
+              <ActionsheetDragIndicatorWrapper>
+                <ActionsheetDragIndicator />
+              </ActionsheetDragIndicatorWrapper>
+
+              {/* Header */}
+              <Box className="p-4 border-b border-outline-100 w-full">
+                <Text className="text-lg font-semibold">{selectedVm?.name}</Text>
+              </Box>
+
+              {/* Configurações label */}
+              <ActionsheetItem isDisabled>
+                <ActionsheetItemText className="text-xs text-typography-500">
+                  CONFIGURAÇÕES
+                </ActionsheetItemText>
+              </ActionsheetItem>
+              <ActionsheetItem
                 onPress={() => {
                   if (!selectedVm) return;
                   handleToggleAutostart(selectedVm, !selectedVm.autoStart);
                   setShowActionsheet(false);
-                } }
-                className="px-3 py-3 hover:bg-background-50 rounded-md"
+                }}
               >
-                <HStack className="items-center gap-2">
-                  {selectedVm?.autoStart && (
-                    <Check size={16} className="text-typography-900" />
-                  )}
-                  <Text className="text-typography-900">
-                    Auto-start na inicialização
-                  </Text>
-                </HStack>
-              </Pressable>
+                <ActionsheetItemText>
+                  {(selectedVm?.autoStart ? "✓ " : "") +
+                    "Auto-start na inicialização"}
+                </ActionsheetItemText>
+              </ActionsheetItem>
 
-              <Divider className="my-2" />
-
-              {/* Operações */}
-              <Text className="text-xs text-typography-500 px-3 py-2 font-semibold">
-                OPERAÇÕES
-              </Text>
-              <Pressable
+              {/* Operações label */}
+              <Box className="h-[1px] bg-outline-100 w-full" />
+              <ActionsheetItem isDisabled>
+                <ActionsheetItemText className="text-xs text-typography-500">
+                  OPERAÇÕES
+                </ActionsheetItemText>
+              </ActionsheetItem>
+              <ActionsheetItem
                 onPress={() => {
                   if (!selectedVm) return;
                   setEditVm(selectedVm);
                   setShowActionsheet(false);
-                } }
-                className="px-3 py-3 hover:bg-background-50 rounded-md"
+                }}
               >
-                <HStack className="items-center gap-3">
-                  <Settings size={18} className="text-typography-700" />
-                  <Text className="text-typography-900">Editar Recursos</Text>
-                </HStack>
-              </Pressable>
-              <Pressable
+                <ActionsheetIcon as={Settings} className="mr-2" />
+                <ActionsheetItemText>Editar Recursos</ActionsheetItemText>
+              </ActionsheetItem>
+              <ActionsheetItem
                 onPress={() => {
                   if (!selectedVm) return;
                   setCloneVm(selectedVm);
                   setShowActionsheet(false);
-                } }
-                className="px-3 py-3 hover:bg-background-50 rounded-md"
+                }}
               >
-                <HStack className="items-center gap-3">
-                  <Copy size={18} className="text-typography-700" />
-                  <Text className="text-typography-900">Clonar VM</Text>
-                </HStack>
-              </Pressable>
-
-              <Divider className="my-2" />
+                <ActionsheetIcon as={Copy} className="mr-2" />
+                <ActionsheetItemText>Clonar VM</ActionsheetItemText>
+              </ActionsheetItem>
 
               {/* Migração & Disco */}
-              <Text className="text-xs text-typography-500 px-3 py-2 font-semibold">
-                MIGRAÇÃO & DISCO
-              </Text>
-              <Pressable
+              <Box className="h-[1px] bg-outline-100 w-full" />
+              <ActionsheetItem isDisabled>
+                <ActionsheetItemText className="text-xs text-typography-500">
+                  MIGRAÇÃO & DISCO
+                </ActionsheetItemText>
+              </ActionsheetItem>
+              <ActionsheetItem
                 onPress={() => {
                   if (!selectedVm) return;
                   setMigrateVm(selectedVm);
                   setShowActionsheet(false);
                 }}
-                className="px-3 py-3 hover:bg-background-50 rounded-md"
               >
-                <HStack className="items-center gap-3">
-                  <GitBranch size={18} className="text-typography-700" />
-                  <Text className="text-typography-900">Migrar VM (Cold/Hot)</Text>
-                </HStack>
-              </Pressable>
-              <Pressable
+                <ActionsheetIcon as={GitBranch} className="mr-2" />
+                <ActionsheetItemText>Migrar VM (Cold/Hot)</ActionsheetItemText>
+              </ActionsheetItem>
+              <ActionsheetItem
                 onPress={() => {
                   if (!selectedVm) return;
                   setMoveDiskVm(selectedVm);
                   setShowActionsheet(false);
                 }}
-                className="px-3 py-3 hover:bg-background-50 rounded-md"
               >
-                <HStack className="items-center gap-3">
-                  <HardDrive size={18} className="text-typography-700" />
-                  <Text className="text-typography-900">Mover Disco</Text>
-                </HStack>
-              </Pressable>
+                <ActionsheetIcon as={HardDrive} className="mr-2" />
+                <ActionsheetItemText>Mover Disco</ActionsheetItemText>
+              </ActionsheetItem>
+
+              {/* Remove All ISOs */}
+              <ActionsheetItem
+                onPress={async () => {
+                  if (!selectedVm) return;
+                  try {
+                    await removeAllIsos(selectedVm.name);
+                    toast.show({
+                      placement: "top",
+                      render: ({ id }) => (
+                        <Toast
+                          nativeID={"toast-" + id}
+                          className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+                          action="success"
+                        >
+                          <ToastTitle size="sm">ISOs removidas</ToastTitle>
+                        </Toast>
+                      ),
+                    });
+                  } catch (error) {
+                    console.error("Erro ao remover ISOs:", error);
+                    toast.show({
+                      placement: "top",
+                      render: ({ id }) => (
+                        <Toast
+                          nativeID={"toast-" + id}
+                          className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+                          action="error"
+                        >
+                          <ToastTitle size="sm">Erro ao remover ISOs</ToastTitle>
+                        </Toast>
+                      ),
+                    });
+                  }
+                  setShowActionsheet(false);
+                }}
+              >
+                <ActionsheetIcon as={Disc3} className="mr-2" />
+                <ActionsheetItemText>Remove All ISOs</ActionsheetItemText>
+              </ActionsheetItem>
 
               {/* Force Shutdown */}
               {selectedVm?.state === VmState.RUNNING && (
-                <Pressable
+                <ActionsheetItem
                   onPress={() => {
                     if (!selectedVm) return;
                     handleVmAction(selectedVm.name, "force-shutdown");
                     setShowActionsheet(false);
                   }}
-                  className="px-3 py-3 hover:bg-orange-50 rounded-md"
                 >
-                  <HStack className="items-center gap-3">
-                    <Zap size={18} className="text-orange-600" />
-                    <Text className="text-orange-600">Force Shutdown</Text>
-                  </HStack>
-                </Pressable>
+                  <ActionsheetIcon as={Zap} className="mr-2 text-orange-600" />
+                  <ActionsheetItemText className="text-orange-600">
+                    Force Shutdown
+                  </ActionsheetItemText>
+                </ActionsheetItem>
               )}
 
               {/* Apagar VM */}
-              <Pressable
+              <ActionsheetItem
                 onPress={() => {
                   if (!selectedVm) return;
-                  setConfirmAction({type: "delete", vm: selectedVm});
+                  setConfirmAction({ type: "delete", vm: selectedVm });
                   setShowActionsheet(false);
                 }}
-                className="px-3 py-3 hover:bg-red-50 rounded-md"
               >
-                <HStack className="items-center gap-3">
-                  <Trash2 size={18} className="text-red-600" />
-                  <Text className="text-red-600">Apagar VM</Text>
-                </HStack>
-              </Pressable>
-            </VStack>
-          </ModalBody>
-          <ModalFooter>
-            <Button
-              variant="outline"
-              className="rounded-md px-4 py-2"
-              onPress={() => setShowActionsheet(false)}
-            >
-              <ButtonText>Cancelar</ButtonText>
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-      ) : (
-        <Actionsheet
-          isOpen={showActionsheet}
-          onClose={() => {
-        setShowActionsheet(false);
-        setSelectedVm(null);
-          }}
-        >
-          <ActionsheetBackdrop />
-          <ActionsheetContent>
-        <ActionsheetDragIndicatorWrapper>
-          <ActionsheetDragIndicator />
-        </ActionsheetDragIndicatorWrapper>
+                <ActionsheetIcon as={Trash2} className="mr-2 text-red-600" />
+                <ActionsheetItemText className="text-red-600">
+                  Apagar VM
+                </ActionsheetItemText>
+              </ActionsheetItem>
 
-        {/* Header */}
-        <Box className="p-4 border-b border-outline-100 w-full">
-          <Text className="text-lg font-semibold">{selectedVm?.name}</Text>
-        </Box>
-
-        {/* Configurações label */}
-        <ActionsheetItem isDisabled>
-          <ActionsheetItemText className="text-xs text-typography-500">
-            CONFIGURAÇÕES
-          </ActionsheetItemText>
-        </ActionsheetItem>
-        <ActionsheetItem
-          onPress={() => {
-            if (!selectedVm) return;
-            handleToggleAutostart(selectedVm, !selectedVm.autoStart);
-            setShowActionsheet(false);
-          }}
-        >
-          <ActionsheetItemText>
-            {(selectedVm?.autoStart ? "✓ " : "") +
-          "Auto-start na inicialização"}
-          </ActionsheetItemText>
-        </ActionsheetItem>
-
-        {/* Operações label */}
-        <Box className="h-[1px] bg-outline-100 w-full" />
-        <ActionsheetItem isDisabled>
-          <ActionsheetItemText className="text-xs text-typography-500">
-            OPERAÇÕES
-          </ActionsheetItemText>
-        </ActionsheetItem>
-        <ActionsheetItem
-          onPress={() => {
-            if (!selectedVm) return;
-            setEditVm(selectedVm);
-            setShowActionsheet(false);
-          }}
-        >
-          <ActionsheetIcon as={Settings} className="mr-2" />
-          <ActionsheetItemText>Editar Recursos</ActionsheetItemText>
-        </ActionsheetItem>
-        <ActionsheetItem
-          onPress={() => {
-            if (!selectedVm) return;
-            setCloneVm(selectedVm);
-            setShowActionsheet(false);
-          }}
-        >
-          <ActionsheetIcon as={Copy} className="mr-2" />
-          <ActionsheetItemText>Clonar VM</ActionsheetItemText>
-        </ActionsheetItem>
-
-        {/* Migração & Disco */}
-        <Box className="h-[1px] bg-outline-100 w-full" />
-        <ActionsheetItem isDisabled>
-          <ActionsheetItemText className="text-xs text-typography-500">
-            MIGRAÇÃO & DISCO
-          </ActionsheetItemText>
-        </ActionsheetItem>
-        <ActionsheetItem
-          onPress={() => {
-            if (!selectedVm) return;
-            setMigrateVm(selectedVm);
-            setShowActionsheet(false);
-          }}
-        >
-          <ActionsheetIcon as={GitBranch} className="mr-2" />
-          <ActionsheetItemText>Migrar VM (Cold/Hot)</ActionsheetItemText>
-        </ActionsheetItem>
-        <ActionsheetItem
-          onPress={() => {
-            if (!selectedVm) return;
-            setMoveDiskVm(selectedVm);
-            setShowActionsheet(false);
-          }}
-        >
-          <ActionsheetIcon as={HardDrive} className="mr-2" />
-          <ActionsheetItemText>Mover Disco</ActionsheetItemText>
-        </ActionsheetItem>
-
-        {/* Force Shutdown */}
-        {selectedVm?.state === VmState.RUNNING && (
-          <ActionsheetItem
-            onPress={() => {
-          if (!selectedVm) return;
-          handleVmAction(selectedVm.name, "force-shutdown");
-          setShowActionsheet(false);
-            }}
-          >
-            <ActionsheetIcon as={Zap} className="mr-2 text-orange-600" />
-            <ActionsheetItemText className="text-orange-600">
-          Force Shutdown
-            </ActionsheetItemText>
-          </ActionsheetItem>
-        )}
-
-        {/* Apagar VM */}
-        <ActionsheetItem
-          onPress={() => {
-            if (!selectedVm) return;
-            setConfirmAction({type: "delete", vm: selectedVm});
-            setShowActionsheet(false);
-          }}
-        >
-          <ActionsheetIcon as={Trash2} className="mr-2 text-red-600" />
-          <ActionsheetItemText className="text-red-600">
-            Apagar VM
-          </ActionsheetItemText>
-        </ActionsheetItem>
-
-        {/* Cancelar */}
-        <ActionsheetItem
-          onPress={() => setShowActionsheet(false)}
-          className="bg-background-100 mt-2"
-        >
-          <ActionsheetItemText className="font-semibold">
-            Cancelar
-          </ActionsheetItemText>
-        </ActionsheetItem>
-      </ActionsheetContent>
-    </Actionsheet>
+              {/* Cancelar */}
+              <ActionsheetItem
+                onPress={() => setShowActionsheet(false)}
+                className="bg-background-100 mt-2"
+              >
+                <ActionsheetItemText className="font-semibold">
+                  Cancelar
+                </ActionsheetItemText>
+              </ActionsheetItem>
+            </ScrollView>
+          </ActionsheetContent>
+        </Actionsheet>
       )}
     </Box>
   );
@@ -1927,10 +2025,10 @@ function VmSkeletonCard() {
   );
 }
 
-function VmSkeletonGrid({count = 6}: {count?: number}) {
+function VmSkeletonGrid({ count = 6 }: { count?: number }) {
   return (
     <VStack className="gap-4 web:grid web:grid-cols-1 web:gap-4 web:sm:grid-cols-2 web:lg:grid-cols-3">
-      {Array.from({length: count}).map((_, index) => (
+      {Array.from({ length: count }).map((_, index) => (
         <VmSkeletonCard key={`vm-skeleton-${index}`} />
       ))}
     </VStack>
@@ -1944,11 +2042,12 @@ function EditVmForm({
 }: {
   vm: VM;
   onCancel: () => void;
-  onSave: (values: {vcpu: number; memory: number; disk: number}) => Promise<void>;
+  onSave: (values: { vcpu: number; memory: number; disk: number; network: string }) => Promise<void>;
 }) {
   const [vcpu, setVcpu] = React.useState(vm.DefinedCPUS);
   const [memory, setMemory] = React.useState(vm.DefinedRam);
   const [disk, setDisk] = React.useState(vm.diskSizeGB);
+  const [network, setNetwork] = React.useState(vm.network);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -1968,7 +2067,7 @@ function EditVmForm({
     setSaving(true);
     setError(null);
     try {
-      await onSave({vcpu, memory, disk});
+      await onSave({ vcpu, memory, disk, network });
     } catch (err) {
       const message =
         err instanceof TypeError
@@ -2003,9 +2102,10 @@ function EditVmForm({
         </HStack>
         <HStack className="mt-4 gap-3 flex-wrap">
           {[
-            {label: "vCPU", value: `${vcpu} cores`, previous: `${vm.DefinedCPUS} atuais`},
-            {label: "RAM", value: formatMemoryLabel(memory), previous: formatMemoryLabel(vm.DefinedRam)},
-            {label: "Disco", value: `${disk} GB`, previous: `${vm.diskSizeGB} GB`},
+            { label: "vCPU", value: `${vcpu} cores`, previous: `${vm.DefinedCPUS} atuais` },
+            { label: "RAM", value: formatMemoryLabel(memory), previous: formatMemoryLabel(vm.DefinedRam) },
+            { label: "Disco", value: `${disk} GB`, previous: `${vm.diskSizeGB} GB` },
+            { label: "Rede", value: network, previous: vm.network },
           ].map((item) => (
             <Box
               key={item.label}
@@ -2096,11 +2196,10 @@ function EditVmForm({
               <Pressable
                 key={preset}
                 onPress={() => setMemory(preset)}
-                className={`px-3 py-2 rounded-full border ${
-                  memory === preset
-                    ? "border-primary-500 bg-primary-50"
-                    : "border-outline-200 bg-background-0"
-                }`}
+                className={`px-3 py-2 rounded-full border ${memory === preset
+                  ? "border-primary-500 bg-primary-50"
+                  : "border-outline-200 bg-background-0"
+                  }`}
               >
                 <Text className="text-xs font-medium text-typography-700">
                   {formatMemoryLabel(preset)}
@@ -2134,11 +2233,10 @@ function EditVmForm({
               <Pressable
                 key={preset}
                 onPress={() => setDisk(preset)}
-                className={`px-3 py-2 rounded-full border ${
-                  disk === preset
-                    ? "border-primary-500 bg-primary-50"
-                    : "border-outline-200 bg-background-0"
-                }`}
+                className={`px-3 py-2 rounded-full border ${disk === preset
+                  ? "border-primary-500 bg-primary-50"
+                  : "border-outline-200 bg-background-0"
+                  }`}
               >
                 <Text className="text-xs font-medium text-typography-700">
                   {preset} GB
@@ -2146,6 +2244,73 @@ function EditVmForm({
               </Pressable>
             ))}
           </HStack>
+        </FormControl>
+
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText className="text-sm font-semibold text-typography-800">
+              Network
+            </FormControlLabelText>
+          </FormControlLabel>
+          <Select
+            selectedValue={network === "default" || network === "512rede" ? network : "outro"}
+            onValueChange={(value) => {
+              if (value === "outro") {
+                setNetwork("");
+              } else {
+                setNetwork(value);
+              }
+            }}
+          >
+            <SelectTrigger className="rounded-md">
+              <SelectInput
+                placeholder="Selecione a rede"
+                className="text-typography-900 dark:text-[#E8EBF0]"
+              />
+              <SelectIcon />
+            </SelectTrigger>
+            <SelectPortal>
+              <SelectBackdrop />
+              <SelectContent className="bg-background-0 dark:bg-[#151F30]">
+                <SelectDragIndicatorWrapper>
+                  <SelectDragIndicator />
+                </SelectDragIndicatorWrapper>
+                <SelectItem
+                  label="default"
+                  value="default"
+                  className="text-typography-900 dark:text-[#E8EBF0]"
+                />
+                <SelectItem
+                  label="512rede"
+                  value="512rede"
+                  className="text-typography-900 dark:text-[#E8EBF0]"
+                />
+                <SelectItem
+                  label="outro..."
+                  value="outro"
+                  className="text-typography-900 dark:text-[#E8EBF0]"
+                />
+              </SelectContent>
+            </SelectPortal>
+          </Select>
+          {(network !== "default" && network !== "512rede") && (
+            <Input
+              variant="outline"
+              className="rounded-md mt-2"
+            >
+              <InputField
+                value={network}
+                onChangeText={setNetwork}
+                placeholder="Digite o nome da rede"
+                className="text-typography-900 dark:text-[#E8EBF0]"
+              />
+            </Input>
+          )}
+          <FormControlHelper>
+            <FormControlHelperText className="text-xs text-typography-500">
+              Selecione a rede para esta VM.
+            </FormControlHelperText>
+          </FormControlHelper>
         </FormControl>
       </VStack>
 
@@ -2191,7 +2356,7 @@ function CloneVmForm({
   slaveOptions: Slave[];
   loadingOptions: boolean;
   onCancel: () => void;
-  onClone: (payload: {newName: string; destNfs: string; destMachine: string}) => Promise<void>;
+  onClone: (payload: { newName: string; destNfs: string; destMachine: string }) => Promise<void>;
 }) {
   const [newName, setNewName] = React.useState(vm.name + "-clone");
   const [destMachine, setDestMachine] = React.useState(vm.machineName);
@@ -2226,7 +2391,7 @@ function CloneVmForm({
     setSaving(true);
     setError(null);
     try {
-      await onClone({newName: sanitizedName, destNfs, destMachine});
+      await onClone({ newName: sanitizedName, destNfs, destMachine });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao clonar VM.");
     } finally {
@@ -2434,7 +2599,7 @@ function MoveDiskForm({
   mountOptions: Mount[];
   loadingOptions: boolean;
   onCancel: () => void;
-  onMove: (payload: {destNfsId: string; destDiskPath?: string}) => Promise<void>;
+  onMove: (payload: { destNfsId: string; destDiskPath?: string }) => Promise<void>;
 }) {
   const [diskPath, setDiskPath] = React.useState(vm.diskPath);
   const [destNfsId, setDestNfsId] = React.useState<string>("");
@@ -2454,7 +2619,7 @@ function MoveDiskForm({
     setSaving(true);
     setError(null);
     try {
-      await onMove({destNfsId, destDiskPath: diskPath.trim() || undefined});
+      await onMove({ destNfsId, destDiskPath: diskPath.trim() || undefined });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao mover disco.");
     } finally {
