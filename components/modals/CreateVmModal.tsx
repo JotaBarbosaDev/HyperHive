@@ -28,12 +28,12 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Checkbox, CheckboxIndicator, CheckboxIcon, CheckboxLabel } from "@/components/ui/checkbox";
-import { Textarea, TextareaInput } from "@/components/ui/textarea";
+import { TextInput } from "react-native";
 import { Badge, BadgeText } from "@/components/ui/badge";
 import { ScrollView, Platform } from "react-native";
 import { Cpu, X, Copy, Trash2, ChevronDown, Check, ChevronDownIcon } from "lucide-react-native";
 import { useToast, Toast, ToastTitle, ToastDescription } from "@/components/ui/toast";
-import { createVm, listIsos, listSlaves, IsoApiResponse, Slave } from "@/services/vms-client";
+import { createVm, listIsos, listSlaves, IsoApiResponse, Slave, getCpuDisableFeatures } from "@/services/vms-client";
 import { listMounts } from "@/services/hyperhive";
 import { Mount } from "@/types/mount";
 
@@ -159,46 +159,10 @@ export default function CreateVmModal({
     setLoadingCPU(true);
 
     try {
-      // Mock XML - aqui seria a chamada real à API
-      const mockXml = `<cpu mode='custom' match='exact' check='partial'>
-  <model fallback='forbid'>Skylake-Client-IBRS</model>
-  <vendor>Intel</vendor>
-  <feature policy='require' name='vme'/>
-  <feature policy='require' name='ss'/>
-  <feature policy='require' name='vmx'/>
-  <feature policy='require' name='pcid'/>
-  <feature policy='require' name='hypervisor'/>
-  <feature policy='require' name='arat'/>
-  <feature policy='require' name='tsc_adjust'/>
-  <feature policy='require' name='umip'/>
-  <feature policy='require' name='md-clear'/>
-  <feature policy='require' name='arch-capabilities'/>
-  <feature policy='require' name='xsaveopt'/>
-  <feature policy='require' name='pdpe1gb'/>
-  <feature policy='require' name='invtsc'/>
-  <feature policy='require' name='ibpb'/>
-  <feature policy='require' name='ibrs'/>
-</cpu>`;
-
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setCpuXml(mockXml);
-
-      toast.show({
-        placement: "top",
-        render: ({ id }) => (
-          <Toast
-            nativeID={"toast-" + id}
-            className="px-5 py-3 gap-3 shadow-soft-1"
-            action="success"
-          >
-            <ToastTitle size="sm">Sucesso</ToastTitle>
-            <ToastDescription size="sm">
-              CPUs mútuas obtidas com sucesso
-            </ToastDescription>
-          </Toast>
-        ),
-      });
+      const cpuXmlResult = await getCpuDisableFeatures(selectedSlaves);
+      setCpuXml(cpuXmlResult);
     } catch (error) {
+      console.error("Erro ao obter CPUs:", error);
       toast.show({
         placement: "top",
         render: ({ id }) => (
@@ -208,7 +172,7 @@ export default function CreateVmModal({
             action="error"
           >
             <ToastTitle size="sm">Erro</ToastTitle>
-            <ToastDescription size="sm">Erro ao obter CPUs</ToastDescription>
+            <ToastDescription size="sm">Erro ao obter CPUs. Verifique o console para mais detalhes.</ToastDescription>
           </Toast>
         ),
       });
@@ -501,17 +465,60 @@ export default function CreateVmModal({
                   >
                     Network
                   </Text>
-                  <Input
-                    variant="outline"
-                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                  <Select
+                    selectedValue={network === "default" || network === "512rede" ? network : "outro"}
+                    onValueChange={(value) => {
+                      if (value === "outro") {
+                        setNetwork("");
+                      } else {
+                        setNetwork(value);
+                      }
+                    }}
                   >
-                    <InputField
-                      value={network}
-                      onChangeText={setNetwork}
-                      placeholder="default"
-                      className="text-typography-900 dark:text-[#E8EBF0]"
-                    />
-                  </Input>
+                    <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
+                      <SelectInput
+                        placeholder="Selecione a rede"
+                        className="text-typography-900 dark:text-[#E8EBF0]"
+                      />
+                      <SelectIcon as={ChevronDown} className="mr-3" />
+                    </SelectTrigger>
+                    <SelectPortal>
+                      <SelectBackdrop />
+                      <SelectContent className="bg-background-0 dark:bg-[#151F30]">
+                        <SelectDragIndicatorWrapper>
+                          <SelectDragIndicator />
+                        </SelectDragIndicatorWrapper>
+                        <SelectItem
+                          label="default"
+                          value="default"
+                          className="text-typography-900 dark:text-[#E8EBF0]"
+                        />
+                        <SelectItem
+                          label="512rede"
+                          value="512rede"
+                          className="text-typography-900 dark:text-[#E8EBF0]"
+                        />
+                        <SelectItem
+                          label="outro..."
+                          value="outro"
+                          className="text-typography-900 dark:text-[#E8EBF0]"
+                        />
+                      </SelectContent>
+                    </SelectPortal>
+                  </Select>
+                  {(network !== "default" && network !== "512rede") && (
+                    <Input
+                      variant="outline"
+                      className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] mt-2"
+                    >
+                      <InputField
+                        value={network}
+                        onChangeText={setNetwork}
+                        placeholder="Digite o nome da rede"
+                        className="text-typography-900 dark:text-[#E8EBF0]"
+                      />
+                    </Input>
+                  )}
                 </VStack>
 
                 {/* NFS Share ID */}
@@ -853,21 +860,31 @@ export default function CreateVmModal({
                       editá-lo manualmente se necessário.
                     </Text>
 
-                    <Textarea
-                      size="md"
-                      className="h-60 bg-[#0F172A] dark:bg-[#0A0E1A] border-outline-300 dark:border-[#1E2F47] rounded-lg"
-                    >
-                      <TextareaInput
-                        value={cpuXml}
+                    <Box className="bg-[#0F172A] border border-[#1E2F47] rounded-lg overflow-hidden">
+                      <Box className="bg-[#0A0E1A] px-3 py-2 border-b border-[#1E2F47] flex-row justify-between items-center">
+                        <Text className="text-xs text-[#64748B] font-mono">XML Editor</Text>
+                        <Text className="text-xs text-[#475569]">{cpuXml.length} chars</Text>
+                      </Box>
+                      <TextInput
+                        defaultValue={cpuXml}
                         onChangeText={setCpuXml}
-                        placeholder="O XML das CPUs mútuas aparecerá aqui após clicar em 'Get Mutual CPUs'..."
+                        multiline
+                        scrollEnabled
+                        autoCorrect={false}
+                        autoCapitalize="none"
+                        spellCheck={false}
+                        textAlignVertical="top"
                         style={{
-                          fontFamily: "Courier",
-                          color: cpuXml ? "#22C55E" : undefined
+                          fontFamily: Platform.select({ ios: "Menlo", android: "monospace" }),
+                          color: cpuXml ? "#22C55E" : "#64748B",
+                          backgroundColor: "#0F172A",
+                          fontSize: 12,
+                          lineHeight: 18,
+                          padding: 12,
+                          height: 240,
                         }}
-                        className="text-xs"
                       />
-                    </Textarea>
+                    </Box>
                   </VStack>
                 </Box>
               )}

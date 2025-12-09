@@ -1,20 +1,22 @@
 import React from "react";
-import {ScrollView, RefreshControl, useColorScheme, Alert, Platform} from "react-native";
+import { ScrollView, RefreshControl, useColorScheme, Alert, Platform } from "react-native";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 import * as Clipboard from "expo-clipboard";
-import {Box} from "@/components/ui/box";
-import {Text} from "@/components/ui/text";
-import {Heading} from "@/components/ui/heading";
-import {VStack} from "@/components/ui/vstack";
-import {HStack} from "@/components/ui/hstack";
-import {Button, ButtonText, ButtonIcon, ButtonSpinner} from "@/components/ui/button";
-import {Input, InputField} from "@/components/ui/input";
-import {Modal, ModalBackdrop, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton} from "@/components/ui/modal";
-import {Toast, ToastTitle, useToast} from "@/components/ui/toast";
-import {Fab, FabIcon} from "@/components/ui/fab";
-import {Shield, Copy, Plus, Trash2, Info} from "lucide-react-native";
-import {useAuthGuard} from "@/hooks/useAuthGuard";
-import {useWireguard} from "@/hooks/useWireguard";
-import {WireguardPeer} from "@/types/wireguard";
+import { Box } from "@/components/ui/box";
+import { Text } from "@/components/ui/text";
+import { Heading } from "@/components/ui/heading";
+import { VStack } from "@/components/ui/vstack";
+import { HStack } from "@/components/ui/hstack";
+import { Button, ButtonText, ButtonIcon, ButtonSpinner } from "@/components/ui/button";
+import { Input, InputField } from "@/components/ui/input";
+import { Modal, ModalBackdrop, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton } from "@/components/ui/modal";
+import { Toast, ToastTitle, useToast } from "@/components/ui/toast";
+import { Fab, FabIcon } from "@/components/ui/fab";
+import { Shield, Copy, Plus, Trash2, Info } from "lucide-react-native";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useWireguard } from "@/hooks/useWireguard";
+import { WireguardPeer } from "@/types/wireguard";
 
 type WireGuardConfig = {
   endpoint: string;
@@ -44,7 +46,7 @@ const buildEndpointLabel = (peer?: WireguardPeer, fallbackEndpoint?: string) => 
 export default function WireGuardScreen() {
   const colorScheme = useColorScheme();
   const toast = useToast();
-  const {token, isChecking} = useAuthGuard();
+  const { token, isChecking } = useAuthGuard();
   const {
     peers,
     vpnReady,
@@ -55,7 +57,7 @@ export default function WireGuardScreen() {
     createVpn,
     addPeer,
     removePeer,
-  } = useWireguard({token});
+  } = useWireguard({ token });
   const [creatingVpn, setCreatingVpn] = React.useState(false);
   const [creatingPeer, setCreatingPeer] = React.useState(false);
   const [deletingPeerId, setDeletingPeerId] = React.useState<number | string | null>(null);
@@ -64,6 +66,44 @@ export default function WireGuardScreen() {
   const [formPeerName, setFormPeerName] = React.useState("");
   const [formPeerEndpoint, setFormPeerEndpoint] = React.useState("");
   const [formPeerKeepalive, setFormPeerKeepalive] = React.useState("25");
+
+  const downloadConfigFile = React.useCallback(async (configText: string) => {
+    const filename = "wg0.conf";
+
+    if (Platform.OS === "web") {
+      const blob = new Blob([configText], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      return filename;
+    }
+
+    const baseDir = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
+    if (!baseDir) {
+      throw new Error("Não foi possível aceder ao diretório de armazenamento.");
+    }
+
+    const targetPath = `${baseDir}${filename}`;
+    await FileSystem.writeAsStringAsync(targetPath, configText, {
+      encoding: FileSystem.EncodingType.UTF8,
+    });
+
+    const canShare = await Sharing.isAvailableAsync();
+    if (canShare) {
+      await Sharing.shareAsync(targetPath, {
+        mimeType: "text/plain",
+        dialogTitle: filename,
+        UTI: "public.plain-text",
+      });
+    }
+
+    return targetPath;
+  }, []);
 
   const vpnConfig = React.useMemo<WireGuardConfig | null>(() => {
     if (!vpnReady) {
@@ -81,7 +121,7 @@ export default function WireGuardScreen() {
     await Clipboard.setStringAsync(text);
     toast.show({
       placement: "top",
-      render: ({id}) => (
+      render: ({ id }) => (
         <Toast
           nativeID={"toast-" + id}
           className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
@@ -99,6 +139,44 @@ export default function WireGuardScreen() {
     return `${str.slice(0, half)}...${str.slice(-half)}`;
   };
 
+  const deletePeer = React.useCallback(
+    async (peer: WireguardPeer) => {
+      setDeletingPeerId(peer.id);
+      try {
+        await removePeer(peer.id);
+        toast.show({
+          placement: "top",
+          render: ({ id }) => (
+            <Toast
+              nativeID={"toast-" + id}
+              className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+              action="success"
+            >
+              <ToastTitle size="sm">Peer removido</ToastTitle>
+            </Toast>
+          ),
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Não foi possível remover o peer.";
+        toast.show({
+          placement: "top",
+          render: ({ id }) => (
+            <Toast
+              nativeID={"toast-" + id}
+              className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+              action="error"
+            >
+              <ToastTitle size="sm">{message}</ToastTitle>
+            </Toast>
+          ),
+        });
+      } finally {
+        setDeletingPeerId(null);
+      }
+    },
+    [removePeer, toast]
+  );
+
   const handleCreateVpn = async () => {
     if (creatingVpn) return;
     setCreatingVpn(true);
@@ -107,7 +185,7 @@ export default function WireGuardScreen() {
       setShowCreateVpnModal(false);
       toast.show({
         placement: "top",
-        render: ({id}) => (
+        render: ({ id }) => (
           <Toast
             nativeID={"toast-" + id}
             className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
@@ -121,7 +199,7 @@ export default function WireGuardScreen() {
       const message = err instanceof Error ? err.message : "Não foi possível criar a VPN.";
       toast.show({
         placement: "top",
-        render: ({id}) => (
+        render: ({ id }) => (
           <Toast
             nativeID={"toast-" + id}
             className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
@@ -140,7 +218,7 @@ export default function WireGuardScreen() {
     if (!formPeerName.trim() || !formPeerEndpoint.trim()) {
       toast.show({
         placement: "top",
-        render: ({id}) => (
+        render: ({ id }) => (
           <Toast
             nativeID={"toast-" + id}
             className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
@@ -158,11 +236,16 @@ export default function WireGuardScreen() {
 
     setCreatingPeer(true);
     try {
-      await addPeer({
+      const configText = await addPeer({
         name: formPeerName.trim(),
         endpoint: formPeerEndpoint.trim(),
         keepalive_seconds: keepaliveSeconds,
       });
+      if (!configText) {
+        throw new Error("Não foi possível obter a configuração do peer.");
+      }
+
+      await downloadConfigFile(configText);
       setShowAddPeerModal(false);
       setFormPeerName("");
       setFormPeerEndpoint("");
@@ -170,13 +253,13 @@ export default function WireGuardScreen() {
 
       toast.show({
         placement: "top",
-        render: ({id}) => (
+        render: ({ id }) => (
           <Toast
             nativeID={"toast-" + id}
             className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
             action="success"
           >
-            <ToastTitle size="sm">Peer adicionado com sucesso!</ToastTitle>
+            <ToastTitle size="sm">Peer adicionado e wg0.conf gerado!</ToastTitle>
           </Toast>
         ),
       });
@@ -184,7 +267,7 @@ export default function WireGuardScreen() {
       const message = err instanceof Error ? err.message : "Não foi possível adicionar o peer.";
       toast.show({
         placement: "top",
-        render: ({id}) => (
+        render: ({ id }) => (
           <Toast
             nativeID={"toast-" + id}
             className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
@@ -200,44 +283,23 @@ export default function WireGuardScreen() {
   };
 
   const handleDeletePeer = (peer: WireguardPeer) => {
-    Alert.alert("Confirmar Exclusão", `Tem certeza que deseja remover o peer "${peer.name}"?`, [
-      {text: "Cancelar", style: "cancel"},
+    const confirmMessage = `Tem certeza que deseja remover o peer "${peer.name}"?`;
+
+    if (Platform.OS === "web") {
+      const confirmed = typeof window !== "undefined" ? window.confirm(confirmMessage) : true;
+      if (confirmed) {
+        void deletePeer(peer);
+      }
+      return;
+    }
+
+    Alert.alert("Confirmar Exclusão", confirmMessage, [
+      { text: "Cancelar", style: "cancel" },
       {
         text: "Remover",
         style: "destructive",
-        onPress: async () => {
-          setDeletingPeerId(peer.id);
-          try {
-            await removePeer(peer.id);
-            toast.show({
-              placement: "top",
-              render: ({id}) => (
-                <Toast
-                  nativeID={"toast-" + id}
-                  className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-                  action="success"
-                >
-                  <ToastTitle size="sm">Peer removido</ToastTitle>
-                </Toast>
-              ),
-            });
-          } catch (err) {
-            const message = err instanceof Error ? err.message : "Não foi possível remover o peer.";
-            toast.show({
-              placement: "top",
-              render: ({id}) => (
-                <Toast
-                  nativeID={"toast-" + id}
-                  className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-                  action="error"
-                >
-                  <ToastTitle size="sm">{message}</ToastTitle>
-                </Toast>
-              ),
-            });
-          } finally {
-            setDeletingPeerId(null);
-          }
+        onPress: () => {
+          void deletePeer(peer);
         },
       },
     ]);
@@ -258,7 +320,7 @@ export default function WireGuardScreen() {
     <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{paddingBottom: 100}}
+        contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing || (isLoading && peers.length === 0)}
@@ -273,7 +335,7 @@ export default function WireGuardScreen() {
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
-            style={{fontFamily: "Inter_700Bold"}}
+            style={{ fontFamily: "Inter_700Bold" }}
           >
             WireGuard VPN
           </Heading>
@@ -285,7 +347,7 @@ export default function WireGuardScreen() {
             <Box className="p-3 mb-4 rounded-lg border border-[#FCA5A5] bg-[#FEF2F2] dark:bg-[#2A1212]">
               <Text
                 className="text-[#B91C1C] dark:text-[#FCA5A5]"
-                style={{fontFamily: "Inter_500Medium"}}
+                style={{ fontFamily: "Inter_500Medium" }}
               >
                 {error}
               </Text>
@@ -297,7 +359,7 @@ export default function WireGuardScreen() {
               <Box className="p-6 web:rounded-2xl web:bg-background-0/80 dark:web:bg-[#151F30]/80 mt-6">
                 <Text
                   className="text-typography-600 dark:text-typography-400 text-center"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Carregando informações da VPN...
                 </Text>
@@ -310,13 +372,13 @@ export default function WireGuardScreen() {
                   <Heading
                     size="xl"
                     className="text-typography-900 dark:text-[#E8EBF0] text-center"
-                    style={{fontFamily: "Inter_600SemiBold"}}
+                    style={{ fontFamily: "Inter_600SemiBold" }}
                   >
                     Nenhuma VPN Configurada
                   </Heading>
                   <Text
                     className="text-typography-600 dark:text-typography-400 text-center max-w-md"
-                    style={{fontFamily: "Inter_400Regular"}}
+                    style={{ fontFamily: "Inter_400Regular" }}
                   >
                     Configure uma VPN WireGuard para conectar-se de forma segura ao seu cluster de qualquer lugar.
                   </Text>
@@ -328,7 +390,7 @@ export default function WireGuardScreen() {
                     <ButtonIcon as={Plus} className="text-background-0 dark:text-typography-900" />
                     <ButtonText
                       className="text-background-0 dark:text-typography-900"
-                      style={{fontFamily: "Inter_600SemiBold"}}
+                      style={{ fontFamily: "Inter_600SemiBold" }}
                     >
                       Criar VPN
                     </ButtonText>
@@ -348,7 +410,7 @@ export default function WireGuardScreen() {
                     <Heading
                       size="lg"
                       className="text-typography-900 dark:text-[#E8EBF0]"
-                      style={{fontFamily: "Inter_700Bold"}}
+                      style={{ fontFamily: "Inter_700Bold" }}
                     >
                       Peers ({peers.length})
                     </Heading>
@@ -372,7 +434,7 @@ export default function WireGuardScreen() {
                   <Box className="p-8">
                     <Text
                       className="text-center text-typography-600 dark:text-typography-400"
-                      style={{fontFamily: "Inter_400Regular"}}
+                      style={{ fontFamily: "Inter_400Regular" }}
                     >
                       Nenhum peer configurado
                     </Text>
@@ -384,31 +446,31 @@ export default function WireGuardScreen() {
                       <HStack className="bg-background-50 dark:bg-[#0A1628] px-6 py-3 border-b border-outline-100 dark:border-[#1E2F47]">
                         <Text
                           className="flex-1 min-w-[120px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                          style={{fontFamily: "Inter_600SemiBold"}}
+                          style={{ fontFamily: "Inter_600SemiBold" }}
                         >
                           NOME
                         </Text>
                         <Text
                           className="w-[120px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                          style={{fontFamily: "Inter_600SemiBold"}}
+                          style={{ fontFamily: "Inter_600SemiBold" }}
                         >
                           IP
                         </Text>
                         <Text
                           className="flex-1 min-w-[200px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                          style={{fontFamily: "Inter_600SemiBold"}}
+                          style={{ fontFamily: "Inter_600SemiBold" }}
                         >
                           PUBLIC KEY
                         </Text>
                         <Text
                           className="w-[140px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                          style={{fontFamily: "Inter_600SemiBold"}}
+                          style={{ fontFamily: "Inter_600SemiBold" }}
                         >
                           ALLOWED IPS
                         </Text>
                         <Text
                           className="w-[80px] text-xs text-[#9AA4B8] dark:text-[#8A94A8] text-right"
-                          style={{fontFamily: "Inter_600SemiBold"}}
+                          style={{ fontFamily: "Inter_600SemiBold" }}
                         >
                           AÇÕES
                         </Text>
@@ -418,31 +480,30 @@ export default function WireGuardScreen() {
                       {peers.map((peer, index) => (
                         <HStack
                           key={peer.id}
-                          className={`px-6 py-4 items-center ${
-                            index !== peers.length - 1
+                          className={`px-6 py-4 items-center ${index !== peers.length - 1
                               ? "border-b border-outline-100 dark:border-[#1E2F47]"
                               : ""
-                          }`}
+                            }`}
                         >
                           <Text
                             className="flex-1 min-w-[120px] text-sm text-typography-900 dark:text-[#E8EBF0]"
-                            style={{fontFamily: "Inter_500Medium"}}
+                            style={{ fontFamily: "Inter_500Medium" }}
                           >
                             {peer.name}
                           </Text>
                           <Text
                             className="w-[120px] text-sm text-typography-600 dark:text-typography-400"
-                            style={{fontFamily: "Inter_400Regular"}}
+                            style={{ fontFamily: "Inter_400Regular" }}
                           >
                             {peer.client_ip?.split("/")[0] ?? "—"}
                           </Text>
                           <HStack className="flex-1 min-w-[200px] items-center gap-2">
-                          <Text
-                            className="flex-1 text-sm text-typography-600 dark:text-typography-400"
-                            style={{fontFamily: "Inter_400Regular"}}
-                          >
-                            {truncateMiddle(peer.public_key, 30)}
-                          </Text>
+                            <Text
+                              className="flex-1 text-sm text-typography-600 dark:text-typography-400"
+                              style={{ fontFamily: "Inter_400Regular" }}
+                            >
+                              {truncateMiddle(peer.public_key, 30)}
+                            </Text>
                             <Button
                               variant="link"
                               size="xs"
@@ -457,7 +518,7 @@ export default function WireGuardScreen() {
                           </HStack>
                           <Text
                             className="w-[140px] text-sm text-typography-600 dark:text-typography-400"
-                            style={{fontFamily: "Inter_400Regular"}}
+                            style={{ fontFamily: "Inter_400Regular" }}
                           >
                             {formatAllowedIps(peer)}
                           </Text>
@@ -507,7 +568,7 @@ export default function WireGuardScreen() {
             <Heading
               size="lg"
               className="text-typography-900 dark:text-[#E8EBF0]"
-              style={{fontFamily: "Inter_700Bold"}}
+              style={{ fontFamily: "Inter_700Bold" }}
             >
               Criar VPN WireGuard
             </Heading>
@@ -520,7 +581,7 @@ export default function WireGuardScreen() {
                 <Info size={20} className="text-[#1E3A8A] dark:text-[#60A5FA] mt-0.5" />
                 <Text
                   className="flex-1 text-sm text-[#1E3A8A] dark:text-[#93C5FD]"
-                  style={{fontFamily: "Inter_400Regular"}}
+                  style={{ fontFamily: "Inter_400Regular" }}
                 >
                   As chaves públicas e privadas serão geradas automaticamente e a interface WireGuard será inicializada.
                 </Text>
@@ -528,7 +589,7 @@ export default function WireGuardScreen() {
 
               <Text
                 className="text-sm text-typography-600 dark:text-typography-400"
-                style={{fontFamily: "Inter_400Regular"}}
+                style={{ fontFamily: "Inter_400Regular" }}
               >
                 Depois de criada, utilize o botão de adicionar peer para gerar as configurações de cliente.
               </Text>
@@ -543,7 +604,7 @@ export default function WireGuardScreen() {
               >
                 <ButtonText
                   className="text-typography-700 dark:text-[#E8EBF0]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Cancelar
                 </ButtonText>
@@ -558,7 +619,7 @@ export default function WireGuardScreen() {
                 ) : null}
                 <ButtonText
                   className="text-background-0 dark:text-typography-900"
-                  style={{fontFamily: "Inter_600SemiBold"}}
+                  style={{ fontFamily: "Inter_600SemiBold" }}
                 >
                   {creatingVpn ? "Criando..." : "Criar"}
                 </ButtonText>
@@ -576,7 +637,7 @@ export default function WireGuardScreen() {
             <Heading
               size="lg"
               className="text-typography-900 dark:text-[#E8EBF0]"
-              style={{fontFamily: "Inter_700Bold"}}
+              style={{ fontFamily: "Inter_700Bold" }}
             >
               Adicionar Peer
             </Heading>
@@ -589,7 +650,7 @@ export default function WireGuardScreen() {
                 <Info size={20} className="text-[#1E3A8A] dark:text-[#60A5FA] mt-0.5" />
                 <Text
                   className="flex-1 text-sm text-[#1E3A8A] dark:text-[#93C5FD]"
-                  style={{fontFamily: "Inter_400Regular"}}
+                  style={{ fontFamily: "Inter_400Regular" }}
                 >
                   Um par de chaves será gerado automaticamente para este peer
                 </Text>
@@ -597,7 +658,7 @@ export default function WireGuardScreen() {
 
               <Text
                 className="text-sm text-typography-600 dark:text-typography-400"
-                style={{fontFamily: "Inter_400Regular"}}
+                style={{ fontFamily: "Inter_400Regular" }}
               >
                 O IP será atribuído automaticamente ao gerar o peer.
               </Text>
@@ -605,7 +666,7 @@ export default function WireGuardScreen() {
               <VStack className="gap-2">
                 <Text
                   className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Nome do Peer <Text className="text-red-500 dark:text-[#f87171]">*</Text>
                 </Text>
@@ -625,7 +686,7 @@ export default function WireGuardScreen() {
               <VStack className="gap-2">
                 <Text
                   className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Endpoint do servidor <Text className="text-red-500 dark:text-[#f87171]">*</Text>
                 </Text>
@@ -645,7 +706,7 @@ export default function WireGuardScreen() {
               <VStack className="gap-2">
                 <Text
                   className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Keepalive (segundos)
                 </Text>
@@ -663,7 +724,7 @@ export default function WireGuardScreen() {
                 </Input>
                 <Text
                   className="text-xs text-typography-500 dark:text-typography-400"
-                  style={{fontFamily: "Inter_400Regular"}}
+                  style={{ fontFamily: "Inter_400Regular" }}
                 >
                   Use 0 para desativar ou deixe em branco para usar o padrão recomendado.
                 </Text>
@@ -679,7 +740,7 @@ export default function WireGuardScreen() {
               >
                 <ButtonText
                   className="text-typography-700 dark:text-[#E8EBF0]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Cancelar
                 </ButtonText>
@@ -694,7 +755,7 @@ export default function WireGuardScreen() {
                 ) : null}
                 <ButtonText
                   className="text-background-0 dark:text-typography-900"
-                  style={{fontFamily: "Inter_600SemiBold"}}
+                  style={{ fontFamily: "Inter_600SemiBold" }}
                 >
                   {creatingPeer ? "Adicionando..." : "Adicionar"}
                 </ButtonText>

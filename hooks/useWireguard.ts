@@ -1,5 +1,5 @@
-import {useCallback, useEffect, useRef, useState} from "react";
-import {ApiError} from "@/services/api-client";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ApiError } from "@/services/api-client";
 import {
   createWireguardPeer,
   createWireguardVpn,
@@ -18,7 +18,7 @@ export type UseWireguardOptions = {
   token?: string | null;
 };
 
-export function useWireguard({token}: UseWireguardOptions = {}) {
+export function useWireguard({ token }: UseWireguardOptions = {}) {
   const [peers, setPeers] = useState<WireguardPeer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -92,8 +92,9 @@ export function useWireguard({token}: UseWireguardOptions = {}) {
 
   const addPeer = useCallback(
     async (input: CreateWireguardPeerInput) => {
-      await createWireguardPeer(input);
+      const config = await createWireguardPeer(input);
       await fetchPeers("refresh");
+      return config;
     },
     [fetchPeers]
   );

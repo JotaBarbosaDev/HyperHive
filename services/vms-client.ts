@@ -153,7 +153,7 @@ export async function moveDisk(vmName: string, destNfsId: string, destDiskPath?:
   return apiFetch<void>(`/virsh/moveDisk/${encodedVmName}/${encodedNfs}`, {
     method: "POST",
     token: authToken,
-    body: destDiskPath ? {dest_disk_path: destDiskPath} : undefined,
+    body: destDiskPath ? { dest_disk_path: destDiskPath } : undefined,
   });
 }
 
@@ -174,6 +174,15 @@ export async function forceShutdownVM(vmName: string) {
   });
 }
 
+export async function removeAllIsos(vmName: string) {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  await apiFetch<void>(`/virsh/removeiso/${encodedVmName}`, {
+    method: "POST",
+    token: authToken,
+  });
+}
+
 export async function cloneVm(
   vmName: string,
   destNfs: string,
@@ -189,7 +198,7 @@ export async function cloneVm(
     {
       method: "POST",
       token: authToken,
-      body: {new_name: newName},
+      body: { new_name: newName },
     }
   );
 }
@@ -207,6 +216,16 @@ export async function editVmResources(vmName: string, payload: EditVmPayload) {
     method: "POST",
     token: authToken,
     body: payload,
+  });
+}
+
+export async function changeVmNetwork(vmName: string, newNetwork: string) {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  return apiFetch<void>(`/virsh/change_vm_network/${encodedVmName}`, {
+    method: "POST",
+    token: authToken,
+    body: { new_network: newNetwork },
   });
 }
 
@@ -246,6 +265,15 @@ export type IsoApiResponse = {
 export async function listIsos(): Promise<IsoApiResponse> {
   const authToken = await resolveToken();
   return apiFetch<IsoApiResponse>("/isos/", {
+    token: authToken,
+  });
+}
+
+export async function getCpuDisableFeatures(slaveNames: string[]): Promise<string> {
+  const authToken = await resolveToken();
+  const slavesQuery = slaveNames.join(",") + ",";
+  return apiFetch<string>(`/virsh/getcpudisablefeatures?slavesnames=${encodeURIComponent(slavesQuery)}`, {
+    method: "GET",
     token: authToken,
   });
 }
