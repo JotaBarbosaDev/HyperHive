@@ -458,23 +458,35 @@ function RootLayoutNav() {
               }}
             >
               <Box className="flex-1">
-                <Slot />
+                {pathname !== "/" && (
+                  <Box
+                    className="absolute top-3 left-3 web:top-5 web:left-5 z-20"
+                    pointerEvents="box-none"
+                  >
+                    <Button
+                      size="md"
+                      variant="outline"
+                      action="secondary"
+                      className="gap-2 rounded-xl px-4 h-11 border-outline-100 dark:border-[#2A3B52] bg-background-0/95 dark:bg-[#1A2332]/95 shadow-soft-1 web:hover:bg-background-50 dark:web:hover:bg-[#1F2D42]"
+                      onPress={() => setShowSidebar(true)}
+                      pointerEvents="auto"
+                    >
+                      <ButtonIcon
+                        as={Menu}
+                        size="md"
+                        className="text-typography-900 dark:text-[#E8EBF0]"
+                      />
+                      <ButtonText className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                        Menu
+                      </ButtonText>
+                    </Button>
+                  </Box>
+                )}
+                <Box className="flex-1 pt-2 web:pt-3">
+                  <Slot />
+                </Box>
               </Box>
             </AppThemeProvider>
-            {pathname !== "/" && (
-                <Button
-                size="md"
-                variant="solid"
-                className="absolute top-4 left-4 w-14 h-14 rounded-full items-center justify-center bg-background-0/95 dark:bg-[#1A2332]/95 shadow-soft-3 backdrop-blur-sm border border-outline-100 dark:border-[#2A3B52] web:top-6 web:left-6 web:hover:bg-background-50 dark:web:hover:bg-[#1F2D42]"
-                onPress={() => setShowSidebar(true)}
-                >
-                <ButtonIcon
-                  as={Menu}
-                  size="xl"
-                  className="text-typography-900 dark:text-[#E8EBF0]"
-                />
-                </Button>
-            )}
             {pathname === "/mounts" && (
               <Button
                 size="lg"

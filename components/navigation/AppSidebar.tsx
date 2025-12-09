@@ -21,7 +21,7 @@ import {
   ModalHeader,
   ModalCloseButton,
 } from "@/components/ui/modal";
-import {Radio, RadioGroup} from "@/components/ui/radio";
+import {Radio, RadioGroup, RadioIndicator, RadioLabel, RadioIcon} from "@/components/ui/radio";
 import {Heading} from "@/components/ui/heading";
 import {
   HardDrive,
@@ -36,6 +36,10 @@ import {
   ChevronRight,
   Network,
   Settings,
+  Dot,
+  MoonStar,
+  MonitorSmartphone,
+  SunMedium,
 } from "lucide-react-native";
 import {usePathname, useRouter} from "expo-router";
 import { clearAuthToken} from "@/services/auth-storage";
@@ -113,6 +117,27 @@ const MENU_ITEMS: MenuItem[] = [
       {label: "Redirection", route: "/redirection"},
       {label: "Streams", route: "/streams"},
     ],
+  },
+];
+
+const THEME_OPTIONS = [
+  {
+    value: "light" as const,
+    label: "Sempre claro",
+    description: "Mais brilho e contraste para ambientes iluminados.",
+    icon: SunMedium,
+  },
+  {
+    value: "dark" as const,
+    label: "Sempre escuro",
+    description: "Fundo discreto e alto contraste para uso prolongado.",
+    icon: MoonStar,
+  },
+  {
+    value: "system" as const,
+    label: "Acompanhar sistema",
+    description: "Adapta automaticamente conforme o tema do dispositivo.",
+    icon: MonitorSmartphone,
   },
 ];
 
@@ -252,8 +277,7 @@ export function AppSidebar({isOpen, onClose, themePreference, onChangeThemePrefe
         <DrawerBody contentContainerClassName="gap-1 px-3 py-2">
           {renderMenuItems(MENU_ITEMS)}
         </DrawerBody>
-        <Divider className="my-2 bg-outline-100 dark:bg-[#2A3B52]" />
-        <DrawerFooter className="px-4 pb-6">
+        <DrawerFooter className="px-4 pb-6 flex-col">
           <Button
             className="w-full gap-2 h-12 rounded-xl mb-3"
             variant="outline"
@@ -280,39 +304,110 @@ export function AppSidebar({isOpen, onClose, themePreference, onChangeThemePrefe
       </DrawerContent>
 
       <Modal isOpen={showSettings} onClose={() => setShowSettings(false)} size="md">
-        <ModalBackdrop />
-        <ModalContent className="bg-background-0 dark:bg-[#0E1524]">
-          <ModalHeader className="flex-row items-center justify-between">
-            <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
-              Definições
-            </Heading>
-            <ModalCloseButton />
+        <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+        <ModalContent className="bg-background-0 dark:bg-[#0E1524] rounded-2xl border border-outline-100 dark:border-[#2A3B52] shadow-soft-2 web:max-w-xl">
+          <ModalHeader className="flex-row items-start justify-between gap-3 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
+            <Box className="flex-row items-center gap-3 flex-1">
+              <Box className="w-11 h-11 rounded-xl items-center justify-center from-primary-50 to-background-0 dark:from-[#16263D] dark:to-[#0F1A2E] border border-outline-100 dark:border-[#2A3B52]">
+                <Icon as={Settings} size="lg" className="text-primary-700 dark:text-[#8AB9FF]" />
+              </Box>
+              <Box className="flex-1">
+                <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
+                  Definições
+                </Heading>
+                <Text className="text-sm text-typography-600 dark:text-typography-300">
+                  Personalize rapidamente a experiência do painel.
+                </Text>
+              </Box>
+            </Box>
+            <ModalCloseButton className="mt-1 rounded-full border border-outline-100 dark:border-[#2A3B52]" />
           </ModalHeader>
-          <ModalBody className="gap-4">
-            <Box>
-              <Text className="text-sm text-typography-600 dark:text-typography-300 mb-2">
+          <ModalBody className="gap-5 pt-5">
+            <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50/70 dark:bg-[#0F1A2E] p-4 gap-3">
+              <Text
+                className="text-xs font-semibold uppercase text-typography-500 dark:text-typography-300 tracking-[0.08em]"
+                style={{fontFamily: "Inter_600SemiBold"}}
+              >
                 Tema
+              </Text>
+              <Text className="text-sm text-typography-600 dark:text-typography-300">
+                Escolha como o HyperHive se adapta ao seu ambiente.
               </Text>
               <RadioGroup
                 value={themePreference}
                 onChange={(val: any) => onChangeThemePreference(val)}
-                className="gap-3"
+                className="gap-3 mt-1"
               >
-                <Radio value="light" aria-label="Claro">
-                  <Text className="text-typography-900 dark:text-typography-100">Sempre claro</Text>
-                </Radio>
-                <Radio value="dark" aria-label="Escuro">
-                  <Text className="text-typography-900 dark:text-typography-100">Sempre escuro</Text>
-                </Radio>
-                <Radio value="system" aria-label="Sistema">
-                  <Text className="text-typography-900 dark:text-typography-100">Acompanhar sistema</Text>
-                </Radio>
+                {THEME_OPTIONS.map((option) => {
+                  const isActive = themePreference === option.value;
+                  return (
+                    <Radio
+                      key={option.value}
+                      value={option.value}
+                      aria-label={option.label}
+                      className={`flex-row items-center gap-3 rounded-xl border px-3 py-3 transition-all ${
+                        isActive
+                          ? "border-primary-500 bg-primary-50/60 dark:border-[#4A7DFF] dark:bg-[#121C2D]"
+                          : "border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524]"
+                      }`}
+                    >
+                      <RadioIndicator
+                        className={`self-center ${
+                          isActive
+                            ? "border-primary-600 bg-primary-50/70 dark:bg-[#1B2F4B] dark:border-[#4A7DFF]"
+                            : ""
+                        }`}
+                      >
+                        {isActive ? (
+                          <RadioIcon as={Dot} size="sm" className="text-primary-700 dark:text-[#8AB9FF]" />
+                        ) : null}
+                      </RadioIndicator>
+                      <Box className="flex-row items-start gap-3 flex-1">
+                        <Box
+                          className={`w-10 h-10 rounded-lg items-center justify-center ${
+                            isActive
+                              ? "bg-primary-500/10 dark:bg-[#1B2F4B]"
+                              : "bg-background-100 dark:bg-[#1A2637]"
+                          }`}
+                        >
+                          <Icon
+                            as={option.icon}
+                            size="md"
+                            className={
+                              isActive
+                                ? "text-primary-700 dark:text-[#8AB9FF]"
+                                : "text-typography-600 dark:text-typography-200"
+                            }
+                          />
+                        </Box>
+                        <Box className="flex-1">
+                          <RadioLabel
+                            className="text-base text-typography-900 dark:text-[#E8EBF0]"
+                            style={{fontFamily: "Inter_600SemiBold"}}
+                          >
+                            {option.label}
+                          </RadioLabel>
+                          <Text className="text-xs text-typography-500 dark:text-typography-300 mt-0.5">
+                            {option.description}
+                          </Text>
+                        </Box>
+                      </Box>
+                    </Radio>
+                  );
+                })}
               </RadioGroup>
             </Box>
           </ModalBody>
-          <ModalFooter className="justify-end">
-            <Button variant="outline" action="secondary" className="rounded-xl" onPress={() => setShowSettings(false)}>
-              <ButtonText>Fechar</ButtonText>
+          <ModalFooter className="justify-end border-t border-outline-100 dark:border-[#2A3B52] pt-4 mt-2">
+            <Button
+              variant="outline"
+              action="secondary"
+              className="rounded-xl px-4 h-11 border-outline-100 dark:border-[#2A3B52]"
+              onPress={() => setShowSettings(false)}
+            >
+              <ButtonText className="font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                Fechar
+              </ButtonText>
             </Button>
           </ModalFooter>
         </ModalContent>
