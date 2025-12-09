@@ -53,9 +53,15 @@ const makeStyles = (theme: Theme) =>
   StyleSheet.create({
     screen: {
       flex: 1,
-      backgroundColor: theme.bg,
       paddingHorizontal: 16,
       paddingTop: 56,
+      width: "100%",
+      maxWidth: 1180,
+      alignSelf: "center",
+    },
+    wrapper: {
+      flex: 1,
+      backgroundColor: theme.bg,
     },
     title: {
       fontSize: 26,
@@ -351,11 +357,12 @@ export default function LogsScreen() {
   }
 
   return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>Logs</Text>
-      <Text style={styles.subtitle}>
-        Visualização em linha, ordenada dos mais recentes para os mais antigos. Toque numa linha para ver detalhe.
-      </Text>
+    <View style={styles.wrapper}>
+      <View style={styles.screen}>
+        <Text style={styles.title}>Logs</Text>
+        <Text style={styles.subtitle}>
+          Visualização em linha, ordenada dos mais recentes para os mais antigos. Toque numa linha para ver detalhe.
+        </Text>
 
       <View style={[styles.card, styles.filters]}>
         <Text style={styles.sectionTitle}>Filtros e controlos</Text>
@@ -450,11 +457,11 @@ export default function LogsScreen() {
             />
           )}
         </View>
-      </View>
+        </View>
 
-      {selected ? (
-        <View style={styles.card}>
-          <View style={styles.detailHeader}>
+        {selected ? (
+          <View style={styles.card}>
+            <View style={styles.detailHeader}>
             <Text style={styles.detailTitle}>Detalhe do log</Text>
             <TouchableOpacity onPress={() => setSelected(null)}>
               <Text style={styles.close}>Fechar</Text>
@@ -469,9 +476,10 @@ export default function LogsScreen() {
             showsVerticalScrollIndicator
           >
             <Text style={styles.detailBody}>{selected.message}</Text>
-          </ScrollView>
-        </View>
-      ) : null}
+            </ScrollView>
+          </View>
+        ) : null}
+      </View>
     </View>
   );
 }
