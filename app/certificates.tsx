@@ -1,5 +1,5 @@
 import React from "react";
-import {RefreshControl, ScrollView} from "react-native";
+import {RefreshControl, ScrollView, useWindowDimensions} from "react-native";
 import {Box} from "@/components/ui/box";
 import {Text} from "@/components/ui/text";
 import {Heading} from "@/components/ui/heading";
@@ -134,6 +134,13 @@ const StatusChip = ({label, action = "info"}: {label: string; action?: "info" | 
   </Badge>
 );
 
+const TOGGLE_PROPS = {
+  size: "sm" as const,
+  thumbColor: "#f8fafc",
+  trackColor: {false: "#cbd5e1", true: "#0f172a"},
+  ios_backgroundColor: "#cbd5e1",
+};
+
 export default function CertificatesScreen() {
   const toast = useToast();
   const [certs, setCerts] = React.useState<Certificate[]>([]);
@@ -147,6 +154,8 @@ export default function CertificatesScreen() {
   const [downloadingId, setDownloadingId] = React.useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<Certificate | null>(null);
   const [deletingId, setDeletingId] = React.useState<number | null>(null);
+  const {height: screenHeight} = useWindowDimensions();
+  const modalBodyMaxHeight = Math.min(screenHeight * 0.7, 720);
 
   const showToast = React.useCallback(
     (title: string, description: string, action: "success" | "error" = "success") => {
@@ -446,108 +455,129 @@ export default function CertificatesScreen() {
       </ScrollView>
 
       <Modal isOpen={modalOpen} onClose={closeModal} size="lg">
-        <ModalBackdrop />
-        <ModalContent className="max-w-2xl">
-          <ModalHeader className="flex-row items-start justify-between">
-            <Heading size="md" className="text-typography-900">
-              Emitir Let's Encrypt
-            </Heading>
-            <ModalCloseButton />
+        <ModalBackdrop className="bg-black/60" />
+        <ModalContent className="max-w-3xl w-full rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628] shadow-2xl">
+          <ModalHeader className="flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
+            <VStack className="flex-1">
+              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+                Emitir Let's Encrypt
+              </Heading>
+              <Text className="text-typography-600 dark:text-typography-400 mt-1">
+                Gere certificados SSL via ACME com HTTP ou DNS challenge.
+              </Text>
+            </VStack>
+            <ModalCloseButton className="text-typography-500" />
           </ModalHeader>
-          <ModalBody className="gap-4">
-            <FormControl isRequired>
-              <FormControlLabel>
-                <FormControlLabelText>Domínios</FormControlLabelText>
-              </FormControlLabel>
-              <Input>
-                <InputField
-                  value={domainsInput}
-                  onChangeText={setDomainsInput}
-                  placeholder="ex: *.marques.com, marques.com"
-                  autoCapitalize="none"
-                />
-              </Input>
-              <FormControlHelper>
-                <FormControlHelperText>Separe por vírgula ou quebra de linha.</FormControlHelperText>
-              </FormControlHelper>
-            </FormControl>
-
-            <FormControl isRequired>
-              <FormControlLabel>
-                <FormControlLabelText>Email</FormControlLabelText>
-              </FormControlLabel>
-              <Input>
-                <InputField
-                  value={form.meta.letsencrypt_email}
-                  onChangeText={(val) => setForm((prev) => ({...prev, meta: {...prev.meta, letsencrypt_email: val}}))}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  placeholder="seu-email@dominio.com"
-                />
-              </Input>
-            </FormControl>
-
-            <HStack className="items-center gap-2">
-              <Switch
-                value={form.meta.letsencrypt_agree ?? false}
-                onValueChange={(val) => setForm((prev) => ({...prev, meta: {...prev.meta, letsencrypt_agree: val}}))}
-              />
-              <Text className="text-typography-800">Aceito os termos do Let's Encrypt</Text>
-            </HStack>
-
-            <HStack className="items-center gap-2 flex-wrap">
-              <Switch
-                value={form.meta.dns_challenge ?? false}
-                onValueChange={(val) => setForm((prev) => ({...prev, meta: {...prev.meta, dns_challenge: val}}))}
-              />
-              <Text className="text-typography-800">Usar DNS Challenge</Text>
-            </HStack>
-
-            {form.meta.dns_challenge ? (
-              <VStack className="gap-3">
-                <FormControl>
+          <ModalBody className="px-6 pt-4">
+            <ScrollView
+              nestedScrollEnabled
+              showsVerticalScrollIndicator
+              style={{maxHeight: modalBodyMaxHeight}}
+              contentContainerStyle={{paddingBottom: 8}}
+            >
+              <VStack className="gap-4">
+                <FormControl isRequired>
                   <FormControlLabel>
-                    <FormControlLabelText>Provedor DNS</FormControlLabelText>
+                    <FormControlLabelText>Domínios</FormControlLabelText>
                   </FormControlLabel>
-                  <Input>
+                  <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
                     <InputField
-                      value={form.meta.dns_provider ?? ""}
-                      onChangeText={(val) => setForm((prev) => ({...prev, meta: {...prev.meta, dns_provider: val}}))}
+                      value={domainsInput}
+                      onChangeText={setDomainsInput}
+                      placeholder="ex: *.marques.com, marques.com"
                       autoCapitalize="none"
-                      placeholder="dynu, cloudflare, route53..."
-                    />
-                  </Input>
-                </FormControl>
-
-                <FormControl>
-                  <FormControlLabel>
-                    <FormControlLabelText>Credenciais DNS</FormControlLabelText>
-                  </FormControlLabel>
-                  <Input>
-                    <InputField
-                      value={form.meta.dns_provider_credentials ?? ""}
-                      onChangeText={(val) =>
-                        setForm((prev) => ({...prev, meta: {...prev.meta, dns_provider_credentials: val}}))
-                      }
-                      autoCapitalize="none"
-                      placeholder="dns_dynu_auth_token = SEU_TOKEN..."
                     />
                   </Input>
                   <FormControlHelper>
-                    <FormControlHelperText>Use o formato esperado pelo lego/ACME do provider.</FormControlHelperText>
+                    <FormControlHelperText>Separe por vírgula ou quebra de linha.</FormControlHelperText>
                   </FormControlHelper>
                 </FormControl>
+
+                <FormControl isRequired>
+                  <FormControlLabel>
+                    <FormControlLabelText>Email</FormControlLabelText>
+                  </FormControlLabel>
+                  <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
+                    <InputField
+                      value={form.meta.letsencrypt_email}
+                      onChangeText={(val) => setForm((prev) => ({...prev, meta: {...prev.meta, letsencrypt_email: val}}))}
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      placeholder="seu-email@dominio.com"
+                    />
+                  </Input>
+                </FormControl>
+
+                <VStack className="gap-3">
+                  <Text className="text-typography-800 font-semibold">Validação</Text>
+                  <HStack className="items-center gap-2">
+                    <Switch
+                      {...TOGGLE_PROPS}
+                      value={form.meta.letsencrypt_agree ?? false}
+                      onValueChange={(val) => setForm((prev) => ({...prev, meta: {...prev.meta, letsencrypt_agree: val}}))}
+                    />
+                    <Text className="text-typography-800">Aceito os termos do Let's Encrypt</Text>
+                  </HStack>
+
+                  <HStack className="items-center gap-2 flex-wrap">
+                    <Switch
+                      {...TOGGLE_PROPS}
+                      value={form.meta.dns_challenge ?? false}
+                      onValueChange={(val) => setForm((prev) => ({...prev, meta: {...prev.meta, dns_challenge: val}}))}
+                    />
+                    <Text className="text-typography-800">Usar DNS Challenge</Text>
+                  </HStack>
+                </VStack>
+
+                {form.meta.dns_challenge ? (
+                  <VStack className="gap-3">
+                    <FormControl>
+                      <FormControlLabel>
+                        <FormControlLabelText>Provedor DNS</FormControlLabelText>
+                      </FormControlLabel>
+                      <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
+                        <InputField
+                          value={form.meta.dns_provider ?? ""}
+                          onChangeText={(val) => setForm((prev) => ({...prev, meta: {...prev.meta, dns_provider: val}}))}
+                          autoCapitalize="none"
+                          placeholder="dynu, cloudflare, route53..."
+                        />
+                      </Input>
+                    </FormControl>
+
+                    <FormControl>
+                      <FormControlLabel>
+                        <FormControlLabelText>Credenciais DNS</FormControlLabelText>
+                      </FormControlLabel>
+                      <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
+                        <InputField
+                          value={form.meta.dns_provider_credentials ?? ""}
+                          onChangeText={(val) =>
+                            setForm((prev) => ({...prev, meta: {...prev.meta, dns_provider_credentials: val}}))
+                          }
+                          autoCapitalize="none"
+                          placeholder="dns_dynu_auth_token = SEU_TOKEN..."
+                        />
+                      </Input>
+                      <FormControlHelper>
+                        <FormControlHelperText>Use o formato esperado pelo lego/ACME do provider.</FormControlHelperText>
+                      </FormControlHelper>
+                    </FormControl>
+                  </VStack>
+                ) : null}
               </VStack>
-            ) : null}
+            </ScrollView>
           </ModalBody>
-          <ModalFooter className="gap-3">
-            <Button variant="outline" action="default" onPress={closeModal} isDisabled={saving}>
-              <ButtonText>Cancelar</ButtonText>
-            </Button>
-            <Button action="primary" onPress={handleCreate} isDisabled={saving}>
-              {saving ? <ButtonSpinner /> : <ButtonIcon as={CloudLightning} size="sm" />}
-              <ButtonText>Emitir</ButtonText>
-            </Button>
+          <ModalFooter className="px-6 pb-6 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
+            <HStack className="gap-3 justify-end w-full">
+              <Button variant="outline" action="default" onPress={closeModal} isDisabled={saving}>
+                <ButtonText>Cancelar</ButtonText>
+              </Button>
+              <Button action="primary" onPress={handleCreate} isDisabled={saving}>
+                {saving ? <ButtonSpinner /> : <ButtonIcon as={CloudLightning} size="sm" />}
+                <ButtonText>Emitir</ButtonText>
+              </Button>
+            </HStack>
           </ModalFooter>
         </ModalContent>
       </Modal>

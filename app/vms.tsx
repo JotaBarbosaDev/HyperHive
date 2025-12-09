@@ -14,6 +14,10 @@ import { Progress, ProgressFilledTrack } from "@/components/ui/progress";
 import { Platform } from "react-native";
 import { Heading } from '@/components/ui/heading';
 import CreateVmModal from "@/components/modals/CreateVmModal";
+import * as Clipboard from "expo-clipboard";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
+import * as WebBrowser from "expo-web-browser";
 import {
   Actionsheet,
   ActionsheetBackdrop,
@@ -46,6 +50,7 @@ import {
   FormControlLabel,
   FormControlLabelText,
 } from "@/components/ui/form-control";
+import { Switch } from "@/components/ui/switch";
 import {
   getAllVMs,
   VirtualMachine,
@@ -57,7 +62,6 @@ import {
   forceShutdownVM,
   startVM,
   migrateVM,
-  coldMigrateVM,
   moveDisk,
   deleteVM,
   cloneVm as cloneVmApi,
@@ -70,6 +74,8 @@ import {
 import { listMounts } from "@/services/hyperhive";
 import { Mount } from "@/types/mount";
 import { ApiError } from "@/services/api-client";
+import { apiFetch } from "@/services/api-client";
+import { getApiBaseUrl } from "@/config/apiConfig";
 let Haptics: any;
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -192,6 +198,146 @@ export default function VirtualMachinesScreen() {
   const [deletingVm, setDeletingVm] = React.useState<string | null>(null);
   const [migratingVm, setMigratingVm] = React.useState<string | null>(null);
   const toast = useToast();
+  const [showConsoleOptions, setShowConsoleOptions] = React.useState(false);
+  const [consoleOptionsVm, setConsoleOptionsVm] = React.useState<VM | null>(null);
+
+  const showToastMessage = React.useCallback(
+    (
+      title: string,
+      description: string = "",
+      actionType: "success" | "error" = "success"
+    ) => {
+      toast.show({
+        placement: "top",
+        render: ({ id }) => (
+          <Toast
+            nativeID={"toast-" + id}
+            className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+            action={actionType}
+          >
+            <ToastTitle size="sm">{title}</ToastTitle>
+            {description ? (
+              <ToastDescription size="sm">{description}</ToastDescription>
+            ) : null}
+          </Toast>
+        ),
+      });
+    },
+    [toast]
+  );
+
+  const downloadTextFile = React.useCallback(
+    async (content: string, fileName: string) => {
+      if (Platform.OS === "web") {
+        const blob = new Blob([content], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = fileName;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(url);
+        return fileName;
+      }
+
+      const baseDir = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
+      if (!baseDir) {
+        throw new Error("Não foi possível aceder ao diretório de armazenamento.");
+      }
+      const fileUri = `${baseDir}${fileName}`;
+      await FileSystem.writeAsStringAsync(fileUri, content, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: "text/plain",
+          dialogTitle: fileName,
+          UTI: "public.plain-text",
+        });
+      }
+      return fileUri;
+    },
+    []
+  );
+
+  const handleConsoleAction = React.useCallback(
+    async (action: "browser" | "sprite" | "guest") => {
+      const vm = consoleOptionsVm;
+      if (!vm) return;
+      setShowConsoleOptions(false);
+      setConsoleOptionsVm(null);
+
+      const apiBase = getApiBaseUrl();
+      if (!apiBase) {
+        showToastMessage(
+          "Domínio não configurado",
+          "Atualize o base URL antes de aceder à consola.",
+          "error"
+        );
+        return;
+      }
+
+      const normalizedBase = apiBase.replace(/\/+$/, "");
+
+      try {
+        if (action === "browser") {
+          const target = `${normalizedBase}/novnc/vnc.html?path=${encodeURIComponent(
+            `/novnc/ws?vm=${vm.name}`
+          )}`;
+          if (Platform.OS === "web") {
+            const webWindow = globalThis.window;
+            if (webWindow) {
+              const opened = webWindow.open(target, "_blank", "noopener,noreferrer");
+              if (!opened) {
+                showToastMessage(
+                  "Erro",
+                  "Não foi possível abrir a nova aba da consola.",
+                  "error"
+                );
+              }
+            } else {
+              showToastMessage("Erro", "Não foi possível abrir a consola no browser.", "error");
+            }
+          } else {
+            await WebBrowser.openBrowserAsync(target);
+          }
+          return;
+        }
+
+        if (action === "sprite") {
+          const spriteText = await apiFetch<string>(
+            `/novnc/sprite/${encodeURIComponent(vm.name)}`,
+            {
+              headers: {
+                Accept: "text/plain",
+              },
+            }
+          );
+          const fileName = `${vm.name}.vv`;
+          await downloadTextFile(spriteText, fileName);
+          showToastMessage("Sprite guardado", "O ficheiro .vv foi gerado.");
+          return;
+        }
+
+        if (action === "guest") {
+          const guestUrl = `${normalizedBase}/guest_api/guest_page/${encodeURIComponent(
+            vm.name
+          )}`;
+          await Clipboard.setStringAsync(guestUrl);
+          showToastMessage("Link copiado", "URL do guest copiado para a área de transferência.");
+          return;
+        }
+      } catch (error) {
+        console.error("Erro ao executar ação da consola:", error);
+        const message =
+          error instanceof Error && error.message ? error.message : "Falha ao executar a ação.";
+        showToastMessage("Erro", message, "error");
+      }
+    },
+    [consoleOptionsVm, showToastMessage]
+  );
 
   const fetchAndSetVms = React.useCallback(async () => {
     const data = await getAllVMs();
@@ -268,6 +414,22 @@ export default function VirtualMachinesScreen() {
 
   const formatMemory = (mb: number) => {
     return mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb} MB`;
+  };
+
+  const formatDiskSize = (gb: number) => {
+    if (!Number.isFinite(gb)) {
+      return "0 GB";
+    }
+    const normalized = gb >= 100 ? gb.toFixed(0) : gb.toFixed(1);
+    return `${Number(normalized)} GB`;
+  };
+
+  const formatPercentUsage = (value: number) => {
+    if (!Number.isFinite(value)) {
+      return "0%";
+    }
+    const clamped = Math.min(100, Math.max(0, value));
+    return `${Math.round(clamped)}%`;
   };
 
   const stats = React.useMemo(() => {
@@ -793,13 +955,13 @@ export default function VirtualMachinesScreen() {
                                       className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                                       style={{ fontFamily: "Inter_400Regular" }}
                                     >
-                                      CPU
+                                      CPU ({vm.DefinedCPUS} vCPU)
                                     </Text>
                                     <Text
                                       className="text-xs text-typography-900 dark:text-[#E8EBF0]"
                                       style={{ fontFamily: "Inter_500Medium" }}
                                     >
-                                      {vm.DefinedCPUS} cores
+                                      {`${formatPercentUsage(vm.currentCpuUsage)} / 100%`}
                                     </Text>
                                   </Box>
                                   <Progress
@@ -831,7 +993,7 @@ export default function VirtualMachinesScreen() {
                                       className="text-xs text-typography-900 dark:text-[#E8EBF0]"
                                       style={{ fontFamily: "Inter_500Medium" }}
                                     >
-                                      {formatMemory(vm.DefinedRam)}
+                                      {`${formatMemory(vm.currentMemoryUsageMB)} / ${formatMemory(vm.DefinedRam)}`}
                                     </Text>
                                   </Box>
                                   <Progress
@@ -868,7 +1030,7 @@ export default function VirtualMachinesScreen() {
                                       className="text-xs text-typography-900 dark:text-[#E8EBF0]"
                                       style={{ fontFamily: "Inter_500Medium" }}
                                     >
-                                      {vm.diskSizeGB} GB
+                                      {`${formatDiskSize(vm.AllocatedGb)} / ${formatDiskSize(vm.diskSizeGB)}`}
                                     </Text>
                                   </Box>
                                   <Progress
@@ -1013,32 +1175,36 @@ export default function VirtualMachinesScreen() {
           {/* Modals e Actionsheet */}
           <Modal isOpen={!!detailsVm} onClose={() => setDetailsVm(null)}>
             <ModalBackdrop />
-            <ModalContent className="rounded-lg shadow-lg">
-              <ModalHeader className="flex justify-between">
-                <Heading size="md" className="text-gray-900">
-                  Detalhes da VM
+          <ModalContent className="rounded-lg shadow-lg max-w-[720px] w-full">
+            <ModalHeader className="flex justify-between">
+              <Heading size="md" className="text-gray-900">
+                Detalhes da VM
                 </Heading>
-                {Platform.OS === "web" ? (
-                  <VStack className="gap-2">
-                    <HStack className="">
-                      <Button
-                        className="rounded-md px-4 py-2"
-                        onPress={() => alert("A abrir")}
-                      >
-                        <ButtonText>Abrir no Browser</ButtonText>
-                      </Button>
-                    </HStack>
-                  </VStack>
-                ) : null}
+                <VStack className="gap-2">
+                  <HStack className="">
+                    <Button
+                      className="rounded-md px-4 py-2"
+                      onPress={() => {
+                        if (!detailsVm) return;
+                        setConsoleOptionsVm(detailsVm);
+                        setShowConsoleOptions(true);
+                      }}
+                    >
+                      <ButtonText>Abrir</ButtonText>
+                    </Button>
+                  </HStack>
+                </VStack>
               </ModalHeader>
-              <ModalBody>
-                {detailsVm && (
-                  <VStack className="gap-4">
-                    {/* Console */}
-
+            <ModalBody className="p-0">
+              {detailsVm && (
+                <ScrollView
+                  className="max-h-[70vh]"
+                  showsVerticalScrollIndicator
+                  contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
+                >
+                  <VStack className="gap-6">
                     <Divider className="my-2" />
-                    {/* Informações */}
-                    <VStack className="gap-3 web:grid ">
+                    <VStack className="gap-3 web:grid web:grid-cols-2 web:gap-4">
                       <HStack className="justify-between">
                         <Text className="text-sm text-gray-600">Estado</Text>
                         <Badge
@@ -1081,14 +1247,14 @@ export default function VirtualMachinesScreen() {
                         </Text>
                       </HStack>
                       {detailsVm.ip.length > 0 && (
-                        <HStack className="justify-between">
+                        <HStack className="justify-between col-span-2">
                           <Text className="text-sm text-gray-600">IP</Text>
                           <Text className="text-sm text-gray-900">
                             {detailsVm.ip.join(", ")}
                           </Text>
                         </HStack>
                       )}
-                      <HStack className="justify-between">
+                      <HStack className="justify-between col-span-2">
                         <Text className="text-sm text-gray-600">
                           Auto-start
                         </Text>
@@ -1096,10 +1262,15 @@ export default function VirtualMachinesScreen() {
                           {detailsVm.autoStart ? "Sim" : "Não"}
                         </Text>
                       </HStack>
+                      <HStack className="justify-between col-span-2">
+                        <Text className="text-sm text-gray-600">Live VM</Text>
+                        <Text className="text-sm text-typography-900">
+                          {detailsVm.isLive ? "Sim" : "Não"}
+                        </Text>
+                      </HStack>
                     </VStack>
                     <Divider className="my-2" />
-                    {/* Ações Rápidas */}
-                    <HStack className="gap-2 flex-wrap">
+                    <HStack className="gap-2 flex-wrap web:justify-start">
                       <Button
                         variant="outline"
                         className="rounded-md px-4 py-2"
@@ -1126,8 +1297,9 @@ export default function VirtualMachinesScreen() {
                       </Button>
                     </HStack>
                   </VStack>
-                )}
-              </ModalBody>
+                </ScrollView>
+              )}
+            </ModalBody>
               <ModalFooter>
                 <HStack className="justify-end gap-2">
                   <Button
@@ -1313,17 +1485,6 @@ export default function VirtualMachinesScreen() {
                   />
                 )}
               </ModalBody>
-              <ModalFooter>
-                <HStack className="justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    className="rounded-md px-4 py-2"
-                    onPress={() => setEditVm(null)}
-                  >
-                    <ButtonText>Fechar</ButtonText>
-                  </Button>
-                </HStack>
-              </ModalFooter>
             </ModalContent>
           </Modal>
 
@@ -1430,14 +1591,15 @@ export default function VirtualMachinesScreen() {
                     }
                     onCancel={() => setMigrateVm(null)}
                     loading={migratingVm === migrateVm.name}
-                    onMigrate={async (targetSlave) => {
+                    onMigrate={async ({ targetSlave, live, timeout }) => {
                       setMigratingVm(migrateVm.name);
                       try {
-                        if (migrateVm.state === VmState.RUNNING) {
-                          await migrateVM(migrateVm.name, targetSlave);
-                        } else {
-                          await coldMigrateVM(migrateVm.name, targetSlave);
-                        }
+                        await migrateVM(migrateVm.name, {
+                          targetMachineName: targetSlave,
+                          originMachine: migrateVm.machineName,
+                          live,
+                          timeout,
+                        });
                         await fetchAndSetVms();
                         setMigrateVm(null);
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -1621,9 +1783,74 @@ export default function VirtualMachinesScreen() {
                   </VStack>
                 )}
               </ModalBody>
-            </ModalContent>
-          </Modal>
-        </Box>
+          </ModalContent>
+        </Modal>
+        <Modal
+          isOpen={showConsoleOptions}
+          onClose={() => {
+            setShowConsoleOptions(false);
+            setConsoleOptionsVm(null);
+          }}
+        >
+          <ModalBackdrop />
+          <ModalContent className="rounded-lg shadow-lg max-h-[90vh]">
+            <ModalHeader className="flex justify-between">
+              <Heading size="md" className="text-gray-900">
+                Console · {consoleOptionsVm?.name ?? ""}
+              </Heading>
+              <ModalCloseButton />
+            </ModalHeader>
+            <ModalBody>
+              <VStack className="gap-3">
+                <Button
+                  className="w-full rounded-md px-4 py-3 bg-typography-900 dark:bg-[#E8EBF0]"
+                  onPress={() => {
+                    void handleConsoleAction("browser");
+                  }}
+                >
+                  <ButtonText className="text-background-0 dark:text-typography-900">
+                    Abrir no Browser
+                  </ButtonText>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full rounded-md px-4 py-3 border-typography-900 dark:border-[#E8EBF0]"
+                  onPress={() => {
+                    void handleConsoleAction("sprite");
+                  }}
+                >
+                  <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                    Download Sprite (.vv)
+                  </ButtonText>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full rounded-md px-4 py-3"
+                  onPress={() => {
+                    void handleConsoleAction("guest");
+                  }}
+                >
+                  <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                    Partilhar Guest
+                  </ButtonText>
+                </Button>
+              </VStack>
+            </ModalBody>
+            <ModalFooter>
+              <Button
+                variant="outline"
+                className="rounded-md px-4 py-2"
+                onPress={() => {
+                  setShowConsoleOptions(false);
+                  setConsoleOptionsVm(null);
+                }}
+              >
+                <ButtonText>Cancelar</ButtonText>
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+      </Box>
       </ScrollView>
       {/* Actionsheet de opções da VM (Mobile) / Modal (Web) */}
       {Platform.OS === "web" ? (
@@ -2514,12 +2741,18 @@ function MigrateVmForm({
   vm: VM;
   slaveChoices: string[];
   onCancel: () => void;
-  onMigrate: (targetSlave: string) => Promise<void>;
+  onMigrate: (payload: {
+    targetSlave: string;
+    live: boolean;
+    timeout: number;
+  }) => Promise<void>;
   loading: boolean;
 }) {
   const uniqueChoices = Array.from(new Set(slaveChoices));
   const initial = uniqueChoices.find((s) => s !== vm.machineName) || vm.machineName;
   const [target, setTarget] = React.useState(initial);
+  const [live, setLive] = React.useState(vm.state === VmState.RUNNING);
+  const [timeout, setTimeoutValue] = React.useState("500");
   const [error, setError] = React.useState<string | null>(null);
 
   const handleSubmit = async () => {
@@ -2528,8 +2761,17 @@ function MigrateVmForm({
       setError("Selecione um destino diferente do host atual.");
       return;
     }
+    const parsedTimeout = Number(timeout);
+    if (!Number.isFinite(parsedTimeout) || parsedTimeout <= 0) {
+      setError("Timeout deve ser um número positivo.");
+      return;
+    }
     try {
-      await onMigrate(target);
+      await onMigrate({
+        targetSlave: target,
+        live,
+        timeout: parsedTimeout,
+      });
     } catch (err) {
       const message =
         err instanceof ApiError && typeof err.data === "string"
@@ -2545,41 +2787,99 @@ function MigrateVmForm({
       <Text className="text-gray-700">
         Migrar {vm.name} de <Text className="font-semibold">{vm.machineName}</Text> para:
       </Text>
-      <Select
-        selectedValue={target}
-        onValueChange={setTarget}
-        isDisabled={uniqueChoices.length === 0}
-      >
-        <SelectTrigger>
-          <SelectInput value={target} />
-          <SelectIcon />
-        </SelectTrigger>
-        <SelectPortal>
-          <SelectBackdrop />
-          <SelectContent>
-            <SelectDragIndicatorWrapper>
-              <SelectDragIndicator />
-            </SelectDragIndicatorWrapper>
-            {uniqueChoices.length === 0 ? (
-              <SelectItem label="Nenhum slave disponível" value="" isDisabled />
-            ) : (
-              uniqueChoices.map((s) => (
-                <SelectItem
-                  key={s}
-                  label={s === vm.machineName ? `${s} (atual)` : s}
-                  value={s}
-                />
-              ))
-            )}
-          </SelectContent>
-        </SelectPortal>
-      </Select>
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText className="text-sm font-semibold text-typography-800">
+            Destino (Slave)
+          </FormControlLabelText>
+        </FormControlLabel>
+        <Select
+          selectedValue={target}
+          onValueChange={setTarget}
+          isDisabled={uniqueChoices.length === 0}
+        >
+          <SelectTrigger>
+            <SelectInput value={target} />
+            <SelectIcon />
+          </SelectTrigger>
+          <SelectPortal>
+            <SelectBackdrop />
+            <SelectContent>
+              <SelectDragIndicatorWrapper>
+                <SelectDragIndicator />
+              </SelectDragIndicatorWrapper>
+              {uniqueChoices.length === 0 ? (
+                <SelectItem label="Nenhum slave disponível" value="" isDisabled />
+              ) : (
+                uniqueChoices.map((s) => (
+                  <SelectItem
+                    key={s}
+                    label={s === vm.machineName ? `${s} (atual)` : s}
+                    value={s}
+                  />
+                ))
+              )}
+            </SelectContent>
+          </SelectPortal>
+        </Select>
+      </FormControl>
+      <FormControl>
+        <HStack className="items-center justify-between">
+          <FormControlLabel>
+            <FormControlLabelText className="text-sm font-semibold text-typography-800">
+              Live migration
+            </FormControlLabelText>
+          </FormControlLabel>
+          <Switch
+            value={live}
+            onValueChange={setLive}
+          />
+        </HStack>
+        <FormControlHelper>
+          <FormControlHelperText className="text-xs text-typography-500">
+            {live
+              ? "Tentará migrar sem desligar a VM."
+              : "Será realizada uma migração a frio; a VM deve estar shutdown"}
+          </FormControlHelperText>
+        </FormControlHelper>
+      </FormControl>
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText className="text-sm font-semibold text-typography-800">
+            Timeout (segundos)
+          </FormControlLabelText>
+        </FormControlLabel>
+        <Input variant="outline" className="rounded-md">
+          <InputField
+            value={timeout}
+            onChangeText={(value) => setTimeoutValue(value.replace(/[^0-9]/g, ""))}
+            keyboardType="numeric"
+            placeholder="500"
+          />
+        </Input>
+        <FormControlHelper>
+          <FormControlHelperText className="text-xs text-typography-500">
+            Tempo máximo para concluir a migração (padrão: 500 segundos).
+          </FormControlHelperText>
+        </FormControlHelper>
+      </FormControl>
       {error && (
         <Text className="text-sm text-red-600">{error}</Text>
       )}
       <HStack className="justify-end gap-2 mt-2">
-        <Button variant="outline" className="rounded-md px-4 py-2" onPress={onCancel} disabled={loading}><ButtonText>Cancelar</ButtonText></Button>
-        <Button className="rounded-md px-4 py-2" onPress={handleSubmit} disabled={loading || uniqueChoices.length === 0}>
+        <Button
+          variant="outline"
+          className="rounded-md px-4 py-2"
+          onPress={onCancel}
+          disabled={loading}
+        >
+          <ButtonText>Cancelar</ButtonText>
+        </Button>
+          <Button
+            className="rounded-md px-4 py-2"
+            onPress={handleSubmit}
+            disabled={loading || uniqueChoices.length === 0}
+          >
           {loading ? <ButtonSpinner className="mr-2" /> : null}
           <ButtonText>Migrar</ButtonText>
         </Button>

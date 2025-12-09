@@ -1,5 +1,5 @@
 import React from "react";
-import {RefreshControl, ScrollView} from "react-native";
+import {RefreshControl, ScrollView, useWindowDimensions} from "react-native";
 import {Box} from "@/components/ui/box";
 import {Text} from "@/components/ui/text";
 import {Heading} from "@/components/ui/heading";
@@ -10,6 +10,18 @@ import {Badge, BadgeText} from "@/components/ui/badge";
 import {Input, InputField} from "@/components/ui/input";
 import {Switch} from "@/components/ui/switch";
 import {Textarea, TextareaInput} from "@/components/ui/textarea";
+import {
+  Select,
+  SelectBackdrop as SelectBackdropContent,
+  SelectContent,
+  SelectDragIndicator,
+  SelectDragIndicatorWrapper,
+  SelectIcon,
+  SelectInput,
+  SelectItem,
+  SelectPortal,
+  SelectTrigger,
+} from "@/components/ui/select";
 import {
   Modal,
   ModalBackdrop,
@@ -49,16 +61,16 @@ import {Skeleton, SkeletonText} from "@/components/ui/skeleton";
 import {Badge as IconBadge} from "@/components/ui/badge";
 import {Pressable} from "@/components/ui/pressable";
 import {
-  AlertTriangle,
+  ChevronDown,
   Globe,
   Lock,
-  Network,
   Pencil,
   Plus,
   Power,
   Shield,
   Trash2,
 } from "lucide-react-native";
+import {useCertificatesOptions} from "@/hooks/useCertificatesOptions";
 
 type FilterTab = "all" | "active" | "inactive";
 
@@ -103,6 +115,13 @@ const StatusChip = ({label, action = "muted"}: {label: string; action?: "muted" 
   </Badge>
 );
 
+const TOGGLE_PROPS = {
+  size: "sm" as const,
+  thumbColor: "#f8fafc",
+  trackColor: {false: "#cbd5e1", true: "#0f172a"},
+  ios_backgroundColor: "#cbd5e1",
+};
+
 export default function ProxyHostsScreen() {
   const toast = useToast();
   const [hosts, setHosts] = React.useState<ProxyHost[]>([]);
@@ -118,6 +137,9 @@ export default function ProxyHostsScreen() {
   const [togglingId, setTogglingId] = React.useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<ProxyHost | null>(null);
   const [deletingId, setDeletingId] = React.useState<number | null>(null);
+  const {height: screenHeight} = useWindowDimensions();
+  const modalBodyMaxHeight = Math.min(screenHeight * 0.55, 520);
+  const [formTab, setFormTab] = React.useState<"details" | "locations" | "ssl">("details");
 
   const showToast = React.useCallback(
     (title: string, description: string, action: "success" | "error" = "success") => {
@@ -137,6 +159,15 @@ export default function ProxyHostsScreen() {
     },
     [toast]
   );
+
+  const handleCertificatesError = React.useCallback(
+    (_error: unknown) => {
+      showToast("Erro ao carregar certificados", "Não foi possível obter os certificados SSL.", "error");
+    },
+    [showToast]
+  );
+
+  const {certificateOptions, loadingCertificates, refreshCertificates} = useCertificatesOptions(handleCertificatesError);
 
   const loadHosts = React.useCallback(
     async (mode: "full" | "refresh" | "silent" = "full") => {
@@ -177,6 +208,8 @@ export default function ProxyHostsScreen() {
     setForm(DEFAULT_FORM);
     setDomainsInput("");
     setLocations([]);
+    void refreshCertificates();
+    setFormTab("details");
     setModalOpen(true);
   };
 
@@ -203,6 +236,8 @@ export default function ProxyHostsScreen() {
     });
     setDomainsInput((host.domain_names ?? []).join(", "));
     setLocations(host.locations ?? []);
+    void refreshCertificates();
+    setFormTab("details");
     setModalOpen(true);
   };
 
@@ -464,213 +499,321 @@ export default function ProxyHostsScreen() {
       </ScrollView>
 
       <Modal isOpen={modalOpen} onClose={closeModal} size="lg">
-        <ModalBackdrop />
-        <ModalContent className="max-w-2xl">
-          <ModalHeader className="flex-row items-start justify-between">
-            <Heading size="md" className="text-typography-900">
-              {editingHost ? "Editar Proxy Host" : "Adicionar Proxy Host"}
-            </Heading>
-            <ModalCloseButton />
+        <ModalBackdrop className="bg-black/60" />
+        <ModalContent className="max-w-3xl w-full rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628] shadow-2xl">
+          <ModalHeader className="flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
+            <VStack className="flex-1">
+              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+                {editingHost ? "Editar Proxy Host" : "Adicionar Proxy Host"}
+              </Heading>
+              <Text className="text-typography-600 dark:text-typography-400 mt-1">
+                Domínios, destino e SSL para o proxy selecionado.
+              </Text>
+            </VStack>
+            <ModalCloseButton className="text-typography-500" />
           </ModalHeader>
-          <ModalBody className="gap-4">
-            <FormControl isRequired>
-              <FormControlLabel>
-                <FormControlLabelText>Domínios</FormControlLabelText>
-              </FormControlLabel>
-              <Input>
-                <InputField
-                  value={domainsInput}
-                  onChangeText={setDomainsInput}
-                  placeholder="ex: app.hyperhive.local, www.app.hyperhive.local"
-                  autoCapitalize="none"
-                />
-              </Input>
-              <FormControlHelper>
-                <FormControlHelperText>Separe por vírgula ou quebra de linha.</FormControlHelperText>
-              </FormControlHelper>
-            </FormControl>
+          <ModalBody className="px-6 pt-4">
+            <ScrollView
+              nestedScrollEnabled
+              showsVerticalScrollIndicator
+              style={{maxHeight: modalBodyMaxHeight}}
+              contentContainerStyle={{paddingBottom: 8}}
+            >
+              <VStack className="gap-5">
+                <HStack className="gap-2">
+                  {[
+                    {key: "details", label: "Details"},
+                    {key: "locations", label: "Custom Locations"},
+                    {key: "ssl", label: "SSL"},
+                  ].map((tab) => {
+                    const active = formTab === tab.key;
+                    return (
+                      <Pressable
+                        key={tab.key}
+                        onPress={() => setFormTab(tab.key as typeof formTab)}
+                        className={`px-4 py-2 rounded-full border ${
+                          active ? "bg-typography-900 border-typography-900" : "bg-background-50 border-outline-200"
+                        }`}
+                      >
+                        <Text
+                          className={`text-sm ${active ? "text-background-0" : "text-typography-700"}`}
+                          style={{fontFamily: active ? "Inter_700Bold" : "Inter_500Medium"}}
+                        >
+                          {tab.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </HStack>
 
-            <FormControl isRequired>
-              <FormControlLabel>
-                <FormControlLabelText>Destino</FormControlLabelText>
-              </FormControlLabel>
-              <HStack className="gap-3">
-                <Input className="flex-1">
-                  <InputField
-                    value={form.forward_scheme}
-                    onChangeText={(val) => setForm((prev) => ({...prev, forward_scheme: val || "http"}))}
-                    autoCapitalize="none"
-                    placeholder="http"
-                  />
-                </Input>
-                <Input className="flex-1">
-                  <InputField
-                    value={form.forward_host}
-                    onChangeText={(val) => setForm((prev) => ({...prev, forward_host: val}))}
-                    autoCapitalize="none"
-                    placeholder="192.168.1.100"
-                  />
-                </Input>
-                <Input className="w-24">
-                  <InputField
-                    value={String(form.forward_port)}
-                    onChangeText={(val) => setForm((prev) => ({...prev, forward_port: Number(val) || 0}))}
-                    keyboardType="number-pad"
-                    placeholder="80"
-                  />
-                </Input>
-              </HStack>
-            </FormControl>
-
-            <FormControl>
-              <FormControlLabel>
-                <FormControlLabelText>ID do Certificado</FormControlLabelText>
-              </FormControlLabel>
-              <Input>
-                <InputField
-                  value={String(form.certificate_id ?? 0)}
-                  onChangeText={(val) => setForm((prev) => ({...prev, certificate_id: Number(val.replace(/[^0-9]/g, "")) || 0}))}
-                  keyboardType="number-pad"
-                  placeholder="0 (sem certificado)"
-                />
-              </Input>
-              <FormControlHelper>
-                <FormControlHelperText>Use 0 para sem certificado.</FormControlHelperText>
-              </FormControlHelper>
-            </FormControl>
-
-            <Textarea size="md">
-              <TextareaInput
-                value={form.advanced_config}
-                onChangeText={(text) => setForm((prev) => ({...prev, advanced_config: text}))}
-                placeholder="Configuração Nginx adicional (opcional)..."
-              />
-            </Textarea>
-
-            <HStack className="flex-wrap gap-4">
-              <HStack className="items-center gap-2">
-                <Switch
-                  value={form.ssl_forced}
-                  onValueChange={(val) => setForm((prev) => ({...prev, ssl_forced: val}))}
-                />
-                <Text className="text-typography-800">Forçar SSL</Text>
-              </HStack>
-              <HStack className="items-center gap-2">
-                <Switch
-                  value={form.allow_websocket_upgrade}
-                  onValueChange={(val) => setForm((prev) => ({...prev, allow_websocket_upgrade: val}))}
-                />
-                <Text className="text-typography-800">WebSockets</Text>
-              </HStack>
-              <HStack className="items-center gap-2">
-                <Switch
-                  value={form.block_exploits}
-                  onValueChange={(val) => setForm((prev) => ({...prev, block_exploits: val}))}
-                />
-                <Text className="text-typography-800">Block Exploits</Text>
-              </HStack>
-              <HStack className="items-center gap-2">
-                <Switch
-                  value={form.caching_enabled}
-                  onValueChange={(val) => setForm((prev) => ({...prev, caching_enabled: val}))}
-                />
-                <Text className="text-typography-800">Caching</Text>
-              </HStack>
-              <HStack className="items-center gap-2">
-                <Switch
-                  value={form.http2_support}
-                  onValueChange={(val) => setForm((prev) => ({...prev, http2_support: val}))}
-                />
-                <Text className="text-typography-800">HTTP/2</Text>
-              </HStack>
-              <HStack className="items-center gap-2">
-                <Switch
-                  value={form.hsts_enabled}
-                  onValueChange={(val) => setForm((prev) => ({...prev, hsts_enabled: val}))}
-                />
-                <Text className="text-typography-800">HSTS</Text>
-              </HStack>
-              <HStack className="items-center gap-2">
-                <Switch
-                  value={form.hsts_subdomains}
-                  onValueChange={(val) => setForm((prev) => ({...prev, hsts_subdomains: val}))}
-                  isDisabled={!form.hsts_enabled}
-                />
-                <Text className={`text-typography-800 ${!form.hsts_enabled ? "text-typography-500" : ""}`}>
-                  HSTS Subdomínios
-                </Text>
-              </HStack>
-            </HStack>
-
-            <VStack className="gap-3">
-              <HStack className="items-center justify-between">
-                <Text className="text-typography-900 font-semibold">Locations</Text>
-                <Button action="primary" variant="outline" size="sm" onPress={addLocation}>
-                  <ButtonText>Adicionar Location</ButtonText>
-                </Button>
-              </HStack>
-              {locations.length === 0 ? (
-                <Text className="text-typography-600 text-sm">Nenhum location definido.</Text>
-              ) : (
-                locations.map((loc, idx) => (
-                  <Box key={`${loc.path}-${idx}`} className="p-3 rounded-xl border border-background-200 bg-background-50 gap-3">
-                    <FormControl>
+                {formTab === "details" ? (
+                  <VStack className="gap-4">
+                    <FormControl isRequired>
                       <FormControlLabel>
-                        <FormControlLabelText>Caminho</FormControlLabelText>
+                        <FormControlLabelText>Domínios</FormControlLabelText>
                       </FormControlLabel>
-                      <Input>
+                      <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
                         <InputField
-                          value={loc.path}
-                          onChangeText={(val) => updateLocation(idx, "path", val)}
+                          value={domainsInput}
+                          onChangeText={setDomainsInput}
+                          placeholder="ex: app.hyperhive.local, www.app.hyperhive.local"
                           autoCapitalize="none"
-                          placeholder="/api"
                         />
                       </Input>
+                      <FormControlHelper>
+                        <FormControlHelperText>Separe por vírgula ou quebra de linha.</FormControlHelperText>
+                      </FormControlHelper>
                     </FormControl>
-                    <HStack className="gap-3">
-                      <Input className="flex-1">
-                        <InputField
-                          value={loc.forward_scheme}
-                          onChangeText={(val) => updateLocation(idx, "forward_scheme", val)}
-                          autoCapitalize="none"
-                          placeholder="http"
-                        />
-                      </Input>
-                      <Input className="flex-1">
-                        <InputField
-                          value={loc.forward_host}
-                          onChangeText={(val) => updateLocation(idx, "forward_host", val)}
-                          autoCapitalize="none"
-                          placeholder="192.168.1.100"
-                        />
-                      </Input>
-                      <Input className="w-24">
-                        <InputField
-                          value={String(loc.forward_port)}
-                          onChangeText={(val) => updateLocation(idx, "forward_port", val)}
-                          keyboardType="number-pad"
-                          placeholder="8080"
-                        />
-                      </Input>
-                    </HStack>
-                    <HStack className="justify-end">
-                      <Button action="negative" variant="outline" size="sm" onPress={() => removeLocation(idx)}>
-                        <ButtonText>Remover</ButtonText>
+
+                    <FormControl isRequired>
+                      <FormControlLabel>
+                        <FormControlLabelText>Destino</FormControlLabelText>
+                      </FormControlLabel>
+                      <HStack className="gap-3 flex-wrap">
+                        <Input className="flex-1 min-w-[120px] rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
+                          <InputField
+                            value={form.forward_scheme}
+                            onChangeText={(val) => setForm((prev) => ({...prev, forward_scheme: val || "http"}))}
+                            autoCapitalize="none"
+                            placeholder="http"
+                          />
+                        </Input>
+                        <Input className="flex-1 min-w-[180px] rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
+                          <InputField
+                            value={form.forward_host}
+                            onChangeText={(val) => setForm((prev) => ({...prev, forward_host: val}))}
+                            autoCapitalize="none"
+                            placeholder="192.168.1.100"
+                          />
+                        </Input>
+                        <Input className="w-24 rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
+                          <InputField
+                            value={String(form.forward_port)}
+                            onChangeText={(val) => setForm((prev) => ({...prev, forward_port: Number(val) || 0}))}
+                            keyboardType="number-pad"
+                            placeholder="80"
+                          />
+                        </Input>
+                      </HStack>
+                    </FormControl>
+
+                    <VStack className="gap-3">
+                      <Text className="text-typography-800 font-semibold">Opções rápidas</Text>
+                      <HStack className="flex-wrap gap-4">
+                        <HStack className="items-center gap-2">
+                          <Switch
+                            {...TOGGLE_PROPS}
+                            value={form.allow_websocket_upgrade}
+                            onValueChange={(val) => setForm((prev) => ({...prev, allow_websocket_upgrade: val}))}
+                          />
+                          <Text className="text-typography-800">WebSockets</Text>
+                        </HStack>
+                        <HStack className="items-center gap-2">
+                          <Switch
+                            {...TOGGLE_PROPS}
+                            value={form.block_exploits}
+                            onValueChange={(val) => setForm((prev) => ({...prev, block_exploits: val}))}
+                          />
+                          <Text className="text-typography-800">Block Exploits</Text>
+                        </HStack>
+                        <HStack className="items-center gap-2">
+                          <Switch
+                            {...TOGGLE_PROPS}
+                            value={form.caching_enabled}
+                            onValueChange={(val) => setForm((prev) => ({...prev, caching_enabled: val}))}
+                          />
+                          <Text className="text-typography-800">Caching</Text>
+                        </HStack>
+                      </HStack>
+                    </VStack>
+                  </VStack>
+                ) : null}
+
+                {formTab === "locations" ? (
+                  <VStack className="gap-4">
+                    <HStack className="items-center justify-between">
+                      <Text className="text-typography-900 font-semibold">Locations personalizados</Text>
+                      <Button action="primary" variant="outline" size="sm" onPress={addLocation}>
+                        <ButtonText>Adicionar Location</ButtonText>
                       </Button>
                     </HStack>
-                  </Box>
-                ))
-              )}
-            </VStack>
+                    {locations.length === 0 ? (
+                      <Text className="text-typography-600 text-sm">Nenhum location definido.</Text>
+                    ) : (
+                      locations.map((loc, idx) => (
+                        <Box key={`${loc.path}-${idx}`} className="p-3 rounded-xl border border-background-200 bg-background-50 gap-3">
+                          <FormControl>
+                            <FormControlLabel>
+                              <FormControlLabelText>Caminho</FormControlLabelText>
+                            </FormControlLabel>
+                            <Input className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
+                              <InputField
+                                value={loc.path}
+                                onChangeText={(val) => updateLocation(idx, "path", val)}
+                                autoCapitalize="none"
+                                placeholder="/api"
+                              />
+                            </Input>
+                          </FormControl>
+                          <HStack className="gap-3 flex-wrap">
+                            <Input className="flex-1 min-w-[120px] rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
+                              <InputField
+                                value={loc.forward_scheme}
+                                onChangeText={(val) => updateLocation(idx, "forward_scheme", val)}
+                                autoCapitalize="none"
+                                placeholder="http"
+                              />
+                            </Input>
+                            <Input className="flex-1 min-w-[160px] rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
+                              <InputField
+                                value={loc.forward_host}
+                                onChangeText={(val) => updateLocation(idx, "forward_host", val)}
+                                autoCapitalize="none"
+                                placeholder="192.168.1.100"
+                              />
+                            </Input>
+                            <Input className="w-24 rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
+                              <InputField
+                                value={String(loc.forward_port)}
+                                onChangeText={(val) => updateLocation(idx, "forward_port", val)}
+                                keyboardType="number-pad"
+                                placeholder="8080"
+                              />
+                            </Input>
+                          </HStack>
+                          <HStack className="justify-end">
+                            <Button action="negative" variant="outline" size="sm" onPress={() => removeLocation(idx)}>
+                              <ButtonText>Remover</ButtonText>
+                            </Button>
+                          </HStack>
+                        </Box>
+                      ))
+                    )}
+                  </VStack>
+                ) : null}
+
+                {formTab === "ssl" ? (
+                  <VStack className="gap-4">
+                    <FormControl>
+                      <HStack className="items-center justify-between">
+                        <FormControlLabel>
+                          <FormControlLabelText>Certificado SSL</FormControlLabelText>
+                        </FormControlLabel>
+                        <Button
+                          variant="link"
+                          action="primary"
+                          className="px-0"
+                          size="sm"
+                          onPress={() => void refreshCertificates()}
+                          isDisabled={loadingCertificates}
+                        >
+                          {loadingCertificates ? <ButtonSpinner /> : <ButtonText>Atualizar</ButtonText>}
+                        </Button>
+                      </HStack>
+                      <Select
+                        selectedValue={String(form.certificate_id ?? 0)}
+                        onValueChange={(val) => setForm((prev) => ({...prev, certificate_id: Number(val)}))}
+                        isDisabled={loadingCertificates && certificateOptions.length === 0}
+                      >
+                        <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] h-11 px-4">
+                          <SelectInput
+                            placeholder={loadingCertificates ? "A carregar certificados..." : "Seleciona um certificado"}
+                            className="text-typography-900 dark:text-[#E8EBF0]"
+                          />
+                          <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-typography-400" />
+                        </SelectTrigger>
+                        <SelectPortal>
+                          <SelectBackdropContent />
+                          <SelectContent className="max-h-72 bg-background-0 dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52] rounded-2xl">
+                            <SelectDragIndicatorWrapper>
+                              <SelectDragIndicator />
+                            </SelectDragIndicatorWrapper>
+                            {certificateOptions.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                label={option.label}
+                                value={option.value}
+                                className="text-base text-typography-900 dark:text-[#E8EBF0]"
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </SelectPortal>
+                      </Select>
+                      <FormControlHelper>
+                        <FormControlHelperText>Mostra os certificados disponíveis. Deixa em branco para HTTP.</FormControlHelperText>
+                      </FormControlHelper>
+                    </FormControl>
+
+                    <FormControl>
+                      <FormControlLabel>
+                        <FormControlLabelText>Configuração avançada (opcional)</FormControlLabelText>
+                      </FormControlLabel>
+                      <Textarea className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]" size="md">
+                        <TextareaInput
+                          value={form.advanced_config}
+                          onChangeText={(text) => setForm((prev) => ({...prev, advanced_config: text}))}
+                          placeholder="Configuração Nginx adicional (opcional)..."
+                        />
+                      </Textarea>
+                    </FormControl>
+
+                    <VStack className="gap-3">
+                      <Text className="text-typography-800 font-semibold">SSL & HSTS</Text>
+                      <HStack className="flex-wrap gap-4">
+                        <HStack className="items-center gap-2">
+                          <Switch
+                            {...TOGGLE_PROPS}
+                            value={form.ssl_forced}
+                            onValueChange={(val) => setForm((prev) => ({...prev, ssl_forced: val}))}
+                          />
+                          <Text className="text-typography-800">Forçar SSL</Text>
+                        </HStack>
+                        <HStack className="items-center gap-2">
+                          <Switch
+                            {...TOGGLE_PROPS}
+                            value={form.http2_support}
+                            onValueChange={(val) => setForm((prev) => ({...prev, http2_support: val}))}
+                          />
+                          <Text className="text-typography-800">HTTP/2</Text>
+                        </HStack>
+                        <HStack className="items-center gap-2">
+                          <Switch
+                            {...TOGGLE_PROPS}
+                            value={form.hsts_enabled}
+                            onValueChange={(val) => setForm((prev) => ({...prev, hsts_enabled: val}))}
+                          />
+                          <Text className="text-typography-800">HSTS</Text>
+                        </HStack>
+                        <HStack className="items-center gap-2">
+                          <Switch
+                            {...TOGGLE_PROPS}
+                            value={form.hsts_subdomains}
+                            onValueChange={(val) => setForm((prev) => ({...prev, hsts_subdomains: val}))}
+                            isDisabled={!form.hsts_enabled}
+                          />
+                          <Text className={`text-typography-800 ${!form.hsts_enabled ? "text-typography-500" : ""}`}>
+                            HSTS Subdomínios
+                          </Text>
+                        </HStack>
+                      </HStack>
+                    </VStack>
+                  </VStack>
+                ) : null}
+              </VStack>
+            </ScrollView>
           </ModalBody>
-          <ModalFooter className="gap-3">
-            <Button variant="outline" action="default" onPress={closeModal} isDisabled={saving}>
-              <ButtonText>Cancelar</ButtonText>
-            </Button>
-            <Button action="primary" onPress={handleSave} isDisabled={saving}>
-              {saving ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
-              <ButtonText>{editingHost ? "Salvar alterações" : "Criar proxy"}</ButtonText>
-            </Button>
+          <ModalFooter className="px-6 pb-6 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
+            <HStack className="gap-3 justify-end w-full">
+              <Button variant="outline" action="default" onPress={closeModal} isDisabled={saving}>
+                <ButtonText>Cancelar</ButtonText>
+              </Button>
+              <Button action="primary" onPress={handleSave} isDisabled={saving}>
+                {saving ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
+                <ButtonText>{editingHost ? "Salvar alterações" : "Criar proxy"}</ButtonText>
+              </Button>
+            </HStack>
           </ModalFooter>
         </ModalContent>
       </Modal>

@@ -18,6 +18,7 @@ type ApiResult = {
   path: string;
   status?: number;
   error?: unknown;
+  errorText?: string;
 };
 type ApiResultListener = (result: ApiResult) => void;
 const apiResultListeners = new Set<ApiResultListener>();
@@ -130,6 +131,7 @@ export async function apiFetch<T = unknown>(
     });
   } catch (networkErr) {
     console.error("[API ERROR]", method, requestPath, networkErr);
+    const networkMessage = networkErr instanceof Error ? networkErr.message : undefined;
     apiResultListeners.forEach((listener) => {
       try {
         listener({
@@ -138,6 +140,7 @@ export async function apiFetch<T = unknown>(
           path: requestPath,
           status: undefined,
           error: networkErr,
+          errorText: networkMessage,
         });
       } catch (err) {
         console.error("API result listener threw an error", err);
@@ -148,8 +151,10 @@ export async function apiFetch<T = unknown>(
 
   if (!response.ok) {
     let errorPayload: unknown = null;
+    let errorText: string | null = null;
     try {
       const raw = await response.text();
+      errorText = raw || null;
       if (raw) {
         try {
           errorPayload = JSON.parse(raw);
@@ -173,17 +178,19 @@ export async function apiFetch<T = unknown>(
           path: requestPath,
           status: response.status,
           error: errorPayload,
+          errorText: errorText ?? undefined,
         });
       } catch (err) {
         console.error("API result listener threw an error", err);
       }
     });
 
-    throw new ApiError(
-      response.statusText || `Request failed with status ${response.status}`,
-      response.status,
-      errorPayload
-    );
+    const literalMessage =
+      (errorText && errorText.trim()) ||
+      response.statusText ||
+      `Request failed with status ${response.status}`;
+
+    throw new ApiError(literalMessage, response.status, errorPayload ?? errorText);
   }
 
   console.info("[API]", method, requestPath, "->", response.status);

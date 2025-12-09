@@ -1,12 +1,12 @@
 import React from "react";
-import {RefreshControl, ScrollView, Switch} from "react-native";
-import {Box} from "@/components/ui/box";
-import {Text} from "@/components/ui/text";
-import {Heading} from "@/components/ui/heading";
-import {VStack} from "@/components/ui/vstack";
-import {HStack} from "@/components/ui/hstack";
-import {Button, ButtonIcon, ButtonSpinner, ButtonText} from "@/components/ui/button";
-import {Input, InputField} from "@/components/ui/input";
+import { RefreshControl, ScrollView, Switch } from "react-native";
+import { Box } from "@/components/ui/box";
+import { Text } from "@/components/ui/text";
+import { Heading } from "@/components/ui/heading";
+import { VStack } from "@/components/ui/vstack";
+import { HStack } from "@/components/ui/hstack";
+import { Button, ButtonIcon, ButtonSpinner, ButtonText } from "@/components/ui/button";
+import { Input, InputField } from "@/components/ui/input";
 import {
   Select,
   SelectTrigger,
@@ -19,18 +19,18 @@ import {
   SelectDragIndicator,
   SelectBackdrop,
 } from "@/components/ui/select";
-import {ChevronDownIcon} from "@/components/ui/icon";
-import {Pressable} from "@/components/ui/pressable";
-import {Divider} from "@/components/ui/divider";
-import {Modal, ModalBackdrop, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton} from "@/components/ui/modal";
-import {AlertDialog, AlertDialogBackdrop, AlertDialogContent, AlertDialogHeader, AlertDialogBody, AlertDialogFooter, AlertDialogCloseButton} from "@/components/ui/alert-dialog";
-import {FormControl, FormControlLabel, FormControlLabelText, FormControlHelper, FormControlHelperText} from "@/components/ui/form-control";
-import {Toast, ToastDescription, ToastTitle, useToast} from "@/components/ui/toast";
-import {Badge, BadgeText} from "@/components/ui/badge";
-import {Skeleton, SkeletonText} from "@/components/ui/skeleton";
-import {BtrfsDisk, BtrfsRaid, AutomaticMount} from "@/types/btrfs";
-import {Machine} from "@/types/machine";
-import {listMachines} from "@/services/hyperhive";
+import { ChevronDownIcon } from "@/components/ui/icon";
+import { Pressable } from "@/components/ui/pressable";
+import { Divider } from "@/components/ui/divider";
+import { Modal, ModalBackdrop, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton } from "@/components/ui/modal";
+import { AlertDialog, AlertDialogBackdrop, AlertDialogContent, AlertDialogHeader, AlertDialogBody, AlertDialogFooter, AlertDialogCloseButton } from "@/components/ui/alert-dialog";
+import { FormControl, FormControlLabel, FormControlLabelText, FormControlHelper, FormControlHelperText } from "@/components/ui/form-control";
+import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
+import { Badge, BadgeText } from "@/components/ui/badge";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
+import { BtrfsDisk, BtrfsRaid, AutomaticMount, BtrfsRaidDevice } from "@/types/btrfs";
+import { Machine } from "@/types/machine";
+import { listMachines } from "@/services/hyperhive";
 import {
   addDiskRaid,
   balanceRaid,
@@ -55,7 +55,7 @@ import {
   scrubRaid,
   unmountRaid,
 } from "@/services/btrfs";
-import {ArrowRight, HardDrive, Plus, Power, RefreshCcw, Trash2} from "lucide-react-native";
+import { ArrowRight, HardDrive, Plus, Power, RefreshCcw, Trash2 } from "lucide-react-native";
 
 type FilterTab = "all" | "active" | "inactive";
 
@@ -70,6 +70,22 @@ const formatSize = (value?: string | number) => {
     return `${value} B`;
   }
   return value;
+};
+
+const formatDeviceDisplay = (device: BtrfsDisk | string): string => {
+  if (typeof device === "string") return device;
+  const dev = device.device || "";
+  const model = device.model || "";
+  if (model) return `${dev} - ${model}`;
+  return dev;
+};
+
+const getRaidDeviceLabel = (dev: BtrfsRaidDevice | BtrfsDisk | string, disks: BtrfsDisk[]) => {
+  if (typeof dev !== "string" && dev.model) return formatDeviceDisplay(dev as BtrfsDisk);
+  const path = typeof dev === "string" ? dev : (dev as any).device;
+  const found = disks.find((d) => d.device === path);
+  if (found) return formatDeviceDisplay(found);
+  return typeof dev === "string" ? dev : formatDeviceDisplay(dev as BtrfsDisk);
 };
 
 const isRaidActive = (raid: BtrfsRaid) => raid.mounted !== false;
@@ -121,7 +137,7 @@ export default function BtrfsRaidsScreen() {
     (title: string, description: string, action: "success" | "error" = "success") => {
       toast.show({
         placement: "top",
-        render: ({id}) => (
+        render: ({ id }) => (
           <Toast
             nativeID={"toast-" + id}
             className="px-5 py-3 gap-3 shadow-soft-1 items-start flex-row"
@@ -274,7 +290,7 @@ export default function BtrfsRaidsScreen() {
     return raids;
   }, [filter, raids]);
 
-  const StatsRow = ({label, value}: {label: string; value?: string | number}) => (
+  const StatsRow = ({ label, value }: { label: string; value?: string | number }) => (
     <HStack className="justify-between py-1">
       <Text className="text-typography-700">{label}</Text>
       <Text className="text-typography-900 font-semibold">{value ?? "—"}</Text>
@@ -288,7 +304,7 @@ export default function BtrfsRaidsScreen() {
       className="flex-row items-center justify-between px-3 py-2 border-b border-background-200"
     >
       <VStack className="gap-1">
-        <Text className="text-typography-900 font-semibold">{disk.device}</Text>
+        <Text className="text-typography-900 font-semibold">{formatDeviceDisplay(disk)}</Text>
         <Text className="text-typography-600 text-sm">
           {disk.model || disk.name || "—"} • {formatSize(disk.size)}
         </Text>
@@ -312,14 +328,14 @@ export default function BtrfsRaidsScreen() {
     <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{paddingBottom: 32}}
+        contentContainerStyle={{ paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadData("refresh")} />}
       >
         <Box className="p-4 pt-16 web:p-10 web:max-w-6xl web:mx-auto web:w-full">
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
-            style={{fontFamily: "Inter_700Bold"}}
+            style={{ fontFamily: "Inter_700Bold" }}
           >
             BTRFS / RAIDs
           </Heading>
@@ -394,22 +410,21 @@ export default function BtrfsRaidsScreen() {
                   <Text className="text-typography-900 font-semibold text-base">Arrays BTRFS</Text>
                   <HStack className="gap-2 flex-wrap">
                     {[
-                      {key: "all" as FilterTab, label: `Todos (${raids.length})`},
-                      {key: "active" as FilterTab, label: `Ativos (${raids.filter(isRaidActive).length})`},
-                      {key: "inactive" as FilterTab, label: `Inativos (${raids.filter((r) => !isRaidActive(r)).length})`},
+                      { key: "all" as FilterTab, label: `Todos (${raids.length})` },
+                      { key: "active" as FilterTab, label: `Ativos (${raids.filter(isRaidActive).length})` },
+                      { key: "inactive" as FilterTab, label: `Inativos (${raids.filter((r) => !isRaidActive(r)).length})` },
                     ].map((tab) => {
                       const active = filter === tab.key;
                       return (
                         <Pressable
                           key={tab.key}
                           onPress={() => setFilter(tab.key)}
-                          className={`px-4 py-2 rounded-full border ${
-                            active ? "bg-typography-900 border-typography-900" : "bg-background-0 border-background-200"
-                          }`}
+                          className={`px-4 py-2 rounded-full border ${active ? "bg-typography-900 border-typography-900" : "bg-background-0 border-background-200"
+                            }`}
                         >
                           <Text
                             className={`text-sm ${active ? "text-background-0" : "text-typography-700"}`}
-                            style={{fontFamily: active ? "Inter_700Bold" : "Inter_500Medium"}}
+                            style={{ fontFamily: active ? "Inter_700Bold" : "Inter_500Medium" }}
                           >
                             {tab.label}
                           </Text>
@@ -459,13 +474,16 @@ export default function BtrfsRaidsScreen() {
                                 <Text className="text-typography-800 text-sm">Livre: {formatSize(raid.free)}</Text>
                               </HStack>
                               <HStack className="gap-2 flex-wrap">
-                                {(Array.isArray(raid.devices) ? raid.devices : []).map((dev) => (
-                                  <Badge key={typeof dev === "string" ? dev : dev.device} className="rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
-                                    <BadgeText className="text-xs text-typography-800">
-                                      {typeof dev === "string" ? dev : dev.device}
-                                    </BadgeText>
-                                  </Badge>
-                                ))}
+                                {(Array.isArray(raid.devices) ? raid.devices : []).map((dev) => {
+                                  const devDisplay = getRaidDeviceLabel(dev, disks);
+                                  return (
+                                    <Badge key={typeof dev === "string" ? dev : (dev as any).device} className="rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
+                                      <BadgeText className="text-xs text-typography-800">
+                                        {devDisplay}
+                                      </BadgeText>
+                                    </Badge>
+                                  );
+                                })}
                               </HStack>
                             </VStack>
                             <ArrowRight size={18} color="#0f172a" />
@@ -491,7 +509,7 @@ export default function BtrfsRaidsScreen() {
             <ModalCloseButton />
           </ModalHeader>
           <ModalBody className="gap-3 max-h-[70vh] overflow-y-auto">
-            <Text className="text-typography-700">{diskDetail?.device}</Text>
+            <Text className="text-typography-700">{diskDetail ? formatDeviceDisplay(diskDetail) : ""}</Text>
             <Divider />
             <StatsRow label="Nome" value={diskDetail?.name} />
             <StatsRow label="Modelo" value={diskDetail?.model} />
@@ -588,9 +606,9 @@ export default function BtrfsRaidsScreen() {
                       >
                         <Box className={`h-4 w-4 rounded border ${checked ? "bg-primary-500 border-primary-500" : "border-outline-400"}`} />
                         <VStack className="flex-1">
-                          <Text className="text-typography-900 font-semibold">{disk.device}</Text>
+                          <Text className="text-typography-900 font-semibold">{formatDeviceDisplay(disk)}</Text>
                           <Text className="text-typography-600 text-sm">
-                            {(disk.model || disk.name || "Disco")} • {formatSize(disk.size)} • {disk.type || "—"}
+                            {formatSize(disk.size)} • {disk.type || "—"}
                           </Text>
                         </VStack>
                       </Pressable>
@@ -683,7 +701,7 @@ export default function BtrfsRaidsScreen() {
                     action="primary"
                     onPress={() =>
                       raidModal?.uuid &&
-                      performAction("montar", () => mountRaid(selectedMachine, {uuid: raidModal.uuid, mount_point: mountPoint, compression}))
+                      performAction("montar", () => mountRaid(selectedMachine, { uuid: raidModal.uuid, mount_point: mountPoint, compression }))
                     }
                     isDisabled={savingAction !== null}
                   >
@@ -700,7 +718,7 @@ export default function BtrfsRaidsScreen() {
                     variant="outline"
                     onPress={() =>
                       raidModal?.uuid &&
-                      performAction("desmontar", () => unmountRaid(selectedMachine, {uuid: raidModal.uuid, force: forceUnmount}))
+                      performAction("desmontar", () => unmountRaid(selectedMachine, { uuid: raidModal.uuid, force: forceUnmount }))
                     }
                     isDisabled={savingAction !== null}
                   >
@@ -720,7 +738,7 @@ export default function BtrfsRaidsScreen() {
                     variant="outline"
                     onPress={() =>
                       raidModal?.uuid &&
-                      performAction("adicionar disco", () => addDiskRaid(selectedMachine, {uuid: raidModal.uuid, disk: addDiskValue}))
+                      performAction("adicionar disco", () => addDiskRaid(selectedMachine, { uuid: raidModal.uuid, disk: addDiskValue }))
                     }
                     isDisabled={savingAction !== null}
                   >
@@ -738,7 +756,7 @@ export default function BtrfsRaidsScreen() {
                     variant="outline"
                     onPress={() =>
                       raidModal?.uuid &&
-                      performAction("remover disco", () => removeDiskRaid(selectedMachine, {uuid: raidModal.uuid, disk: removeDiskValue}))
+                      performAction("remover disco", () => removeDiskRaid(selectedMachine, { uuid: raidModal.uuid, disk: removeDiskValue }))
                     }
                     isDisabled={savingAction !== null}
                   >
@@ -759,7 +777,7 @@ export default function BtrfsRaidsScreen() {
                     variant="outline"
                     onPress={() =>
                       raidModal?.uuid &&
-                      performAction("substituir disco", () => replaceDiskRaid(selectedMachine, {uuid: raidModal.uuid, old_disk: replaceOld, new_disk: replaceNew}))
+                      performAction("substituir disco", () => replaceDiskRaid(selectedMachine, { uuid: raidModal.uuid, old_disk: replaceOld, new_disk: replaceNew }))
                     }
                     isDisabled={savingAction !== null}
                   >
@@ -777,7 +795,7 @@ export default function BtrfsRaidsScreen() {
                     variant="outline"
                     onPress={() =>
                       raidModal?.uuid &&
-                      performAction("mudar nível", () => changeRaidLevel(selectedMachine, {uuid: raidModal.uuid, new_raid_level: newRaidLevel}))
+                      performAction("mudar nível", () => changeRaidLevel(selectedMachine, { uuid: raidModal.uuid, new_raid_level: newRaidLevel }))
                     }
                     isDisabled={savingAction !== null}
                   >
@@ -904,7 +922,7 @@ export default function BtrfsRaidsScreen() {
                       variant="outline"
                       onPress={() =>
                         raidModal?.uuid &&
-                        performAction("auto-mount", () => createAutomaticMount(selectedMachine, {uuid: raidModal.uuid, mount_point: autoMountPoint, compression: autoCompression}))
+                        performAction("auto-mount", () => createAutomaticMount(selectedMachine, { uuid: raidModal.uuid, mount_point: autoMountPoint, compression: autoCompression }))
                       }
                       isDisabled={savingAction !== null}
                     >
@@ -932,19 +950,22 @@ export default function BtrfsRaidsScreen() {
             <Box className="p-3 rounded-xl border border-background-200">
               <Text className="text-typography-900 font-semibold mb-2">Dispositivos</Text>
               <VStack className="gap-2">
-                {(Array.isArray(raidModal?.devices) ? raidModal?.devices : [])?.map((dev) => (
-                  <Box
-                    key={typeof dev === "string" ? dev : dev.device}
-                    className="px-3 py-2 rounded-lg border border-background-200 bg-background-50"
-                  >
-                    <Text className="text-typography-900 font-semibold">{typeof dev === "string" ? dev : dev.device}</Text>
-                    {typeof dev !== "string" ? (
-                      <Text className="text-typography-700 text-sm">
-                        {formatSize(dev.size)} • {dev.status || "—"}
-                      </Text>
-                    ) : null}
-                  </Box>
-                ))}
+                {(Array.isArray(raidModal?.devices) ? raidModal?.devices : [])?.map((dev) => {
+                  const devDisplay = getRaidDeviceLabel(dev, disks);
+                  return (
+                    <Box
+                      key={typeof dev === "string" ? dev : dev.device}
+                      className="px-3 py-2 rounded-lg border border-background-200 bg-background-50"
+                    >
+                      <Text className="text-typography-900 font-semibold">{devDisplay}</Text>
+                      {typeof dev !== "string" ? (
+                        <Text className="text-typography-700 text-sm">
+                          {formatSize(dev.size)} • {dev.status || "—"}
+                        </Text>
+                      ) : null}
+                    </Box>
+                  );
+                })}
               </VStack>
             </Box>
           </ModalBody>

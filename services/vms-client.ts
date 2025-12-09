@@ -126,13 +126,31 @@ export async function startVM(vmName: string) {
   });
 }
 
-export async function migrateVM(vmName: string, targetMachineName: string) {
+export async function migrateVM(
+  vmName: string,
+  {
+    targetMachineName,
+    originMachine,
+    live,
+    timeout,
+  }: {
+    targetMachineName: string;
+    originMachine: string;
+    live: boolean;
+    timeout?: number;
+  }
+) {
   const authToken = await resolveToken();
   const encodedVmName = encodeURIComponent(vmName);
-  const encodedTarget = encodeURIComponent(targetMachineName);
-  return apiFetch<void>(`/virsh/migratevm/${encodedVmName}/${encodedTarget}`, {
+  return apiFetch<void>(`/virsh/migratevm/${encodedVmName}`, {
     method: "POST",
     token: authToken,
+    body: {
+      origin_machine: originMachine,
+      destination_machine: targetMachineName,
+      live,
+      timeout: timeout ?? 500,
+    },
   });
 }
 

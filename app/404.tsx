@@ -1,5 +1,5 @@
 import React from "react";
-import {RefreshControl, ScrollView} from "react-native";
+import {RefreshControl, ScrollView, useWindowDimensions} from "react-native";
 import {Box} from "@/components/ui/box";
 import {Text} from "@/components/ui/text";
 import {Heading} from "@/components/ui/heading";
@@ -10,6 +10,18 @@ import {Badge, BadgeText} from "@/components/ui/badge";
 import {Input, InputField} from "@/components/ui/input";
 import {Textarea, TextareaInput} from "@/components/ui/textarea";
 import {Switch} from "@/components/ui/switch";
+import {
+  Select,
+  SelectBackdrop as SelectBackdropContent,
+  SelectContent,
+  SelectDragIndicator,
+  SelectDragIndicatorWrapper,
+  SelectIcon,
+  SelectInput,
+  SelectItem,
+  SelectPortal,
+  SelectTrigger,
+} from "@/components/ui/select";
 import {
   Modal,
   ModalBackdrop,
@@ -48,6 +60,7 @@ import {
 } from "@/services/nginx404";
 import {
   AlertTriangle,
+  ChevronDown,
   Lock,
   Pencil,
   Plus,
@@ -57,6 +70,7 @@ import {
   Trash2,
 } from "lucide-react-native";
 import {Skeleton, SkeletonText} from "@/components/ui/skeleton";
+import {useCertificatesOptions} from "@/hooks/useCertificatesOptions";
 
 type FilterTab = "all" | "active" | "inactive";
 
@@ -103,6 +117,13 @@ const StatusChip = ({
   </Badge>
 );
 
+const TOGGLE_PROPS = {
+  size: "sm" as const,
+  thumbColor: "#f8fafc",
+  trackColor: {false: "#cbd5e1", true: "#0f172a"},
+  ios_backgroundColor: "#cbd5e1",
+};
+
 export default function NotFoundHostsScreen() {
   const toast = useToast();
   const [hosts, setHosts] = React.useState<NotFoundHost[]>([]);
@@ -117,6 +138,9 @@ export default function NotFoundHostsScreen() {
   const [domainsInput, setDomainsInput] = React.useState("");
   const [togglingId, setTogglingId] = React.useState<number | null>(null);
   const [deletingId, setDeletingId] = React.useState<number | null>(null);
+  const {height: screenHeight} = useWindowDimensions();
+  const modalBodyMaxHeight = Math.min(screenHeight * 0.55, 520);
+  const [formTab, setFormTab] = React.useState<"details" | "ssl">("details");
 
   const showToast = React.useCallback(
     (title: string, description: string, action: "success" | "error" = "success") => {
@@ -138,6 +162,17 @@ export default function NotFoundHostsScreen() {
     },
     [toast]
   );
+
+  const handleCertificatesError = React.useCallback(
+    (_error: unknown) => {
+      showToast("Erro ao carregar certificados", "Não foi possível obter os certificados SSL.", "error");
+    },
+    [showToast]
+  );
+
+  const {certificateOptions, loadingCertificates, refreshCertificates} = useCertificatesOptions(handleCertificatesError);
+  const selectedCertificateLabel =
+    certificateOptions.find((option) => option.value === String(form.certificate_id ?? 0))?.label || "Sem certificado";
 
   const loadHosts = React.useCallback(
     async (mode: "full" | "refresh" | "silent" = "full") => {
@@ -165,6 +200,8 @@ export default function NotFoundHostsScreen() {
     setEditingHost(null);
     setForm(DEFAULT_PAYLOAD);
     setDomainsInput("");
+    void refreshCertificates();
+    setFormTab("details");
     setModalOpen(true);
   };
 
@@ -184,6 +221,8 @@ export default function NotFoundHostsScreen() {
       ssl_forced: host.ssl_forced ?? false,
     });
     setDomainsInput((host.domain_names ?? []).join(", "));
+    void refreshCertificates();
+    setFormTab("details");
     setModalOpen(true);
   };
 
@@ -454,129 +493,200 @@ export default function NotFoundHostsScreen() {
                 );
               })}
             </VStack>
-          )}
+      )}
         </Box>
       </ScrollView>
 
       <Modal isOpen={modalOpen} onClose={closeModal} size="lg">
-        <ModalBackdrop />
-        <ModalContent className="max-w-2xl">
-          <ModalHeader className="flex-row items-start justify-between">
-            <Heading size="md" className="text-typography-900">
-              {editingHost ? "Editar 404 Host" : "Adicionar 404 Host"}
-            </Heading>
-            <ModalCloseButton />
+        <ModalBackdrop className="bg-black/60" />
+        <ModalContent className="max-w-3xl w-full rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628] shadow-2xl">
+          <ModalHeader className="flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
+            <VStack className="flex-1">
+              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+                {editingHost ? "Editar 404 Host" : "Adicionar 404 Host"}
+              </Heading>
+              <Text className="text-typography-600 dark:text-typography-400 mt-1">
+                Bloqueie domínios devolvendo 404, com SSL opcional e cabeçalhos HSTS.
+              </Text>
+            </VStack>
+            <ModalCloseButton className="text-typography-500" />
           </ModalHeader>
-          <ModalBody className="gap-4">
-            <FormControl isRequired>
-              <FormControlLabel>
-                <FormControlLabelText>Domínios</FormControlLabelText>
-              </FormControlLabel>
-              <Input>
-                <InputField
-                  value={domainsInput}
-                  onChangeText={setDomainsInput}
-                  placeholder="ex: blocked.hyperhive.local, spam.hyperhive.local"
-                  autoCapitalize="none"
-                />
-              </Input>
-              <FormControlHelper>
-                <FormControlHelperText>Separe por vírgula ou quebra de linha.</FormControlHelperText>
-              </FormControlHelper>
-            </FormControl>
+          <ModalBody className="px-6 pt-4">
+            <ScrollView
+              nestedScrollEnabled
+              showsVerticalScrollIndicator
+              style={{maxHeight: modalBodyMaxHeight}}
+              contentContainerStyle={{paddingBottom: 8}}
+            >
+              <VStack className="gap-5">
+                <HStack className="gap-2">
+                  {[
+                    {key: "details", label: "Details"},
+                    {key: "ssl", label: "SSL"},
+                  ].map((tab) => {
+                    const active = formTab === tab.key;
+                    return (
+                      <Pressable
+                        key={tab.key}
+                        onPress={() => setFormTab(tab.key as typeof formTab)}
+                        className={`px-4 py-2 rounded-full border ${
+                          active ? "bg-typography-900 border-typography-900" : "bg-background-50 border-outline-200"
+                        }`}
+                      >
+                        <Text
+                          className={`text-sm ${active ? "text-background-0" : "text-typography-700"}`}
+                          style={{fontFamily: active ? "Inter_700Bold" : "Inter_500Medium"}}
+                        >
+                          {tab.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </HStack>
 
-            <FormControl>
-              <FormControlLabel>
-                <FormControlLabelText>ID do Certificado (opcional)</FormControlLabelText>
-              </FormControlLabel>
-              <Input>
-                <InputField
-                  value={String(form.certificate_id ?? 0)}
-                  onChangeText={(val) =>
-                    setForm((prev) => ({...prev, certificate_id: Number(val.replace(/[^0-9]/g, "")) || 0}))
-                  }
-                  keyboardType="number-pad"
-                  placeholder="0"
-                />
-              </Input>
-              <FormControlHelper>
-                <FormControlHelperText>Use 0 para nenhum certificado.</FormControlHelperText>
-              </FormControlHelper>
-            </FormControl>
+                {formTab === "details" ? (
+                  <VStack className="gap-4">
+                    <FormControl isRequired>
+                      <FormControlLabel>
+                        <FormControlLabelText>Domínios</FormControlLabelText>
+                      </FormControlLabel>
+                      <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
+                        <InputField
+                          value={domainsInput}
+                          onChangeText={setDomainsInput}
+                          placeholder="ex: blocked.hyperhive.local, spam.hyperhive.local"
+                          autoCapitalize="none"
+                        />
+                      </Input>
+                      <FormControlHelper>
+                        <FormControlHelperText>Separe por vírgula ou quebra de linha.</FormControlHelperText>
+                      </FormControlHelper>
+                    </FormControl>
 
-            <FormControl>
-              <FormControlLabel>
-                <FormControlLabelText>Configuração avançada (opcional)</FormControlLabelText>
-              </FormControlLabel>
-              <Textarea size="md">
-                <TextareaInput
-                  value={form.advanced_config}
-                  onChangeText={(text) => setForm((prev) => ({...prev, advanced_config: text}))}
-                  placeholder="Bloco de configuração Nginx opcional..."
-                />
-              </Textarea>
-            </FormControl>
+                    <FormControl>
+                      <FormControlLabel>
+                        <FormControlLabelText>Configuração avançada (opcional)</FormControlLabelText>
+                      </FormControlLabel>
+                      <Textarea className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]" size="md">
+                        <TextareaInput
+                          value={form.advanced_config}
+                          onChangeText={(text) => setForm((prev) => ({...prev, advanced_config: text}))}
+                          placeholder="Bloco de configuração Nginx opcional..."
+                        />
+                      </Textarea>
+                    </FormControl>
+                  </VStack>
+                ) : null}
 
-            <HStack className="flex-wrap gap-4">
-              <HStack className="items-center gap-2">
-                <Switch
-                  value={form.ssl_forced}
-                  onValueChange={(val) => setForm((prev) => ({...prev, ssl_forced: val}))}
-                />
-                <Text className="text-typography-800">Forçar SSL</Text>
-              </HStack>
-              <HStack className="items-center gap-2">
-                <Switch
-                  value={form.http2_support}
-                  onValueChange={(val) => setForm((prev) => ({...prev, http2_support: val}))}
-                />
-                <Text className="text-typography-800">HTTP/2</Text>
-              </HStack>
-              <HStack className="items-center gap-2">
-                <Switch
-                  value={form.hsts_enabled}
-                  onValueChange={(val) => setForm((prev) => ({...prev, hsts_enabled: val}))}
-                />
-                <Text className="text-typography-800">HSTS</Text>
-              </HStack>
-              <HStack className="items-center gap-2">
-                <Switch
-                  value={form.hsts_subdomains}
-                  onValueChange={(val) => setForm((prev) => ({...prev, hsts_subdomains: val}))}
-                  isDisabled={!form.hsts_enabled}
-                />
-                <Text className={`text-typography-800 ${!form.hsts_enabled ? "text-typography-500" : ""}`}>
-                  HSTS Subdomínios
-                </Text>
-              </HStack>
-              <HStack className="items-center gap-2">
-                <Switch
-                  value={form.meta.letsencrypt_agree}
-                  onValueChange={(val) =>
-                    setForm((prev) => ({...prev, meta: {...prev.meta, letsencrypt_agree: val}}))
-                  }
-                />
-                <Text className="text-typography-800">Let's Encrypt</Text>
-              </HStack>
-              <HStack className="items-center gap-2">
-                <Switch
-                  value={form.meta.dns_challenge}
-                  onValueChange={(val) =>
-                    setForm((prev) => ({...prev, meta: {...prev.meta, dns_challenge: val}}))
-                  }
-                />
-                <Text className="text-typography-800">DNS Challenge</Text>
-              </HStack>
-            </HStack>
+                {formTab === "ssl" ? (
+                  <VStack className="gap-4">
+                    <FormControl>
+                      <HStack className="items-center justify-between">
+                        <FormControlLabel>
+                          <FormControlLabelText>Certificado SSL</FormControlLabelText>
+                        </FormControlLabel>
+                        <Button
+                          variant="link"
+                          action="primary"
+                          className="px-0"
+                          size="sm"
+                          onPress={() => void refreshCertificates()}
+                          isDisabled={loadingCertificates}
+                        >
+                          {loadingCertificates ? <ButtonSpinner /> : <ButtonText>Atualizar</ButtonText>}
+                        </Button>
+                      </HStack>
+                      <Select
+                        selectedValue={String(form.certificate_id ?? 0)}
+                        onValueChange={(val) => setForm((prev) => ({...prev, certificate_id: Number(val)}))}
+                        isDisabled={loadingCertificates && certificateOptions.length === 0}
+                      >
+                        <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] h-11 px-4">
+                          <SelectInput
+                            placeholder={loadingCertificates ? "A carregar certificados..." : selectedCertificateLabel}
+                            className="text-typography-900 dark:text-[#E8EBF0]"
+                          />
+                          <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-typography-400" />
+                        </SelectTrigger>
+                        <SelectPortal>
+                          <SelectBackdropContent />
+                          <SelectContent className="max-h-72 bg-background-0 dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52] rounded-2xl">
+                            <SelectDragIndicatorWrapper>
+                              <SelectDragIndicator />
+                            </SelectDragIndicatorWrapper>
+                            {certificateOptions.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                label={option.label}
+                                value={option.value}
+                                className="text-base text-typography-900 dark:text-[#E8EBF0]"
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </SelectPortal>
+                      </Select>
+                      <FormControlHelper>
+                        <FormControlHelperText>Use um certificado emitido ou deixe sem SSL.</FormControlHelperText>
+                      </FormControlHelper>
+                    </FormControl>
+
+                    <VStack className="gap-3">
+                      <Text className="text-typography-800 font-semibold">Opções de ligação</Text>
+                      <HStack className="flex-wrap gap-4">
+                        <HStack className="items-center gap-2">
+                          <Switch
+                            {...TOGGLE_PROPS}
+                            value={form.ssl_forced}
+                            onValueChange={(val) => setForm((prev) => ({...prev, ssl_forced: val}))}
+                          />
+                          <Text className="text-typography-800">Forçar SSL</Text>
+                        </HStack>
+                        <HStack className="items-center gap-2">
+                          <Switch
+                            {...TOGGLE_PROPS}
+                            value={form.http2_support}
+                            onValueChange={(val) => setForm((prev) => ({...prev, http2_support: val}))}
+                          />
+                          <Text className="text-typography-800">HTTP/2</Text>
+                        </HStack>
+                        <HStack className="items-center gap-2">
+                          <Switch
+                            {...TOGGLE_PROPS}
+                            value={form.hsts_enabled}
+                            onValueChange={(val) => setForm((prev) => ({...prev, hsts_enabled: val}))}
+                          />
+                          <Text className="text-typography-800">HSTS</Text>
+                        </HStack>
+                        <HStack className="items-center gap-2">
+                          <Switch
+                            {...TOGGLE_PROPS}
+                            value={form.hsts_subdomains}
+                            onValueChange={(val) => setForm((prev) => ({...prev, hsts_subdomains: val}))}
+                            isDisabled={!form.hsts_enabled}
+                          />
+                          <Text className={`text-typography-800 ${!form.hsts_enabled ? "text-typography-500" : ""}`}>
+                            HSTS Subdomínios
+                          </Text>
+                        </HStack>
+                      </HStack>
+                    </VStack>
+                  </VStack>
+                ) : null}
+              </VStack>
+            </ScrollView>
           </ModalBody>
-          <ModalFooter className="gap-3">
-            <Button variant="outline" action="default" onPress={closeModal} isDisabled={saving}>
-              <ButtonText>Cancelar</ButtonText>
-            </Button>
-            <Button action="primary" onPress={handleSaveHost} isDisabled={saving}>
-              {saving ? <ButtonSpinner /> : null}
-              <ButtonText>{editingHost ? "Salvar alterações" : "Criar host"}</ButtonText>
-            </Button>
+          <ModalFooter className="px-6 pb-6 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
+            <HStack className="gap-3 justify-end w-full">
+              <Button variant="outline" action="default" onPress={closeModal} isDisabled={saving}>
+                <ButtonText>Cancelar</ButtonText>
+              </Button>
+              <Button action="primary" onPress={handleSaveHost} isDisabled={saving}>
+                {saving ? <ButtonSpinner /> : null}
+                <ButtonText>{editingHost ? "Salvar alterações" : "Criar host"}</ButtonText>
+              </Button>
+            </HStack>
           </ModalFooter>
         </ModalContent>
       </Modal>

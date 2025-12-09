@@ -17,13 +17,14 @@ import {StatusBar, setStatusBarHidden} from "expo-status-bar";
 import {AppState, Platform} from "react-native";
 import * as SystemUI from "expo-system-ui";
 import * as NavigationBar from "expo-navigation-bar";
-import {Button, ButtonIcon} from "@/components/ui/button";
+import {Button, ButtonIcon, ButtonText} from "@/components/ui/button";
 import {EditIcon} from "@/components/ui/icon";
 import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context";
 import React from "react";
 import {CreateMountDrawer} from "@/components/drawers/CreateMountDrawer";
 import {AppSidebar} from "@/components/navigation/AppSidebar";
 import {Box} from "@/components/ui/box";
+import {Text} from "@/components/ui/text";
 import {Menu} from "lucide-react-native";
 import {setApiBaseUrl} from "@/config/apiConfig";
 import {
@@ -36,9 +37,17 @@ import {
 } from "@/services/auth-storage";
 import {ApiError, onApiResult, onUnauthorized, setAuthToken} from "@/services/api-client";
 import {listMachines} from "@/services/hyperhive";
-import {useToast, Toast, ToastTitle, ToastDescription} from "@/components/ui/toast";
 import {AppThemeProvider} from "@/hooks/useAppTheme";
 import {ThemePreference, loadThemePreference, saveThemePreference} from "@/services/theme-preference";
+import {
+  Modal,
+  ModalBackdrop,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+} from "@/components/ui/modal";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -100,6 +109,48 @@ const resolveWebTitle = (path: string) => {
   return fallbackSegment
     .replace(/[-_]+/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const sanitizeRequestPath = (path?: string) => {
+  if (!path) {
+    return "Request";
+  }
+  return path.replace(/^https?:\/\//, "");
+};
+
+const getLiteralApiErrorMessage = (errorText?: string, errorPayload?: unknown) => {
+  if (typeof errorText === "string" && errorText.trim().length > 0) {
+    return errorText;
+  }
+  if (typeof errorPayload === "string" && errorPayload.trim().length > 0) {
+    return errorPayload;
+  }
+  if (errorPayload instanceof Error && errorPayload.message) {
+    return errorPayload.message;
+  }
+  if (errorPayload && typeof errorPayload === "object") {
+    const possibleKeys: Array<"message" | "error" | "detail" | "description"> = [
+      "message",
+      "error",
+      "detail",
+      "description",
+    ];
+    for (const key of possibleKeys) {
+      const value = (errorPayload as Record<string, unknown>)[key];
+      if (typeof value === "string" && value.trim().length > 0) {
+        return value;
+      }
+    }
+    try {
+      return JSON.stringify(errorPayload, null, 2);
+    } catch {
+      // no-op
+    }
+  }
+  if (typeof errorPayload === "number" || typeof errorPayload === "boolean") {
+    return String(errorPayload);
+  }
+  return "Ocorreu um erro ao comunicar com a API. Consulte os logs para mais detalhes.";
 };
 
 export default function RootLayout() {
@@ -176,8 +227,14 @@ function RootLayoutNav() {
   const statusBarBackground = resolvedMode === "dark" ? "#070D19" : "#F8FAFC";
   const [showDrawer, setShowDrawer] = React.useState(false);
   const [showSidebar, setShowSidebar] = React.useState(false);
+  const [apiErrorModal, setApiErrorModal] = React.useState<
+    {status?: number; path?: string; details: string} | null
+  >(null);
   const isSigningOutRef = React.useRef(false);
-  const toast = useToast();
+
+  const handleCloseApiErrorModal = React.useCallback(() => {
+    setApiErrorModal(null);
+  }, []);
 
   React.useEffect(() => {
     loadThemePreference().then((pref) => {
@@ -273,24 +330,14 @@ function RootLayoutNav() {
         return;
       }
       console.error("[API ERROR]", result.method, result.path, result.status, result.error);
-      toast.show({
-        placement: "top",
-        render: ({id}) => (
-          <Toast
-            nativeID={"toast-" + id}
-            className="px-5 py-3 gap-3 shadow-soft-1"
-            action="error"
-          >
-            <ToastTitle size="sm">Erro na API ({result.status ?? "?"})</ToastTitle>
-            <ToastDescription size="sm">
-              {result.path?.replace(/^https?:\/\//, "") || "Request"}
-            </ToastDescription>
-          </Toast>
-        ),
+      setApiErrorModal({
+        status: result.status,
+        path: result.path,
+        details: getLiteralApiErrorMessage(result.errorText, result.error),
       });
     });
     return unsubscribe;
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     if (
@@ -462,6 +509,41 @@ function RootLayoutNav() {
                 onSuccess={handleMountCreated}
               />
             )}
+            <Modal isOpen={Boolean(apiErrorModal)} onClose={handleCloseApiErrorModal} size="md">
+              <ModalBackdrop />
+              <ModalContent>
+                <ModalHeader>
+                  <Box className="flex-1 pr-4">
+                    <Text className="text-lg font-semibold text-typography-900 dark:text-[#E2E8F0]">
+                      {apiErrorModal?.status
+                        ? `Erro na API (${apiErrorModal.status})`
+                        : "Erro na API"}
+                    </Text>
+                    {apiErrorModal?.path ? (
+                      <Text
+                        className="text-xs text-typography-500 dark:text-[#94A3B8]"
+                        numberOfLines={2}
+                      >
+                        {sanitizeRequestPath(apiErrorModal.path)}
+                      </Text>
+                    ) : null}
+                  </Box>
+                  <ModalCloseButton onPress={handleCloseApiErrorModal} />
+                </ModalHeader>
+                <ModalBody>
+                  <Box className="bg-background-100 dark:bg-[#111827] rounded-md p-3">
+                    <Text className="font-mono text-sm text-typography-900 dark:text-[#E2E8F0]">
+                      {apiErrorModal?.details || "Erro desconhecido."}
+                    </Text>
+                  </Box>
+                </ModalBody>
+                <ModalFooter>
+                  <Button onPress={handleCloseApiErrorModal} size="sm">
+                    <ButtonText>Fechar</ButtonText>
+                  </Button>
+                </ModalFooter>
+              </ModalContent>
+            </Modal>
           </SafeAreaView>
         </ThemeProvider>
       </GluestackUIProvider>

@@ -1,5 +1,5 @@
 import React from "react";
-import {RefreshControl, ScrollView} from "react-native";
+import {RefreshControl, ScrollView, useWindowDimensions} from "react-native";
 import {Box} from "@/components/ui/box";
 import {Text} from "@/components/ui/text";
 import {Heading} from "@/components/ui/heading";
@@ -8,6 +8,18 @@ import {HStack} from "@/components/ui/hstack";
 import {Button, ButtonIcon, ButtonSpinner, ButtonText} from "@/components/ui/button";
 import {Input, InputField} from "@/components/ui/input";
 import {Switch} from "@/components/ui/switch";
+import {
+  Select,
+  SelectBackdrop as SelectBackdropContent,
+  SelectContent,
+  SelectDragIndicator,
+  SelectDragIndicatorWrapper,
+  SelectIcon,
+  SelectInput,
+  SelectItem,
+  SelectPortal,
+  SelectTrigger,
+} from "@/components/ui/select";
 import {
   Modal,
   ModalBackdrop,
@@ -40,8 +52,8 @@ import {Skeleton, SkeletonText} from "@/components/ui/skeleton";
 import {Badge, BadgeText} from "@/components/ui/badge";
 import {Pressable} from "@/components/ui/pressable";
 import {
-  AlertTriangle,
   ArrowLeftRight,
+  ChevronDown,
   Lock,
   Pencil,
   Plus,
@@ -49,6 +61,7 @@ import {
   Shield,
   Trash2,
 } from "lucide-react-native";
+import {useCertificatesOptions} from "@/hooks/useCertificatesOptions";
 
 type FilterTab = "all" | "active" | "inactive";
 
@@ -68,6 +81,13 @@ const DEFAULT_FORM: StreamPayload = {
 
 const isEnabled = (host: StreamHost) => host.enabled !== false;
 
+const TOGGLE_PROPS = {
+  size: "sm" as const,
+  thumbColor: "#f8fafc",
+  trackColor: {false: "#cbd5e1", true: "#0f172a"},
+  ios_backgroundColor: "#cbd5e1",
+};
+
 export default function StreamsScreen() {
   const toast = useToast();
   const [items, setItems] = React.useState<StreamHost[]>([]);
@@ -81,6 +101,9 @@ export default function StreamsScreen() {
   const [togglingId, setTogglingId] = React.useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<StreamHost | null>(null);
   const [deletingId, setDeletingId] = React.useState<number | null>(null);
+  const {height: screenHeight} = useWindowDimensions();
+  const modalBodyMaxHeight = Math.min(screenHeight * 0.55, 520);
+  const [formTab, setFormTab] = React.useState<"details" | "ssl">("details");
 
   const showToast = React.useCallback(
     (title: string, description: string, action: "success" | "error" = "success") => {
@@ -100,6 +123,17 @@ export default function StreamsScreen() {
     },
     [toast]
   );
+
+  const handleCertificatesError = React.useCallback(
+    (_error: unknown) => {
+      showToast("Erro ao carregar certificados", "Não foi possível obter os certificados SSL.", "error");
+    },
+    [showToast]
+  );
+
+  const {certificateOptions, loadingCertificates, refreshCertificates} = useCertificatesOptions(handleCertificatesError);
+  const selectedCertificateLabel =
+    certificateOptions.find((option) => option.value === String(form.certificate_id ?? 0))?.label || "Sem certificado";
 
   const loadItems = React.useCallback(
     async (mode: "full" | "refresh" | "silent" = "full") => {
@@ -138,6 +172,8 @@ export default function StreamsScreen() {
   const openCreateModal = () => {
     setEditingHost(null);
     setForm(DEFAULT_FORM);
+    void refreshCertificates();
+    setFormTab("details");
     setModalOpen(true);
   };
 
@@ -156,6 +192,8 @@ export default function StreamsScreen() {
         dns_challenge: host.meta?.dns_challenge ?? true,
       },
     });
+    void refreshCertificates();
+    setFormTab("details");
     setModalOpen(true);
   };
 
@@ -414,92 +452,184 @@ export default function StreamsScreen() {
       </ScrollView>
 
       <Modal isOpen={modalOpen} onClose={closeModal} size="lg">
-        <ModalBackdrop />
-        <ModalContent className="max-w-2xl">
-          <ModalHeader className="flex-row items-start justify-between">
-            <Heading size="md" className="text-typography-900">
-              {editingHost ? "Editar Stream" : "Adicionar Stream"}
-            </Heading>
-            <ModalCloseButton />
+        <ModalBackdrop className="bg-black/60" />
+        <ModalContent className="max-w-3xl w-full rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628] shadow-2xl">
+          <ModalHeader className="flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
+            <VStack className="flex-1">
+              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+                {editingHost ? "Editar Stream" : "Adicionar Stream"}
+              </Heading>
+              <Text className="text-typography-600 dark:text-typography-400 mt-1">
+                Encaminhamento de portas TCP/UDP com opção de certificado SNI.
+              </Text>
+            </VStack>
+            <ModalCloseButton className="text-typography-500" />
           </ModalHeader>
-          <ModalBody className="gap-4">
-            <FormControl isRequired>
-              <FormControlLabel>
-                <FormControlLabelText>Porta de entrada</FormControlLabelText>
-              </FormControlLabel>
-              <Input>
-                <InputField
-                  value={String(form.incoming_port || "")}
-                  onChangeText={(val) => setForm((prev) => ({...prev, incoming_port: Number(val) || 0}))}
-                  keyboardType="number-pad"
-                  placeholder="6060"
-                />
-              </Input>
-            </FormControl>
+          <ModalBody className="px-6 pt-4">
+            <ScrollView
+              nestedScrollEnabled
+              showsVerticalScrollIndicator
+              style={{maxHeight: modalBodyMaxHeight}}
+              contentContainerStyle={{paddingBottom: 8}}
+            >
+              <VStack className="gap-5">
+                <HStack className="gap-2">
+                  {[
+                    {key: "details", label: "Details"},
+                    {key: "ssl", label: "SSL"},
+                  ].map((tab) => {
+                    const active = formTab === tab.key;
+                    return (
+                      <Pressable
+                        key={tab.key}
+                        onPress={() => setFormTab(tab.key as typeof formTab)}
+                        className={`px-4 py-2 rounded-full border ${
+                          active ? "bg-typography-900 border-typography-900" : "bg-background-50 border-outline-200"
+                        }`}
+                      >
+                        <Text
+                          className={`text-sm ${active ? "text-background-0" : "text-typography-700"}`}
+                          style={{fontFamily: active ? "Inter_700Bold" : "Inter_500Medium"}}
+                        >
+                          {tab.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </HStack>
 
-            <FormControl isRequired>
-              <FormControlLabel>
-                <FormControlLabelText>Destino</FormControlLabelText>
-              </FormControlLabel>
-              <HStack className="gap-3">
-                <Input className="flex-1">
-                  <InputField
-                    value={form.forwarding_host}
-                    onChangeText={(val) => setForm((prev) => ({...prev, forwarding_host: val}))}
-                    autoCapitalize="none"
-                    placeholder="10.0.0.3"
-                  />
-                </Input>
-                <Input className="w-24">
-                  <InputField
-                    value={String(form.forwarding_port || "")}
-                    onChangeText={(val) => setForm((prev) => ({...prev, forwarding_port: Number(val) || 0}))}
-                    keyboardType="number-pad"
-                    placeholder="60"
-                  />
-                </Input>
-              </HStack>
-            </FormControl>
+                {formTab === "details" ? (
+                  <VStack className="gap-4">
+                    <FormControl isRequired>
+                      <FormControlLabel>
+                        <FormControlLabelText>Porta de entrada</FormControlLabelText>
+                      </FormControlLabel>
+                      <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
+                        <InputField
+                          value={String(form.incoming_port || "")}
+                          onChangeText={(val) => setForm((prev) => ({...prev, incoming_port: Number(val) || 0}))}
+                          keyboardType="number-pad"
+                          placeholder="6060"
+                        />
+                      </Input>
+                    </FormControl>
 
-            <FormControl>
-              <FormControlLabel>
-                <FormControlLabelText>ID do Certificado</FormControlLabelText>
-              </FormControlLabel>
-              <Input>
-                <InputField
-                  value={String(form.certificate_id ?? 0)}
-                  onChangeText={(val) => setForm((prev) => ({...prev, certificate_id: Number(val.replace(/[^0-9]/g, "")) || 0}))}
-                  keyboardType="number-pad"
-                  placeholder="0 (sem certificado)"
-                />
-              </Input>
-            </FormControl>
+                    <FormControl isRequired>
+                      <FormControlLabel>
+                        <FormControlLabelText>Destino</FormControlLabelText>
+                      </FormControlLabel>
+                      <HStack className="gap-3 flex-wrap">
+                        <Input className="flex-1 min-w-[160px] rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
+                          <InputField
+                            value={form.forwarding_host}
+                            onChangeText={(val) => setForm((prev) => ({...prev, forwarding_host: val}))}
+                            autoCapitalize="none"
+                            placeholder="10.0.0.3"
+                          />
+                        </Input>
+                        <Input className="w-24 rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
+                          <InputField
+                            value={String(form.forwarding_port || "")}
+                            onChangeText={(val) => setForm((prev) => ({...prev, forwarding_port: Number(val) || 0}))}
+                            keyboardType="number-pad"
+                            placeholder="60"
+                          />
+                        </Input>
+                      </HStack>
+                    </FormControl>
 
-            <HStack className="flex-wrap gap-4">
-              <HStack className="items-center gap-2">
-                <Switch
-                  value={form.tcp_forwarding}
-                  onValueChange={(val) => setForm((prev) => ({...prev, tcp_forwarding: val}))}
-                />
-                <Text className="text-typography-800">TCP</Text>
-              </HStack>
-              <HStack className="items-center gap-2">
-                <Switch
-                  value={form.udp_forwarding}
-                  onValueChange={(val) => setForm((prev) => ({...prev, udp_forwarding: val}))}
-                />
-                <Text className="text-typography-800">UDP</Text>
-              </HStack>
-            </HStack>
+                    <VStack className="gap-3">
+                      <Text className="text-typography-800 font-semibold">Protocolos</Text>
+                      <HStack className="flex-wrap gap-4">
+                        <HStack className="items-center gap-2">
+                          <Switch
+                            {...TOGGLE_PROPS}
+                            value={form.tcp_forwarding}
+                            onValueChange={(val) => setForm((prev) => ({...prev, tcp_forwarding: val}))}
+                          />
+                          <Text className="text-typography-800">TCP</Text>
+                        </HStack>
+                        <HStack className="items-center gap-2">
+                          <Switch
+                            {...TOGGLE_PROPS}
+                            value={form.udp_forwarding}
+                            onValueChange={(val) => setForm((prev) => ({...prev, udp_forwarding: val}))}
+                          />
+                          <Text className="text-typography-800">UDP</Text>
+                        </HStack>
+                      </HStack>
+                    </VStack>
+                  </VStack>
+                ) : null}
+
+                {formTab === "ssl" ? (
+                  <VStack className="gap-4">
+                    <FormControl>
+                      <HStack className="items-center justify-between">
+                        <FormControlLabel>
+                          <FormControlLabelText>Certificado SSL</FormControlLabelText>
+                        </FormControlLabel>
+                        <Button
+                          variant="link"
+                          action="primary"
+                          className="px-0"
+                          size="sm"
+                          onPress={() => void refreshCertificates()}
+                          isDisabled={loadingCertificates}
+                        >
+                          {loadingCertificates ? <ButtonSpinner /> : <ButtonText>Atualizar</ButtonText>}
+                        </Button>
+                      </HStack>
+                      <Select
+                        selectedValue={String(form.certificate_id ?? 0)}
+                        onValueChange={(val) => setForm((prev) => ({...prev, certificate_id: Number(val)}))}
+                        isDisabled={loadingCertificates && certificateOptions.length === 0}
+                      >
+                        <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] h-11 px-4">
+                          <SelectInput
+                            placeholder={loadingCertificates ? "A carregar certificados..." : selectedCertificateLabel}
+                            className="text-typography-900 dark:text-[#E8EBF0]"
+                          />
+                          <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-typography-400" />
+                        </SelectTrigger>
+                        <SelectPortal>
+                          <SelectBackdropContent />
+                          <SelectContent className="max-h-72 bg-background-0 dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52] rounded-2xl">
+                            <SelectDragIndicatorWrapper>
+                              <SelectDragIndicator />
+                            </SelectDragIndicatorWrapper>
+                            {certificateOptions.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                label={option.label}
+                                value={option.value}
+                                className="text-base text-typography-900 dark:text-[#E8EBF0]"
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </SelectPortal>
+                      </Select>
+                      <FormControlHelper>
+                        <FormControlHelperText>Selecione um certificado para TLS ou deixe &quot;Sem certificado&quot;.</FormControlHelperText>
+                      </FormControlHelper>
+                    </FormControl>
+                  </VStack>
+                ) : null}
+              </VStack>
+            </ScrollView>
           </ModalBody>
-          <ModalFooter className="gap-3">
-            <Button variant="outline" action="default" onPress={closeModal} isDisabled={saving}>
-              <ButtonText>Cancelar</ButtonText>
-            </Button>
-            <Button action="primary" onPress={handleSave} isDisabled={saving}>
-              {saving ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
-              <ButtonText>{editingHost ? "Salvar alterações" : "Criar stream"}</ButtonText>
-            </Button>
+          <ModalFooter className="px-6 pb-6 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
+            <HStack className="gap-3 justify-end w-full">
+              <Button variant="outline" action="default" onPress={closeModal} isDisabled={saving}>
+                <ButtonText>Cancelar</ButtonText>
+              </Button>
+              <Button action="primary" onPress={handleSave} isDisabled={saving}>
+                {saving ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
+                <ButtonText>{editingHost ? "Salvar alterações" : "Criar stream"}</ButtonText>
+              </Button>
+            </HStack>
           </ModalFooter>
         </ModalContent>
       </Modal>

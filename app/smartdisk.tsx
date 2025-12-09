@@ -1,11 +1,11 @@
 import React from "react";
-import {RefreshControl, ScrollView} from "react-native";
-import {Box} from "@/components/ui/box";
-import {Text} from "@/components/ui/text";
-import {Heading} from "@/components/ui/heading";
-import {VStack} from "@/components/ui/vstack";
-import {HStack} from "@/components/ui/hstack";
-import {Button, ButtonIcon, ButtonSpinner, ButtonText} from "@/components/ui/button";
+import { RefreshControl, ScrollView } from "react-native";
+import { Box } from "@/components/ui/box";
+import { Text } from "@/components/ui/text";
+import { Heading } from "@/components/ui/heading";
+import { VStack } from "@/components/ui/vstack";
+import { HStack } from "@/components/ui/hstack";
+import { Button, ButtonIcon, ButtonSpinner, ButtonText } from "@/components/ui/button";
 import {
   Select,
   SelectTrigger,
@@ -18,9 +18,9 @@ import {
   SelectBackdrop,
   SelectDragIndicatorWrapper,
 } from "@/components/ui/select";
-import {ChevronDownIcon} from "@/components/ui/icon";
-import {Divider} from "@/components/ui/divider";
-import {Pressable} from "@/components/ui/pressable";
+import { ChevronDownIcon } from "@/components/ui/icon";
+import { Divider } from "@/components/ui/divider";
+import { Pressable } from "@/components/ui/pressable";
 import {
   Modal,
   ModalBackdrop,
@@ -39,15 +39,15 @@ import {
   AlertDialogFooter,
   AlertDialogCloseButton,
 } from "@/components/ui/alert-dialog";
-import {FormControl, FormControlHelper, FormControlHelperText, FormControlLabel, FormControlLabelText} from "@/components/ui/form-control";
-import {Input, InputField} from "@/components/ui/input";
-import {Switch} from "@/components/ui/switch";
-import {Toast, ToastDescription, ToastTitle, useToast} from "@/components/ui/toast";
-import {Badge, BadgeText} from "@/components/ui/badge";
-import {Skeleton, SkeletonText} from "@/components/ui/skeleton";
-import {Machine} from "@/types/machine";
-import {SmartDiskDevice, SmartDiskSchedule} from "@/types/smartdisk";
-import {listMachines} from "@/services/hyperhive";
+import { FormControl, FormControlHelper, FormControlHelperText, FormControlLabel, FormControlLabelText } from "@/components/ui/form-control";
+import { Input, InputField } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
+import { Badge, BadgeText } from "@/components/ui/badge";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
+import { Machine } from "@/types/machine";
+import { SmartDiskDevice, SmartDiskSchedule } from "@/types/smartdisk";
+import { listMachines } from "@/services/hyperhive";
 import {
   listAllDisks,
 } from "@/services/btrfs";
@@ -62,16 +62,17 @@ import {
   reallocNonDestructive,
   reallocCancel,
 } from "@/services/smartdisk";
-import {AlertTriangle, Activity, CalendarClock, Plus, RefreshCcw, Trash2, Play, Info, ThermometerSun, ThermometerSnowflake} from "lucide-react-native";
+import { AlertTriangle, Activity, CalendarClock, Plus, RefreshCcw, Trash2, Play, Info, ThermometerSun, ThermometerSnowflake } from "lucide-react-native";
+import { BtrfsDisk } from "@/types/btrfs";
 
 const TEST_TYPES = [
-  {value: "short", label: "Short Self-Test (~2 min)"},
-  {value: "extended", label: "Extended Self-Test (mais demorado)"},
+  { value: "short", label: "Short Self-Test (~2 min)" },
+  { value: "extended", label: "Extended Self-Test (mais demorado)" },
 ];
 
 const WEEK_DAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
-const HOURS = Array.from({length: 24}).map((_, i) => ({value: i, label: `${String(i).padStart(2, "0")}:00`}));
+const HOURS = Array.from({ length: 24 }).map((_, i) => ({ value: i, label: `${String(i).padStart(2, "0")}:00` }));
 
 const STATUS_COLOR: Record<string, string> = {
   ok: "bg-success-100 text-success-700",
@@ -86,6 +87,37 @@ const formatTemp = (temp?: string | number) => {
   const num = typeof temp === "number" ? temp : Number(temp);
   if (isNaN(num)) return String(temp);
   return `${num}°C`;
+};
+
+const formatDeviceDisplay = (device: SmartDiskDevice | BtrfsDisk | string): string => {
+  if (typeof device === "string") return device;
+  const dev = device.device || "";
+  const model = (device as any).model || "";
+  if (model) return `${dev} - ${model}`;
+  return dev;
+};
+
+const findDeviceLabel = (dev: string, disks: SmartDiskDevice[]) => {
+  const found = disks.find((d) => d.device === dev);
+  return found ? formatDeviceDisplay(found) : dev;
+};
+
+const buildDeviceMeta = (rawDevices: any[]): Record<string, string> => {
+  const meta: Record<string, string> = {};
+  rawDevices.forEach((d) => {
+    const device = normalizeDevicePath(d?.device ?? d?.path ?? d?.name ?? d) ?? "";
+    if (!device) return;
+    const model = d?.model ?? "";
+    if (model) meta[device] = model;
+  });
+  return meta;
+};
+
+const getDeviceLabel = (dev: string, disks: SmartDiskDevice[], meta: Record<string, string>) => {
+  const found = disks.find((d) => d.device === dev);
+  if (found) return formatDeviceDisplay(found);
+  if (meta[dev]) return `${dev} - ${meta[dev]}`;
+  return dev;
 };
 
 const normalizeDevicePath = (dev?: string | null): string | null => {
@@ -107,6 +139,7 @@ export default function SmartDiskScreen() {
   const [selectedMachine, setSelectedMachine] = React.useState<string>("");
   const [disks, setDisks] = React.useState<SmartDiskDevice[]>([]);
   const [deviceOptions, setDeviceOptions] = React.useState<string[]>([]);
+  const [deviceMeta, setDeviceMeta] = React.useState<Record<string, string>>({});
   const [schedules, setSchedules] = React.useState<SmartDiskSchedule[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -114,10 +147,10 @@ export default function SmartDiskScreen() {
   const [selfTestTarget, setSelfTestTarget] = React.useState<SmartDiskDevice | null>(null);
   const [scheduleModal, setScheduleModal] = React.useState(false);
   const defaultSchedule = React.useMemo(
-    () => ({device: "", type: "short", week_day: 0, hour: 0, active: true}),
+    () => ({ device: "", type: "short", week_day: 0, hour: 0, active: true }),
     []
   );
-  const [scheduleForm, setScheduleForm] = React.useState<{device: string; type: string; week_day: number; hour: number; active: boolean}>(
+  const [scheduleForm, setScheduleForm] = React.useState<{ device: string; type: string; week_day: number; hour: number; active: boolean }>(
     defaultSchedule
   );
   const [progress, setProgress] = React.useState<string>("");
@@ -127,7 +160,7 @@ export default function SmartDiskScreen() {
     (title: string, description: string, action: "success" | "error" = "success") => {
       toast.show({
         placement: "top",
-        render: ({id}) => (
+        render: ({ id }) => (
           <Toast
             nativeID={"toast-" + id}
             className="px-5 py-3 gap-3 shadow-soft-1 items-start flex-row"
@@ -166,6 +199,7 @@ export default function SmartDiskScreen() {
           listAllDisks(selectedMachine).catch(() => []),
           listSchedules(selectedMachine),
         ]);
+        setDeviceMeta(buildDeviceMeta(Array.isArray(rawDevices) ? rawDevices : []));
         const deviceList = Array.from(
           new Set(
             (Array.isArray(rawDevices) ? rawDevices : [])
@@ -191,7 +225,7 @@ export default function SmartDiskScreen() {
         setSchedules(Array.isArray(schedResp) ? schedResp : []);
 
         if (!scheduleForm.device && deviceList[0]) {
-          setScheduleForm((prev) => ({...prev, device: deviceList[0]}));
+          setScheduleForm((prev) => ({ ...prev, device: deviceList[0] }));
         }
       } catch (err) {
         console.error("Failed to load smartdisk data", err);
@@ -233,7 +267,7 @@ export default function SmartDiskScreen() {
     if (!selfTestTarget) return;
     setSavingAction("selftest");
     try {
-      await startSelfTest(selectedMachine, {device: selfTestTarget.device, type: scheduleForm.type});
+      await startSelfTest(selectedMachine, { device: selfTestTarget.device, type: scheduleForm.type });
       showToast("Self-test iniciado", `${selfTestTarget.device} em execução.`);
       setSelfTestTarget(null);
     } catch (err) {
@@ -319,14 +353,14 @@ export default function SmartDiskScreen() {
     <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{paddingBottom: 32}}
+        contentContainerStyle={{ paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadData("refresh")} />}
       >
         <Box className="p-4 pt-16 web:p-10 web:max-w-6xl web:mx-auto web:w-full">
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
-            style={{fontFamily: "Inter_700Bold"}}
+            style={{ fontFamily: "Inter_700Bold" }}
           >
             SmartDisk Health
           </Heading>
@@ -376,15 +410,6 @@ export default function SmartDiskScreen() {
             </Button>
           </HStack>
 
-          <Box className="mt-6 p-4 rounded-xl bg-warning-50 border border-warning-200">
-            <HStack className="gap-3 items-start">
-              <Info size={18} color="#92400e" />
-              <Text className="text-warning-800 text-sm">
-                Atenção: se os discos forem movidos de posição ou novos discos forem adicionados, o identificador pode mudar. Use seriais ou IDs persistentes para identificação confiável.
-              </Text>
-            </HStack>
-          </Box>
-
           {loading ? (
             <VStack className="mt-6 gap-4">
               {[1, 2, 3].map((idx) => (
@@ -419,7 +444,7 @@ export default function SmartDiskScreen() {
                       <Divider />
                       {(Array.isArray(disks) ? disks : []).map((disk) => (
                         <HStack key={disk.device} className="py-3 items-center">
-                          <Text className="flex-1 text-typography-900 font-semibold">{disk.device}</Text>
+                          <Text className="flex-1 text-typography-900 font-semibold">{formatDeviceDisplay(disk)}</Text>
                           <Text className="flex-1 text-typography-700">{disk.model || "—"}</Text>
                           <Text className="w-16 text-typography-700">{formatTemp(disk.temp)}</Text>
                           <Text className="w-24 text-center text-typography-700">{disk.reallocated ?? 0}</Text>
@@ -454,7 +479,7 @@ export default function SmartDiskScreen() {
                   <VStack className="divide-y divide-background-200">
                     {schedules.map((sched) => (
                       <HStack key={sched.id} className="px-4 py-3 items-center flex-wrap gap-2">
-                        <Text className="flex-1 text-typography-900 font-semibold">{sched.device}</Text>
+                        <Text className="flex-1 text-typography-900 font-semibold">{getDeviceLabel(sched.device, disks, deviceMeta)}</Text>
                         <Badge className="rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
                           <BadgeText className="text-xs text-typography-800">{sched.type}</BadgeText>
                         </Badge>
@@ -503,14 +528,14 @@ export default function SmartDiskScreen() {
             <ModalCloseButton />
           </ModalHeader>
           <ModalBody className="gap-4">
-            <Text className="text-typography-700">{selfTestTarget?.device}</Text>
+            <Text className="text-typography-700">{selfTestTarget ? formatDeviceDisplay(selfTestTarget) : ""}</Text>
             <FormControl>
               <FormControlLabel>
                 <FormControlLabelText>Tipo de Teste</FormControlLabelText>
               </FormControlLabel>
               <Select
                 selectedValue={scheduleForm.type}
-                onValueChange={(val) => setScheduleForm((prev) => ({...prev, type: val}))}
+                onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, type: val }))}
               >
                 <SelectTrigger>
                   <SelectInput placeholder="Selecione" value={scheduleForm.type} />
@@ -564,10 +589,10 @@ export default function SmartDiskScreen() {
               </FormControlLabel>
               <Select
                 selectedValue={scheduleForm.device}
-                onValueChange={(val) => setScheduleForm((prev) => ({...prev, device: val}))}
+                onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, device: val }))}
               >
                 <SelectTrigger>
-                  <SelectInput placeholder="Selecionar disco" value={scheduleForm.device} />
+                  <SelectInput placeholder="Selecionar disco" value={getDeviceLabel(scheduleForm.device, disks, deviceMeta)} />
                   <SelectIcon as={ChevronDownIcon} />
                 </SelectTrigger>
                 <SelectPortal>
@@ -576,9 +601,10 @@ export default function SmartDiskScreen() {
                     <SelectDragIndicatorWrapper>
                       <SelectDragIndicator />
                     </SelectDragIndicatorWrapper>
-                    {(Array.isArray(deviceOptions) ? deviceOptions : []).map((dev) => (
-                      <SelectItem key={dev} value={dev} label={dev} />
-                    ))}
+                    {(Array.isArray(deviceOptions) ? deviceOptions : []).map((dev) => {
+                      const label = getDeviceLabel(dev, disks, deviceMeta);
+                      return <SelectItem key={dev} value={dev} label={label} />;
+                    })}
                   </SelectContent>
                 </SelectPortal>
               </Select>
@@ -590,7 +616,7 @@ export default function SmartDiskScreen() {
               </FormControlLabel>
               <Select
                 selectedValue={scheduleForm.type}
-                onValueChange={(val) => setScheduleForm((prev) => ({...prev, type: val}))}
+                onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, type: val }))}
               >
                 <SelectTrigger>
                   <SelectInput placeholder="Selecione" value={scheduleForm.type} />
@@ -616,7 +642,7 @@ export default function SmartDiskScreen() {
               </FormControlLabel>
               <Select
                 selectedValue={String(scheduleForm.week_day)}
-                onValueChange={(val) => setScheduleForm((prev) => ({...prev, week_day: Number(val)}))}
+                onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, week_day: Number(val) }))}
               >
                 <SelectTrigger>
                   <SelectInput placeholder="Dia" value={String(scheduleForm.week_day)} />
@@ -642,7 +668,7 @@ export default function SmartDiskScreen() {
               </FormControlLabel>
               <Select
                 selectedValue={String(scheduleForm.hour)}
-                onValueChange={(val) => setScheduleForm((prev) => ({...prev, hour: Number(val)}))}
+                onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, hour: Number(val) }))}
               >
                 <SelectTrigger>
                   <SelectInput placeholder="Hora" value={String(scheduleForm.hour)} />
@@ -665,7 +691,7 @@ export default function SmartDiskScreen() {
             <HStack className="items-center gap-2">
               <Switch
                 value={scheduleForm.active}
-                onValueChange={(val) => setScheduleForm((prev) => ({...prev, active: val}))}
+                onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, active: val }))}
               />
               <Text className="text-typography-800">Agendamento ativo</Text>
             </HStack>
@@ -690,7 +716,7 @@ export default function SmartDiskScreen() {
               <Heading size="md" className="text-typography-900">
                 Detalhes do Disco
               </Heading>
-              <Text className="text-typography-600">{diskDetail?.device}</Text>
+              <Text className="text-typography-600">{diskDetail ? formatDeviceDisplay(diskDetail) : ""}</Text>
             </VStack>
             <ModalCloseButton />
           </ModalHeader>

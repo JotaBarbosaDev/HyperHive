@@ -30,6 +30,7 @@ import { getApiBaseUrl, normalizeApiBaseUrl, setApiBaseUrl } from "@/config/apiC
 import { login, listMachines } from "@/services/hyperhive";
 import { ApiError, getAuthToken, setAuthToken } from "@/services/api-client";
 import { loadApiBaseUrl, saveApiBaseUrl, saveAuthToken } from "@/services/auth-storage";
+import * as WebBrowser from "expo-web-browser";
 
 
 
@@ -58,7 +59,18 @@ export default function LoginScreen() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
-  
+
+  const getBrowserUrlFromApiBase = (baseUrl: string) => {
+    try {
+      const normalized = baseUrl.replace(/\/+$/, "");
+      if (normalized.toLowerCase().endsWith("/api")) {
+        return normalized.slice(0, -4) || normalized;
+      }
+      return normalized;
+    } catch {
+      return null;
+    }
+  };
 
   React.useEffect(() => {
     let isActive = true;
@@ -154,6 +166,12 @@ export default function LoginScreen() {
 
       setAuthToken(token);
       await Promise.all([saveAuthToken(token), saveApiBaseUrl(normalizedBaseUrl)]);
+      if (!isWeb) {
+        const targetUrl = getBrowserUrlFromApiBase(normalizedBaseUrl);
+        if (targetUrl) {
+          void WebBrowser.openBrowserAsync(targetUrl);
+        }
+      }
       router.replace("/mounts");
     } catch (err) {
       let message = "Error signing in. Please try again.";

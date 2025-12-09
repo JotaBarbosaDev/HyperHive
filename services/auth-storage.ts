@@ -4,6 +4,26 @@ import * as SecureStore from "expo-secure-store";
 export const AUTH_TOKEN_STORAGE_KEY = "hyperhive.authToken";
 export const API_BASE_URL_STORAGE_KEY = "hyperhive.apiBaseUrl";
 
+const AUTH_COOKIE_NAME = "Authorization";
+
+const setAuthCookie = (token: string | null) => {
+  if (Platform.OS !== "web" || typeof document === "undefined") {
+    return;
+  }
+
+  if (token) {
+    const attributes = ["path=/", "SameSite=Lax"];
+    if (typeof window !== "undefined" && window.location.protocol === "https:") {
+      attributes.push("Secure");
+    }
+    document.cookie = `${AUTH_COOKIE_NAME}=${encodeURIComponent(token)}; ${attributes.join(
+      "; "
+    )}`;
+  } else {
+    document.cookie = `${AUTH_COOKIE_NAME}=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; path=/`;
+  }
+};
+
 const getWebStorage = () => {
   if (typeof window === "undefined") {
     return null;
@@ -23,6 +43,7 @@ export const saveAuthToken = async (token: string) => {
     } catch (err) {
       console.warn("Failed to persist auth token in local storage", err);
     }
+    setAuthCookie(token);
     return;
   }
 
@@ -31,6 +52,7 @@ export const saveAuthToken = async (token: string) => {
   } catch (err) {
     console.warn("Failed to store auth token securely", err);
   }
+  setAuthCookie(token);
 };
 
 export const saveApiBaseUrl = async (baseUrl: string) => {
@@ -84,6 +106,7 @@ export const clearAuthToken = async () => {
   if (Platform.OS === "web") {
     const storage = getWebStorage();
     storage?.removeItem(AUTH_TOKEN_STORAGE_KEY);
+    setAuthCookie(null);
     return;
   }
 
@@ -92,6 +115,7 @@ export const clearAuthToken = async () => {
   } catch (err) {
     console.warn("Failed to clear auth token", err);
   }
+  setAuthCookie(null);
 };
 
 export const clearApiBaseUrl = async () => {
