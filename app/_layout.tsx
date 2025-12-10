@@ -1,4 +1,4 @@
-import {GluestackUIProvider} from "@/components/ui/gluestack-ui-provider";
+import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
 import "@/global.css";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import {
@@ -7,26 +7,26 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from "@expo-google-fonts/inter";
-import {DarkTheme, DefaultTheme, ThemeProvider} from "@react-navigation/native";
-import {useFonts} from "expo-font";
+import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
+import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
-import {useEffect} from "react";
-import {useColorScheme} from "@/components/useColorScheme";
-import {Slot, usePathname, useRouter} from "expo-router";
-import {StatusBar, setStatusBarHidden} from "expo-status-bar";
-import {AppState, Platform} from "react-native";
+import { useEffect } from "react";
+import { useColorScheme } from "@/components/useColorScheme";
+import { Slot, usePathname, useRouter } from "expo-router";
+import { StatusBar, setStatusBarHidden } from "expo-status-bar";
+import { AppState, Platform } from "react-native";
 import * as SystemUI from "expo-system-ui";
 import * as NavigationBar from "expo-navigation-bar";
-import {Button, ButtonIcon, ButtonText} from "@/components/ui/button";
-import {EditIcon} from "@/components/ui/icon";
-import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context";
+import { Button, ButtonIcon, ButtonText } from "@/components/ui/button";
+import { EditIcon } from "@/components/ui/icon";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import React from "react";
-import {CreateMountDrawer} from "@/components/drawers/CreateMountDrawer";
-import {AppSidebar} from "@/components/navigation/AppSidebar";
-import {Box} from "@/components/ui/box";
-import {Text} from "@/components/ui/text";
-import {Menu} from "lucide-react-native";
-import {setApiBaseUrl} from "@/config/apiConfig";
+import { CreateMountDrawer } from "@/components/drawers/CreateMountDrawer";
+import { AppSidebar } from "@/components/navigation/AppSidebar";
+import { Box } from "@/components/ui/box";
+import { Text } from "@/components/ui/text";
+import { Menu } from "lucide-react-native";
+import { setApiBaseUrl } from "@/config/apiConfig";
 import {
   API_BASE_URL_STORAGE_KEY,
   AUTH_TOKEN_STORAGE_KEY,
@@ -35,10 +35,11 @@ import {
   loadApiBaseUrl,
   loadAuthToken,
 } from "@/services/auth-storage";
-import {ApiError, onApiResult, onUnauthorized, setAuthToken} from "@/services/api-client";
-import {listMachines} from "@/services/hyperhive";
-import {AppThemeProvider} from "@/hooks/useAppTheme";
-import {ThemePreference, loadThemePreference, saveThemePreference} from "@/services/theme-preference";
+import { ApiError, clearApiCooldown, getApiCooldown, onApiResult, onUnauthorized, setAuthToken } from "@/services/api-client";
+import { listMachines } from "@/services/hyperhive";
+import { AppThemeProvider } from "@/hooks/useAppTheme";
+import { useRealtimeEvents } from "@/hooks/useRealtimeEvents";
+import { ThemePreference, loadThemePreference, saveThemePreference } from "@/services/theme-preference";
 import {
   Modal,
   ModalBackdrop,
@@ -153,6 +154,12 @@ const getLiteralApiErrorMessage = (errorText?: string, errorPayload?: unknown) =
   return "Ocorreu um erro ao comunicar com a API. Consulte os logs para mais detalhes.";
 };
 
+const RealtimeEventsBridge = ({ enabled }: { enabled: boolean }) => {
+  // Mounted inside the Gluestack provider so the toast context exists.
+  useRealtimeEvents({ enabled });
+  return null;
+};
+
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
@@ -198,7 +205,7 @@ export default function RootLayout() {
     });
 
     const visibilitySubscription = NavigationBar.addVisibilityListener(
-      ({visibility}) => {
+      ({ visibility }) => {
         if (visibility !== "hidden") {
           hideSystemUi();
         }
@@ -228,13 +235,22 @@ function RootLayoutNav() {
   const [showDrawer, setShowDrawer] = React.useState(false);
   const [showSidebar, setShowSidebar] = React.useState(false);
   const [apiErrorModal, setApiErrorModal] = React.useState<
-    {status?: number; path?: string; details: string} | null
+    { status?: number; path?: string; details: string } | null
   >(null);
   const isSigningOutRef = React.useRef(false);
 
   const handleCloseApiErrorModal = React.useCallback(() => {
     setApiErrorModal(null);
   }, []);
+
+  const handleRetryApiError = React.useCallback(() => {
+    clearApiCooldown();
+    setApiErrorModal(null);
+    router.replace({
+      pathname: pathname as any,
+      params: { retry: Date.now().toString() },
+    });
+  }, [pathname, router]);
 
   React.useEffect(() => {
     loadThemePreference().then((pref) => {
@@ -280,7 +296,7 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
-    const doc = (globalThis as typeof globalThis & {document?: any}).document;
+    const doc = (globalThis as typeof globalThis & { document?: any }).document;
     if (!doc) return;
     doc.documentElement.dataset.theme = resolvedMode;
     doc.documentElement.style.colorScheme =
@@ -289,7 +305,7 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
-    const doc = (globalThis as typeof globalThis & {document?: {title: string}}).document;
+    const doc = (globalThis as typeof globalThis & { document?: { title: string } }).document;
     if (!doc) return;
     const pageTitle = resolveWebTitle(pathname ?? "/");
     doc.title = `${pageTitle} | ${APP_TITLE}`;
@@ -388,6 +404,19 @@ function RootLayoutNav() {
         return;
       }
 
+      const cooldown = getApiCooldown();
+      if (cooldown.isCoolingDown) {
+        if (!isActive) return;
+        setApiErrorModal({
+          status: cooldown.retryInMs ? 503 : undefined,
+          path: "Auth check",
+          details:
+            cooldown.reason ||
+            "API temporariamente indisponível. Tente novamente em alguns segundos.",
+        });
+        return;
+      }
+
       try {
         await listMachines();
         if (!isActive) return;
@@ -419,7 +448,7 @@ function RootLayoutNav() {
     requestAnimationFrame(() => {
       router.replace({
         pathname: pathname as any,
-        params: {refresh: Date.now().toString()},
+        params: { refresh: Date.now().toString() },
       });
     });
   }, [pathname, router]);
@@ -438,7 +467,7 @@ function RootLayoutNav() {
       <GluestackUIProvider mode={resolvedMode}>
         <ThemeProvider value={resolvedMode === "dark" ? DarkTheme : DefaultTheme}>
           <SafeAreaView
-            style={{flex: 1, backgroundColor: statusBarBackground}}
+            style={{ flex: 1, backgroundColor: statusBarBackground }}
             edges={["top", "right", "bottom", "left"]}
           >
             <StatusBar
@@ -447,6 +476,7 @@ function RootLayoutNav() {
               animated
               hidden={Platform.OS === "android"}
             />
+            <RealtimeEventsBridge enabled={true} />
             <AppThemeProvider
               preference={themePreference}
               resolvedMode={resolvedMode}
@@ -532,10 +562,7 @@ function RootLayoutNav() {
                         : "Erro na API"}
                     </Text>
                     {apiErrorModal?.path ? (
-                      <Text
-                        className="text-xs text-typography-500 dark:text-[#94A3B8]"
-                        numberOfLines={2}
-                      >
+                      <Text className="text-xs text-typography-500 dark:text-[#94A3B8]">
                         {sanitizeRequestPath(apiErrorModal.path)}
                       </Text>
                     ) : null}
@@ -549,8 +576,11 @@ function RootLayoutNav() {
                     </Text>
                   </Box>
                 </ModalBody>
-                <ModalFooter>
-                  <Button onPress={handleCloseApiErrorModal} size="sm">
+                <ModalFooter className="gap-2">
+                  <Button variant="outline" onPress={handleRetryApiError} size="sm">
+                    <ButtonText>Tentar novamente</ButtonText>
+                  </Button>
+                  <Button onPress={handleCloseApiErrorModal} size="sm" action="secondary">
                     <ButtonText>Fechar</ButtonText>
                   </Button>
                 </ModalFooter>

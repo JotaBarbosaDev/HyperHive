@@ -1,4 +1,43 @@
-import {getApiBaseUrl} from "@/config/apiConfig";
+import { getApiBaseUrl } from "@/config/apiConfig";
+
+const FAILURE_BASE_DELAY_MS = 1500;
+const FAILURE_MAX_DELAY_MS = 15000;
+let failureStreak = 0;
+let cooldownUntil: number | null = null;
+let lastFailureReason: string | undefined;
+
+const nowMs = () => Date.now();
+
+const remainingCooldownMs = () =>
+  cooldownUntil ? Math.max(0, cooldownUntil - nowMs()) : 0;
+
+const isCoolingDown = () => cooldownUntil !== null && cooldownUntil > nowMs();
+
+const resetCooldown = () => {
+  failureStreak = 0;
+  cooldownUntil = null;
+  lastFailureReason = undefined;
+};
+
+const scheduleCooldown = (reason?: string) => {
+  failureStreak = Math.min(failureStreak + 1, 5);
+  const delay = Math.min(
+    FAILURE_BASE_DELAY_MS * Math.pow(2, Math.max(0, failureStreak - 1)),
+    FAILURE_MAX_DELAY_MS
+  );
+  cooldownUntil = nowMs() + delay;
+  lastFailureReason = reason;
+};
+
+export const clearApiCooldown = () => {
+  resetCooldown();
+};
+
+export const getApiCooldown = () => ({
+  isCoolingDown: isCoolingDown(),
+  retryInMs: remainingCooldownMs(),
+  reason: lastFailureReason,
+});
 
 export type ApiRequestOptions = {
   method?: string;
@@ -103,8 +142,16 @@ const serializeBody = (body: unknown, headers: Record<string, string>) => {
 
 export async function apiFetch<T = unknown>(
   path: string,
-  {method = "GET", token, headers = {}, body}: ApiRequestOptions = {}
+  { method = "GET", token, headers = {}, body }: ApiRequestOptions = {}
 ): Promise<T> {
+  if (isCoolingDown()) {
+    const retryInMs = remainingCooldownMs();
+    const message = lastFailureReason
+      ? `${lastFailureReason} (tente novamente em ${Math.ceil(retryInMs / 1000)}s)`
+      : `A API está temporariamente indisponível. Tente novamente em ${Math.ceil(retryInMs / 1000)}s.`;
+    throw new ApiError(message, 0, { cooldown: true, retryInMs });
+  }
+
   const effectiveToken =
     token === undefined ? currentAuthToken : token ?? null;
 
@@ -130,8 +177,9 @@ export async function apiFetch<T = unknown>(
       body: serializedBody,
     });
   } catch (networkErr) {
-    console.error("[API ERROR]", method, requestPath, networkErr);
     const networkMessage = networkErr instanceof Error ? networkErr.message : undefined;
+    scheduleCooldown(networkMessage);
+    console.error("[API ERROR]", method, requestPath, networkErr);
     apiResultListeners.forEach((listener) => {
       try {
         listener({
@@ -169,6 +217,15 @@ export async function apiFetch<T = unknown>(
       notifyUnauthorized();
     }
 
+    if (response.status >= 500 || response.status === 429) {
+      scheduleCooldown(
+        (errorText ?? response.statusText) ||
+        `Erro ${response.status}: aguarde alguns segundos antes de tentar novamente.`
+      );
+    } else {
+      resetCooldown();
+    }
+
     console.error("[API]", method, requestPath, "->", response.status, errorPayload);
     apiResultListeners.forEach((listener) => {
       try {
@@ -194,9 +251,10 @@ export async function apiFetch<T = unknown>(
   }
 
   console.info("[API]", method, requestPath, "->", response.status);
+  resetCooldown();
   apiResultListeners.forEach((listener) => {
     try {
-      listener({ok: true, method, path: requestPath, status: response.status});
+      listener({ ok: true, method, path: requestPath, status: response.status });
     } catch (err) {
       console.error("API result listener threw an error", err);
     }

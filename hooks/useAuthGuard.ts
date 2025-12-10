@@ -1,7 +1,7 @@
-import {useEffect, useMemo, useState} from "react";
-import {usePathname, useRouter} from "expo-router";
-import {setApiBaseUrl} from "@/config/apiConfig";
-import {ApiError, setAuthToken} from "@/services/api-client";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "expo-router";
+import { setApiBaseUrl } from "@/config/apiConfig";
+import { ApiError, getApiCooldown, setAuthToken } from "@/services/api-client";
 import {
   API_BASE_URL_STORAGE_KEY,
   AUTH_TOKEN_STORAGE_KEY,
@@ -10,7 +10,7 @@ import {
   loadApiBaseUrl,
   loadAuthToken,
 } from "@/services/auth-storage";
-import {listMachines} from "@/services/hyperhive";
+import { listMachines } from "@/services/hyperhive";
 
 export type UseAuthGuardResult = {
   token: string | null;
@@ -23,7 +23,7 @@ export type UseAuthGuardOptions = {
 
 export function useAuthGuard(
   redirectTo: string = "/",
-  {validate = true}: UseAuthGuardOptions = {}
+  { validate = true }: UseAuthGuardOptions = {}
 ): UseAuthGuardResult {
   const router = useRouter();
   const pathname = usePathname();
@@ -50,7 +50,7 @@ export function useAuthGuard(
         setAuthToken(null);
         setApiBaseUrl(null);
         if (isActive) {
-          setState({token: null, isChecking: false});
+          setState({ token: null, isChecking: false });
           redirectIfNeeded();
         }
       }
@@ -64,13 +64,20 @@ export function useAuthGuard(
 
       if (!storedToken) {
         if (isActive) {
-          setState({token: null, isChecking: false});
+          setState({ token: null, isChecking: false });
           redirectIfNeeded();
         }
         return;
       }
 
       if (validate) {
+        const cooldown = getApiCooldown();
+        if (cooldown.isCoolingDown) {
+          if (isActive) {
+            setState({ token: storedToken, isChecking: false });
+          }
+          return;
+        }
         try {
           await listMachines();
         } catch (err) {
@@ -83,7 +90,7 @@ export function useAuthGuard(
       }
 
       if (isActive) {
-        setState({token: storedToken, isChecking: false});
+        setState({ token: storedToken, isChecking: false });
       }
     };
 
