@@ -37,6 +37,7 @@ import {
 } from "@/services/auth-storage";
 import {ApiError, onApiResult, onUnauthorized, setAuthToken} from "@/services/api-client";
 import {listMachines} from "@/services/hyperhive";
+import {ensureHyperHiveWebsocket} from "@/services/websocket-client";
 import {AppThemeProvider} from "@/hooks/useAppTheme";
 import {ThemePreference, loadThemePreference, saveThemePreference} from "@/services/theme-preference";
 import {
@@ -391,6 +392,13 @@ function RootLayoutNav() {
       try {
         await listMachines();
         if (!isActive) return;
+        if (storedBaseUrl && storedToken) {
+          try {
+            await ensureHyperHiveWebsocket({token: storedToken, baseUrl: storedBaseUrl});
+          } catch (socketErr) {
+            console.warn("Failed to initialize HyperHive WebSocket", socketErr);
+          }
+        }
         if (pathname === "/") {
           router.replace("/mounts");
         }

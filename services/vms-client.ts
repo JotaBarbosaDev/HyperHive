@@ -295,3 +295,16 @@ export async function getCpuDisableFeatures(slaveNames: string[]): Promise<strin
     token: authToken,
   });
 }
+
+export async function updateCpuXml(vmName: string, payload: { machine_name: string; cpu_xml: string }) {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  return apiFetch<void>(`/virsh/updatecpuxml/${encodedVmName}`, {
+    method: "POST",
+    token: authToken,
+    body: {
+      machine_name: payload.machine_name,
+      cpu_xml: payload.cpu_xml,
+    },
+  });
+}

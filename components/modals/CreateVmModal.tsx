@@ -32,6 +32,7 @@ import { TextInput } from "react-native";
 import { Badge, BadgeText } from "@/components/ui/badge";
 import { ScrollView, Platform } from "react-native";
 import { Cpu, X, Copy, Trash2, ChevronDown, Check, ChevronDownIcon } from "lucide-react-native";
+import { Pressable } from "@/components/ui/pressable";
 import { useToast, Toast, ToastTitle, ToastDescription } from "@/components/ui/toast";
 import { createVm, listIsos, listSlaves, IsoApiResponse, Slave, getCpuDisableFeatures } from "@/services/vms-client";
 import { listMounts } from "@/services/hyperhive";
@@ -63,7 +64,7 @@ export default function CreateVmModal({
 }: CreateVmModalProps) {
   // Estados básicos da VM
   const [name, setName] = useState("");
-  const [slave, setSlave] = useState("slave-01");
+  const [slave, setSlave] = useState("");
   const [vcpu, setVcpu] = useState("2");
   const [memory, setMemory] = useState("4096");
   const [disk, setDisk] = useState("50");
@@ -87,6 +88,8 @@ export default function CreateVmModal({
   const [slaveOptions, setSlaveOptions] = useState<Slave[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [creating, setCreating] = useState(false);
+  const quickMemoryGb = [2, 4, 8, 16, 32, 64];
+  const quickDiskGb = [20, 50, 100, 200, 500];
 
   const toast = useToast();
 
@@ -106,9 +109,6 @@ export default function CreateVmModal({
         setIsoOptions(fetchedIsos);
         setMountOptions(fetchedMounts);
         setSlaveOptions(fetchedSlaves);
-        if (!slave && fetchedSlaves.length > 0) {
-          setSlave(fetchedSlaves[0].MachineName);
-        }
       } catch (err) {
         console.error("Failed to list ISOs or mounts:", err);
         toast.show({
@@ -186,7 +186,19 @@ export default function CreateVmModal({
     const parsedVcpu = parseInt(vcpu, 10);
     const parsedDisk = parseInt(disk, 10);
 
-    if (!name || !nfsShare || !parsedMemory || !parsedVcpu || !parsedDisk) {
+    const hasIso = Boolean(iso && parseInt(iso, 10));
+    const hasNetwork = Boolean(network && network.trim().length > 0);
+
+    if (
+      !name ||
+      !slave ||
+      !hasIso ||
+      !nfsShare ||
+      !parsedMemory ||
+      !parsedVcpu ||
+      !parsedDisk ||
+      !hasNetwork
+    ) {
       toast.show({
         placement: "top",
         render: ({ id }) => (
@@ -197,7 +209,7 @@ export default function CreateVmModal({
           >
             <ToastTitle size="sm">Erro</ToastTitle>
             <ToastDescription size="sm">
-              Nome, NFS Share, vCPU, Memória e Disco são obrigatórios
+              Nome, Slave, ISO, NFS Share, Network, vCPU, Memória e Disco são obrigatórios
             </ToastDescription>
           </Toast>
         ),
@@ -245,7 +257,7 @@ export default function CreateVmModal({
 
       // Reset form
       setName("");
-      setSlave("slave-01");
+      setSlave("");
       setVcpu("2");
       setMemory("4096");
       setDisk("50");
@@ -433,6 +445,22 @@ export default function CreateVmModal({
                       className="text-typography-900 dark:text-[#E8EBF0]"
                     />
                   </Input>
+                  <HStack className="gap-2 flex-wrap">
+                    {quickMemoryGb.map((gb) => (
+                      <Pressable
+                        key={`mem-${gb}`}
+                        onPress={() => setMemory(String(gb * 1024))}
+                        className={`px-3 py-2 rounded-full border ${Number(memory) === gb * 1024
+                          ? "border-primary-500 bg-primary-50"
+                          : "border-outline-200 bg-background-0"
+                          }`}
+                      >
+                        <Text className="text-xs font-medium text-typography-700">
+                          {gb} GB
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </HStack>
                 </VStack>
 
                 {/* Disco */}
@@ -455,6 +483,22 @@ export default function CreateVmModal({
                       className="text-typography-900 dark:text-[#E8EBF0]"
                     />
                   </Input>
+                  <HStack className="gap-2 flex-wrap">
+                    {quickDiskGb.map((gb) => (
+                      <Pressable
+                        key={`disk-${gb}`}
+                        onPress={() => setDisk(String(gb))}
+                        className={`px-3 py-2 rounded-full border ${Number(disk) === gb
+                          ? "border-primary-500 bg-primary-50"
+                          : "border-outline-200 bg-background-0"
+                          }`}
+                      >
+                        <Text className="text-xs font-medium text-typography-700">
+                          {gb} GB
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </HStack>
                 </VStack>
 
                 {/* Network */}

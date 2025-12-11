@@ -1,5 +1,5 @@
 import React from "react";
-import {Platform, RefreshControl, ScrollView, useColorScheme} from "react-native";
+import {RefreshControl, ScrollView, useColorScheme} from "react-native";
 import {Box} from "@/components/ui/box";
 import {Text} from "@/components/ui/text";
 import {Heading} from "@/components/ui/heading";
@@ -56,6 +56,7 @@ import {
 } from "@/services/hyperhive";
 import {ApiError} from "@/services/api-client";
 import {getApiBaseUrl} from "@/config/apiConfig";
+import {ensureHyperHiveWebsocket, subscribeToHyperHiveWebsocket} from "@/services/websocket-client";
 import {
   Select,
   SelectBackdrop,
@@ -136,22 +137,6 @@ const resolveNormalizedApiBase = () => {
     return undefined;
   }
   return base.replace(/\/+$/, "");
-};
-
-const resolveDownloadSocketInfo = () => {
-  const base = getApiBaseUrl();
-  if (!base) {
-    return undefined;
-  }
-  try {
-    const parsed = new URL(base);
-    const protocol = parsed.protocol === "https:" ? "wss:" : "ws:";
-    const normalizedPath = parsed.pathname.replace(/\/+$/, "");
-    const endpoint = `${protocol}//${parsed.host}${normalizedPath}/ws`;
-    return {endpoint, host: parsed.host};
-  } catch {
-    return undefined;
-  }
 };
 
 const tryParseJson = (input: string): unknown => {
@@ -1410,17 +1395,19 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isMonitoring, setIsMonitoring] = React.useState(false);
   const [downloadMonitor, setDownloadMonitor] = React.useState<DownloadMonitor | null>(null);
-  const wsRef = React.useRef<WebSocket | null>(null);
   const autoCloseTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const wasOpenRef = React.useRef(false);
   const lastProgressRef = React.useRef(0);
+  const isoNameRef = React.useRef<string | null>(null);
+  const completionHandledRef = React.useRef(false);
+  const downloadMonitorRef = React.useRef<DownloadMonitor | null>(null);
   const clearAutoCloseTimer = React.useCallback(() => {
     if (autoCloseTimerRef.current) {
       clearTimeout(autoCloseTimerRef.current);
       autoCloseTimerRef.current = null;
     }
   }, []);
-  const isBusy = isSubmitting || isMonitoring;
+  const isBusy = isSubmitting || isMonitoring || isDownloadActive(downloadMonitor);
   const progressValue =
     downloadMonitor?.progress != null ? clampProgress(downloadMonitor.progress) : undefined;
   const showFooter =
@@ -1438,17 +1425,6 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
       ? isBusy || isLoadingShares || shareOptions.length === 0
       : isBusy || isLoadingShares || shareOptions.length === 0 || !!downloadMonitor;
 
-  const cleanupSocket = React.useCallback(() => {
-    if (wsRef.current) {
-      try {
-        wsRef.current.close();
-      } catch (err) {
-        console.warn("Failed to close ISO download socket", err);
-      }
-      wsRef.current = null;
-    }
-  }, []);
-
   const resetForm = React.useCallback(
     (options?: {preserveDownload?: boolean}) => {
       setIsoUrl("");
@@ -1463,11 +1439,12 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
       }
       clearAutoCloseTimer();
       lastProgressRef.current = 0;
+      isoNameRef.current = null;
+      completionHandledRef.current = false;
       setDownloadMonitor(null);
       setIsMonitoring(false);
-      cleanupSocket();
     },
-    [cleanupSocket, clearAutoCloseTimer]
+    [clearAutoCloseTimer]
   );
 
   const handleModalClose = React.useCallback(() => {
@@ -1487,10 +1464,9 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
 
   React.useEffect(() => {
     return () => {
-      cleanupSocket();
       clearAutoCloseTimer();
     };
-  }, [cleanupSocket, clearAutoCloseTimer]);
+  }, [clearAutoCloseTimer]);
 
   React.useEffect(() => {
     const isOpening = isOpen && !wasOpenRef.current;
@@ -1498,6 +1474,10 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
     if (!isOpening) return;
     resetForm({preserveDownload: !!downloadMonitor});
   }, [downloadMonitor, isOpen, resetForm]);
+
+  React.useEffect(() => {
+    downloadMonitorRef.current = downloadMonitor;
+  }, [downloadMonitor]);
 
   React.useEffect(() => {
     onDownloadChange?.(downloadMonitor);
@@ -1553,188 +1533,171 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
     return undefined;
   }, []);
 
-  const startDownloadMonitor = React.useCallback(
-    (targetIsoName: string) => {
-      if (!authToken) {
-        setSubmitError("Invalid session. Please log in again to continue.");
-        return false;
-      }
-      const socketInfo = resolveDownloadSocketInfo();
-      if (!socketInfo) {
-        setSubmitError("Domínio/API base não configurado. Faz login novamente.");
-        return false;
-      }
-      clearAutoCloseTimer();
-      lastProgressRef.current = 0;
-      cleanupSocket();
+  const applyDownloadUpdate = React.useCallback(
+    (payload: Record<string, unknown>) => {
+      const rawData =
+        typeof payload.data === "string"
+          ? payload.data
+          : typeof payload.data === "number"
+          ? String(payload.data)
+          : "";
 
-      let socket: WebSocket;
+      const payloadProgress =
+        toNumber(payload.progress) ??
+        toNumber(payload.percentage) ??
+        toNumber(payload.percent);
 
-      try {
-        if (Platform.OS === "web") {
-          // For web, use URL parameter for authentication as browsers don't support custom headers.
-          const wsUrl = `${socketInfo.endpoint}?token=${encodeURIComponent(authToken)}`;
-          socket = new WebSocket(wsUrl);
-        } else {
-          // For native (iOS/Android), use headers for authentication.
-          const wsUrl = socketInfo.endpoint;
-          socket = new (WebSocket as any)(wsUrl, undefined, {
-            headers: {
-              authorization: authToken,
-              host: socketInfo.host,
-            },
-          });
-        }
-      } catch (err) {
-        console.error("Failed to open ISO download socket", err);
-        setSubmitError("Could not connect to the download socket.");
-        return false;
+      const parsedData = rawData ? parseDownloadMessage(rawData) : null;
+      const effectiveProgress = clampProgress(
+        parsedData?.progress ?? payloadProgress
+      );
+
+      if (effectiveProgress != null) {
+        lastProgressRef.current = effectiveProgress;
       }
 
-      wsRef.current = socket;
-      let hasFinished = false;
+      const statusText =
+        parsedData?.status ??
+        (typeof payload.status === "string" ? payload.status : undefined) ??
+        rawData ??
+        "Download in progress...";
 
-      const finalize = (success: boolean, message?: string) => {
-        if (hasFinished) return;
-        hasFinished = true;
-        clearAutoCloseTimer();
-        cleanupSocket();
-        setIsMonitoring(false);
-        if (success) {
-          setDownloadMonitor((prev) =>
-            prev
-              ? {...prev, stage: "completed", status: message ?? "Download completed."}
-              : prev
-          );
-          onSuccess();
-          scheduleAutoClose();
-        } else {
-          setDownloadMonitor((prev) =>
-            prev ? {...prev, stage: "error", status: message ?? prev.status} : prev
-          );
-          if (message) {
-            setSubmitError(message);
-          }
-        }
-      };
+      const detailText =
+        parsedData?.detail ??
+        (typeof payload.detail === "string" ? payload.detail : undefined) ??
+        (typeof payload.description === "string" ? payload.description : undefined) ??
+        undefined;
 
-      setIsMonitoring(true);
-      setDownloadMonitor({
+      const errorMessage =
+        (typeof payload.error === "string" && payload.error) ||
+        (typeof (payload as {error_message?: unknown}).error_message === "string"
+          ? (payload as {error_message: string}).error_message
+          : undefined);
+
+      const extraIsoName =
+        typeof payload.extra === "string" && payload.extra.trim().length > 0
+          ? payload.extra.trim()
+          : undefined;
+
+      const completed =
+        payload.completed === true ||
+        payload.done === true ||
+        (typeof payload.status === "string" &&
+          ["completed", "finished", "success"].includes(payload.status.toLowerCase())) ||
+        (effectiveProgress ?? 0) >= COMPLETION_THRESHOLD;
+
+      const stage: DownloadMonitor["stage"] = errorMessage
+        ? "error"
+        : completed
+        ? "completed"
+        : "downloading";
+
+      const targetIsoName =
+        extraIsoName ??
+        isoNameRef.current ??
+        downloadMonitorRef.current?.isoName ??
+        "ISO download";
+
+      const nextMonitor: DownloadMonitor = {
         isoName: targetIsoName,
-        status: "Connecting to server...",
-        stage: "connecting",
-      });
-
-      socket.onopen = () => {
-        setDownloadMonitor((prev) =>
-          prev
-            ? {...prev, stage: "downloading", status: "Download in progress..."}
-            : prev
-        );
+        status: statusText,
+        progress: effectiveProgress ?? undefined,
+        stage,
+        detail: detailText,
       };
 
-      socket.onerror = (event) => {
-        console.warn("ISO download socket error", event);
-        finalize(false, "Download socket connection error.");
-      };
+      setDownloadMonitor(nextMonitor);
+      setIsMonitoring(stage === "downloading" || stage === "connecting");
 
-      socket.onclose = () => {
-        wsRef.current = null;
-        setIsMonitoring(false);
-        if (!hasFinished) {
-          const progress = lastProgressRef.current;
-          if (progress >= COMPLETION_THRESHOLD) {
-            finalize(true);
-          } else {
-            finalize(false, "Download connection closed.");
-          }
-        }
-      };
+      if (stage === "error") {
+        setSubmitError(errorMessage ?? statusText);
+      }
 
-      socket.onmessage = (event) => {
-        let payload: Record<string, unknown> | null = null;
-        if (typeof event.data === "string") {
-          try {
-            payload = JSON.parse(event.data);
-          } catch {
-            payload = {message: event.data};
-          }
-        } else if (typeof event.data === "object" && event.data !== null) {
-          payload = event.data as Record<string, unknown>;
-        }
+      if (stage === "completed" && !completionHandledRef.current) {
+        completionHandledRef.current = true;
+        onSuccess();
+        scheduleAutoClose();
+      }
+    },
+    [onSuccess, scheduleAutoClose, toNumber]
+  );
 
-        if (!payload) return;
+  const handleWsMessage = React.useCallback(
+    async (payload: any) => {
+      let message: any = payload;
 
-
-        const isoField =
-          (payload.iso_name as string | undefined) ??
-          (payload.isoName as string | undefined) ??
-          (payload.iso as string | undefined) ??
-          (payload.name as string | undefined);
-        if (isoField && isoField !== targetIsoName) {
+      if (typeof Blob !== "undefined" && payload instanceof Blob) {
+        try {
+          message = await payload.text();
+        } catch (err) {
+          console.warn("Failed to read WS Blob payload", err);
           return;
         }
-
-        const payloadProgress =
-          toNumber(payload.progress) ??
-          toNumber(payload.percentage) ??
-          toNumber(payload.percent);
-        const dataMessage =
-          typeof payload.data === "string" ? payload.data : undefined;
-        const parsedData = dataMessage ? parseDownloadMessage(dataMessage) : null;
-        
-        
-        const errorMessage =
-          (payload.error as string | undefined) ??
-          (payload.error_message as string | undefined);
-        const effectiveProgress = clampProgress(
-          parsedData?.progress ?? payloadProgress
-        );
-                
-        const statusText =
-          parsedData?.status ??
-          (payload.status as string | undefined) ??
-          (payload.message as string | undefined) ??
-          (effectiveProgress != null
-            ? `Progress ${Math.round(effectiveProgress)}%`
-            : undefined) ??
-          dataMessage ??
-          "Download in progress...";
-        const detailText =
-          (typeof payload.detail === "string" && payload.detail) ||
-          (typeof payload.description === "string" && payload.description) ||
-          parsedData?.detail ||
-          null;
-        const completed =
-          payload.completed === true ||
-          payload.done === true ||
-          (typeof payload.status === "string" &&
-            ["completed", "finished", "success"].includes(
-              payload.status.toLowerCase()
-            )) ||
-          (effectiveProgress ?? 0) >= COMPLETION_THRESHOLD;
-
-        setDownloadMonitor({
-          isoName: targetIsoName,
-          status: statusText,
-          progress: effectiveProgress ?? undefined,
-          stage: errorMessage ? "error" : completed ? "completed" : "downloading",
-          detail: detailText ?? undefined,
-        });
-        if (effectiveProgress != null) {
-          lastProgressRef.current = effectiveProgress;
+      } else if (payload instanceof ArrayBuffer) {
+        try {
+          const decoder = typeof TextDecoder !== "undefined" ? new TextDecoder() : null;
+          message = decoder ? decoder.decode(payload) : payload;
+        } catch (err) {
+          console.warn("Failed to decode WS ArrayBuffer payload", err);
+          return;
         }
-
-        if (errorMessage) {
-          finalize(false, errorMessage);
-        } else if (completed) {
-          finalize(true);
+      } else if (ArrayBuffer.isView(payload)) {
+        try {
+          const decoder = typeof TextDecoder !== "undefined" ? new TextDecoder() : null;
+          message = decoder ? decoder.decode(payload.buffer) : payload;
+        } catch (err) {
+          console.warn("Failed to decode WS buffer view payload", err);
+          return;
         }
-      };
-      return true;
+      }
+
+      if (typeof message === "string") {
+        const trimmed = message.trim();
+        if (!trimmed) {
+          return;
+        }
+        try {
+          message = JSON.parse(trimmed);
+        } catch {
+          return;
+        }
+      }
+
+      if (!message || typeof message !== "object") {
+        return;
+      }
+
+      const record = message as Record<string, unknown>;
+      const type =
+        typeof record.type === "string" ? record.type.trim().toLowerCase() : undefined;
+      if (type !== "downloadiso") {
+        return;
+      }
+      applyDownloadUpdate(record);
     },
-    [authToken, cleanupSocket, onSuccess, scheduleAutoClose, toNumber, clearAutoCloseTimer]
+    [applyDownloadUpdate]
   );
+
+  React.useEffect(() => {
+    const unsubscribe = subscribeToHyperHiveWebsocket((msg) => {
+      void handleWsMessage(msg);
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, [handleWsMessage]);
+
+  const downloadStage = downloadMonitor?.stage;
+  React.useEffect(() => {
+    const hasActiveDownload =
+      downloadStage === "connecting" || downloadStage === "downloading";
+    if (!isOpen && !hasActiveDownload) {
+      return;
+    }
+    ensureHyperHiveWebsocket().catch((err) => {
+      console.warn("Erro ao conectar ao WebSocket geral:", err);
+    });
+  }, [downloadStage, isOpen]);
 
   const handleSubmit = React.useCallback(async () => {
     if (isBusy) {
@@ -1778,7 +1741,22 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
     }
 
     setIsSubmitting(true);
-    const monitorStarted = startDownloadMonitor(normalizedIsoName);
+    completionHandledRef.current = false;
+    isoNameRef.current = normalizedIsoName;
+    lastProgressRef.current = 0;
+    try {
+      await ensureHyperHiveWebsocket();
+    } catch (err) {
+      let message = "Could not connect to the WebSocket.";
+      if (err instanceof Error && err.message) {
+        message = err.message;
+      }
+      setIsMonitoring(false);
+      setDownloadMonitor(null);
+      setSubmitError(message);
+      setIsSubmitting(false);
+      return;
+    }
     try {
       await downloadIso({
         url: normalizedUrl,
@@ -1803,20 +1781,21 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
       } else if (err instanceof Error && err.message) {
         message = err.message;
       }
-      cleanupSocket();
       setIsMonitoring(false);
-      setDownloadMonitor((prev) =>
-        prev ?? {
-          isoName: normalizedIsoName,
-          status: message,
-          stage: "error",
-        }
-      );
+      setDownloadMonitor(null);
       setSubmitError(message);
-    } finally {
       setIsSubmitting(false);
+      return;
     }
-  }, [isoUrl, isoName, selectedShareId, isBusy, startDownloadMonitor, cleanupSocket]);
+    setDownloadMonitor({
+      isoName: normalizedIsoName,
+      status: "Download in progress...",
+      stage: "connecting",
+      progress: 0,
+    });
+    setIsMonitoring(true);
+    setIsSubmitting(false);
+  }, [isoUrl, isoName, selectedShareId, isBusy, ensureHyperHiveWebsocket]);
 
   return (
     <Modal isOpen={isOpen} onClose={handleModalClose}>
