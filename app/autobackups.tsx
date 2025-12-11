@@ -100,9 +100,9 @@ const NFS_SHARES: Record<number, string> = {
 };
 
 const FREQUENCY_OPTIONS = [
-  {label: "Diário", value: 1},
-  {label: "Semanal", value: 7},
-  {label: "Mensal", value: 30},
+  {label: "Daily", value: 1},
+  {label: "Weekly", value: 7},
+  {label: "Monthly", value: 30},
 ];
 
 export default function AutoBackupsScreen() {
@@ -152,15 +152,15 @@ export default function AutoBackupsScreen() {
   }, [schedules]);
 
   const getFrequencyLabel = (days: number): string => {
-    if (days === 1) return "Diário";
-    if (days === 7) return "Semanal";
-    if (days === 30) return "Mensal";
-    return `${days} dias`;
+    if (days === 1) return "Daily";
+    if (days === 7) return "Weekly";
+    if (days === 30) return "Monthly";
+    return `${days} days`;
   };
 
   const formatDate = (date: Date | null): string => {
-    if (!date) return "Nunca";
-    return new Intl.DateTimeFormat("pt-PT", {
+    if (!date) return "Never";
+    return new Intl.DateTimeFormat("en-US", {
       day: "2-digit",
       month: "short",
       year: "numeric",
@@ -185,7 +185,7 @@ export default function AutoBackupsScreen() {
             className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
             action="success"
           >
-            <ToastTitle size="sm">Agendamentos atualizados</ToastTitle>
+            <ToastTitle size="sm">Schedules updated</ToastTitle>
           </Toast>
         ),
       });
@@ -209,7 +209,7 @@ export default function AutoBackupsScreen() {
           action="success"
         >
           <ToastTitle size="sm">
-            Agendamento {!schedule.isEnabled ? "ativado" : "desativado"}
+            Schedule {!schedule.isEnabled ? "enabled" : "disabled"}
           </ToastTitle>
         </Toast>
       ),
@@ -230,12 +230,12 @@ export default function AutoBackupsScreen() {
 
   const handleDelete = (schedule: AutoBackup) => {
     Alert.alert(
-      "Confirmar Exclusão",
-      `Tem certeza que deseja apagar o agendamento de ${schedule.vmName}?`,
+      "Confirm deletion",
+      `Are you sure you want to delete the schedule for ${schedule.vmName}?`,
       [
-        {text: "Cancelar", style: "cancel"},
+        {text: "Cancel", style: "cancel"},
         {
-          text: "Apagar",
+          text: "Delete",
           style: "destructive",
           onPress: () => {
             setSchedules((prev) => prev.filter((s) => s.id !== schedule.id));
@@ -247,7 +247,7 @@ export default function AutoBackupsScreen() {
                   className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
                   action="success"
                 >
-                  <ToastTitle size="sm">Agendamento apagado</ToastTitle>
+                  <ToastTitle size="sm">Schedule deleted</ToastTitle>
                 </Toast>
               ),
             });
@@ -278,7 +278,7 @@ export default function AutoBackupsScreen() {
             className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
             action="error"
           >
-            <ToastTitle size="sm">Preencha todos os campos obrigatórios</ToastTitle>
+            <ToastTitle size="sm">Fill all required fields</ToastTitle>
           </Toast>
         ),
       });
@@ -314,7 +314,7 @@ export default function AutoBackupsScreen() {
             className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
             action="success"
           >
-            <ToastTitle size="sm">Agendamento atualizado</ToastTitle>
+            <ToastTitle size="sm">Schedule updated</ToastTitle>
           </Toast>
         ),
       });
@@ -342,7 +342,7 @@ export default function AutoBackupsScreen() {
             className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
             action="success"
           >
-            <ToastTitle size="sm">Agendamento criado</ToastTitle>
+            <ToastTitle size="sm">Schedule created</ToastTitle>
           </Toast>
         ),
       });
@@ -381,8 +381,7 @@ export default function AutoBackupsScreen() {
                 Auto-Backups
               </Heading>
               <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl mt-2">
-                Configure agendamentos automáticos de backup para suas VMs com
-                controle de frequência e retenção.
+                Configure automatic backup schedules for your VMs with frequency and retention control.
               </Text>
             </VStack>
             {/* Botão desktop */}
@@ -400,7 +399,7 @@ export default function AutoBackupsScreen() {
                   className="text-background-0 dark:text-typography-900"
                 />
                 <ButtonText className="text-background-0 dark:text-typography-900">
-                  Novo Agendamento
+                  New Schedule
                 </ButtonText>
               </Button>
             </Box>
@@ -415,7 +414,7 @@ export default function AutoBackupsScreen() {
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                   style={{fontFamily: "Inter_500Medium"}}
                 >
-                  Total Agendamentos
+                  Total Schedules
                 </Text>
               </HStack>
               <Text
@@ -433,7 +432,7 @@ export default function AutoBackupsScreen() {
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                   style={{fontFamily: "Inter_500Medium"}}
                 >
-                  Ativos
+                  Active
                 </Text>
               </HStack>
               <Text
@@ -469,14 +468,14 @@ export default function AutoBackupsScreen() {
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                   style={{fontFamily: "Inter_500Medium"}}
                 >
-                  Média Frequência
+                  Average Frequency
                 </Text>
               </HStack>
               <Text
                 className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
                 style={{fontFamily: "Inter_700Bold"}}
               >
-                {stats.avgFrequency} dias
+                {stats.avgFrequency} days
               </Text>
             </Box>
           </HStack>
@@ -490,13 +489,13 @@ export default function AutoBackupsScreen() {
                   className="text-typography-900 dark:text-[#E8EBF0] text-lg text-center"
                   style={{fontFamily: "Inter_600SemiBold"}}
                 >
-                  Nenhum agendamento encontrado
+                  No schedules found
                 </Text>
                 <Text
                   className="text-[#9AA4B8] dark:text-[#8A94A8] text-center"
                   style={{fontFamily: "Inter_400Regular"}}
                 >
-                  Crie seu primeiro agendamento automático
+                  Create your first automatic schedule
                 </Text>
               </VStack>
             </Box>
@@ -522,7 +521,7 @@ export default function AutoBackupsScreen() {
                         className="text-sm text-[#9AA4B8] dark:text-[#8A94A8]"
                         style={{fontFamily: "Inter_400Regular"}}
                       >
-                        {machineName} • {vmSchedules.length} agendamento
+                        {machineName} • {vmSchedules.length} schedule
                         {vmSchedules.length > 1 ? "s" : ""}
                       </Text>
                     </Box>
@@ -542,13 +541,13 @@ export default function AutoBackupsScreen() {
                             className="w-[120px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                             style={{fontFamily: "Inter_600SemiBold"}}
                           >
-                            FREQUÊNCIA
+                            FREQUENCY
                           </Text>
                           <Text
                             className="w-[150px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                             style={{fontFamily: "Inter_600SemiBold"}}
                           >
-                            HORÁRIO
+                            TIME WINDOW
                           </Text>
                           <Text
                             className="flex-1 min-w-[150px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
@@ -560,13 +559,13 @@ export default function AutoBackupsScreen() {
                             className="w-[100px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                             style={{fontFamily: "Inter_600SemiBold"}}
                           >
-                            RETENÇÃO
+                            RETENTION
                           </Text>
                           <Text
                             className="w-[150px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                             style={{fontFamily: "Inter_600SemiBold"}}
                           >
-                            ÚLTIMO BACKUP
+                            LAST BACKUP
                           </Text>
                           <Text
                             className="w-[80px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
@@ -578,7 +577,7 @@ export default function AutoBackupsScreen() {
                             className="w-[140px] text-xs text-[#9AA4B8] dark:text-[#8A94A8] text-right"
                             style={{fontFamily: "Inter_600SemiBold"}}
                           >
-                            AÇÕES
+                            ACTIONS
                           </Text>
                         </HStack>
 
@@ -649,7 +648,7 @@ export default function AutoBackupsScreen() {
                                   }`}
                                   style={{fontFamily: "Inter_500Medium"}}
                                 >
-                                  {schedule.isEnabled ? "Ativo" : "Inativo"}
+                                  {schedule.isEnabled ? "Active" : "Inactive"}
                                 </BadgeText>
                               </Badge>
                             </Box>
@@ -736,7 +735,7 @@ export default function AutoBackupsScreen() {
               className="text-typography-900 dark:text-[#E8EBF0]"
               style={{fontFamily: "Inter_700Bold"}}
             >
-              {editSchedule ? "Editar" : "Novo"} Agendamento
+              {editSchedule ? "Edit" : "New"} Schedule
             </Heading>
             <ModalCloseButton className="text-typography-600 dark:text-typography-400" />
           </ModalHeader>
@@ -752,7 +751,7 @@ export default function AutoBackupsScreen() {
                 <Select>
                   <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
                     <SelectInput
-                      placeholder="Selecione uma VM..."
+                      placeholder="Select a VM..."
                       value={formVm}
                       className="text-typography-900 dark:text-[#E8EBF0]"
                     />
@@ -786,7 +785,7 @@ export default function AutoBackupsScreen() {
                   className="text-sm text-typography-700 dark:text-[#E8EBF0]"
                   style={{fontFamily: "Inter_500Medium"}}
                 >
-                  Frequência
+                  Frequency
                 </Text>
                 <Select>
                   <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
@@ -816,12 +815,12 @@ export default function AutoBackupsScreen() {
 
               <HStack className="gap-3">
                 <VStack className="gap-2 flex-1">
-                  <Text 
-                    className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                    style={{fontFamily: "Inter_500Medium"}}
-                  >
-                    Horário Mínimo
-                  </Text>
+                <Text 
+                  className="text-sm text-typography-700 dark:text-[#E8EBF0]"
+                  style={{fontFamily: "Inter_500Medium"}}
+                >
+                  Minimum Time
+                </Text>
                   <Input 
                     variant="outline" 
                     className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]"
@@ -835,12 +834,12 @@ export default function AutoBackupsScreen() {
                   </Input>
                 </VStack>
                 <VStack className="gap-2 flex-1">
-                  <Text 
-                    className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                    style={{fontFamily: "Inter_500Medium"}}
-                  >
-                    Horário Máximo
-                  </Text>
+                <Text 
+                  className="text-sm text-typography-700 dark:text-[#E8EBF0]"
+                  style={{fontFamily: "Inter_500Medium"}}
+                >
+                  Maximum Time
+                </Text>
                   <Input 
                     variant="outline" 
                     className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]"
@@ -865,7 +864,7 @@ export default function AutoBackupsScreen() {
                 <Select>
                   <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
                     <SelectInput
-                      placeholder="Selecione um NFS..."
+                      placeholder="Select an NFS..."
                       value={formNfsShare ? getNfsName(formNfsShare) : ""}
                       className="text-typography-900 dark:text-[#E8EBF0]"
                     />
@@ -895,7 +894,7 @@ export default function AutoBackupsScreen() {
                   className="text-sm text-typography-700 dark:text-[#E8EBF0]"
                   style={{fontFamily: "Inter_500Medium"}}
                 >
-                  Retenção (backups)
+                  Retention (backups)
                 </Text>
                 <Input 
                   variant="outline" 
@@ -924,7 +923,7 @@ export default function AutoBackupsScreen() {
                   className="text-sm text-typography-700 dark:text-[#E8EBF0]"
                   style={{fontFamily: "Inter_400Regular"}}
                 >
-                  Live Backup (sem parar VM)
+                  Live Backup (without stopping VM)
                 </CheckboxLabel>
               </Checkbox>
             </VStack>
@@ -943,7 +942,7 @@ export default function AutoBackupsScreen() {
                   className="text-typography-700 dark:text-[#E8EBF0]"
                   style={{fontFamily: "Inter_500Medium"}}
                 >
-                  Cancelar
+                  Cancel
                 </ButtonText>
               </Button>
               <Button
@@ -954,7 +953,7 @@ export default function AutoBackupsScreen() {
                   className="text-background-0 dark:text-typography-900"
                   style={{fontFamily: "Inter_600SemiBold"}}
                 >
-                  {editSchedule ? "Salvar" : "Criar"}
+                  {editSchedule ? "Save" : "Create"}
                 </ButtonText>
               </Button>
             </HStack>

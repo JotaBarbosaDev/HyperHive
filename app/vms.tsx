@@ -558,18 +558,18 @@ export default function VirtualMachinesScreen() {
     []
   );
 
-  // Fetch inicial de VMs
+  // Initial fetch of VMs
   React.useEffect(() => {
     const fetchVMs = async () => {
       try {
         await fetchAndSetVms();
       } catch (error) {
-        console.error("Erro ao carregar VMs:", error);
+        console.error("Error loading VMs:", error);
         toast.show({
           placement: "top",
           render: ({ id }) => (
             <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="error">
-              <ToastTitle size="sm">Erro ao carregar VMs</ToastTitle>
+              <ToastTitle size="sm">Error loading VMs</ToastTitle>
             </Toast>
           )
         });
@@ -588,7 +588,7 @@ export default function VirtualMachinesScreen() {
         setMountOptions(mounts);
         setSlaveOptions(slaves);
       } catch (error) {
-        console.error("Erro ao carregar NFS/Slaves:", error);
+        console.error("Error loading NFS/Slaves:", error);
         toast.show({
           placement: "top",
           render: ({ id }) => (
@@ -597,7 +597,7 @@ export default function VirtualMachinesScreen() {
               className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
               action="error"
             >
-              <ToastTitle size="sm">Falha ao listar NFS/Slaves</ToastTitle>
+              <ToastTitle size="sm">Failed to list NFS/Slaves</ToastTitle>
             </Toast>
           ),
         });
@@ -658,17 +658,17 @@ export default function VirtualMachinesScreen() {
       toast.show({
         placement: "top", render: ({ id }) => (
           <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="success">
-            <ToastTitle size="sm">Atualizado</ToastTitle>
+            <ToastTitle size="sm">Updated</ToastTitle>
           </Toast>
         )
       });
     } catch (error) {
-      console.error("Erro ao atualizar VMs:", error);
+      console.error("Error updating VMs:", error);
       toast.show({
         placement: "top",
         render: ({ id }) => (
           <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="error">
-            <ToastTitle size="sm">Erro ao atualizar</ToastTitle>
+            <ToastTitle size="sm">Error updating</ToastTitle>
           </Toast>
         )
       });
@@ -1818,13 +1818,13 @@ export default function VirtualMachinesScreen() {
                               action="success"
                             >
                               <ToastTitle size="sm">
-                                Recursos atualizados
+                                Resources updated
                               </ToastTitle>
                             </Toast>
                           ),
                         });
                       } catch (error) {
-                        console.error("Erro ao editar VM:", error);
+                        console.error("Error editing VM:", error);
                         toast.show({
                           placement: "top",
                           render: ({ id }) => (
@@ -1834,14 +1834,14 @@ export default function VirtualMachinesScreen() {
                               action="error"
                             >
                               <ToastTitle size="sm">
-                                Erro ao editar VM
+                                Error editing VM
                               </ToastTitle>
                             </Toast>
                           ),
                         });
                         throw error instanceof Error
                           ? error
-                          : new Error("Erro ao editar VM");
+                          : new Error("Error editing VM");
                       }
                     }}
                   />
@@ -1876,35 +1876,35 @@ export default function VirtualMachinesScreen() {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         toast.show({
                           placement: "top",
+                      render: ({ id }) => (
+                        <Toast
+                          nativeID={"toast-" + id}
+                          className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+                          action="success"
+                        >
+                          <ToastTitle size="sm">VM cloned</ToastTitle>
+                        </Toast>
+                      ),
+                    });
+                  } catch (error) {
+                    console.error("Error cloning VM:", error);
+                    toast.show({
+                      placement: "top",
                           render: ({ id }) => (
                             <Toast
-                              nativeID={"toast-" + id}
-                              className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-                              action="success"
-                            >
-                              <ToastTitle size="sm">VM clonada</ToastTitle>
-                            </Toast>
-                          ),
-                        });
-                      } catch (error) {
-                        console.error("Erro ao clonar VM:", error);
-                        toast.show({
-                          placement: "top",
-                          render: ({ id }) => (
-                            <Toast
-                              nativeID={"toast-" + id}
-                              className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-                              action="error"
-                            >
-                              <ToastTitle size="sm">Erro ao clonar VM</ToastTitle>
-                              <ToastDescription size="sm">
-                                {error instanceof ApiError && typeof error.data === "string"
-                                  ? error.data
-                                  : "Verifique nome, NFS e slave e tente novamente."}
-                              </ToastDescription>
-                            </Toast>
-                          ),
-                        });
+                          nativeID={"toast-" + id}
+                          className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+                          action="error"
+                        >
+                          <ToastTitle size="sm">Error cloning VM</ToastTitle>
+                          <ToastDescription size="sm">
+                            {error instanceof ApiError && typeof error.data === "string"
+                              ? error.data
+                              : "Check the name, NFS, and slave and try again."}
+                          </ToastDescription>
+                        </Toast>
+                      ),
+                    });
                         if (error instanceof ApiError) {
                           const message =
                             typeof error.data === "string"
@@ -1912,7 +1912,7 @@ export default function VirtualMachinesScreen() {
                               : (error.data as any)?.message ?? error.message;
                           throw new Error(message);
                         }
-                        throw error instanceof Error ? error : new Error("Erro ao clonar VM");
+                        throw error instanceof Error ? error : new Error("Error cloning VM");
                       }
                     }}
                   />
@@ -1925,7 +1925,7 @@ export default function VirtualMachinesScreen() {
                     className="rounded-md px-4 py-2"
                     onPress={() => setCloneVm(null)}
                   >
-                    <ButtonText>Fechar</ButtonText>
+                    <ButtonText>Close</ButtonText>
                   </Button>
                 </HStack>
               </ModalFooter>
@@ -1979,18 +1979,18 @@ export default function VirtualMachinesScreen() {
                               className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
                               action="success"
                             >
-                              <ToastTitle size="sm">VM migrada</ToastTitle>
+                              <ToastTitle size="sm">VM migrated</ToastTitle>
                             </Toast>
                           ),
                         });
                       } catch (error) {
-                        console.error("Erro ao migrar VM:", error);
+                        console.error("Error migrating VM:", error);
                         const description =
                           error instanceof ApiError && typeof error.data === "string"
                             ? error.data
                             : error instanceof Error
                               ? error.message
-                              : "Verifique nome, estado da VM e destino.";
+                              : "Check the VM name, state, and destination.";
                         toast.show({
                           placement: "top",
                           render: ({ id }) => (
@@ -1999,7 +1999,7 @@ export default function VirtualMachinesScreen() {
                               className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
                               action="error"
                             >
-                              <ToastTitle size="sm">Erro ao migrar VM</ToastTitle>
+                              <ToastTitle size="sm">Error migrating VM</ToastTitle>
                               <ToastDescription size="sm">{description}</ToastDescription>
                             </Toast>
                           ),
@@ -2007,7 +2007,7 @@ export default function VirtualMachinesScreen() {
                         if (error instanceof ApiError) {
                           throw new Error(description);
                         }
-                        throw error instanceof Error ? error : new Error("Erro ao migrar VM");
+                        throw error instanceof Error ? error : new Error("Error migrating VM");
                       } finally {
                         setMigratingVm(null);
                       }
@@ -2022,7 +2022,7 @@ export default function VirtualMachinesScreen() {
                     className="rounded-md px-4 py-2"
                     onPress={() => setMigrateVm(null)}
                   >
-                    <ButtonText>Fechar</ButtonText>
+                    <ButtonText>Close</ButtonText>
                   </Button>
                 </HStack>
               </ModalFooter>
@@ -2054,18 +2054,18 @@ export default function VirtualMachinesScreen() {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         toast.show({
                           placement: "top",
-                          render: ({ id }) => (
-                            <Toast
-                              nativeID={"toast-" + id}
-                              className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-                              action="success"
-                            >
-                              <ToastTitle size="sm">Disco movido</ToastTitle>
-                            </Toast>
-                          ),
-                        });
-                      } catch (error) {
-                        console.error("Erro ao mover disco:", error);
+                      render: ({ id }) => (
+                        <Toast
+                          nativeID={"toast-" + id}
+                          className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+                          action="success"
+                        >
+                          <ToastTitle size="sm">Disk moved</ToastTitle>
+                        </Toast>
+                      ),
+                    });
+                  } catch (error) {
+                    console.error("Error moving disk:", error);
                         toast.show({
                           placement: "top",
                           render: ({ id }) => (
@@ -2494,7 +2494,7 @@ export default function VirtualMachinesScreen() {
                 >
                   <HStack className="items-center gap-3">
                     <Trash2 size={18} className="text-red-600" />
-                    <Text className="text-red-600">Apagar VM</Text>
+                    <Text className="text-red-600">Delete VM</Text>
                   </HStack>
                 </Pressable>
               </VStack>
@@ -2694,7 +2694,7 @@ export default function VirtualMachinesScreen() {
               >
                 <ActionsheetIcon as={Trash2} className="mr-2 text-red-600" />
                 <ActionsheetItemText className="text-red-600">
-                  Apagar VM
+                  Delete VM
                 </ActionsheetItemText>
               </ActionsheetItem>
 
@@ -2704,7 +2704,7 @@ export default function VirtualMachinesScreen() {
                 className="bg-background-100 mt-2"
               >
                 <ActionsheetItemText className="font-semibold">
-                  Cancelar
+                  Cancel
                 </ActionsheetItemText>
               </ActionsheetItem>
             </ScrollView>
@@ -2928,7 +2928,7 @@ function EditVmForm({
         <FormControl>
           <FormControlLabel>
             <FormControlLabelText className="text-sm font-semibold text-typography-800">
-              Disco (GB)
+              Disk (GB)
             </FormControlLabelText>
           </FormControlLabel>
           <Input variant="outline" className="rounded-md">

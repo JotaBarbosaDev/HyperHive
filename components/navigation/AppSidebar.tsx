@@ -123,20 +123,20 @@ const MENU_ITEMS: MenuItem[] = [
 const THEME_OPTIONS = [
   {
     value: "light" as const,
-    label: "Sempre claro",
-    description: "Mais brilho e contraste para ambientes iluminados.",
+    label: "Always light",
+    description: "More brightness and contrast for well-lit spaces.",
     icon: SunMedium,
   },
   {
     value: "dark" as const,
-    label: "Sempre escuro",
-    description: "Fundo discreto e alto contraste para uso prolongado.",
+    label: "Always dark",
+    description: "Subtle background and high contrast for long sessions.",
     icon: MoonStar,
   },
   {
     value: "system" as const,
-    label: "Acompanhar sistema",
-    description: "Adapta automaticamente conforme o tema do dispositivo.",
+    label: "Follow system",
+    description: "Automatically adapts to your device theme.",
     icon: MonitorSmartphone,
   },
 ];
@@ -286,7 +286,7 @@ export function AppSidebar({isOpen, onClose, themePreference, onChangeThemePrefe
           >
             <ButtonIcon as={Settings} className="text-typography-700 dark:text-typography-300" />
             <ButtonText className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
-              Definições
+              Settings
             </ButtonText>
           </Button>
           <Button
@@ -313,10 +313,10 @@ export function AppSidebar({isOpen, onClose, themePreference, onChangeThemePrefe
               </Box>
               <Box className="flex-1">
                 <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
-                  Definições
+                  Settings
                 </Heading>
                 <Text className="text-sm text-typography-600 dark:text-typography-300">
-                  Personalize rapidamente a experiência do painel.
+                  Quickly personalize the dashboard experience.
                 </Text>
               </Box>
             </Box>
@@ -328,10 +328,10 @@ export function AppSidebar({isOpen, onClose, themePreference, onChangeThemePrefe
                 className="text-xs font-semibold uppercase text-typography-500 dark:text-typography-300 tracking-[0.08em]"
                 style={{fontFamily: "Inter_600SemiBold"}}
               >
-                Tema
+                Theme
               </Text>
               <Text className="text-sm text-typography-600 dark:text-typography-300">
-                Escolha como o HyperHive se adapta ao seu ambiente.
+                Choose how HyperHive adapts to your environment.
               </Text>
               <RadioGroup
                 value={themePreference}
@@ -406,7 +406,7 @@ export function AppSidebar({isOpen, onClose, themePreference, onChangeThemePrefe
               onPress={() => setShowSettings(false)}
             >
               <ButtonText className="font-semibold text-typography-900 dark:text-[#E8EBF0]">
-                Fechar
+                Close
               </ButtonText>
             </Button>
           </ModalFooter>

@@ -504,20 +504,20 @@ export default function BtrfsRaidsScreen() {
         <ModalContent className="max-w-3xl">
           <ModalHeader className="flex-row items-start justify-between">
             <Heading size="md" className="text-typography-900">
-              Detalhes do Disco
+              Disk Details
             </Heading>
             <ModalCloseButton />
           </ModalHeader>
           <ModalBody className="gap-3 max-h-[70vh] overflow-y-auto">
             <Text className="text-typography-700">{diskDetail ? formatDeviceDisplay(diskDetail) : ""}</Text>
             <Divider />
-            <StatsRow label="Nome" value={diskDetail?.name} />
-            <StatsRow label="Modelo" value={diskDetail?.model} />
+            <StatsRow label="Name" value={diskDetail?.name} />
+            <StatsRow label="Model" value={diskDetail?.model} />
             <StatsRow label="Vendor" value={diskDetail?.vendor} />
             <StatsRow label="Serial" value={diskDetail?.serial} />
-            <StatsRow label="Tamanho" value={formatSize(diskDetail?.size)} />
-            <StatsRow label="Tipo" value={diskDetail?.type} />
-            <StatsRow label="Transporte" value={diskDetail?.transport} />
+            <StatsRow label="Size" value={formatSize(diskDetail?.size)} />
+            <StatsRow label="Type" value={diskDetail?.type} />
+            <StatsRow label="Transport" value={diskDetail?.transport} />
             <StatsRow label="Status" value={diskDetail?.status} />
             <StatsRow label="By ID" value={diskDetail?.byId} />
             <StatsRow label="PCI Path" value={diskDetail?.pciPath} />

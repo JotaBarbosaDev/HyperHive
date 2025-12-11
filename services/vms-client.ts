@@ -333,11 +333,13 @@ export async function importVm(
         xhr.setRequestHeader("Authorization", authToken);
       }
 
-      if (xhr.upload && options?.onProgress) {
+      const onProgress = options?.onProgress;
+
+      if (xhr.upload && onProgress) {
         xhr.upload.onprogress = (evt) => {
           if (evt.lengthComputable && evt.total > 0) {
             const percent = Math.round((evt.loaded / evt.total) * 100);
-            options.onProgress(percent);
+            onProgress(percent);
           }
         };
       }

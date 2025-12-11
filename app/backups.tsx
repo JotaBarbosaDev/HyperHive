@@ -136,7 +136,7 @@ export default function BackupsScreen() {
   }, [backups]);
 
   const formatDate = (date: Date): string => {
-    return new Intl.DateTimeFormat("pt-PT", {
+    return new Intl.DateTimeFormat("en-US", {
       day: "2-digit",
       month: "short",
       year: "numeric",
@@ -162,7 +162,7 @@ export default function BackupsScreen() {
             className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
             action="success"
           >
-            <ToastTitle size="sm">Backups atualizados</ToastTitle>
+            <ToastTitle size="sm">Backups updated</ToastTitle>
           </Toast>
         ),
       });
@@ -173,12 +173,12 @@ export default function BackupsScreen() {
 
   const handleDelete = (backup: Backup) => {
     Alert.alert(
-      "Confirmar Exclusão",
-      `Tem certeza que deseja apagar o backup de ${backup.vmName} (${formatDate(backup.backupDate)})?`,
+      "Confirm deletion",
+      `Are you sure you want to delete the backup for ${backup.vmName} (${formatDate(backup.backupDate)})?`,
       [
-        {text: "Cancelar", style: "cancel"},
+        {text: "Cancel", style: "cancel"},
         {
-          text: "Apagar",
+          text: "Delete",
           style: "destructive",
           onPress: () => {
             setBackups((prev) => prev.filter((b) => b.id !== backup.id));
@@ -190,7 +190,7 @@ export default function BackupsScreen() {
                   className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
                   action="success"
                 >
-                  <ToastTitle size="sm">Backup apagado</ToastTitle>
+                  <ToastTitle size="sm">Backup deleted</ToastTitle>
                 </Toast>
               ),
             });
@@ -211,7 +211,7 @@ export default function BackupsScreen() {
           className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
           action="success"
         >
-          <ToastTitle size="sm">Restauração iniciada</ToastTitle>
+          <ToastTitle size="sm">Restore started</ToastTitle>
         </Toast>
       ),
     });
@@ -246,8 +246,7 @@ export default function BackupsScreen() {
             Backups
           </Heading>
           <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl mb-6">
-            Gestão completa de backups das máquinas virtuais com restauração
-            rápida e controle de versões.
+            Full backup management for virtual machines with quick restores and version control.
           </Text>
 
           {/* Stats Overview */}
@@ -277,7 +276,7 @@ export default function BackupsScreen() {
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                   style={{fontFamily: "Inter_500Medium"}}
                 >
-                  Completos
+                  Completed
                 </Text>
               </HStack>
               <Text
@@ -295,7 +294,7 @@ export default function BackupsScreen() {
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                   style={{fontFamily: "Inter_500Medium"}}
                 >
-                  Espaço Total
+                  Total Space
                 </Text>
               </HStack>
               <Text
@@ -313,7 +312,7 @@ export default function BackupsScreen() {
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                   style={{fontFamily: "Inter_500Medium"}}
                 >
-                  Último Backup
+                  Last Backup
                 </Text>
               </HStack>
               <Text
@@ -334,7 +333,7 @@ export default function BackupsScreen() {
                 <InputIcon as={Search} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
               </InputSlot>
               <InputField
-                placeholder="Pesquisar por VM ou slave..."
+                placeholder="Search by VM or slave..."
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
@@ -366,15 +365,15 @@ export default function BackupsScreen() {
                   className="text-typography-900 dark:text-[#E8EBF0] text-lg text-center"
                   style={{fontFamily: "Inter_600SemiBold"}}
                 >
-                  Nenhum backup encontrado
+                  No backups found
                 </Text>
                 <Text
                   className="text-[#9AA4B8] dark:text-[#8A94A8] text-center"
                   style={{fontFamily: "Inter_400Regular"}}
                 >
                   {searchQuery
-                    ? "Tente ajustar sua pesquisa"
-                    : "Os backups aparecerão aqui automaticamente"}
+                    ? "Try refining your search"
+                    : "Backups will appear here automatically"}
                 </Text>
               </VStack>
             </Box>
@@ -414,19 +413,19 @@ export default function BackupsScreen() {
                             className="flex-[2] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                             style={{fontFamily: "Inter_600SemiBold"}}
                           >
-                            DATA
+                            DATE
                           </Text>
                           <Text
                             className="flex-1 text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                             style={{fontFamily: "Inter_600SemiBold"}}
                           >
-                            TIPO
+                            TYPE
                           </Text>
                           <Text
                             className="flex-1 text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                             style={{fontFamily: "Inter_600SemiBold"}}
                           >
-                            TAMANHO
+                            SIZE
                           </Text>
                           <Text
                             className="flex-[2] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
@@ -444,7 +443,7 @@ export default function BackupsScreen() {
                             className="flex-1 text-xs text-[#9AA4B8] dark:text-[#8A94A8] text-right"
                             style={{fontFamily: "Inter_600SemiBold"}}
                           >
-                            AÇÕES
+                            ACTIONS
                           </Text>
                         </HStack>
 
@@ -521,10 +520,10 @@ export default function BackupsScreen() {
                                   style={{fontFamily: "Inter_500Medium"}}
                                 >
                                   {backup.status === "complete"
-                                    ? "Completo"
+                                    ? "Complete"
                                     : backup.status === "partial"
-                                    ? "Parcial"
-                                    : "Falhou"}
+                                    ? "Partial"
+                                    : "Failed"}
                                 </BadgeText>
                               </Badge>
                             </Box>
@@ -576,7 +575,7 @@ export default function BackupsScreen() {
               className="text-typography-900 dark:text-[#E8EBF0]"
               style={{fontFamily: "Inter_700Bold"}}
             >
-              Restaurar Backup
+              Restore Backup
             </Heading>
             <ModalCloseButton className="text-typography-600 dark:text-typography-400" />
           </ModalHeader>
@@ -602,7 +601,7 @@ export default function BackupsScreen() {
                     className="text-sm text-typography-700 dark:text-[#E8EBF0]"
                     style={{fontFamily: "Inter_500Medium"}}
                   >
-                    Data do Backup
+                    Backup Date
                   </Text>
                   <Text className="text-base text-typography-900 dark:text-[#E8EBF0]">
                     {formatDate(restoreBackup.backupDate)}
@@ -613,7 +612,7 @@ export default function BackupsScreen() {
                     className="text-sm text-typography-700 dark:text-[#E8EBF0]"
                     style={{fontFamily: "Inter_500Medium"}}
                   >
-                    Tamanho
+                    Size
                   </Text>
                   <Text className="text-base text-typography-900 dark:text-[#E8EBF0]">
                     {restoreBackup.size.toFixed(1)} GB
@@ -624,12 +623,12 @@ export default function BackupsScreen() {
                     className="text-sm text-typography-700 dark:text-[#E8EBF0]"
                     style={{fontFamily: "Inter_500Medium"}}
                   >
-                    Selecionar Máquina Destino
+                    Select target machine
                   </Text>
                   <Select>
                     <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
                       <SelectInput
-                        placeholder="Escolha uma máquina..."
+                        placeholder="Choose a machine..."
                         value={selectedMachine}
                         className="text-typography-900 dark:text-[#E8EBF0]"
                       />
@@ -671,7 +670,7 @@ export default function BackupsScreen() {
                   className="text-typography-700 dark:text-[#E8EBF0]"
                   style={{fontFamily: "Inter_500Medium"}}
                 >
-                  Cancelar
+                  Cancel
                 </ButtonText>
               </Button>
               <Button
@@ -683,7 +682,7 @@ export default function BackupsScreen() {
                   className="text-background-0 dark:text-typography-900"
                   style={{fontFamily: "Inter_600SemiBold"}}
                 >
-                  Restaurar
+                  Restore
                 </ButtonText>
               </Button>
             </HStack>

@@ -130,7 +130,7 @@ export function CreateMountDrawer({
   const handleDirectoryFetch = React.useCallback(
     async (customPath?: string) => {
       if (!machineName.trim()) {
-        setDirError("Selecione uma máquina antes de listar as pastas.");
+        setDirError("Select a machine before listing folders.");
         return undefined;
       }
 
@@ -151,7 +151,7 @@ export function CreateMountDrawer({
         const message =
           err instanceof Error
             ? err.message
-            : "Erro ao carregar o conteúdo do diretório.";
+            : "Error loading directory contents.";
         setDirError(message);
         setDirListing(null);
         return undefined;
@@ -164,7 +164,7 @@ export function CreateMountDrawer({
 
   const handleOpenDirectoryModal = React.useCallback(async () => {
     if (!machineName.trim()) {
-      setDirError("Selecione uma máquina antes de listar as pastas.");
+      setDirError("Select a machine before listing folders.");
       return;
     }
     setDirError(null);
@@ -194,12 +194,12 @@ export function CreateMountDrawer({
     const trimmedName = mountName.trim();
 
     if (!trimmedMachine) {
-      setCreateError("Selecione uma máquina.");
+      setCreateError("Select a machine.");
       return;
     }
 
     if (!trimmedName) {
-      setCreateError("Informe um nome para o mount.");
+      setCreateError("Enter a name for the mount.");
       return;
     }
 
@@ -217,7 +217,7 @@ export function CreateMountDrawer({
       onClose();
       onSuccess?.();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro ao criar o mount.";
+      const message = err instanceof Error ? err.message : "Error creating mount.";
       setCreateError(message);
     } finally {
       setIsCreating(false);

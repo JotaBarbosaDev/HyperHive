@@ -76,7 +76,7 @@ export default function MountsScreen() {
                       className="text-[#EF4444]"
                       style={{fontFamily: "Inter_400Regular"}}
                     >
-                      Erro ao carregar mounts: {error}
+                      Error loading mounts: {error}
                     </Text>
                   </Box>
                 ) : mounts.length === 0 ? (
@@ -85,7 +85,7 @@ export default function MountsScreen() {
                       className="color-[#9AA4B8] web:text-base"
                       style={{fontFamily: "Inter_400Regular"}}
                     >
-                      Nenhum mount encontrado.
+                      No mounts found.
                     </Text>
                   </Box>
                 ) : (

@@ -165,14 +165,14 @@ export default function NotFoundHostsScreen() {
 
   const handleCertificatesError = React.useCallback(
     (_error: unknown) => {
-      showToast("Erro ao carregar certificados", "Não foi possível obter os certificados SSL.", "error");
+      showToast("Error loading certificates", "Could not fetch SSL certificates.", "error");
     },
     [showToast]
   );
 
   const {certificateOptions, loadingCertificates, refreshCertificates} = useCertificatesOptions(handleCertificatesError);
   const selectedCertificateLabel =
-    certificateOptions.find((option) => option.value === String(form.certificate_id ?? 0))?.label || "Sem certificado";
+    certificateOptions.find((option) => option.value === String(form.certificate_id ?? 0))?.label || "No certificate";
 
   const loadHosts = React.useCallback(
     async (mode: "full" | "refresh" | "silent" = "full") => {
@@ -183,7 +183,7 @@ export default function NotFoundHostsScreen() {
         setHosts(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Failed to load 404 hosts", err);
-        showToast("Erro ao carregar", "Não foi possível obter os 404 hosts.", "error");
+        showToast("Error loading", "Could not fetch the 404 hosts.", "error");
       } finally {
         if (mode === "full") setLoading(false);
         if (mode === "refresh") setRefreshing(false);
@@ -235,7 +235,7 @@ export default function NotFoundHostsScreen() {
   const handleSaveHost = async () => {
     const domain_names = parseDomains(domainsInput);
     if (!domain_names.length) {
-      showToast("Domínios obrigatórios", "Informe ao menos um domínio.", "error");
+      showToast("Domains required", "Provide at least one domain.", "error");
       return;
     }
     const payload: NotFoundHostPayload = {
@@ -249,17 +249,17 @@ export default function NotFoundHostsScreen() {
     try {
       if (editingHost?.id) {
         await updateNotFoundHost(editingHost.id, payload);
-        showToast("404 Host atualizado", "Configuração editada com sucesso.");
+        showToast("404 Host updated", "Configuration edited successfully.");
       } else {
         await createNotFoundHost(payload);
-        showToast("404 Host criado", "Novo host de erro 404 adicionado.");
+        showToast("404 Host created", "New 404 error host added.");
       }
       setModalOpen(false);
       setEditingHost(null);
       await loadHosts("silent");
     } catch (err) {
       console.error("Failed to persist 404 host", err);
-      showToast("Erro ao salvar", "Verifique os dados e tente novamente.", "error");
+      showToast("Error saving", "Check the data and try again.", "error");
     } finally {
       setSaving(false);
     }
@@ -272,15 +272,15 @@ export default function NotFoundHostsScreen() {
     try {
       if (enabled) {
         await disableNotFoundHost(host.id);
-        showToast("Host desativado", "O host 404 foi desativado.");
+        showToast("Host disabled", "The 404 host was disabled.");
       } else {
         await enableNotFoundHost(host.id);
-        showToast("Host ativado", "O host 404 foi ativado.");
+        showToast("Host enabled", "The 404 host was enabled.");
       }
       await loadHosts("silent");
     } catch (err) {
       console.error("Failed to toggle 404 host", err);
-      showToast("Erro ao alterar status", "Não foi possível atualizar o host.", "error");
+      showToast("Error changing status", "Could not update the host.", "error");
     } finally {
       setTogglingId(null);
     }
@@ -291,12 +291,12 @@ export default function NotFoundHostsScreen() {
     setDeletingId(deleteTarget.id);
     try {
       await deleteNotFoundHost(deleteTarget.id);
-      showToast("Host removido", "404 Host apagado com sucesso.");
+      showToast("Host removed", "404 host deleted successfully.");
       setDeleteTarget(null);
       await loadHosts("silent");
     } catch (err) {
       console.error("Failed to delete 404 host", err);
-      showToast("Erro ao apagar", "Não foi possível remover o host.", "error");
+      showToast("Error deleting", "Could not remove the host.", "error");
     } finally {
       setDeletingId(null);
     }
@@ -349,15 +349,15 @@ export default function NotFoundHostsScreen() {
             404 Hosts
           </Heading>
           <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
-            Domínios que retornarão erro 404 - Not Found para todas as requisições.
+            Domains that will return 404 - Not Found for every request.
           </Text>
 
           <HStack className="mt-6 items-center justify-between flex-wrap gap-3">
             <HStack className="gap-2 flex-wrap">
               {[
-                {key: "all" as FilterTab, label: `Todos (${stats.total})`},
-                {key: "active" as FilterTab, label: `Ativos (${stats.active})`},
-                {key: "inactive" as FilterTab, label: `Inativos (${stats.inactive})`},
+                {key: "all" as FilterTab, label: `All (${stats.total})`},
+                {key: "active" as FilterTab, label: `Active (${stats.active})`},
+                {key: "inactive" as FilterTab, label: `Inactive (${stats.inactive})`},
               ].map((tab) => {
                 const active = filter === tab.key;
                 return (
@@ -380,7 +380,7 @@ export default function NotFoundHostsScreen() {
             </HStack>
             <Button action="primary" variant="solid" size="md" onPress={openCreateModal} className="rounded-full px-5">
               <ButtonIcon as={Plus} size="sm" />
-              <ButtonText>Adicionar 404 Host</ButtonText>
+              <ButtonText>Add 404 Host</ButtonText>
             </Button>
           </HStack>
 
@@ -388,9 +388,9 @@ export default function NotFoundHostsScreen() {
             renderLoading()
           ) : filteredHosts.length === 0 ? (
             <Box className="mt-10 p-6 border border-dashed border-background-300 rounded-2xl bg-background-0 items-center">
-              <Text className="text-typography-700 font-semibold text-base">Nenhum host 404 encontrado</Text>
+              <Text className="text-typography-700 font-semibold text-base">No 404 hosts found</Text>
               <Text className="text-typography-500 text-sm mt-1 text-center">
-                Clique em &quot;Adicionar 404 Host&quot; para criar o primeiro domínio de resposta 404.
+                Click "Add 404 Host" to create the first 404 response domain.
               </Text>
             </Box>
           ) : (
@@ -428,7 +428,7 @@ export default function NotFoundHostsScreen() {
                           ) : (
                             <ButtonIcon as={Power} size="sm" />
                           )}
-                          <ButtonText>{enabled ? "Desativar" : "Ativar"}</ButtonText>
+                          <ButtonText>{enabled ? "Disable" : "Enable"}</ButtonText>
                         </Button>
                         <Button
                           action="default"
@@ -462,27 +462,27 @@ export default function NotFoundHostsScreen() {
                           <ShieldOff size={18} color="#9ca3af" />
                         )}
                         <Text className={`text-sm ${host.ssl_forced ? "text-success-600" : "text-typography-600"}`}>
-                          SSL {host.ssl_forced ? "(Forçado)" : "(Opcional)"}
+                          SSL {host.ssl_forced ? "(Forced)" : "(Optional)"}
                         </Text>
                       </HStack>
-                      {host.certificate_id ? <StatusChip label="Com SSL" /> : null}
+                      {host.certificate_id ? <StatusChip label="SSL enabled" /> : null}
                       {host.http2_support ? <StatusChip label="HTTP/2" /> : null}
                       {host.hsts_enabled ? (
-                        <StatusChip label={`HSTS${host.hsts_subdomains ? " + Subdomínios" : ""}`} />
+                        <StatusChip label={`HSTS${host.hsts_subdomains ? " + Subdomains" : ""}`} />
                       ) : null}
                     </HStack>
 
                     <HStack className="mt-3 gap-2 flex-wrap">
                       {host.meta?.letsencrypt_agree ? <StatusChip label="Let's Encrypt" /> : null}
                       {host.meta?.dns_challenge ? <StatusChip label="DNS Challenge" /> : null}
-                      <StatusChip label={enabled ? "Ativo" : "Inativo"} active={enabled} />
+                      <StatusChip label={enabled ? "Active" : "Inactive"} active={enabled} />
                     </HStack>
 
                     {host.advanced_config ? (
                       <Box className="mt-3 p-3 rounded-xl bg-background-50 border border-background-100">
                         <HStack className="items-center gap-2 mb-2">
                           <Shield size={16} color="#0f172a" />
-                          <Text className="text-typography-800 font-semibold text-sm">Configuração avançada</Text>
+                          <Text className="text-typography-800 font-semibold text-sm">Advanced configuration</Text>
                         </HStack>
                         <Text className="text-typography-600 text-xs leading-5">
                           {host.advanced_config}
@@ -503,10 +503,10 @@ export default function NotFoundHostsScreen() {
           <ModalHeader className="flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
             <VStack className="flex-1">
               <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
-                {editingHost ? "Editar 404 Host" : "Adicionar 404 Host"}
+                {editingHost ? "Edit 404 Host" : "Add 404 Host"}
               </Heading>
               <Text className="text-typography-600 dark:text-typography-400 mt-1">
-                Bloqueie domínios devolvendo 404, com SSL opcional e cabeçalhos HSTS.
+                Block domains by returning 404 responses with optional SSL and HSTS headers.
               </Text>
             </VStack>
             <ModalCloseButton className="text-typography-500" />
@@ -548,7 +548,7 @@ export default function NotFoundHostsScreen() {
                   <VStack className="gap-4">
                     <FormControl isRequired>
                       <FormControlLabel>
-                        <FormControlLabelText>Domínios</FormControlLabelText>
+                        <FormControlLabelText>Domains</FormControlLabelText>
                       </FormControlLabel>
                       <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
                         <InputField
@@ -559,19 +559,19 @@ export default function NotFoundHostsScreen() {
                         />
                       </Input>
                       <FormControlHelper>
-                        <FormControlHelperText>Separe por vírgula ou quebra de linha.</FormControlHelperText>
+                        <FormControlHelperText>Separate with commas or line breaks.</FormControlHelperText>
                       </FormControlHelper>
                     </FormControl>
 
                     <FormControl>
                       <FormControlLabel>
-                        <FormControlLabelText>Configuração avançada (opcional)</FormControlLabelText>
+                        <FormControlLabelText>Advanced configuration (optional)</FormControlLabelText>
                       </FormControlLabel>
                       <Textarea className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]" size="md">
                         <TextareaInput
                           value={form.advanced_config}
                           onChangeText={(text) => setForm((prev) => ({...prev, advanced_config: text}))}
-                          placeholder="Bloco de configuração Nginx opcional..."
+                          placeholder="Optional Nginx configuration block..."
                         />
                       </Textarea>
                     </FormControl>
@@ -583,7 +583,7 @@ export default function NotFoundHostsScreen() {
                     <FormControl>
                       <HStack className="items-center justify-between">
                         <FormControlLabel>
-                          <FormControlLabelText>Certificado SSL</FormControlLabelText>
+                          <FormControlLabelText>SSL Certificate</FormControlLabelText>
                         </FormControlLabel>
                         <Button
                           variant="link"
@@ -593,7 +593,7 @@ export default function NotFoundHostsScreen() {
                           onPress={() => void refreshCertificates()}
                           isDisabled={loadingCertificates}
                         >
-                          {loadingCertificates ? <ButtonSpinner /> : <ButtonText>Atualizar</ButtonText>}
+                          {loadingCertificates ? <ButtonSpinner /> : <ButtonText>Refresh</ButtonText>}
                         </Button>
                       </HStack>
                       <Select
@@ -603,7 +603,7 @@ export default function NotFoundHostsScreen() {
                       >
                         <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] h-11 px-4">
                           <SelectInput
-                            placeholder={loadingCertificates ? "A carregar certificados..." : selectedCertificateLabel}
+                            placeholder={loadingCertificates ? "Loading certificates..." : selectedCertificateLabel}
                             className="text-typography-900 dark:text-[#E8EBF0]"
                           />
                           <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-typography-400" />
@@ -628,12 +628,12 @@ export default function NotFoundHostsScreen() {
                         </SelectPortal>
                       </Select>
                       <FormControlHelper>
-                        <FormControlHelperText>Use um certificado emitido ou deixe sem SSL.</FormControlHelperText>
+                        <FormControlHelperText>Use an issued certificate or leave without SSL.</FormControlHelperText>
                       </FormControlHelper>
                     </FormControl>
 
                     <VStack className="gap-3">
-                      <Text className="text-typography-800 font-semibold">Opções de ligação</Text>
+                      <Text className="text-typography-800 font-semibold">Connection options</Text>
                       <HStack className="flex-wrap gap-4">
                         <HStack className="items-center gap-2">
                           <Switch
@@ -641,7 +641,7 @@ export default function NotFoundHostsScreen() {
                             value={form.ssl_forced}
                             onValueChange={(val) => setForm((prev) => ({...prev, ssl_forced: val}))}
                           />
-                          <Text className="text-typography-800">Forçar SSL</Text>
+                          <Text className="text-typography-800">Force SSL</Text>
                         </HStack>
                         <HStack className="items-center gap-2">
                           <Switch
@@ -667,7 +667,7 @@ export default function NotFoundHostsScreen() {
                             isDisabled={!form.hsts_enabled}
                           />
                           <Text className={`text-typography-800 ${!form.hsts_enabled ? "text-typography-500" : ""}`}>
-                            HSTS Subdomínios
+                            HSTS Subdomains
                           </Text>
                         </HStack>
                       </HStack>
@@ -680,11 +680,11 @@ export default function NotFoundHostsScreen() {
           <ModalFooter className="px-6 pb-6 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
             <HStack className="gap-3 justify-end w-full">
               <Button variant="outline" action="default" onPress={closeModal} isDisabled={saving}>
-                <ButtonText>Cancelar</ButtonText>
+                <ButtonText>Cancel</ButtonText>
               </Button>
               <Button action="primary" onPress={handleSaveHost} isDisabled={saving}>
                 {saving ? <ButtonSpinner /> : null}
-                <ButtonText>{editingHost ? "Salvar alterações" : "Criar host"}</ButtonText>
+                <ButtonText>{editingHost ? "Save changes" : "Create host"}</ButtonText>
               </Button>
             </HStack>
           </ModalFooter>
@@ -696,25 +696,25 @@ export default function NotFoundHostsScreen() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <Heading size="md" className="text-typography-900">
-              Remover host 404?
+              Remove 404 host?
             </Heading>
           </AlertDialogHeader>
           <AlertDialogBody>
             <Text className="text-typography-700">
-              Esta ação apagará{" "}
+              This action will delete{" "}
               <Text className="font-semibold">
                 {(deleteTarget?.domain_names ?? []).join(", ")}
               </Text>
-              . Deseja continuar?
+              . Continue?
             </Text>
           </AlertDialogBody>
           <AlertDialogFooter className="gap-3">
             <Button variant="outline" action="default" onPress={() => setDeleteTarget(null)} isDisabled={Boolean(deletingId)}>
-              <ButtonText>Cancelar</ButtonText>
+              <ButtonText>Cancel</ButtonText>
             </Button>
             <Button action="negative" onPress={handleDelete} isDisabled={Boolean(deletingId)}>
               {deletingId ? <ButtonSpinner /> : null}
-              <ButtonText>Apagar</ButtonText>
+              <ButtonText>Delete</ButtonText>
             </Button>
           </AlertDialogFooter>
           <AlertDialogCloseButton />

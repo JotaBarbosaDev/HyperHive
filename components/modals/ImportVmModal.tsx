@@ -99,10 +99,8 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
           placement: "top",
           render: ({ id }) => (
             <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1" action="error">
-              <ToastTitle size="sm">Erro ao carregar listas</ToastTitle>
-              <ToastDescription size="sm">
-                Não foi possível listar NFS/Slaves. Verifique conexão e tente novamente.
-              </ToastDescription>
+              <ToastTitle size="sm">Error loading lists</ToastTitle>
+              <ToastDescription size="sm">Could not list NFS/Slaves. Check the connection and try again.</ToastDescription>
             </Toast>
           ),
         });
@@ -120,8 +118,8 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
         placement: "top",
         render: ({ id }) => (
           <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1" action="error">
-            <ToastTitle size="sm">Erro</ToastTitle>
-            <ToastDescription size="sm">Selecione pelo menos um slave</ToastDescription>
+            <ToastTitle size="sm">Error</ToastTitle>
+            <ToastDescription size="sm">Select at least one slave.</ToastDescription>
           </Toast>
         ),
       });
@@ -134,15 +132,13 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
       const cpuXmlResult = await getCpuDisableFeatures(selectedSlaves);
       setCpuXml(cpuXmlResult);
     } catch (error) {
-      console.error("Erro ao obter CPUs:", error);
+      console.error("Error fetching CPUs:", error);
       toast.show({
         placement: "top",
         render: ({ id }) => (
           <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1" action="error">
-            <ToastTitle size="sm">Erro</ToastTitle>
-            <ToastDescription size="sm">
-              Erro ao obter CPUs. Verifique o console para mais detalhes.
-            </ToastDescription>
+            <ToastTitle size="sm">Error</ToastTitle>
+            <ToastDescription size="sm">Failed to fetch CPUs. Check the console for more details.</ToastDescription>
           </Toast>
         ),
       });
@@ -193,10 +189,8 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
         placement: "top",
         render: ({ id }) => (
           <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1" action="error">
-            <ToastTitle size="sm">Dados obrigatórios faltando</ToastTitle>
-            <ToastDescription size="sm">
-              Nome, Slave, NFS Share, Rede, vCPU, Memória e arquivo da VM são obrigatórios
-            </ToastDescription>
+            <ToastTitle size="sm">Required data missing</ToastTitle>
+            <ToastDescription size="sm">Name, Slave, NFS Share, Network, vCPU, Memory, and VM file are required.</ToastDescription>
           </Toast>
         ),
       });
@@ -208,7 +202,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
         placement: "top",
         render: ({ id }) => (
           <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1" action="error">
-            <ToastTitle size="sm">Import disponível apenas no navegador</ToastTitle>
+            <ToastTitle size="sm">Import available only in the browser</ToastTitle>
           </Toast>
         ),
       });
@@ -240,8 +234,8 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
         placement: "top",
         render: ({ id }) => (
           <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1" action="success">
-            <ToastTitle size="sm">Importação iniciada</ToastTitle>
-            <ToastDescription size="sm">O upload do disco da VM foi enviado ao servidor.</ToastDescription>
+            <ToastTitle size="sm">Import started</ToastTitle>
+            <ToastDescription size="sm">The VM disk upload was sent to the server.</ToastDescription>
           </Toast>
         ),
       });
@@ -252,12 +246,12 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
       setShowModal(false);
       resetForm();
     } catch (error) {
-      console.error("Erro ao importar VM:", error);
+      console.error("Error importing VM:", error);
       toast.show({
         placement: "top",
         render: ({ id }) => (
           <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1" action="error">
-            <ToastTitle size="sm">Erro ao importar VM</ToastTitle>
+            <ToastTitle size="sm">Error importing VM</ToastTitle>
             <ToastDescription size="sm">
               {error instanceof Error ? error.message : String(error)}
             </ToastDescription>
@@ -279,12 +273,12 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
         placement: "top",
         render: ({ id }) => (
           <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1" action="success">
-            <ToastTitle size="sm">XML copiado</ToastTitle>
+            <ToastTitle size="sm">XML copied</ToastTitle>
           </Toast>
         ),
       });
     } catch (err) {
-      console.warn("Clipboard indisponível", err);
+      console.warn("Clipboard unavailable", err);
     }
   };
 
@@ -314,7 +308,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                     className="text-sm text-typography-700 dark:text-typography-300"
                     style={{ fontFamily: "Inter_600SemiBold" }}
                   >
-                    Nome da VM
+                    VM Name
                   </Text>
                   <Input variant="outline" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
                     <InputField
@@ -335,21 +329,21 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                   </Text>
                   <Select selectedValue={slave} onValueChange={setSlave} isDisabled={loadingOptions || slaveOptions.length === 0}>
                     <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
-                      <SelectInput placeholder={loadingOptions ? "Carregando..." : "Selecione..."} className="text-typography-900 dark:text-[#E8EBF0]" />
+                      <SelectInput placeholder={loadingOptions ? "Loading..." : "Select..."} className="text-typography-900 dark:text-[#E8EBF0]" />
                       <SelectIcon as={ChevronDown} className="mr-3" />
                     </SelectTrigger>
                     <SelectPortal>
                       <SelectBackdrop />
                       <SelectContent className="bg-background-0 dark:bg-[#151F30]">
                         <SelectDragIndicatorWrapper>
-                          <SelectDragIndicator />
-                        </SelectDragIndicatorWrapper>
-                        {slaveOptions.length === 0 ? (
-                          <SelectItem label={loadingOptions ? "Carregando..." : "Nenhum slave encontrado"} value="" isDisabled />
-                        ) : (
-                          slaveOptions.map((s) => (
-                            <SelectItem
-                              key={s.MachineName}
+                        <SelectDragIndicator />
+                      </SelectDragIndicatorWrapper>
+                      {slaveOptions.length === 0 ? (
+                        <SelectItem label={loadingOptions ? "Loading..." : "No slaves found"} value="" isDisabled />
+                      ) : (
+                        slaveOptions.map((s) => (
+                          <SelectItem
+                            key={s.MachineName}
                               label={s.MachineName}
                               value={s.MachineName}
                               className="text-typography-900 dark:text-[#E8EBF0]"
@@ -384,7 +378,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                     className="text-sm text-typography-700 dark:text-typography-300"
                     style={{ fontFamily: "Inter_600SemiBold" }}
                   >
-                    Memória (MB)
+                    Memory (MB)
                   </Text>
                   <Input variant="outline" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
                     <InputField
@@ -428,7 +422,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                     }}
                   >
                     <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
-                      <SelectInput placeholder="Selecione a rede" className="text-typography-900 dark:text-[#E8EBF0]" />
+                      <SelectInput placeholder="Select network" className="text-typography-900 dark:text-[#E8EBF0]" />
                       <SelectIcon as={ChevronDown} className="mr-3" />
                     </SelectTrigger>
                     <SelectPortal>
@@ -439,7 +433,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                         </SelectDragIndicatorWrapper>
                         <SelectItem label="default" value="default" className="text-typography-900 dark:text-[#E8EBF0]" />
                         <SelectItem label="512rede" value="512rede" className="text-typography-900 dark:text-[#E8EBF0]" />
-                        <SelectItem label="outro..." value="outro" className="text-typography-900 dark:text-[#E8EBF0]" />
+                        <SelectItem label="other..." value="outro" className="text-typography-900 dark:text-[#E8EBF0]" />
                       </SelectContent>
                     </SelectPortal>
                   </Select>
@@ -448,7 +442,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                       <InputField
                         value={network}
                         onChangeText={setNetwork}
-                        placeholder="Digite o nome da rede"
+                        placeholder="Enter the network name"
                         className="text-typography-900 dark:text-[#E8EBF0]"
                       />
                     </Input>
@@ -464,14 +458,14 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                   </Text>
                   <Select selectedValue={nfsShare} onValueChange={setNfsShare} isDisabled={loadingOptions || mountOptions.length === 0}>
                     <SelectTrigger variant="outline" size="md">
-                      <SelectInput placeholder={loadingOptions ? "Carregando..." : "Select NFS"} />
+                      <SelectInput placeholder={loadingOptions ? "Loading..." : "Select NFS"} />
                       <SelectIcon className="mr-3" as={ChevronDown} />
                     </SelectTrigger>
                     <SelectPortal>
                       <SelectBackdrop />
                       <SelectContent>
                         {mountOptions.length === 0 ? (
-                          <SelectItem label={loadingOptions ? "Carregando..." : "Nenhum NFS encontrado"} value="" isDisabled />
+                          <SelectItem label={loadingOptions ? "Loading..." : "No NFS found"} value="" isDisabled />
                         ) : (
                           mountOptions.map((s) => (
                             <SelectItem
@@ -492,7 +486,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                     className="text-sm text-typography-700 dark:text-typography-300"
                     style={{ fontFamily: "Inter_600SemiBold" }}
                   >
-                    VNC Password (opcional)
+                    VNC Password (optional)
                   </Text>
                   <Input variant="outline" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
                     <InputField
@@ -511,7 +505,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                   className="text-sm text-typography-700 dark:text-typography-300"
                   style={{ fontFamily: "Inter_600SemiBold" }}
                 >
-                  Arquivo da VM
+                  VM file
                 </Text>
                 {isWeb ? (
                   <>
@@ -535,10 +529,10 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                         </Box>
                         <VStack className="flex-1">
                           <Text className="text-typography-900 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_600SemiBold" }}>
-                            {selectedFile ? selectedFile.name : "Selecione o arquivo .qcow2"}
+                            {selectedFile ? selectedFile.name : "Select the .qcow2 file"}
                           </Text>
                           <Text className="text-xs text-typography-600 dark:text-typography-400">
-                            {selectedFile ? formatFileSize(selectedFile.size) : "Tamanho máximo depende do backend"}
+                            {selectedFile ? formatFileSize(selectedFile.size) : "Maximum size depends on the backend"}
                           </Text>
                         </VStack>
                       </HStack>
@@ -558,7 +552,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                 ) : (
                   <Box className="border border-outline-200 dark:border-[#2A3B52] rounded-lg p-3 bg-background-0 dark:bg-[#0F1A2E]">
                     <Text className="text-sm text-typography-600 dark:text-typography-400">
-                      Importação com upload de disco está disponível somente na versão web.
+                      Importing with disk upload is available only on the web version.
                     </Text>
                   </Box>
                 )}
@@ -584,12 +578,12 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                       className="text-typography-900 dark:text-[#E8EBF0]"
                       style={{ fontFamily: "Inter_700Bold" }}
                     >
-                      Configuração Avançada de CPU
+                      Advanced CPU Configuration
                     </Heading>
                   </HStack>
 
                   <Text className="text-sm text-typography-600 dark:text-typography-400 mb-4">
-                    Selecione slaves para comparar e obter a configuração de CPU compatível entre eles.
+                    Select slaves to compare and get a CPU configuration compatible between them.
                   </Text>
 
                   <VStack className="gap-2 mb-4">
@@ -597,13 +591,13 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                       className="text-sm text-typography-700 dark:text-typography-300"
                       style={{ fontFamily: "Inter_600SemiBold" }}
                     >
-                      Slaves selecionados ({selectedSlaves.length})
+                      Selected slaves ({selectedSlaves.length})
                     </Text>
 
                     <Box className="p-3 bg-background-50 dark:bg-[#0A1628] border border-outline-200 dark:border-[#1E2F47] rounded-lg min-h-[60px]">
                       {selectedSlaves.length === 0 ? (
                         <Text className="text-sm text-typography-400 dark:text-typography-500 text-center">
-                          Nenhum slave selecionado
+                          No slave selected
                         </Text>
                       ) : (
                         <HStack className="gap-2 flex-wrap">
@@ -644,7 +638,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                       className="text-sm text-typography-700 dark:text-typography-300"
                       style={{ fontFamily: "Inter_600SemiBold" }}
                     >
-                      Adicionar slave à comparação
+                      Add slave to comparison
                     </Text>
 
                     <Select
@@ -658,7 +652,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                       isDisabled={loadingOptions || availableSlaves.length === 0}
                     >
                       <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
-                        <SelectInput placeholder={loadingOptions ? "Carregando..." : "Selecione um slave..."} className="text-typography-900 dark:text-[#E8EBF0]" />
+                        <SelectInput placeholder={loadingOptions ? "Loading..." : "Select a slave..."} className="text-typography-900 dark:text-[#E8EBF0]" />
                         <SelectIcon as={ChevronDown} className="mr-3" />
                       </SelectTrigger>
                       <SelectPortal>
@@ -668,7 +662,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                             <SelectDragIndicator />
                           </SelectDragIndicatorWrapper>
                           {availableSlaves.length === 0 ? (
-                            <SelectItem label="Todos os slaves já foram adicionados" value="" isDisabled />
+                            <SelectItem label="All slaves have been added" value="" isDisabled />
                           ) : (
                             availableSlaves.map((s) => (
                               <SelectItem key={s} label={s} value={s} className="text-typography-900 dark:text-[#E8EBF0]" />
@@ -688,7 +682,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                     {loadingCPU ? (
                       <>
                         <ButtonSpinner className="mr-2" />
-                        <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Obtendo CPUs...</ButtonText>
+                        <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Fetching CPUs...</ButtonText>
                       </>
                     ) : (
                       <>
@@ -704,7 +698,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                         className="text-sm text-typography-700 dark:text-typography-300"
                         style={{ fontFamily: "Inter_600SemiBold" }}
                       >
-                        XML de Configuração da CPU
+                        CPU Configuration XML
                       </Text>
 
                       <HStack className="gap-2">
@@ -725,7 +719,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                     </HStack>
 
                     <Text className="text-xs text-typography-500 dark:text-typography-400">
-                      Este XML será usado para configurar a CPU da VM. Você pode editá-lo manualmente se necessário.
+                      This XML configures the VM CPU. You can edit it manually if needed.
                     </Text>
 
                     <Box className="bg-[#0F172A] border border-[#1E2F47] rounded-lg overflow-hidden">
@@ -771,7 +765,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
               }}
               disabled={importing}
             >
-              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancelar</ButtonText>
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
             </Button>
 
             <Button
@@ -780,7 +774,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
               disabled={importing || !isWeb}
             >
               {importing ? <ButtonSpinner className="mr-2" /> : null}
-              <ButtonText className="text-background-0 dark:text-typography-900">Importar VM</ButtonText>
+              <ButtonText className="text-background-0 dark:text-typography-900">Import VM</ButtonText>
             </Button>
           </HStack>
         </ModalFooter>

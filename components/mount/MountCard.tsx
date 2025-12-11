@@ -63,7 +63,7 @@ export function MountCard({
         },
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro ao remover mount.";
+      const message = err instanceof Error ? err.message : "Error removing mount.";
       setDeleteError(message);
     } finally {
       setIsDeleting(false);
