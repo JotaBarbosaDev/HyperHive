@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useRef, useState} from "react";
-import {LogEntry, LogLevel, LOG_LEVEL_REVERSE_MAP} from "@/types/log";
+import {LogEntry, LogLevel, LOG_LEVEL_MAP, LOG_LEVEL_REVERSE_MAP} from "@/types/log";
 import {listLogs} from "@/services/hyperhive";
+import {ensureHyperHiveWebsocket, subscribeToHyperHiveWebsocket} from "@/services/websocket-client";
 
 type FetchMode = "initial" | "refresh";
 
@@ -32,7 +33,7 @@ const extractMachineFromContent = (content: string): string => {
 
 // Função para remover [máquina] do início da mensagem
 const cleanMessageContent = (content: string): string => {
-  return content.replace(/^\[([^\]]+)\]\s*/, '');
+  return content.replace(/^\[([^\]]+)\]\s*/, "");
 };
 
 const parseTimestampMs = (value: unknown): number => {
@@ -51,7 +52,7 @@ const parseTimestampMs = (value: unknown): number => {
 // Função para normalizar os dados recebidos da API
 const normalizeLogEntry = (rawLog: any, index: number): LogEntry => {
   // Se rawLog for uma string ou algo primitivo, converter para objeto
-  const logObj = typeof rawLog === 'object' && rawLog !== null ? rawLog : {content: String(rawLog)};
+  const logObj = typeof rawLog === "object" && rawLog !== null ? rawLog : {content: String(rawLog)};
   
   // Extrair conteúdo da mensagem
   const content = logObj.content || logObj.message || logObj.msg || String(logObj);
@@ -66,6 +67,120 @@ const normalizeLogEntry = (rawLog: any, index: number): LogEntry => {
     rawContent: typeof content === "string" ? content : undefined,
     raw: rawLog,
   };
+};
+
+const resolveLogLevelFromHint = (hint: unknown): LogLevel | null => {
+  if (typeof hint === "number") {
+    const mapped = (LOG_LEVEL_REVERSE_MAP as Record<number, LogLevel | undefined>)[hint];
+    return mapped ?? null;
+  }
+  if (typeof hint === "string") {
+    const trimmed = hint.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const numeric = Number(trimmed);
+    if (Number.isFinite(numeric)) {
+      const mapped = (LOG_LEVEL_REVERSE_MAP as Record<number, LogLevel | undefined>)[numeric];
+      return mapped ?? null;
+    }
+    const normalized = trimmed.toLowerCase();
+    if (["info", "error", "warn", "debug"].includes(normalized)) {
+      return normalized as LogLevel;
+    }
+  }
+  return null;
+};
+
+const decodeSocketPayload = async (payload: unknown): Promise<unknown> => {
+  if (typeof Blob !== "undefined" && payload instanceof Blob) {
+    try {
+      return await payload.text();
+    } catch (err) {
+      console.warn("useLogs: failed to read Blob payload", err);
+      return null;
+    }
+  }
+  if (typeof ArrayBuffer !== "undefined" && payload instanceof ArrayBuffer) {
+    if (typeof TextDecoder !== "undefined") {
+      try {
+        return new TextDecoder().decode(payload);
+      } catch (err) {
+        console.warn("useLogs: failed to decode ArrayBuffer payload", err);
+        return payload;
+      }
+    }
+    return payload;
+  }
+  if (typeof ArrayBuffer !== "undefined" && ArrayBuffer.isView(payload)) {
+    const view = payload as ArrayBufferView;
+    if (typeof TextDecoder !== "undefined") {
+      try {
+        return new TextDecoder().decode(view.buffer);
+      } catch (err) {
+        console.warn("useLogs: failed to decode BufferView payload", err);
+        return payload;
+      }
+    }
+    return view.buffer;
+  }
+  return payload;
+};
+
+const parseLogsRecord = (message: unknown): Record<string, unknown> | null => {
+  if (!message) {
+    return null;
+  }
+  if (typeof message === "string") {
+    const trimmed = message.trim();
+    if (!trimmed) {
+      return null;
+    }
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return null;
+    }
+  }
+  if (typeof message === "object") {
+    return message as Record<string, unknown>;
+  }
+  return null;
+};
+
+const buildLogEntryFromRecord = (record: Record<string, unknown>): LogEntry | null => {
+  const type = typeof record.type === "string" ? record.type.trim().toLowerCase() : "";
+  if (type !== "logs") {
+    return null;
+  }
+  const contentCandidate = record.data ?? record.message ?? record.content;
+  if (typeof contentCandidate !== "string" || !contentCandidate.trim()) {
+    return null;
+  }
+  const now = new Date();
+  const timestampSource =
+    typeof record.timestamp === "string"
+      ? record.timestamp
+      : typeof record.ts === "string"
+        ? record.ts
+        : now.toISOString();
+  const numericTs =
+    typeof record.ts === "number"
+      ? record.ts
+      : typeof record.timestamp === "number"
+        ? record.timestamp
+        : now.getTime();
+  const hintedLevel = resolveLogLevelFromHint(record.extra ?? record.level);
+  return normalizeLogEntry(
+    {
+      ...record,
+      timestamp: timestampSource,
+      ts: numericTs,
+      level: hintedLevel ?? record.level,
+      content: contentCandidate,
+    },
+    0
+  );
 };
 
 export function useLogs({token, limit = 200, level}: UseLogsOptions = {}) {
@@ -135,6 +250,64 @@ export function useLogs({token, limit = 200, level}: UseLogsOptions = {}) {
   }, [fetchLogs]);
 
   const refresh = useCallback(() => fetchLogs("refresh"), [fetchLogs]);
+
+  const processWsLog = useCallback(
+    async (payload: unknown) => {
+      const decoded = await decodeSocketPayload(payload);
+      if (!decoded) {
+        return;
+      }
+      const record = parseLogsRecord(decoded);
+      if (!record) {
+        return;
+      }
+      const logEntry = buildLogEntryFromRecord(record);
+      if (!logEntry) {
+        return;
+      }
+      if (typeof level === "number") {
+        const entryLevelNumber = LOG_LEVEL_MAP[logEntry.level];
+        if (entryLevelNumber !== undefined && entryLevelNumber !== level) {
+          return;
+        }
+      }
+      setLogs((prev) => {
+        const next = [logEntry, ...prev];
+        if (typeof limit === "number" && Number.isFinite(limit) && next.length > limit) {
+          return next.slice(0, limit);
+        }
+        return next;
+      });
+    },
+    [level, limit]
+  );
+
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+    let isCancelled = false;
+    let unsubscribe: (() => void) | undefined;
+    const setup = async () => {
+      try {
+        await ensureHyperHiveWebsocket();
+      } catch (err) {
+        console.warn("useLogs: unable to connect to HyperHive WebSocket", err);
+        return;
+      }
+      if (isCancelled) {
+        return;
+      }
+      unsubscribe = subscribeToHyperHiveWebsocket((message) => {
+        void processWsLog(message);
+      });
+    };
+    setup();
+    return () => {
+      isCancelled = true;
+      unsubscribe?.();
+    };
+  }, [token, processWsLog]);
 
   return {
     logs,

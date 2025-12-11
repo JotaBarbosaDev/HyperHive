@@ -464,7 +464,7 @@ export default function LogsScreen() {
             <View style={styles.detailHeader}>
             <Text style={styles.detailTitle}>Detalhe do log</Text>
             <TouchableOpacity onPress={() => setSelected(null)}>
-              <Text style={styles.close}>Fechar</Text>
+              <Text style={styles.close}>Close</Text>
             </TouchableOpacity>
           </View>
           <Text style={styles.detailMeta}>
