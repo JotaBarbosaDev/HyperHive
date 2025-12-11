@@ -81,6 +81,7 @@ const ROUTE_TITLE_MAP: Record<string, string> = {
   "/orders": "Orders",
   "/modal": "Modal",
   "/tabs": "Tabs",
+  "/spa": "SPA",
 };
 
 const normalizePathname = (path: string) => {

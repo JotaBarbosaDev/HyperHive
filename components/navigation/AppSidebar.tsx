@@ -40,6 +40,7 @@ import {
   MoonStar,
   MonitorSmartphone,
   SunMedium,
+  KeyRound,
 } from "lucide-react-native";
 import {usePathname, useRouter} from "expo-router";
 import { clearAuthToken} from "@/services/auth-storage";
@@ -96,6 +97,11 @@ const MENU_ITEMS: MenuItem[] = [
     label: "WireGuard VPN",
     icon: Shield,
     route: "/wireguard",
+  },
+  {
+    label: "SPA",
+    icon: KeyRound,
+    route: "/spa",
   },
   {
     label: "Updates",
