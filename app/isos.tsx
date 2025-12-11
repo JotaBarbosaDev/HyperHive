@@ -1607,7 +1607,7 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
       };
 
       setDownloadMonitor(nextMonitor);
-      setIsMonitoring(stage === "downloading" || stage === "connecting");
+      setIsMonitoring(stage === "downloading");
 
       if (stage === "error") {
         setSubmitError(errorMessage ?? statusText);

@@ -7,6 +7,7 @@ import GorhomBottomSheet, {
   BottomSheetFlatList as GorhomBottomSheetFlatList,
   BottomSheetSectionList as GorhomBottomSheetSectionList,
 } from '@gorhom/bottom-sheet';
+import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 import { Platform } from 'react-native';
 import type { PressableProps, TextProps } from 'react-native';
 import { FocusScope } from '@gluestack-ui/utils/aria';
@@ -41,14 +42,15 @@ const bottomSheetItemStyle = tva({
   base: 'p-3 flex-row items-center rounded-sm w-full disabled:opacity-0.4 web:pointer-events-auto disabled:cursor-not-allowed hover:bg-background-50 active:bg-background-100 focus:bg-background-100 web:focus-visible:bg-background-100',
 });
 
+const defaultBottomSheetRef = React.createRef<BottomSheetMethods>();
 const BottomSheetContext = createContext<{
   visible: boolean;
-  bottomSheetRef: React.RefObject<GorhomBottomSheet>;
+  bottomSheetRef: React.RefObject<BottomSheetMethods>;
   handleClose: () => void;
   handleOpen: () => void;
 }>({
   visible: false,
-  bottomSheetRef: { current: null },
+  bottomSheetRef: defaultBottomSheetRef,
   handleClose: () => {},
   handleOpen: () => {},
 });
@@ -65,7 +67,7 @@ export const BottomSheet = ({
   onOpen?: () => void;
   onClose?: () => void;
 }) => {
-  const bottomSheetRef = useRef<GorhomBottomSheet>(null);
+  const bottomSheetRef = useRef<BottomSheetMethods>(null);
 
   const [visible, setVisible] = useState(false);
 

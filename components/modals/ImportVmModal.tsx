@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Modal,
   ModalBackdrop,
@@ -28,100 +28,80 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Checkbox, CheckboxIndicator, CheckboxIcon, CheckboxLabel } from "@/components/ui/checkbox";
-import { TextInput } from "react-native";
-import { Badge, BadgeText } from "@/components/ui/badge";
-import { ScrollView, Platform } from "react-native";
-import { Cpu, X, Copy, Trash2, ChevronDown, Check, ChevronDownIcon } from "lucide-react-native";
+import { ScrollView, Platform, TextInput } from "react-native";
+import { Cpu, X, Copy, Trash2, ChevronDown, Check, Upload } from "lucide-react-native";
 import { Pressable } from "@/components/ui/pressable";
 import { useToast, Toast, ToastTitle, ToastDescription } from "@/components/ui/toast";
-import { createVm, listIsos, listSlaves, IsoApiResponse, Slave, getCpuDisableFeatures } from "@/services/vms-client";
+import { importVm, listSlaves, Slave, getCpuDisableFeatures } from "@/services/vms-client";
 import { listMounts } from "@/services/hyperhive";
 import { Mount } from "@/types/mount";
+import { Badge, BadgeText } from "@/components/ui/badge";
+import { Progress, ProgressFilledTrack } from "@/components/ui/progress";
 
-// Try/catch para lidar com expo-clipboard
-let Clipboard: any;
-try {
-  Clipboard = require("expo-clipboard");
-} catch (e) {
-  // Fallback se expo-clipboard não estiver disponível
-  Clipboard = {
-    setStringAsync: async (text: string) => {
-      console.log("Clipboard não disponível:", text);
-    },
-  };
-}
-
-interface CreateVmModalProps {
+type ImportVmModalProps = {
   showModal: boolean;
   setShowModal: (show: boolean) => void;
-  onSuccess?: (createdName?: string) => void;
-}
+  onSuccess?: (importedName?: string) => void;
+};
 
-export default function CreateVmModal({
-  showModal,
-  setShowModal,
-  onSuccess,
-}: CreateVmModalProps) {
-  // Estados básicos da VM
-  const [name, setName] = useState("");
+const DEFAULT_CPU_XML =
+  "<cpu mode='custom' match='exact'> <model fallback='allow'>Broadwell-noTSX-IBRS</model> <vendor>Intel</vendor> </cpu>";
+
+export default function ImportVmModal({ showModal, setShowModal, onSuccess }: ImportVmModalProps) {
+  const [vmName, setVmName] = useState("");
   const [slave, setSlave] = useState("");
-  const [vcpu, setVcpu] = useState("2");
+  const [vcpu, setVcpu] = useState("4");
   const [memory, setMemory] = useState("4096");
-  const [disk, setDisk] = useState("50");
-  const [iso, setIso] = useState("");
   const [nfsShare, setNfsShare] = useState("");
   const [network, setNetwork] = useState("default");
   const [vncPassword, setVncPassword] = useState("");
-
-  // Estados de checkboxes
-  const [autoStart, setAutoStart] = useState(false);
-  const [isWindows, setIsWindows] = useState(false);
   const [live, setLive] = useState(false);
+  const [cpuXml, setCpuXml] = useState("");
 
-  // Estados para CPU XML
   const [selectedSlaves, setSelectedSlaves] = useState<string[]>([]);
   const [currentSlaveSelect, setCurrentSlaveSelect] = useState("");
-  const [cpuXml, setCpuXml] = useState("");
   const [loadingCPU, setLoadingCPU] = useState(false);
-  const [isoOptions, setIsoOptions] = useState<IsoApiResponse>([]);
-  const [mountOptions, setMountOptions] = useState<Mount[]>([]);
+
   const [slaveOptions, setSlaveOptions] = useState<Slave[]>([]);
+  const [mountOptions, setMountOptions] = useState<Mount[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const quickMemoryGb = [2, 4, 8, 16, 32, 64];
-  const quickDiskGb = [20, 50, 100, 200, 500];
+  const [importing, setImporting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const toast = useToast();
+  const isWeb = Platform.OS === "web";
+  const quickMemoryGb = [2, 4, 8, 16, 32, 64];
 
-  const availableSlaves = slaveOptions
-    .map((s) => s.MachineName)
-    .filter((s) => !selectedSlaves.includes(s));
+  const availableSlaves = useMemo(
+    () => slaveOptions.map((s) => s.MachineName).filter((s) => !selectedSlaves.includes(s)),
+    [selectedSlaves, slaveOptions]
+  );
 
   useEffect(() => {
+    if (!showModal) {
+      return;
+    }
+    if (slaveOptions.length > 0 && mountOptions.length > 0) {
+      return;
+    }
     const fetchOptions = async () => {
       setLoadingOptions(true);
       try {
-        const [fetchedIsos, fetchedMounts, fetchedSlaves] = await Promise.all([
-          listIsos(),
-          listMounts(),
-          listSlaves(),
-        ]);
-        setIsoOptions(fetchedIsos);
+        const [fetchedMounts, fetchedSlaves] = await Promise.all([listMounts(), listSlaves()]);
         setMountOptions(fetchedMounts);
         setSlaveOptions(fetchedSlaves);
-      } catch (err) {
-        console.error("Failed to list ISOs or mounts:", err);
+      } catch (error) {
+        console.error("Erro ao carregar NFS/Slaves:", error);
         toast.show({
           placement: "top",
           render: ({ id }) => (
-            <Toast
-              nativeID={"toast-" + id}
-              className="px-5 py-3 gap-3 shadow-soft-1"
-              action="error"
-            >
+            <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1" action="error">
               <ToastTitle size="sm">Erro ao carregar listas</ToastTitle>
               <ToastDescription size="sm">
-                Não foi possível listar ISOs/NFS. Verifique conexão e tente novamente.
+                Não foi possível listar NFS/Slaves. Verifique conexão e tente novamente.
               </ToastDescription>
             </Toast>
           ),
@@ -131,25 +111,17 @@ export default function CreateVmModal({
       }
     };
 
-    if (showModal && isoOptions.length === 0 && mountOptions.length === 0) {
-      fetchOptions();
-    }
-  }, [showModal, isoOptions.length, mountOptions.length, toast]);
+    fetchOptions();
+  }, [showModal, slaveOptions.length, mountOptions.length, toast]);
 
   const handleGetMutualCPUs = async () => {
     if (selectedSlaves.length === 0) {
       toast.show({
         placement: "top",
         render: ({ id }) => (
-          <Toast
-            nativeID={"toast-" + id}
-            className="px-5 py-3 gap-3 shadow-soft-1"
-            action="error"
-          >
+          <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1" action="error">
             <ToastTitle size="sm">Erro</ToastTitle>
-            <ToastDescription size="sm">
-              Selecione pelo menos um slave
-            </ToastDescription>
+            <ToastDescription size="sm">Selecione pelo menos um slave</ToastDescription>
           </Toast>
         ),
       });
@@ -166,13 +138,11 @@ export default function CreateVmModal({
       toast.show({
         placement: "top",
         render: ({ id }) => (
-          <Toast
-            nativeID={"toast-" + id}
-            className="px-5 py-3 gap-3 shadow-soft-1"
-            action="error"
-          >
+          <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1" action="error">
             <ToastTitle size="sm">Erro</ToastTitle>
-            <ToastDescription size="sm">Erro ao obter CPUs. Verifique o console para mais detalhes.</ToastDescription>
+            <ToastDescription size="sm">
+              Erro ao obter CPUs. Verifique o console para mais detalhes.
+            </ToastDescription>
           </Toast>
         ),
       });
@@ -181,35 +151,51 @@ export default function CreateVmModal({
     }
   };
 
-  const handleCreate = async () => {
+  const formatFileSize = (size: number) => {
+    if (!Number.isFinite(size)) {
+      return "";
+    }
+    if (size >= 1024 * 1024 * 1024) {
+      return `${(size / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+    }
+    if (size >= 1024 * 1024) {
+      return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+    }
+    if (size >= 1024) {
+      return `${(size / 1024).toFixed(0)} KB`;
+    }
+    return `${size} B`;
+  };
+
+  const resetForm = () => {
+    setVmName("");
+    setSlave("");
+    setVcpu("4");
+    setMemory("4096");
+    setNfsShare("");
+    setNetwork("default");
+    setVncPassword("");
+    setLive(false);
+    setCpuXml("");
+    setSelectedSlaves([]);
+    setCurrentSlaveSelect("");
+    setSelectedFile(null);
+    setUploadProgress(null);
+  };
+
+  const handleImport = async () => {
     const parsedMemory = parseInt(memory, 10);
     const parsedVcpu = parseInt(vcpu, 10);
-    const parsedDisk = parseInt(disk, 10);
-
-    const hasIso = Boolean(iso && parseInt(iso, 10));
     const hasNetwork = Boolean(network && network.trim().length > 0);
 
-    if (
-      !name ||
-      !slave ||
-      !hasIso ||
-      !nfsShare ||
-      !parsedMemory ||
-      !parsedVcpu ||
-      !parsedDisk ||
-      !hasNetwork
-    ) {
+    if (!vmName || !slave || !nfsShare || !parsedMemory || !parsedVcpu || !hasNetwork || !selectedFile) {
       toast.show({
         placement: "top",
         render: ({ id }) => (
-          <Toast
-            nativeID={"toast-" + id}
-            className="px-5 py-3 gap-3 shadow-soft-1"
-            action="error"
-          >
-            <ToastTitle size="sm">Erro</ToastTitle>
+          <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1" action="error">
+            <ToastTitle size="sm">Dados obrigatórios faltando</ToastTitle>
             <ToastDescription size="sm">
-              Nome, Slave, ISO, NFS Share, Network, vCPU, Memória e Disco são obrigatórios
+              Nome, Slave, NFS Share, Rede, vCPU, Memória e arquivo da VM são obrigatórios
             </ToastDescription>
           </Toast>
         ),
@@ -217,70 +203,61 @@ export default function CreateVmModal({
       return;
     }
 
-    setCreating(true);
-    try {
-      const vmData = {
-        machine_name: slave,
-        name,
-        memory: parsedMemory,
-        vcpu: parsedVcpu,
-        disk_sizeGB: parsedDisk,
-        iso_id: iso ? parseInt(iso) : undefined,
-        nfs_share_id: parseInt(nfsShare),
-        network,
-        VNC_password: vncPassword,
-        live,
-        cpu_xml:
-          cpuXml ||
-          "<cpu mode='custom' match='exact'> <model fallback='allow'>Broadwell-IBRS</model> <vendor>Intel</vendor></cpu>",
-        auto_start: autoStart,
-        is_windows: isWindows,
-      };
+    if (!isWeb) {
+      toast.show({
+        placement: "top",
+        render: ({ id }) => (
+          <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1" action="error">
+            <ToastTitle size="sm">Import disponível apenas no navegador</ToastTitle>
+          </Toast>
+        ),
+      });
+      return;
+    }
 
-      await createVm(vmData);
+    setImporting(true);
+    setUploadProgress(0);
+    try {
+      await importVm(
+        {
+          slave_name: slave,
+          nfs_share_id: parseInt(nfsShare, 10),
+          vm_name: vmName,
+          memory: parsedMemory,
+          vcpu: parsedVcpu,
+          network,
+          VNC_password: vncPassword || undefined,
+          cpu_xml: cpuXml || DEFAULT_CPU_XML,
+          live,
+        },
+        selectedFile,
+        {
+          onProgress: (percent) => setUploadProgress(percent),
+        }
+      );
 
       toast.show({
         placement: "top",
         render: ({ id }) => (
-          <Toast
-            nativeID={"toast-" + id}
-            className="px-5 py-3 gap-3 shadow-soft-1"
-            action="success"
-          >
-            <ToastTitle size="sm">VM criada com sucesso</ToastTitle>
+          <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1" action="success">
+            <ToastTitle size="sm">Importação iniciada</ToastTitle>
+            <ToastDescription size="sm">O upload do disco da VM foi enviado ao servidor.</ToastDescription>
           </Toast>
         ),
       });
 
-      if (onSuccess) onSuccess();
+      if (onSuccess) {
+        onSuccess(vmName);
+      }
       setShowModal(false);
-
-      // Reset form
-      setName("");
-      setSlave("");
-      setVcpu("2");
-      setMemory("4096");
-      setDisk("50");
-      setIso("");
-      setNfsShare("");
-      setNetwork("default");
-      setVncPassword("");
-      setAutoStart(false);
-      setIsWindows(false);
-      setLive(false);
-      setSelectedSlaves([]);
-      setCpuXml("");
+      resetForm();
     } catch (error) {
-      console.error("Erro ao criar VM:", error);
+      console.error("Erro ao importar VM:", error);
       toast.show({
         placement: "top",
         render: ({ id }) => (
-          <Toast
-            nativeID={"toast-" + id}
-            className="px-5 py-3 gap-3 shadow-soft-1"
-            action="error"
-          >
-            <ToastTitle size="sm">Erro ao criar VM</ToastTitle>
+          <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1" action="error">
+            <ToastTitle size="sm">Erro ao importar VM</ToastTitle>
             <ToastDescription size="sm">
               {error instanceof Error ? error.message : String(error)}
             </ToastDescription>
@@ -288,33 +265,31 @@ export default function CreateVmModal({
         ),
       });
     }
-    setCreating(false);
+    setImporting(false);
+    setUploadProgress(null);
   };
 
   const handleCopyXml = async () => {
-    if (cpuXml) {
+    if (!cpuXml) return;
+    try {
+      // Clipboard already required dynamically in CreateVmModal; using optional require here keeps parity.
+      const Clipboard = require("expo-clipboard");
       await Clipboard.setStringAsync(cpuXml);
       toast.show({
         placement: "top",
         render: ({ id }) => (
-          <Toast
-            nativeID={"toast-" + id}
-            className="px-5 py-3 gap-3 shadow-soft-1"
-            action="success"
-          >
+          <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1" action="success">
             <ToastTitle size="sm">XML copiado</ToastTitle>
           </Toast>
         ),
       });
+    } catch (err) {
+      console.warn("Clipboard indisponível", err);
     }
   };
 
   return (
-    <Modal
-      isOpen={showModal}
-      onClose={() => setShowModal(false)}
-      size="full"
-    >
+    <Modal isOpen={showModal} onClose={() => setShowModal(false)} size="full">
       <ModalBackdrop />
       <ModalContent className="max-w-[90%] max-h-[90%] web:max-w-4xl">
         <ModalHeader className="border-b border-outline-100 dark:border-[#2A3B52]">
@@ -323,7 +298,7 @@ export default function CreateVmModal({
             className="text-typography-900 dark:text-[#E8EBF0]"
             style={{ fontFamily: "Inter_700Bold" }}
           >
-            Create Virtual Machine
+            Import Virtual Machine
           </Heading>
           <ModalCloseButton>
             <X className="text-typography-700 dark:text-[#E8EBF0]" />
@@ -331,11 +306,9 @@ export default function CreateVmModal({
         </ModalHeader>
 
         <ModalBody className="bg-background-50 dark:bg-[#0A1628]">
-          <ScrollView showsVerticalScrollIndicator={true}>
+          <ScrollView showsVerticalScrollIndicator>
             <Box className="p-4 web:p-6">
-              {/* SEÇÃO 1: CAMPOS BÁSICOS */}
               <VStack className="gap-4 web:grid web:grid-cols-2 web:gap-4">
-                {/* Nome da VM */}
                 <VStack className="gap-2">
                   <Text
                     className="text-sm text-typography-700 dark:text-typography-300"
@@ -343,20 +316,16 @@ export default function CreateVmModal({
                   >
                     Nome da VM
                   </Text>
-                  <Input
-                    variant="outline"
-                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
-                  >
+                  <Input variant="outline" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
                     <InputField
-                      value={name}
-                      onChangeText={setName}
-                      placeholder="vm-web-01"
+                      value={vmName}
+                      onChangeText={setVmName}
+                      placeholder="vm-importada-01"
                       className="text-typography-900 dark:text-[#E8EBF0]"
                     />
                   </Input>
                 </VStack>
 
-                {/* Slave */}
                 <VStack className="gap-2">
                   <Text
                     className="text-sm text-typography-700 dark:text-typography-300"
@@ -364,16 +333,9 @@ export default function CreateVmModal({
                   >
                     Slave
                   </Text>
-                  <Select
-                    selectedValue={slave}
-                    onValueChange={setSlave}
-                    isDisabled={loadingOptions || slaveOptions.length === 0}
-                  >
+                  <Select selectedValue={slave} onValueChange={setSlave} isDisabled={loadingOptions || slaveOptions.length === 0}>
                     <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
-                      <SelectInput
-                        placeholder={loadingOptions ? "Carregando..." : "Selecione..."}
-                        className="text-typography-900 dark:text-[#E8EBF0]"
-                      />
+                      <SelectInput placeholder={loadingOptions ? "Carregando..." : "Selecione..."} className="text-typography-900 dark:text-[#E8EBF0]" />
                       <SelectIcon as={ChevronDown} className="mr-3" />
                     </SelectTrigger>
                     <SelectPortal>
@@ -383,11 +345,7 @@ export default function CreateVmModal({
                           <SelectDragIndicator />
                         </SelectDragIndicatorWrapper>
                         {slaveOptions.length === 0 ? (
-                          <SelectItem
-                            label={loadingOptions ? "Carregando..." : "Nenhum slave encontrado"}
-                            value=""
-                            isDisabled
-                          />
+                          <SelectItem label={loadingOptions ? "Carregando..." : "Nenhum slave encontrado"} value="" isDisabled />
                         ) : (
                           slaveOptions.map((s) => (
                             <SelectItem
@@ -403,7 +361,6 @@ export default function CreateVmModal({
                   </Select>
                 </VStack>
 
-                {/* vCPU */}
                 <VStack className="gap-2">
                   <Text
                     className="text-sm text-typography-700 dark:text-typography-300"
@@ -411,21 +368,17 @@ export default function CreateVmModal({
                   >
                     vCPU
                   </Text>
-                  <Input
-                    variant="outline"
-                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
-                  >
+                  <Input variant="outline" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
                     <InputField
                       value={vcpu}
                       onChangeText={setVcpu}
                       keyboardType="numeric"
-                      placeholder="2"
+                      placeholder="4"
                       className="text-typography-900 dark:text-[#E8EBF0]"
                     />
                   </Input>
                 </VStack>
 
-                {/* Memória */}
                 <VStack className="gap-2">
                   <Text
                     className="text-sm text-typography-700 dark:text-typography-300"
@@ -433,10 +386,7 @@ export default function CreateVmModal({
                   >
                     Memória (MB)
                   </Text>
-                  <Input
-                    variant="outline"
-                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
-                  >
+                  <Input variant="outline" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
                     <InputField
                       value={memory}
                       onChangeText={setMemory}
@@ -450,58 +400,16 @@ export default function CreateVmModal({
                       <Pressable
                         key={`mem-${gb}`}
                         onPress={() => setMemory(String(gb * 1024))}
-                        className={`px-3 py-2 rounded-full border ${Number(memory) === gb * 1024
-                          ? "border-primary-500 bg-primary-50"
-                          : "border-outline-200 bg-background-0"
-                          }`}
+                        className={`px-3 py-2 rounded-full border ${
+                          Number(memory) === gb * 1024 ? "border-primary-500 bg-primary-50" : "border-outline-200 bg-background-0"
+                        }`}
                       >
-                        <Text className="text-xs font-medium text-typography-700">
-                          {gb} GB
-                        </Text>
+                        <Text className="text-xs font-medium text-typography-700">{gb} GB</Text>
                       </Pressable>
                     ))}
                   </HStack>
                 </VStack>
 
-                {/* Disco */}
-                <VStack className="gap-2">
-                  <Text
-                    className="text-sm text-typography-700 dark:text-typography-300"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
-                  >
-                    Disco (GB)
-                  </Text>
-                  <Input
-                    variant="outline"
-                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
-                  >
-                    <InputField
-                      value={disk}
-                      onChangeText={setDisk}
-                      keyboardType="numeric"
-                      placeholder="50"
-                      className="text-typography-900 dark:text-[#E8EBF0]"
-                    />
-                  </Input>
-                  <HStack className="gap-2 flex-wrap">
-                    {quickDiskGb.map((gb) => (
-                      <Pressable
-                        key={`disk-${gb}`}
-                        onPress={() => setDisk(String(gb))}
-                        className={`px-3 py-2 rounded-full border ${Number(disk) === gb
-                          ? "border-primary-500 bg-primary-50"
-                          : "border-outline-200 bg-background-0"
-                          }`}
-                      >
-                        <Text className="text-xs font-medium text-typography-700">
-                          {gb} GB
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </HStack>
-                </VStack>
-
-                {/* Network */}
                 <VStack className="gap-2">
                   <Text
                     className="text-sm text-typography-700 dark:text-typography-300"
@@ -520,10 +428,7 @@ export default function CreateVmModal({
                     }}
                   >
                     <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
-                      <SelectInput
-                        placeholder="Selecione a rede"
-                        className="text-typography-900 dark:text-[#E8EBF0]"
-                      />
+                      <SelectInput placeholder="Selecione a rede" className="text-typography-900 dark:text-[#E8EBF0]" />
                       <SelectIcon as={ChevronDown} className="mr-3" />
                     </SelectTrigger>
                     <SelectPortal>
@@ -532,29 +437,14 @@ export default function CreateVmModal({
                         <SelectDragIndicatorWrapper>
                           <SelectDragIndicator />
                         </SelectDragIndicatorWrapper>
-                        <SelectItem
-                          label="default"
-                          value="default"
-                          className="text-typography-900 dark:text-[#E8EBF0]"
-                        />
-                        <SelectItem
-                          label="512rede"
-                          value="512rede"
-                          className="text-typography-900 dark:text-[#E8EBF0]"
-                        />
-                        <SelectItem
-                          label="outro..."
-                          value="outro"
-                          className="text-typography-900 dark:text-[#E8EBF0]"
-                        />
+                        <SelectItem label="default" value="default" className="text-typography-900 dark:text-[#E8EBF0]" />
+                        <SelectItem label="512rede" value="512rede" className="text-typography-900 dark:text-[#E8EBF0]" />
+                        <SelectItem label="outro..." value="outro" className="text-typography-900 dark:text-[#E8EBF0]" />
                       </SelectContent>
                     </SelectPortal>
                   </Select>
-                  {(network !== "default" && network !== "512rede") && (
-                    <Input
-                      variant="outline"
-                      className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] mt-2"
-                    >
+                  {network !== "default" && network !== "512rede" && (
+                    <Input variant="outline" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] mt-2">
                       <InputField
                         value={network}
                         onChangeText={setNetwork}
@@ -565,7 +455,6 @@ export default function CreateVmModal({
                   )}
                 </VStack>
 
-                {/* NFS Share ID */}
                 <VStack className="gap-2">
                   <Text
                     className="text-sm text-typography-700 dark:text-typography-300"
@@ -576,17 +465,13 @@ export default function CreateVmModal({
                   <Select selectedValue={nfsShare} onValueChange={setNfsShare} isDisabled={loadingOptions || mountOptions.length === 0}>
                     <SelectTrigger variant="outline" size="md">
                       <SelectInput placeholder={loadingOptions ? "Carregando..." : "Select NFS"} />
-                      <SelectIcon className="mr-3" as={ChevronDownIcon} />
+                      <SelectIcon className="mr-3" as={ChevronDown} />
                     </SelectTrigger>
                     <SelectPortal>
                       <SelectBackdrop />
                       <SelectContent>
                         {mountOptions.length === 0 ? (
-                          <SelectItem
-                            label={loadingOptions ? "Carregando..." : "Nenhum NFS encontrado"}
-                            value=""
-                            isDisabled
-                          />
+                          <SelectItem label={loadingOptions ? "Carregando..." : "Nenhum NFS encontrado"} value="" isDisabled />
                         ) : (
                           mountOptions.map((s) => (
                             <SelectItem
@@ -602,115 +487,96 @@ export default function CreateVmModal({
                   </Select>
                 </VStack>
 
-                {/* ISO ID */}
                 <VStack className="gap-2">
                   <Text
                     className="text-sm text-typography-700 dark:text-typography-300"
                     style={{ fontFamily: "Inter_600SemiBold" }}
                   >
-                    ISO ID (Opcional)
+                    VNC Password (opcional)
                   </Text>
-                  <Select selectedValue={iso} onValueChange={setIso} isDisabled={loadingOptions || isoOptions.length === 0}>
-                    <SelectTrigger variant="outline" size="md">
-                      <SelectInput placeholder={loadingOptions ? "Carregando..." : "Select ISO"} />
-                      <SelectIcon className="mr-3" as={ChevronDownIcon} />
-                    </SelectTrigger>
-                    <SelectPortal>
-                      <SelectBackdrop />
-                      <SelectContent>
-                        {isoOptions.length === 0 ? (
-                          <SelectItem
-                            label={loadingOptions ? "Carregando..." : "Nenhuma ISO encontrada"}
-                            value=""
-                            isDisabled
-                          />
-                        ) : (
-                          isoOptions.map((s) => (
-                            <SelectItem
-                              key={s.Id}
-                              label={s.Name}
-                              value={String(s.Id)}
-                              className="text-typography-900 dark:text-[#E8EBF0]"
-                            />
-                          ))
-                        )}
-                      </SelectContent>
-                    </SelectPortal>
-                  </Select>
+                  <Input variant="outline" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
+                    <InputField
+                      value={vncPassword}
+                      onChangeText={setVncPassword}
+                      placeholder="Insert NoVNC Password (optional)"
+                      secureTextEntry
+                      className="text-typography-900 dark:text-[#E8EBF0]"
+                    />
+                  </Input>
                 </VStack>
               </VStack>
 
-              {/* SEÇÃO 2: CHECKBOXES */}
               <VStack className="gap-3 mt-6">
-                <Checkbox
-                  value="autostart"
-                  isChecked={autoStart}
-                  onChange={setAutoStart}
-                  className="gap-2"
-                >
-                  <CheckboxIndicator className="border-outline-300 dark:border-[#2A3B52]">
-                    <CheckboxIcon as={Check} />
-                  </CheckboxIndicator>
-                  <CheckboxLabel className="text-typography-700 dark:text-typography-300">
-                    Auto-start ao boot do slave
-                  </CheckboxLabel>
-                </Checkbox>
-
-                <Checkbox
-                  value="windows"
-                  isChecked={isWindows}
-                  onChange={setIsWindows}
-                  className="gap-2"
-                >
-                  <CheckboxIndicator className="border-outline-300 dark:border-[#2A3B52]">
-                    <CheckboxIcon as={Check} />
-                  </CheckboxIndicator>
-                  <CheckboxLabel className="text-typography-700 dark:text-typography-300">
-                    Windows VM
-                  </CheckboxLabel>
-                </Checkbox>
-
-                <Checkbox
-                  value="live"
-                  isChecked={live}
-                  onChange={setLive}
-                  className="gap-2"
-                >
-                  <CheckboxIndicator className="border-outline-300 dark:border-[#2A3B52]">
-                    <CheckboxIcon as={Check} />
-                  </CheckboxIndicator>
-                  <CheckboxLabel className="text-typography-700 dark:text-typography-300">
-                    Live VM
-                  </CheckboxLabel>
-                </Checkbox>
-              </VStack>
-
-              {/* SEÇÃO 3: VNC PASSWORD */}
-              <VStack className="gap-2 mt-6">
                 <Text
                   className="text-sm text-typography-700 dark:text-typography-300"
                   style={{ fontFamily: "Inter_600SemiBold" }}
                 >
-                  VNC Password
+                  Arquivo da VM
                 </Text>
-                <Input
-                  variant="outline"
-                  className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
-                >
-                  <InputField
-                    value={vncPassword}
-                    onChangeText={setVncPassword}
-                    placeholder="Insert NoVNC Password (optional)"
-                    secureTextEntry={true}
-                    className="text-typography-900 dark:text-[#E8EBF0]"
-                  />
-                </Input>
+                {isWeb ? (
+                  <>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".qcow2,.qcow,.img,.raw,.vmdk"
+                      style={{ display: "none" }}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0] ?? null;
+                        setSelectedFile(file);
+                      }}
+                    />
+                    <Pressable
+                      onPress={() => fileInputRef.current?.click()}
+                      className="border border-dashed border-outline-300 dark:border-[#2A3B52] rounded-lg p-4 bg-background-0 dark:bg-[#0F1A2E]"
+                    >
+                      <HStack className="items-center gap-3">
+                        <Box className="w-10 h-10 rounded-full bg-primary-50 dark:bg-[#1E2F47] items-center justify-center">
+                          <Upload className="text-primary-500" />
+                        </Box>
+                        <VStack className="flex-1">
+                          <Text className="text-typography-900 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_600SemiBold" }}>
+                            {selectedFile ? selectedFile.name : "Selecione o arquivo .qcow2"}
+                          </Text>
+                          <Text className="text-xs text-typography-600 dark:text-typography-400">
+                            {selectedFile ? formatFileSize(selectedFile.size) : "Tamanho máximo depende do backend"}
+                          </Text>
+                        </VStack>
+                      </HStack>
+                    </Pressable>
+                    {typeof uploadProgress === "number" && (
+                      <Box className="mt-3">
+                        <HStack className="justify-between mb-1">
+                          <Text className="text-xs text-typography-600 dark:text-typography-400">Upload progress</Text>
+                          <Text className="text-xs text-typography-600 dark:text-typography-400">{uploadProgress}%</Text>
+                        </HStack>
+                        <Progress value={uploadProgress} className="h-2 rounded-full bg-outline-100 dark:bg-[#1E2F47]">
+                          <ProgressFilledTrack className="bg-primary-500" />
+                        </Progress>
+                      </Box>
+                    )}
+                  </>
+                ) : (
+                  <Box className="border border-outline-200 dark:border-[#2A3B52] rounded-lg p-3 bg-background-0 dark:bg-[#0F1A2E]">
+                    <Text className="text-sm text-typography-600 dark:text-typography-400">
+                      Importação com upload de disco está disponível somente na versão web.
+                    </Text>
+                  </Box>
+                )}
               </VStack>
 
-              {/* SEÇÃO 4: CONFIGURAÇÃO AVANÇADA DE CPU */}
+              <VStack className="gap-3 mt-6">
+                <Checkbox value="live" isChecked={live} onChange={setLive} className="gap-2">
+                  <CheckboxIndicator className="border-outline-300 dark:border-[#2A3B52]">
+                    <CheckboxIcon as={Check} />
+                  </CheckboxIndicator>
+                  <CheckboxLabel className="text-typography-700 dark:text-typography-300">
+                    Live VM / custom CPU
+                  </CheckboxLabel>
+                </Checkbox>
+              </VStack>
+
               {live && (
-                <Box className="mt-6 p-4 bg-background-0 dark:bg-[#0F1A2E] border border-outline-200 dark:border-[#2A3B52] rounded-xl">
-                  {/* Header */}
+                <Box className="mt-4 p-4 bg-background-0 dark:bg-[#0F1A2E] border border-outline-200 dark:border-[#2A3B52] rounded-xl">
                   <HStack className="gap-2 items-center mb-3">
                     <Cpu size={20} className="text-typography-700 dark:text-[#E8EBF0]" />
                     <Heading
@@ -723,11 +589,9 @@ export default function CreateVmModal({
                   </HStack>
 
                   <Text className="text-sm text-typography-600 dark:text-typography-400 mb-4">
-                    Selecione slaves para comparar e obter a configuração de CPU
-                    compatível entre eles.
+                    Selecione slaves para comparar e obter a configuração de CPU compatível entre eles.
                   </Text>
 
-                  {/* Lista de Slaves Selecionados */}
                   <VStack className="gap-2 mb-4">
                     <Text
                       className="text-sm text-typography-700 dark:text-typography-300"
@@ -757,9 +621,7 @@ export default function CreateVmModal({
                                   size="xs"
                                   variant="link"
                                   onPress={() => {
-                                    setSelectedSlaves(
-                                      selectedSlaves.filter((s) => s !== slaveName)
-                                    );
+                                    setSelectedSlaves(selectedSlaves.filter((s) => s !== slaveName));
                                   }}
                                   className="p-0 min-w-0 h-4"
                                 >
@@ -777,7 +639,6 @@ export default function CreateVmModal({
                     </Box>
                   </VStack>
 
-                  {/* Dropdown Adicionar Slaves */}
                   <VStack className="gap-2 mb-4">
                     <Text
                       className="text-sm text-typography-700 dark:text-typography-300"
@@ -797,10 +658,7 @@ export default function CreateVmModal({
                       isDisabled={loadingOptions || availableSlaves.length === 0}
                     >
                       <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
-                        <SelectInput
-                          placeholder={loadingOptions ? "Carregando..." : "Selecione um slave..."}
-                          className="text-typography-900 dark:text-[#E8EBF0]"
-                        />
+                        <SelectInput placeholder={loadingOptions ? "Carregando..." : "Selecione um slave..."} className="text-typography-900 dark:text-[#E8EBF0]" />
                         <SelectIcon as={ChevronDown} className="mr-3" />
                       </SelectTrigger>
                       <SelectPortal>
@@ -809,21 +667,11 @@ export default function CreateVmModal({
                           <SelectDragIndicatorWrapper>
                             <SelectDragIndicator />
                           </SelectDragIndicatorWrapper>
-
                           {availableSlaves.length === 0 ? (
-                            <SelectItem
-                              label="Todos os slaves já foram adicionados"
-                              value=""
-                              isDisabled
-                            />
+                            <SelectItem label="Todos os slaves já foram adicionados" value="" isDisabled />
                           ) : (
                             availableSlaves.map((s) => (
-                              <SelectItem
-                                key={s}
-                                label={s}
-                                value={s}
-                                className="text-typography-900 dark:text-[#E8EBF0]"
-                              />
+                              <SelectItem key={s} label={s} value={s} className="text-typography-900 dark:text-[#E8EBF0]" />
                             ))
                           )}
                         </SelectContent>
@@ -831,7 +679,6 @@ export default function CreateVmModal({
                     </Select>
                   </VStack>
 
-                  {/* Botão Get Mutual CPUs */}
                   <Button
                     variant="outline"
                     onPress={handleGetMutualCPUs}
@@ -841,24 +688,16 @@ export default function CreateVmModal({
                     {loadingCPU ? (
                       <>
                         <ButtonSpinner className="mr-2" />
-                        <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
-                          Obtendo CPUs...
-                        </ButtonText>
+                        <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Obtendo CPUs...</ButtonText>
                       </>
                     ) : (
                       <>
-                        <ButtonIcon
-                          as={Cpu}
-                          className="mr-2 text-typography-900 dark:text-[#E8EBF0]"
-                        />
-                        <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
-                          Get Mutual CPUs
-                        </ButtonText>
+                        <ButtonIcon as={Cpu} className="mr-2 text-typography-900 dark:text-[#E8EBF0]" />
+                        <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Get Mutual CPUs</ButtonText>
                       </>
                     )}
                   </Button>
 
-                  {/* XML TextArea */}
                   <VStack className="gap-2">
                     <HStack className="justify-between items-center">
                       <Text
@@ -869,18 +708,8 @@ export default function CreateVmModal({
                       </Text>
 
                       <HStack className="gap-2">
-                        <Button
-                          size="xs"
-                          variant="outline"
-                          onPress={handleCopyXml}
-                          disabled={!cpuXml}
-                          className="rounded-md border-outline-200 dark:border-[#2A3B52]"
-                        >
-                          <ButtonIcon
-                            as={Copy}
-                            size="xs"
-                            className="text-typography-700 dark:text-[#E8EBF0]"
-                          />
+                        <Button size="xs" variant="outline" onPress={handleCopyXml} disabled={!cpuXml} className="rounded-md border-outline-200 dark:border-[#2A3B52]">
+                          <ButtonIcon as={Copy} size="xs" className="text-typography-700 dark:text-[#E8EBF0]" />
                         </Button>
 
                         <Button
@@ -890,18 +719,13 @@ export default function CreateVmModal({
                           disabled={!cpuXml}
                           className="rounded-md border-red-300 dark:border-red-700"
                         >
-                          <ButtonIcon
-                            as={Trash2}
-                            size="xs"
-                            className="text-red-600 dark:text-red-400"
-                          />
+                          <ButtonIcon as={Trash2} size="xs" className="text-red-600 dark:text-red-400" />
                         </Button>
                       </HStack>
                     </HStack>
 
                     <Text className="text-xs text-typography-500 dark:text-typography-400">
-                      Este XML será usado para configurar a CPU da VM. Você pode
-                      editá-lo manualmente se necessário.
+                      Este XML será usado para configurar a CPU da VM. Você pode editá-lo manualmente se necessário.
                     </Text>
 
                     <Box className="bg-[#0F172A] border border-[#1E2F47] rounded-lg overflow-hidden">
@@ -941,23 +765,22 @@ export default function CreateVmModal({
             <Button
               variant="outline"
               className="flex-1 rounded-lg border-outline-200 dark:border-[#2A3B52]"
-              onPress={() => setShowModal(false)}
-              disabled={creating}
+              onPress={() => {
+                resetForm();
+                setShowModal(false);
+              }}
+              disabled={importing}
             >
-              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
-                Cancelar
-              </ButtonText>
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancelar</ButtonText>
             </Button>
 
             <Button
               className="flex-1 rounded-lg bg-typography-900 dark:bg-[#E8EBF0]"
-              onPress={handleCreate}
-              disabled={creating}
+              onPress={handleImport}
+              disabled={importing || !isWeb}
             >
-              {creating ? <ButtonSpinner className="mr-2" /> : null}
-              <ButtonText className="text-background-0 dark:text-typography-900">
-                Criar VM
-              </ButtonText>
+              {importing ? <ButtonSpinner className="mr-2" /> : null}
+              <ButtonText className="text-background-0 dark:text-typography-900">Importar VM</ButtonText>
             </Button>
           </HStack>
         </ModalFooter>

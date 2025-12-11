@@ -16,7 +16,7 @@ export interface ListLogsOptions {
   level?: number;
 }
 
-// Mapeamento de níveis
+// Log level mapping
 export const LOG_LEVEL_MAP = {
   info: 0,
   error: 1,

@@ -58,7 +58,7 @@ export function useWireguard({ token }: UseWireguardOptions = {}) {
           setError(null);
         } else {
           const message =
-            err instanceof Error ? err.message : "Não foi possível carregar as informações da VPN.";
+            err instanceof Error ? err.message : "Unable to load VPN information.";
           setError(message);
         }
       } finally {

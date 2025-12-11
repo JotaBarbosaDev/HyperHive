@@ -81,7 +81,7 @@ const formatDeviceDisplay = (device: BtrfsDisk | string): string => {
 };
 
 const getRaidDeviceLabel = (dev: BtrfsRaidDevice | BtrfsDisk | string, disks: BtrfsDisk[]) => {
-  if (typeof dev !== "string" && dev.model) return formatDeviceDisplay(dev as BtrfsDisk);
+  if (typeof dev !== "string" && "model" in dev && dev.model) return formatDeviceDisplay(dev as BtrfsDisk);
   const path = typeof dev === "string" ? dev : (dev as any).device;
   const found = disks.find((d) => d.device === path);
   if (found) return formatDeviceDisplay(found);
@@ -162,7 +162,7 @@ export default function BtrfsRaidsScreen() {
       }
     } catch (err) {
       console.error("Failed to load machines", err);
-      showToast("Erro ao carregar máquinas", "Tente novamente.", "error");
+      showToast("Error loading machines", "Try again.", "error");
     }
   }, [selectedMachine, showToast]);
 
@@ -184,7 +184,7 @@ export default function BtrfsRaidsScreen() {
         setAutoMounts(Array.isArray(auto) ? auto : []);
       } catch (err) {
         console.error("Failed to load BTRFS data", err);
-        showToast("Erro ao carregar", "Não foi possível obter os dados de BTRFS.", "error");
+        showToast("Error loading", "Unable to fetch BTRFS data.", "error");
       } finally {
         if (mode === "full") setLoading(false);
         if (mode === "refresh") setRefreshing(false);
@@ -206,11 +206,11 @@ export default function BtrfsRaidsScreen() {
   const handleCreateRaid = async () => {
     if (!selectedMachine) return;
     if (!raidName.trim()) {
-      showToast("Nome obrigatório", "Informe um nome para o RAID.", "error");
+      showToast("Name required", "Provide a name for the RAID.", "error");
       return;
     }
     if (selectedDisks.size < 2 && raidLevel !== "single") {
-      showToast("Selecione os discos", "Selecione pelo menos 2 discos para o RAID.", "error");
+      showToast("Select disks", "Select at least 2 disks for the RAID.", "error");
       return;
     }
     setCreatingRaid(true);
@@ -220,14 +220,14 @@ export default function BtrfsRaidsScreen() {
         raid: raidLevel,
         disks: Array.from(selectedDisks),
       });
-      showToast("RAID criado", "Array BTRFS criado com sucesso.");
+      showToast("RAID created", "BTRFS array created successfully.");
       setCreateModal(false);
       setRaidName("");
       setSelectedDisks(new Set());
       await loadData("silent");
     } catch (err) {
       console.error("Failed to create raid", err);
-      showToast("Erro ao criar RAID", "Verifique os dados e tente novamente.", "error");
+      showToast("Error creating RAID", "Check the data and try again.", "error");
     } finally {
       setCreatingRaid(false);
     }
@@ -237,13 +237,13 @@ export default function BtrfsRaidsScreen() {
     setSavingAction(label);
     try {
       await action();
-      showToast(`${label} concluído`, "Ação executada com sucesso.");
+      showToast(`${label} completed`, "Action executed successfully.");
       if (reload) {
         await loadData("silent");
       }
     } catch (err) {
       console.error(`Failed to ${label}`, err);
-      showToast(`Erro ao ${label}`, "Tente novamente.", "error");
+      showToast(`Error during ${label}`, "Try again.", "error");
     } finally {
       setSavingAction(null);
     }
@@ -340,7 +340,7 @@ export default function BtrfsRaidsScreen() {
             BTRFS / RAIDs
           </Heading>
           <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
-            Gestão de arrays BTRFS e discos.
+            Management of BTRFS arrays and disks.
           </Text>
 
           <HStack className="mt-6 items-center justify-between flex-wrap gap-3">
@@ -350,7 +350,7 @@ export default function BtrfsRaidsScreen() {
                 onValueChange={(val) => setSelectedMachine(val)}
               >
                 <SelectTrigger className="min-w-[180px]">
-                  <SelectInput placeholder="Máquina" value={selectedMachine} />
+                  <SelectInput placeholder="Machine" value={selectedMachine} />
                   <SelectIcon as={ChevronDownIcon} />
                 </SelectTrigger>
                 <SelectPortal>
@@ -367,12 +367,12 @@ export default function BtrfsRaidsScreen() {
               </Select>
               <Button variant="outline" action="default" size="sm" onPress={() => loadData("refresh")}>
                 <ButtonIcon as={RefreshCcw} size="sm" />
-                <ButtonText>Atualizar</ButtonText>
+                <ButtonText>Refresh</ButtonText>
               </Button>
             </HStack>
             <Button action="primary" variant="solid" size="md" onPress={() => setCreateModal(true)} className="rounded-full px-5">
               <ButtonIcon as={Plus} size="sm" />
-              <ButtonText>Criar RAID</ButtonText>
+              <ButtonText>Create RAID</ButtonText>
             </Button>
           </HStack>
 
@@ -389,16 +389,16 @@ export default function BtrfsRaidsScreen() {
             <>
               <Box className="mt-6 rounded-2xl bg-background-0 border border-background-200 shadow-soft-1">
                 <HStack className="items-center justify-between px-4 py-3">
-                  <Text className="text-typography-900 font-semibold text-base">Discos Livres</Text>
+                  <Text className="text-typography-900 font-semibold text-base">Free Disks</Text>
                   <HStack className="items-center gap-2">
                     <HardDrive size={18} color="#0f172a" />
-                    <Text className="text-typography-700 text-sm">{(Array.isArray(freeDisks) ? freeDisks.length : 0)} discos</Text>
+                    <Text className="text-typography-700 text-sm">{(Array.isArray(freeDisks) ? freeDisks.length : 0)} disks</Text>
                   </HStack>
                 </HStack>
                 <Divider />
                 {(!Array.isArray(freeDisks) || freeDisks.length === 0) ? (
                   <Box className="p-4">
-                    <Text className="text-typography-600 text-sm">Nenhum disco livre encontrado.</Text>
+                    <Text className="text-typography-600 text-sm">No free disks found.</Text>
                   </Box>
                 ) : (
                   freeDisks.map(renderDiskRow)
@@ -410,9 +410,9 @@ export default function BtrfsRaidsScreen() {
                   <Text className="text-typography-900 font-semibold text-base">Arrays BTRFS</Text>
                   <HStack className="gap-2 flex-wrap">
                     {[
-                      { key: "all" as FilterTab, label: `Todos (${raids.length})` },
-                      { key: "active" as FilterTab, label: `Ativos (${raids.filter(isRaidActive).length})` },
-                      { key: "inactive" as FilterTab, label: `Inativos (${raids.filter((r) => !isRaidActive(r)).length})` },
+                      { key: "all" as FilterTab, label: `All (${raids.length})` },
+                      { key: "active" as FilterTab, label: `Active (${raids.filter(isRaidActive).length})` },
+                      { key: "inactive" as FilterTab, label: `Inactive (${raids.filter((r) => !isRaidActive(r)).length})` },
                     ].map((tab) => {
                       const active = filter === tab.key;
                       return (
@@ -436,7 +436,7 @@ export default function BtrfsRaidsScreen() {
                 <Divider />
                 {filteredRaids.length === 0 ? (
                   <Box className="p-4">
-                    <Text className="text-typography-600 text-sm">Nenhum RAID encontrado.</Text>
+                    <Text className="text-typography-600 text-sm">No RAID found.</Text>
                   </Box>
                 ) : (
                   <VStack className="divide-y divide-background-200">
@@ -524,7 +524,7 @@ export default function BtrfsRaidsScreen() {
           </ModalBody>
           <ModalFooter>
             <Button action="primary" onPress={() => setDiskDetail(null)}>
-              <ButtonText>Fechar</ButtonText>
+              <ButtonText>Close</ButtonText>
             </Button>
           </ModalFooter>
         </ModalContent>
@@ -535,14 +535,14 @@ export default function BtrfsRaidsScreen() {
         <ModalContent className="max-w-2xl">
           <ModalHeader className="flex-row items-start justify-between">
             <Heading size="md" className="text-typography-900">
-              Criar RAID
+              Create RAID
             </Heading>
             <ModalCloseButton />
           </ModalHeader>
           <ModalBody className="gap-4">
             <FormControl isRequired>
               <FormControlLabel>
-                <FormControlLabelText>Nome da RAID</FormControlLabelText>
+                <FormControlLabelText>RAID Name</FormControlLabelText>
               </FormControlLabel>
               <Input>
                 <InputField
@@ -555,11 +555,11 @@ export default function BtrfsRaidsScreen() {
 
             <FormControl isRequired>
               <FormControlLabel>
-                <FormControlLabelText>Nível de RAID</FormControlLabelText>
+                <FormControlLabelText>RAID Level</FormControlLabelText>
               </FormControlLabel>
               <Select selectedValue={raidLevel} onValueChange={setRaidLevel}>
                 <SelectTrigger>
-                  <SelectInput placeholder="Selecione" value={raidLevel} />
+                  <SelectInput placeholder="Select" value={raidLevel} />
                   <SelectIcon as={ChevronDownIcon} />
                 </SelectTrigger>
                 <SelectPortal>
@@ -578,12 +578,12 @@ export default function BtrfsRaidsScreen() {
 
             <FormControl>
               <FormControlLabel>
-                <FormControlLabelText>Discos</FormControlLabelText>
+                <FormControlLabelText>Disks</FormControlLabelText>
               </FormControlLabel>
               <VStack className="gap-3 max-h-60 overflow-y-auto">
                 {(Array.isArray(freeDisks) ? freeDisks : []).length === 0 ? (
                   <Text className="text-typography-600 text-sm">
-                    Nenhum disco livre disponível nesta máquina.
+                    No free disk available on this machine.
                   </Text>
                 ) : (
                   freeDisks.map((disk) => {
@@ -618,18 +618,18 @@ export default function BtrfsRaidsScreen() {
               </VStack>
               <FormControlHelper>
                 <FormControlHelperText>
-                  Selecione pelo menos 2 discos para níveis redundantes.
+                  Select at least 2 disks for redundant levels.
                 </FormControlHelperText>
               </FormControlHelper>
             </FormControl>
           </ModalBody>
           <ModalFooter className="gap-3">
             <Button variant="outline" action="default" onPress={() => setCreateModal(false)} isDisabled={creatingRaid}>
-              <ButtonText>Cancelar</ButtonText>
+              <ButtonText>Cancel</ButtonText>
             </Button>
             <Button action="primary" onPress={handleCreateRaid} isDisabled={creatingRaid}>
               {creatingRaid ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
-              <ButtonText>Criar RAID</ButtonText>
+              <ButtonText>Create RAID</ButtonText>
             </Button>
           </ModalFooter>
         </ModalContent>
@@ -651,14 +651,14 @@ export default function BtrfsRaidsScreen() {
             <Box className="p-3 rounded-xl border border-background-200 bg-background-50">
               <StatsRow label="UUID" value={raidModal?.uuid} />
               <StatsRow label="Label" value={raidModal?.label} />
-              <StatsRow label="Compressão" value={raidModal?.compression} />
+              <StatsRow label="Compression" value={raidModal?.compression} />
               <StatsRow label="Target" value={raidModal?.mount_point} />
               <StatsRow label="Source" value={raidModal?.source} />
               <StatsRow label="Status" value={raidModal?.status} />
-              <StatsRow label="Mounted" value={raidModal?.mounted ? "Sim" : "Não"} />
-              <StatsRow label="Usado" value={formatSize(raidModal?.used)} />
+              <StatsRow label="Mounted" value={raidModal?.mounted ? "Yes" : "No"} />
+              <StatsRow label="Used" value={formatSize(raidModal?.used)} />
               <StatsRow label="Total" value={formatSize(raidModal?.total)} />
-              <StatsRow label="Livre" value={formatSize(raidModal?.free)} />
+              <StatsRow label="Free" value={formatSize(raidModal?.free)} />
             </Box>
 
             {raidStatus ? (
@@ -680,14 +680,14 @@ export default function BtrfsRaidsScreen() {
             ) : null}
 
             <Box className="p-3 rounded-xl border border-background-200">
-              <Text className="text-typography-900 font-semibold mb-3">Ações</Text>
+              <Text className="text-typography-900 font-semibold mb-3">Actions</Text>
               <VStack className="gap-3">
                 <HStack className="gap-3 flex-wrap">
                   <Input className="flex-1">
                     <InputField
                       value={mountPoint}
                       onChangeText={setMountPoint}
-                      placeholder="Ponto de montagem"
+                      placeholder="Mount point"
                     />
                   </Input>
                   <Input className="flex-1">
@@ -701,11 +701,11 @@ export default function BtrfsRaidsScreen() {
                     action="primary"
                     onPress={() =>
                       raidModal?.uuid &&
-                      performAction("montar", () => mountRaid(selectedMachine, { uuid: raidModal.uuid, mount_point: mountPoint, compression }))
+                      performAction("mount", () => mountRaid(selectedMachine, { uuid: raidModal.uuid, mount_point: mountPoint, compression }))
                     }
                     isDisabled={savingAction !== null}
                   >
-                    {savingAction === "montar" ? <ButtonSpinner /> : <ButtonIcon as={Power} size="sm" />}
+                    {savingAction === "mount" ? <ButtonSpinner /> : <ButtonIcon as={Power} size="sm" />}
                     <ButtonText>Mount</ButtonText>
                   </Button>
                 </HStack>
@@ -718,11 +718,11 @@ export default function BtrfsRaidsScreen() {
                     variant="outline"
                     onPress={() =>
                       raidModal?.uuid &&
-                      performAction("desmontar", () => unmountRaid(selectedMachine, { uuid: raidModal.uuid, force: forceUnmount }))
+                      performAction("unmount", () => unmountRaid(selectedMachine, { uuid: raidModal.uuid, force: forceUnmount }))
                     }
                     isDisabled={savingAction !== null}
                   >
-                    {savingAction === "desmontar" ? <ButtonSpinner /> : <ButtonIcon as={Power} size="sm" />}
+                    {savingAction === "unmount" ? <ButtonSpinner /> : <ButtonIcon as={Power} size="sm" />}
                     <ButtonText>Unmount</ButtonText>
                   </Button>
                 </HStack>
@@ -738,12 +738,12 @@ export default function BtrfsRaidsScreen() {
                     variant="outline"
                     onPress={() =>
                       raidModal?.uuid &&
-                      performAction("adicionar disco", () => addDiskRaid(selectedMachine, { uuid: raidModal.uuid, disk: addDiskValue }))
+                      performAction("add disk", () => addDiskRaid(selectedMachine, { uuid: raidModal.uuid, disk: addDiskValue }))
                     }
                     isDisabled={savingAction !== null}
                   >
-                    {savingAction === "adicionar disco" ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
-                    <ButtonText>Adicionar Disco</ButtonText>
+                    {savingAction === "add disk" ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
+                    <ButtonText>Add Disk</ButtonText>
                   </Button>
                 </HStack>
 
@@ -756,33 +756,33 @@ export default function BtrfsRaidsScreen() {
                     variant="outline"
                     onPress={() =>
                       raidModal?.uuid &&
-                      performAction("remover disco", () => removeDiskRaid(selectedMachine, { uuid: raidModal.uuid, disk: removeDiskValue }))
+                      performAction("remove disk", () => removeDiskRaid(selectedMachine, { uuid: raidModal.uuid, disk: removeDiskValue }))
                     }
                     isDisabled={savingAction !== null}
                   >
-                    {savingAction === "remover disco" ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
-                    <ButtonText>Remover Disco</ButtonText>
+                    {savingAction === "remove disk" ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
+                    <ButtonText>Remove Disk</ButtonText>
                   </Button>
                 </HStack>
 
                 <HStack className="gap-3 flex-wrap">
                   <Input className="flex-1">
-                    <InputField value={replaceOld} onChangeText={setReplaceOld} placeholder="Disco antigo" />
+                    <InputField value={replaceOld} onChangeText={setReplaceOld} placeholder="Old disk" />
                   </Input>
                   <Input className="flex-1">
-                    <InputField value={replaceNew} onChangeText={setReplaceNew} placeholder="Disco novo" />
+                    <InputField value={replaceNew} onChangeText={setReplaceNew} placeholder="New disk" />
                   </Input>
                   <Button
                     action="primary"
                     variant="outline"
                     onPress={() =>
                       raidModal?.uuid &&
-                      performAction("substituir disco", () => replaceDiskRaid(selectedMachine, { uuid: raidModal.uuid, old_disk: replaceOld, new_disk: replaceNew }))
+                      performAction("replace disk", () => replaceDiskRaid(selectedMachine, { uuid: raidModal.uuid, old_disk: replaceOld, new_disk: replaceNew }))
                     }
                     isDisabled={savingAction !== null}
                   >
-                    {savingAction === "substituir disco" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
-                    <ButtonText>Substituir Disco</ButtonText>
+                    {savingAction === "replace disk" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
+                    <ButtonText>Replace Disk</ButtonText>
                   </Button>
                 </HStack>
 
@@ -795,12 +795,12 @@ export default function BtrfsRaidsScreen() {
                     variant="outline"
                     onPress={() =>
                       raidModal?.uuid &&
-                      performAction("mudar nível", () => changeRaidLevel(selectedMachine, { uuid: raidModal.uuid, new_raid_level: newRaidLevel }))
+                      performAction("change level", () => changeRaidLevel(selectedMachine, { uuid: raidModal.uuid, new_raid_level: newRaidLevel }))
                     }
                     isDisabled={savingAction !== null}
                   >
-                    {savingAction === "mudar nível" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
-                    <ButtonText>Mudar Nível</ButtonText>
+                    {savingAction === "change level" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
+                    <ButtonText>Change Level</ButtonText>
                   </Button>
                 </HStack>
 
@@ -859,29 +859,29 @@ export default function BtrfsRaidsScreen() {
                   <Button
                     action="default"
                     variant="outline"
-                    onPress={() => raidModal?.uuid && performAction("pausar balance", () => pauseBalance(selectedMachine, raidModal.uuid))}
+                    onPress={() => raidModal?.uuid && performAction("pause balance", () => pauseBalance(selectedMachine, raidModal.uuid))}
                     isDisabled={savingAction !== null}
                   >
-                    {savingAction === "pausar balance" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
-                    <ButtonText>Pausar Balance</ButtonText>
+                    {savingAction === "pause balance" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
+                    <ButtonText>Pause Balance</ButtonText>
                   </Button>
                   <Button
                     action="default"
                     variant="outline"
-                    onPress={() => raidModal?.uuid && performAction("retomar balance", () => resumeBalance(selectedMachine, raidModal.uuid))}
+                    onPress={() => raidModal?.uuid && performAction("resume balance", () => resumeBalance(selectedMachine, raidModal.uuid))}
                     isDisabled={savingAction !== null}
                   >
-                    {savingAction === "retomar balance" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
-                    <ButtonText>Retomar Balance</ButtonText>
+                    {savingAction === "resume balance" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
+                    <ButtonText>Resume Balance</ButtonText>
                   </Button>
                   <Button
                     action="negative"
                     variant="outline"
-                    onPress={() => raidModal?.uuid && performAction("cancelar balance", () => cancelBalance(selectedMachine, raidModal.uuid))}
+                    onPress={() => raidModal?.uuid && performAction("cancel balance", () => cancelBalance(selectedMachine, raidModal.uuid))}
                     isDisabled={savingAction !== null}
                   >
-                    {savingAction === "cancelar balance" ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
-                    <ButtonText>Cancelar Balance</ButtonText>
+                    {savingAction === "cancel balance" ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
+                    <ButtonText>Cancel Balance</ButtonText>
                   </Button>
                 </HStack>
 
@@ -920,35 +920,35 @@ export default function BtrfsRaidsScreen() {
                     <Button
                       action="primary"
                       variant="outline"
+                    onPress={() =>
+                      raidModal?.uuid &&
+                      performAction("auto-mount", () => createAutomaticMount(selectedMachine, { uuid: raidModal.uuid, mount_point: autoMountPoint, compression: autoCompression }))
+                    }
+                    isDisabled={savingAction !== null}
+                  >
+                    {savingAction === "auto-mount" ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
+                    <ButtonText>Enable Auto-mount</ButtonText>
+                  </Button>
+                  {getAutoMountForRaid(raidModal?.uuid)?.id ? (
+                    <Button
+                      action="negative"
+                      variant="outline"
                       onPress={() =>
-                        raidModal?.uuid &&
-                        performAction("auto-mount", () => createAutomaticMount(selectedMachine, { uuid: raidModal.uuid, mount_point: autoMountPoint, compression: autoCompression }))
-                      }
+                          performAction("remove auto-mount", () => deleteAutomaticMount(getAutoMountForRaid(raidModal?.uuid)!.id))
+                        }
                       isDisabled={savingAction !== null}
                     >
-                      {savingAction === "auto-mount" ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
-                      <ButtonText>Ativar Auto-mount</ButtonText>
+                      {savingAction === "remove auto-mount" ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
+                      <ButtonText>Remove Auto-mount</ButtonText>
                     </Button>
-                    {getAutoMountForRaid(raidModal?.uuid)?.id ? (
-                      <Button
-                        action="negative"
-                        variant="outline"
-                        onPress={() =>
-                          performAction("remover auto-mount", () => deleteAutomaticMount(getAutoMountForRaid(raidModal?.uuid)!.id))
-                        }
-                        isDisabled={savingAction !== null}
-                      >
-                        {savingAction === "remover auto-mount" ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
-                        <ButtonText>Remover Auto-mount</ButtonText>
-                      </Button>
-                    ) : null}
-                  </HStack>
+                  ) : null}
+                </HStack>
                 </VStack>
               </VStack>
             </Box>
 
             <Box className="p-3 rounded-xl border border-background-200">
-              <Text className="text-typography-900 font-semibold mb-2">Dispositivos</Text>
+              <Text className="text-typography-900 font-semibold mb-2">Devices</Text>
               <VStack className="gap-2">
                 {(Array.isArray(raidModal?.devices) ? raidModal?.devices : [])?.map((dev) => {
                   const devDisplay = getRaidDeviceLabel(dev, disks);
@@ -977,10 +977,10 @@ export default function BtrfsRaidsScreen() {
               className="border-error-500"
             >
               <ButtonIcon as={Trash2} size="sm" />
-              <ButtonText>Remover RAID</ButtonText>
+              <ButtonText>Remove RAID</ButtonText>
             </Button>
             <Button action="primary" onPress={() => setRaidModal(null)}>
-              <ButtonText>Fechar</ButtonText>
+              <ButtonText>Close</ButtonText>
             </Button>
           </ModalFooter>
         </ModalContent>
@@ -991,32 +991,32 @@ export default function BtrfsRaidsScreen() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <Heading size="md" className="text-typography-900">
-              Remover RAID?
+              Remove RAID?
             </Heading>
           </AlertDialogHeader>
           <AlertDialogBody>
             <Text className="text-typography-700">
-              Esta ação apagará o RAID{" "}
-              <Text className="font-semibold">{deleteRaidTarget?.uuid}</Text>. Deseja continuar?
+              This action will delete RAID{" "}
+              <Text className="font-semibold">{deleteRaidTarget?.uuid}</Text>. Do you want to continue?
             </Text>
           </AlertDialogBody>
           <AlertDialogFooter className="gap-3">
             <Button variant="outline" action="default" onPress={() => setDeleteRaidTarget(null)} isDisabled={savingAction !== null}>
-              <ButtonText>Cancelar</ButtonText>
+              <ButtonText>Cancel</ButtonText>
             </Button>
             <Button
               action="negative"
               onPress={() =>
                 deleteRaidTarget?.uuid &&
-                performAction("remover RAID", () => removeRaid(selectedMachine, deleteRaidTarget.uuid)).then(() => {
+                performAction("remove RAID", () => removeRaid(selectedMachine, deleteRaidTarget.uuid)).then(() => {
                   setDeleteRaidTarget(null);
                   setRaidModal(null);
                 })
               }
               isDisabled={savingAction !== null}
             >
-              {savingAction === "remover RAID" ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
-              <ButtonText>Remover</ButtonText>
+              {savingAction === "remove RAID" ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
+              <ButtonText>Remove</ButtonText>
             </Button>
           </AlertDialogFooter>
           <AlertDialogCloseButton />

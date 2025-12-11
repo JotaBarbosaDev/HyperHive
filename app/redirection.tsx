@@ -158,14 +158,14 @@ export default function RedirectionHostsScreen() {
 
   const handleCertificatesError = React.useCallback(
     (_error: unknown) => {
-      showToast("Erro ao carregar certificados", "Não foi possível obter os certificados SSL.", "error");
+      showToast("Error loading certificates", "Unable to fetch SSL certificates.", "error");
     },
     [showToast]
   );
 
   const {certificateOptions, loadingCertificates, refreshCertificates} = useCertificatesOptions(handleCertificatesError);
   const selectedCertificateLabel =
-    certificateOptions.find((option) => option.value === String(form.certificate_id ?? 0))?.label || "Sem certificado";
+    certificateOptions.find((option) => option.value === String(form.certificate_id ?? 0))?.label || "No certificate";
 
   const loadItems = React.useCallback(
     async (mode: "full" | "refresh" | "silent" = "full") => {
@@ -176,7 +176,7 @@ export default function RedirectionHostsScreen() {
         setItems(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Failed to load redirections", err);
-        showToast("Erro ao carregar", "Não foi possível obter os redirecionamentos.", "error");
+        showToast("Error loading", "Unable to fetch redirections.", "error");
       } finally {
         if (mode === "full") setLoading(false);
         if (mode === "refresh") setRefreshing(false);
@@ -245,11 +245,11 @@ export default function RedirectionHostsScreen() {
   const handleSave = async () => {
     const domain_names = parseDomains(domainsInput);
     if (!domain_names.length) {
-      showToast("Domínios obrigatórios", "Informe ao menos um domínio.", "error");
+      showToast("Domains required", "Provide at least one domain.", "error");
       return;
     }
     if (!form.forward_domain_name) {
-      showToast("Destino obrigatório", "Informe o domínio de destino.", "error");
+      showToast("Destination required", "Provide the destination domain.", "error");
       return;
     }
     const payload: RedirectionPayload = {
@@ -263,17 +263,17 @@ export default function RedirectionHostsScreen() {
     try {
       if (editingHost?.id) {
         await editRedirection(editingHost.id, payload);
-        showToast("Redirecionamento atualizado", "Configuração salva.");
+        showToast("Redirection updated", "Configuration saved.");
       } else {
         await createRedirection(payload);
-        showToast("Redirecionamento criado", "Host de redirecionamento adicionado.");
+        showToast("Redirection created", "Redirection host added.");
       }
       setModalOpen(false);
       setEditingHost(null);
       await loadItems("silent");
     } catch (err) {
       console.error("Failed to save redirection", err);
-      showToast("Erro ao salvar", "Verifique os dados e tente novamente.", "error");
+      showToast("Error saving", "Check the data and try again.", "error");
     } finally {
       setSaving(false);
     }
@@ -286,15 +286,15 @@ export default function RedirectionHostsScreen() {
     try {
       if (enabled) {
         await disableRedirection(host.id);
-        showToast("Redirecionamento desativado", "Host desativado.");
+        showToast("Redirection disabled", "Host disabled.");
       } else {
         await enableRedirection(host.id);
-        showToast("Redirecionamento ativado", "Host ativado.");
+        showToast("Redirection enabled", "Host enabled.");
       }
       await loadItems("silent");
     } catch (err) {
       console.error("Failed to toggle redirection", err);
-      showToast("Erro ao alterar status", "Não foi possível atualizar o host.", "error");
+      showToast("Error changing status", "Unable to update the host.", "error");
     } finally {
       setTogglingId(null);
     }
@@ -305,12 +305,12 @@ export default function RedirectionHostsScreen() {
     setDeletingId(deleteTarget.id);
     try {
       await deleteRedirection(deleteTarget.id);
-      showToast("Redirecionamento removido", "Host apagado com sucesso.");
+      showToast("Redirection removed", "Host deleted successfully.");
       setDeleteTarget(null);
       await loadItems("silent");
     } catch (err) {
       console.error("Failed to delete redirection", err);
-      showToast("Erro ao apagar", "Não foi possível remover o host.", "error");
+      showToast("Error deleting", "Unable to remove the host.", "error");
     } finally {
       setDeletingId(null);
     }
@@ -347,15 +347,15 @@ export default function RedirectionHostsScreen() {
             Redirection Hosts
           </Heading>
           <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
-            Configure redirecionamentos HTTP para seus domínios.
+            Configure HTTP redirections for your domains.
           </Text>
 
           <HStack className="mt-6 items-center justify-between flex-wrap gap-3">
             <HStack className="gap-2 flex-wrap">
               {[
-                {key: "all" as FilterTab, label: `Todos (${stats.total})`},
-                {key: "active" as FilterTab, label: `Ativos (${stats.active})`},
-                {key: "inactive" as FilterTab, label: `Inativos (${stats.inactive})`},
+                {key: "all" as FilterTab, label: `All (${stats.total})`},
+                {key: "active" as FilterTab, label: `Active (${stats.active})`},
+                {key: "inactive" as FilterTab, label: `Inactive (${stats.inactive})`},
               ].map((tab) => {
                 const active = filter === tab.key;
                 return (
@@ -378,7 +378,7 @@ export default function RedirectionHostsScreen() {
             </HStack>
             <Button action="primary" variant="solid" size="md" onPress={openCreateModal} className="rounded-full px-5">
               <ButtonIcon as={Plus} size="sm" />
-              <ButtonText>Adicionar Redirecionamento</ButtonText>
+              <ButtonText>Add Redirection</ButtonText>
             </Button>
           </HStack>
 
@@ -386,9 +386,9 @@ export default function RedirectionHostsScreen() {
             renderLoading()
           ) : filteredItems.length === 0 ? (
             <Box className="mt-10 p-6 border border-dashed border-background-300 rounded-2xl bg-background-0 items-center">
-              <Text className="text-typography-700 font-semibold text-base">Nenhum redirecionamento encontrado</Text>
+              <Text className="text-typography-700 font-semibold text-base">No redirections found</Text>
               <Text className="text-typography-500 text-sm mt-1 text-center">
-                Clique em &quot;Adicionar Redirecionamento&quot; para criar o primeiro host de redirecionamento.
+                Click "Add Redirection" to create the first redirection host.
               </Text>
             </Box>
           ) : (
@@ -421,7 +421,7 @@ export default function RedirectionHostsScreen() {
                           {host.ssl_forced ? (
                             <HStack className="items-center gap-1">
                               <Lock size={16} color="#16a34a" />
-                              <Text className="text-success-600 text-sm">SSL (Forçado)</Text>
+                              <Text className="text-success-600 text-sm">SSL (Forced)</Text>
                             </HStack>
                           ) : (
                             <HStack className="items-center gap-1">
@@ -447,7 +447,7 @@ export default function RedirectionHostsScreen() {
                           className="border-background-300"
                         >
                           {togglingId === host.id ? <ButtonSpinner /> : <ButtonIcon as={Power} size="sm" />}
-                          <ButtonText>{enabled ? "Desativar" : "Ativar"}</ButtonText>
+                          <ButtonText>{enabled ? "Disable" : "Enable"}</ButtonText>
                         </Button>
                         <Button
                           action="default"
@@ -483,10 +483,10 @@ export default function RedirectionHostsScreen() {
           <ModalHeader className="flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
             <VStack className="flex-1">
               <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
-                {editingHost ? "Editar Redirecionamento" : "Adicionar Redirecionamento"}
+                {editingHost ? "Edit Redirection" : "Add Redirection"}
               </Heading>
               <Text className="text-typography-600 dark:text-typography-400 mt-1">
-                Roteie domínios para novos destinos com opções de SSL e HSTS.
+                Route domains to new destinations with SSL and HSTS options.
               </Text>
             </VStack>
             <ModalCloseButton className="text-typography-500" />
@@ -528,24 +528,24 @@ export default function RedirectionHostsScreen() {
                   <VStack className="gap-4">
                     <FormControl isRequired>
                       <FormControlLabel>
-                        <FormControlLabelText>Domínios</FormControlLabelText>
+                        <FormControlLabelText>Domains</FormControlLabelText>
                       </FormControlLabel>
                       <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
                         <InputField
                           value={domainsInput}
                           onChangeText={setDomainsInput}
-                          placeholder="ex: old.hyperhive.local, www.old.hyperhive.local"
+                          placeholder="e.g.: old.hyperhive.local, www.old.hyperhive.local"
                           autoCapitalize="none"
                         />
                       </Input>
                       <FormControlHelper>
-                        <FormControlHelperText>Separe por vírgula ou quebra de linha.</FormControlHelperText>
+                        <FormControlHelperText>Separate by comma or line break.</FormControlHelperText>
                       </FormControlHelper>
                     </FormControl>
 
                     <FormControl isRequired>
                       <FormControlLabel>
-                        <FormControlLabelText>Destino</FormControlLabelText>
+                        <FormControlLabelText>Destination</FormControlLabelText>
                       </FormControlLabel>
                       <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
                         <InputField
@@ -559,7 +559,7 @@ export default function RedirectionHostsScreen() {
 
                     <FormControl>
                       <FormControlLabel>
-                        <FormControlLabelText>Código HTTP</FormControlLabelText>
+                        <FormControlLabelText>HTTP Code</FormControlLabelText>
                       </FormControlLabel>
                       <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
                         <InputField
@@ -572,7 +572,7 @@ export default function RedirectionHostsScreen() {
                     </FormControl>
 
                     <VStack className="gap-3">
-                      <Text className="text-typography-800 font-semibold">Opções adicionais</Text>
+                      <Text className="text-typography-800 font-semibold">Additional options</Text>
                       <HStack className="flex-wrap gap-4">
                         <HStack className="items-center gap-2">
                           <Switch
@@ -600,7 +600,7 @@ export default function RedirectionHostsScreen() {
                     <FormControl>
                       <HStack className="items-center justify-between">
                         <FormControlLabel>
-                          <FormControlLabelText>Certificado SSL</FormControlLabelText>
+                          <FormControlLabelText>SSL Certificate</FormControlLabelText>
                         </FormControlLabel>
                         <Button
                           variant="link"
@@ -610,7 +610,7 @@ export default function RedirectionHostsScreen() {
                           onPress={() => void refreshCertificates()}
                           isDisabled={loadingCertificates}
                         >
-                          {loadingCertificates ? <ButtonSpinner /> : <ButtonText>Atualizar</ButtonText>}
+                          {loadingCertificates ? <ButtonSpinner /> : <ButtonText>Refresh</ButtonText>}
                         </Button>
                       </HStack>
                       <Select
@@ -620,7 +620,7 @@ export default function RedirectionHostsScreen() {
                       >
                         <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] h-11 px-4">
                           <SelectInput
-                            placeholder={loadingCertificates ? "A carregar certificados..." : selectedCertificateLabel}
+                            placeholder={loadingCertificates ? "Loading certificates..." : selectedCertificateLabel}
                             className="text-typography-900 dark:text-[#E8EBF0]"
                           />
                           <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-typography-400" />
@@ -645,19 +645,19 @@ export default function RedirectionHostsScreen() {
                         </SelectPortal>
                       </Select>
                       <FormControlHelper>
-                        <FormControlHelperText>Escolha o certificado a aplicar ou deixe sem SSL.</FormControlHelperText>
+                        <FormControlHelperText>Choose the certificate to apply or leave without SSL.</FormControlHelperText>
                       </FormControlHelper>
                     </FormControl>
 
                     <FormControl>
                       <FormControlLabel>
-                        <FormControlLabelText>Configuração avançada (opcional)</FormControlLabelText>
+                        <FormControlLabelText>Advanced configuration (optional)</FormControlLabelText>
                       </FormControlLabel>
                       <Textarea className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]" size="md">
                         <TextareaInput
                           value={form.advanced_config}
                           onChangeText={(text) => setForm((prev) => ({...prev, advanced_config: text}))}
-                          placeholder="Configuração Nginx adicional (opcional)..."
+                          placeholder="Additional Nginx configuration (optional)..."
                         />
                       </Textarea>
                     </FormControl>
@@ -671,7 +671,7 @@ export default function RedirectionHostsScreen() {
                             value={form.ssl_forced}
                             onValueChange={(val) => setForm((prev) => ({...prev, ssl_forced: val}))}
                           />
-                          <Text className="text-typography-800">Forçar SSL</Text>
+                          <Text className="text-typography-800">Force SSL</Text>
                         </HStack>
                         <HStack className="items-center gap-2">
                           <Switch
@@ -697,7 +697,7 @@ export default function RedirectionHostsScreen() {
                             isDisabled={!form.hsts_enabled}
                           />
                           <Text className={`text-typography-800 ${!form.hsts_enabled ? "text-typography-500" : ""}`}>
-                            HSTS Subdomínios
+                            HSTS Subdomains
                           </Text>
                         </HStack>
                       </HStack>
@@ -710,11 +710,11 @@ export default function RedirectionHostsScreen() {
           <ModalFooter className="px-6 pb-6 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
             <HStack className="gap-3 justify-end w-full">
               <Button variant="outline" action="default" onPress={closeModal} isDisabled={saving}>
-                <ButtonText>Cancelar</ButtonText>
+                <ButtonText>Cancel</ButtonText>
               </Button>
               <Button action="primary" onPress={handleSave} isDisabled={saving}>
                 {saving ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
-                <ButtonText>{editingHost ? "Salvar alterações" : "Criar redirecionamento"}</ButtonText>
+                <ButtonText>{editingHost ? "Save changes" : "Create redirection"}</ButtonText>
               </Button>
             </HStack>
           </ModalFooter>
@@ -726,25 +726,25 @@ export default function RedirectionHostsScreen() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <Heading size="md" className="text-typography-900">
-              Remover redirecionamento?
+              Remove redirection?
             </Heading>
           </AlertDialogHeader>
           <AlertDialogBody>
             <Text className="text-typography-700">
-              Esta ação apagará{" "}
+              This action will delete{" "}
               <Text className="font-semibold">
                 {(deleteTarget?.domain_names ?? []).join(", ")}
               </Text>
-              . Deseja continuar?
+              . Do you want to continue?
             </Text>
           </AlertDialogBody>
           <AlertDialogFooter className="gap-3">
             <Button variant="outline" action="default" onPress={() => setDeleteTarget(null)} isDisabled={Boolean(deletingId)}>
-              <ButtonText>Cancelar</ButtonText>
+              <ButtonText>Cancel</ButtonText>
             </Button>
             <Button action="negative" onPress={handleDelete} isDisabled={Boolean(deletingId)}>
               {deletingId ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
-              <ButtonText>Apagar</ButtonText>
+              <ButtonText>Delete</ButtonText>
             </Button>
           </AlertDialogFooter>
           <AlertDialogCloseButton />

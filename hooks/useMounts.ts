@@ -41,7 +41,7 @@ export function useMounts({token}: UseMountsOptions = {}) {
       } catch (err) {
         if (!isMountedRef.current) return;
         const message =
-          err instanceof Error ? err.message : "Não foi possível carregar os mounts.";
+          err instanceof Error ? err.message : "Unable to load mounts.";
         setError(message);
       } finally {
         if (!isMountedRef.current) return;

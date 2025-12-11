@@ -13,7 +13,7 @@ const ensureApiBaseUrl = async () => {
     baseUrl = setApiBaseUrl(storedBaseUrl) ?? null;
   }
   if (!baseUrl) {
-    throw new Error("Domínio/API base não configurado. Inicia sessão novamente.");
+    throw new Error("Base domain/API not configured. Sign in again.");
   }
   return baseUrl;
 };
@@ -24,7 +24,7 @@ const resolveToken = async () => {
   if (!storedToken) {
     setAuthToken(null);
     triggerUnauthorized();
-    throw new Error("Token de autenticação inválida.");
+    throw new Error("Invalid authentication token.");
   }
   setAuthToken(storedToken);
   return storedToken;
@@ -43,7 +43,7 @@ const normalizeDevices = (data: any): SmartDiskDevice[] => {
     : Array.isArray(data?.devices)
     ? data.devices
     : [];
-  return devices.map((d) => ({
+  return devices.map((d: any) => ({
     device: d?.device ?? d?.path ?? d?.name ?? d ?? "",
     model: d?.model,
     serial: d?.serial,

@@ -14,6 +14,7 @@ import { Progress, ProgressFilledTrack } from "@/components/ui/progress";
 import { Platform } from "react-native";
 import { Heading } from '@/components/ui/heading';
 import CreateVmModal from "@/components/modals/CreateVmModal";
+import ImportVmModal from "@/components/modals/ImportVmModal";
 import { ensureHyperHiveWebsocket, subscribeToHyperHiveWebsocket } from "@/services/websocket-client";
 import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system";
@@ -74,6 +75,7 @@ import {
   removeAllIsos,
   getCpuDisableFeatures,
   updateCpuXml,
+  getVmExportUrl,
 } from "@/services/vms-client";
 import { listMounts } from "@/services/hyperhive";
 import { Mount } from "@/types/mount";
@@ -114,6 +116,8 @@ import {
   RefreshCcw,
   AlertCircle,
   Disc3,
+  Download,
+  Upload,
 } from "lucide-react-native";
 
 // Interfaces TypeScript
@@ -195,6 +199,7 @@ export default function VirtualMachinesScreen() {
   const [selectedVm, setSelectedVm] = React.useState<VM | null>(null);
   const [confirmAction, setConfirmAction] = React.useState<null | { type: "delete" | "force-shutdown"; vm: VM }>(null);
   const [openCreate, setOpenCreate] = React.useState(false);
+  const [openImport, setOpenImport] = React.useState(false);
   const [editVm, setEditVm] = React.useState<VM | null>(null);
   const [cloneVm, setCloneVm] = React.useState<VM | null>(null);
   const [migrateVm, setMigrateVm] = React.useState<VM | null>(null);
@@ -207,9 +212,47 @@ export default function VirtualMachinesScreen() {
   const [cloneOptionsLoading, setCloneOptionsLoading] = React.useState(false);
   const [deletingVm, setDeletingVm] = React.useState<string | null>(null);
   const [migratingVm, setMigratingVm] = React.useState<string | null>(null);
+  const [exportingVm, setExportingVm] = React.useState<string | null>(null);
   const toast = useToast();
   const [showConsoleOptions, setShowConsoleOptions] = React.useState(false);
   const [consoleOptionsVm, setConsoleOptionsVm] = React.useState<VM | null>(null);
+  const mountLookup = React.useMemo(() => {
+    return mountOptions.map((mount) => {
+      const { NfsShare } = mount;
+      const label =
+        NfsShare.Name?.trim() && NfsShare.Name.trim().length > 0
+          ? NfsShare.Name.trim()
+          : `${NfsShare.MachineName} • ${NfsShare.FolderPath}`;
+      return {
+        label,
+        folderPath: (NfsShare.FolderPath ?? "").toLowerCase(),
+        target: (NfsShare.Target ?? "").toLowerCase(),
+        source: (NfsShare.Source ?? "").toLowerCase(),
+      };
+    });
+  }, [mountOptions]);
+  const getNfsNameByDiskPath = React.useCallback(
+    (diskPath?: string) => {
+      if (!diskPath) return null;
+      const normalized = diskPath.toLowerCase();
+      const match = mountLookup.find(({ folderPath, target, source }) => {
+        if (target && normalized.startsWith(target)) {
+          return true;
+        }
+        if (folderPath && normalized.includes(folderPath)) {
+          return true;
+        }
+        if (source && normalized.includes(source)) {
+          return true;
+        }
+        return false;
+      });
+      return match?.label ?? null;
+    },
+    [mountLookup]
+  );
+  const detailsVmNfsName = detailsVm ? getNfsNameByDiskPath(detailsVm.diskPath) : null;
+  const isExportingSelectedVm = selectedVm ? exportingVm === selectedVm.name : false;
 
   const showToastMessage = React.useCallback(
     (
@@ -253,7 +296,7 @@ export default function VirtualMachinesScreen() {
 
       const baseDir = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
       if (!baseDir) {
-        throw new Error("Não foi possível aceder ao diretório de armazenamento.");
+        throw new Error("Unable to access the storage directory.");
       }
       const fileUri = `${baseDir}${fileName}`;
       await FileSystem.writeAsStringAsync(fileUri, content, {
@@ -272,6 +315,39 @@ export default function VirtualMachinesScreen() {
     []
   );
 
+  const handleExportVm = React.useCallback(
+    async (vmToExport: VM) => {
+      if (Platform.OS !== "web") {
+        showToastMessage(
+          "Export unavailable",
+          "Export VM is only supported on the web version.",
+          "error"
+        );
+        return;
+      }
+      setExportingVm(vmToExport.name);
+      try {
+        const { url, token } = await getVmExportUrl(vmToExport.name);
+        const targetUrl = token ? `${url}?token=${encodeURIComponent(token)}` : url;
+        const opened = globalThis.window?.open(targetUrl, "_blank", "noopener,noreferrer");
+        if (!opened) {
+          throw new Error("Browser blocked the export tab. Allow popups for this site.");
+        }
+        showToastMessage("Export started", "The VM disk download opened in a new tab.");
+      } catch (error) {
+        console.error("Error exporting VM:", error);
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to export VM disk.";
+        showToastMessage("Error exporting VM", message, "error");
+      } finally {
+        setExportingVm(null);
+      }
+    },
+    [showToastMessage]
+  );
+
   const handleConsoleAction = React.useCallback(
     async (action: "browser" | "sprite" | "guest") => {
       const vm = consoleOptionsVm;
@@ -282,8 +358,8 @@ export default function VirtualMachinesScreen() {
       const apiBase = getApiBaseUrl();
       if (!apiBase) {
         showToastMessage(
-          "Domínio não configurado",
-          "Atualize o base URL antes de aceder à consola.",
+          "Domain not configured",
+          "Update the base URL before accessing the console.",
           "error"
         );
         return;
@@ -302,13 +378,13 @@ export default function VirtualMachinesScreen() {
               const opened = webWindow.open(target, "_blank", "noopener,noreferrer");
               if (!opened) {
                 showToastMessage(
-                  "Erro",
-                  "Não foi possível abrir a nova aba da consola.",
+                  "Error",
+                  "Could not open the new console tab.",
                   "error"
                 );
               }
             } else {
-              showToastMessage("Erro", "Não foi possível abrir a consola no browser.", "error");
+              showToastMessage("Error", "Could not open the console in the browser.", "error");
             }
           } else {
             await WebBrowser.openBrowserAsync(target);
@@ -327,7 +403,7 @@ export default function VirtualMachinesScreen() {
           );
           const fileName = `${vm.name}.vv`;
           await downloadTextFile(spriteText, fileName);
-          showToastMessage("Sprite guardado", "O ficheiro .vv foi gerado.");
+          showToastMessage("Sprite saved", "The .vv file was generated.");
           return;
         }
 
@@ -336,14 +412,14 @@ export default function VirtualMachinesScreen() {
             vm.name
           )}`;
           await Clipboard.setStringAsync(guestUrl);
-          showToastMessage("Link copiado", "URL do guest copiado para a área de transferência.");
+          showToastMessage("Link copied", "Guest URL copied to the clipboard.");
           return;
         }
       } catch (error) {
-        console.error("Erro ao executar ação da consola:", error);
+        console.error("Error executing console action:", error);
         const message =
-          error instanceof Error && error.message ? error.message : "Falha ao executar a ação.";
-        showToastMessage("Erro", message, "error");
+          error instanceof Error && error.message ? error.message : "Failed to perform the action.";
+        showToastMessage("Error", message, "error");
       }
     },
     [consoleOptionsVm, showToastMessage]
@@ -648,7 +724,7 @@ export default function VirtualMachinesScreen() {
           void processWsPayload(msg);
         });
       } catch (err) {
-        console.error("Erro ao iniciar WebSocket:", err);
+        console.error("Error starting WebSocket:", err);
       }
     };
     setup();
@@ -660,7 +736,7 @@ export default function VirtualMachinesScreen() {
   React.useEffect(() => {
     const interval = setInterval(() => {
       fetchAndSetVms().catch((err) => {
-        console.warn("Erro ao atualizar VMs (intervalo):", err);
+        console.warn("Error updating VMs (interval):", err);
       });
     }, 10_000);
     return () => clearInterval(interval);
@@ -688,17 +764,17 @@ export default function VirtualMachinesScreen() {
       toast.show({
         placement: "top", render: ({ id }) => (
           <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="success">
-            <ToastTitle size="sm">{action} executado</ToastTitle>
+            <ToastTitle size="sm">{action} executed</ToastTitle>
           </Toast>
         )
       });
     } catch (error) {
-      console.error("Erro ao executar ação na VM:", error);
+      console.error("Error performing action on VM:", error);
       toast.show({
         placement: "top",
         render: ({ id }) => (
           <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="error">
-            <ToastTitle size="sm">Erro ao executar ação</ToastTitle>
+            <ToastTitle size="sm">Error performing action</ToastTitle>
           </Toast>
         )
       });
@@ -713,7 +789,7 @@ export default function VirtualMachinesScreen() {
     toast.show({
       placement: "top", render: ({ id }) => (
         <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="success">
-          <ToastTitle size="sm">Auto-start {checked ? "ativado" : "desativado"}</ToastTitle>
+          <ToastTitle size="sm">Auto-start {checked ? "enabled" : "disabled"}</ToastTitle>
         </Toast>
       )
     });
@@ -752,7 +828,7 @@ export default function VirtualMachinesScreen() {
                 Virtual Machines
               </Heading>
               <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl mt-2">
-                Gestão completa de máquinas virtuais distribuídas por slave com controle de recursos e monitoramento.
+                Complete management of virtual machines distributed across slaves with resource controls and monitoring.
               </Text>
             </VStack>
             <HStack className="gap-2">
@@ -771,6 +847,20 @@ export default function VirtualMachinesScreen() {
                     className="text-typography-700 dark:text-[#E8EBF0]"
                   />
                 )}
+              </Button>
+              <Button
+                variant="outline"
+                size="md"
+                onPress={() => setOpenImport(true)}
+                className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+              >
+                <ButtonIcon
+                  as={Upload}
+                  className="text-typography-700 dark:text-[#E8EBF0]"
+                />
+                <ButtonText className="web:inline hidden text-typography-900 dark:text-[#E8EBF0]">
+                  Importar VM
+                </ButtonText>
               </Button>
               <Button
                 size="md"
@@ -995,13 +1085,13 @@ export default function VirtualMachinesScreen() {
                   className="text-typography-900 dark:text-[#E8EBF0] text-lg text-center"
                   style={{ fontFamily: "Inter_600SemiBold" }}
                 >
-                  Nenhuma VM encontrada
+                  No VMs found
                 </Text>
                 <Text
                   className="text-[#9AA4B8] dark:text-[#8A94A8] text-center"
                   style={{ fontFamily: "Inter_400Regular" }}
                 >
-                  Comece criando sua primeira máquina virtual
+                  Start by creating your first virtual machine
                 </Text>
                 <Button
                   onPress={handleNewVM}
@@ -1012,7 +1102,7 @@ export default function VirtualMachinesScreen() {
                     className="text-background-0 dark:text-typography-900"
                   />
                   <ButtonText className="text-background-0 dark:text-typography-900">
-                    Criar Primeira VM
+                    Create First VM
                   </ButtonText>
                 </Button>
               </VStack>
@@ -1068,6 +1158,7 @@ export default function VirtualMachinesScreen() {
                           const isPaused = vm.state === VmState.PAUSED;
                           const isStopped = vm.state === VmState.SHUTOFF;
                           const isLoading = loadingVm === vm.name;
+                          const vmNfsName = getNfsNameByDiskPath(vm.diskPath);
 
                           return (
                             <Box
@@ -1298,6 +1389,22 @@ export default function VirtualMachinesScreen() {
                                     {vm.network}
                                   </Text>
                                 </HStack>
+                                {vmNfsName ? (
+                                  <HStack className="justify-between mt-3">
+                                    <Text
+                                      className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
+                                      style={{ fontFamily: "Inter_400Regular" }}
+                                    >
+                                      NFS
+                                    </Text>
+                                    <Text
+                                      className="text-xs text-typography-900 dark:text-[#E8EBF0] truncate max-w-[60%]"
+                                      style={{ fontFamily: "Inter_500Medium" }}
+                                    >
+                                      {vmNfsName}
+                                    </Text>
+                                  </HStack>
+                                ) : null}
                               </Box>
 
                               {/* Botões de Ação */}
@@ -1409,7 +1516,7 @@ export default function VirtualMachinesScreen() {
             <ModalContent className="rounded-lg shadow-lg max-w-[720px] w-full">
               <ModalHeader className="flex justify-between">
                 <Heading size="md" className="text-gray-900">
-                  Detalhes da VM
+                  VM Details
                 </Heading>
                 <VStack className="gap-2">
                   <HStack className="">
@@ -1421,7 +1528,7 @@ export default function VirtualMachinesScreen() {
                         setShowConsoleOptions(true);
                       }}
                     >
-                      <ButtonText>Abrir</ButtonText>
+                      <ButtonText>Open</ButtonText>
                     </Button>
                   </HStack>
                 </VStack>
@@ -1437,7 +1544,7 @@ export default function VirtualMachinesScreen() {
                       <Divider className="my-2" />
                       <VStack className="gap-3 web:grid web:grid-cols-2 web:gap-4">
                         <HStack className="justify-between">
-                          <Text className="text-sm text-gray-600">Estado</Text>
+                          <Text className="text-sm text-gray-600">State</Text>
                           <Badge
                             variant={VM_STATES[detailsVm.state].badgeVariant}
                             className="rounded-full"
@@ -1460,9 +1567,9 @@ export default function VirtualMachinesScreen() {
                           </Text>
                         </HStack>
                         <HStack className="justify-between">
-                          <Text className="text-sm text-gray-600">Disco</Text>
+                          <Text className="text-sm text-gray-600">Disk</Text>
                           <Text className="text-sm text-gray-900">
-                            {detailsVm.diskSizeGB} GB (Alocado: {detailsVm.AllocatedGb} GB)
+                            {detailsVm.diskSizeGB} GB (Allocated: {detailsVm.AllocatedGb} GB)
                           </Text>
                         </HStack>
                         <HStack className="justify-between">
@@ -1472,11 +1579,19 @@ export default function VirtualMachinesScreen() {
                           </Text>
                         </HStack>
                         <HStack className="justify-between">
-                          <Text className="text-sm text-gray-600">Caminho do Disco</Text>
+                          <Text className="text-sm text-gray-600">Disk Path</Text>
                           <Text className="text-sm text-gray-900 truncate max-w-[200px]">
                             {detailsVm.diskPath}
                           </Text>
                         </HStack>
+                        {detailsVmNfsName ? (
+                          <HStack className="justify-between">
+                            <Text className="text-sm text-gray-600">NFS</Text>
+                            <Text className="text-sm text-gray-900">
+                              {detailsVmNfsName}
+                            </Text>
+                          </HStack>
+                        ) : null}
                         {detailsVm.ip.length > 0 && (
                           <HStack className="justify-between col-span-2">
                             <Text className="text-sm text-gray-600">IP</Text>
@@ -1490,13 +1605,13 @@ export default function VirtualMachinesScreen() {
                             Auto-start
                           </Text>
                           <Text className="text-sm text-gray-900">
-                            {detailsVm.autoStart ? "Sim" : "Não"}
+                            {detailsVm.autoStart ? "Yes" : "No"}
                           </Text>
                         </HStack>
                         <HStack className="justify-between col-span-2">
                           <Text className="text-sm text-gray-600">Live VM</Text>
                           <Text className="text-sm text-typography-900">
-                            {detailsVm.isLive ? "Sim" : "Não"}
+                            {detailsVm.isLive ? "Yes" : "No"}
                           </Text>
                         </HStack>
                       </VStack>
@@ -1508,7 +1623,7 @@ export default function VirtualMachinesScreen() {
                           onPress={() => setEditVm(detailsVm)}
                         >
                           <ButtonIcon as={Settings} />
-                          <ButtonText>Editar Recursos</ButtonText>
+                          <ButtonText>Edit Resources</ButtonText>
                         </Button>
                         <Button
                           variant="outline"
@@ -1516,7 +1631,7 @@ export default function VirtualMachinesScreen() {
                           onPress={() => setCloneVm(detailsVm)}
                         >
                           <ButtonIcon as={Copy} />
-                          <ButtonText>Clonar VM</ButtonText>
+                          <ButtonText>Clone VM</ButtonText>
                         </Button>
                         <Button
                           variant="outline"
@@ -1524,7 +1639,7 @@ export default function VirtualMachinesScreen() {
                           onPress={() => setMigrateVm(detailsVm)}
                         >
                           <ButtonIcon as={GitBranch} />
-                          <ButtonText>Migrar VM</ButtonText>
+                          <ButtonText>Migrate VM</ButtonText>
                         </Button>
                       </HStack>
                     </VStack>
@@ -1538,13 +1653,13 @@ export default function VirtualMachinesScreen() {
                     className="rounded-md px-4 py-2"
                     onPress={() => setDetailsVm(null)}
                   >
-                    <ButtonText>Fechar</ButtonText>
+                    <ButtonText>Close</ButtonText>
                   </Button>
                 </HStack>
               </ModalFooter>
             </ModalContent>
           </Modal>
-          {/* AlertDialog de confirmação */}
+          {/* Confirmation AlertDialog */}
           <AlertDialog
             isOpen={!!confirmAction}
             onClose={() => setConfirmAction(null)}
@@ -1553,15 +1668,15 @@ export default function VirtualMachinesScreen() {
             <AlertDialogContent>
               <AlertDialogHeader>
                 <Heading size="md" className="text-gray-900">
-                  Confirmação
+                  Confirmation
                 </Heading>
                 <AlertDialogCloseButton />
               </AlertDialogHeader>
               <AlertDialogBody>
                 <Text className="text-gray-700">
                   {confirmAction?.type === "delete"
-                    ? `Tem certeza que deseja apagar a VM ${confirmAction?.vm.name}?`
-                    : `Forçar desligamento de ${confirmAction?.vm.name}?`}
+                    ? `Are you sure you want to delete VM ${confirmAction?.vm.name}?`
+                    : `Force shutdown of ${confirmAction?.vm.name}?`}
                 </Text>
               </AlertDialogBody>
               <AlertDialogFooter>
@@ -1570,7 +1685,7 @@ export default function VirtualMachinesScreen() {
                   onPress={() => setConfirmAction(null)}
                   className="rounded-md px-4 py-2"
                 >
-                  <ButtonText>Cancelar</ButtonText>
+                  <ButtonText>Cancel</ButtonText>
                 </Button>
                 <Button
                   onPress={async () => {
@@ -1593,12 +1708,12 @@ export default function VirtualMachinesScreen() {
                               className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
                               action="success"
                             >
-                              <ToastTitle size="sm">VM apagada</ToastTitle>
+                              <ToastTitle size="sm">VM deleted</ToastTitle>
                             </Toast>
                           ),
                         });
                       } catch (error) {
-                        console.error("Erro ao apagar VM:", error);
+                        console.error("Error deleting VM:", error);
                         toast.show({
                           placement: "top",
                           render: ({ id }) => (
@@ -1607,7 +1722,7 @@ export default function VirtualMachinesScreen() {
                               className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
                               action="error"
                             >
-                              <ToastTitle size="sm">Erro ao apagar VM</ToastTitle>
+                              <ToastTitle size="sm">Error deleting VM</ToastTitle>
                             </Toast>
                           ),
                         });
@@ -1628,6 +1743,22 @@ export default function VirtualMachinesScreen() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+          {/* Modal: Importar VM */}
+          <ImportVmModal
+            showModal={openImport}
+            setShowModal={setOpenImport}
+            onSuccess={(importedName) => {
+              if (importedName) {
+                setPendingVmNames((prev) => {
+                  const next = new Set(prev);
+                  next.add(importedName);
+                  return new Set(next);
+                });
+              }
+              handleRefresh();
+            }}
+          />
 
           {/* Modal: Criar VM */}
           <CreateVmModal
@@ -1652,7 +1783,7 @@ export default function VirtualMachinesScreen() {
             <ModalContent className="rounded-2xl border border-outline-100 shadow-soft-1 web:max-w-2xl w-[90%] max-h-[85vh] web:max-h-[90vh]">
               <ModalHeader className="border-b border-outline-100 dark:border-[#2A3B52]">
                 <Heading size="md" className="text-gray-900 dark:text-[#E8EBF0]">
-                  Editar Recursos
+                  Edit Resources
                 </Heading>
                 <ModalCloseButton />
               </ModalHeader>
@@ -1725,7 +1856,7 @@ export default function VirtualMachinesScreen() {
             <ModalContent className="rounded-lg shadow-lg">
               <ModalHeader>
                 <Heading size="md" className="text-gray-900">
-                  Clonar VM
+                  Clone VM
                 </Heading>
                 <ModalCloseButton />
               </ModalHeader>
@@ -1807,7 +1938,7 @@ export default function VirtualMachinesScreen() {
             <ModalContent className="rounded-lg shadow-lg">
               <ModalHeader>
                 <Heading size="md" className="text-gray-900">
-                  Migrar VM
+                  Migrate VM
                 </Heading>
                 <ModalCloseButton />
               </ModalHeader>
@@ -1904,7 +2035,7 @@ export default function VirtualMachinesScreen() {
             <ModalContent className="rounded-lg shadow-lg">
               <ModalHeader>
                 <Heading size="md" className="text-gray-900">
-                  Mover Disco
+                  Move Disk
                 </Heading>
                 <ModalCloseButton />
               </ModalHeader>
@@ -1915,9 +2046,9 @@ export default function VirtualMachinesScreen() {
                     mountOptions={mountOptions}
                     loadingOptions={cloneOptionsLoading}
                     onCancel={() => setMoveDiskVm(null)}
-                    onMove={async ({ destNfsId, destDiskPath }) => {
+                    onMove={async ({ destNfsId, newName }) => {
                       try {
-                        await moveDisk(moveDiskVm.name, destNfsId, destDiskPath);
+                        await moveDisk(moveDiskVm.name, destNfsId, newName);
                         await fetchAndSetVms();
                         setMoveDiskVm(null);
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -1943,11 +2074,11 @@ export default function VirtualMachinesScreen() {
                               className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
                               action="error"
                             >
-                              <ToastTitle size="sm">Erro ao mover disco</ToastTitle>
+                              <ToastTitle size="sm">Error moving disk</ToastTitle>
                             </Toast>
                           ),
                         });
-                        throw error instanceof Error ? error : new Error("Erro ao mover disco");
+                        throw error instanceof Error ? error : new Error("Error moving disk");
                       }
                     }}
                   />
@@ -1960,7 +2091,7 @@ export default function VirtualMachinesScreen() {
                     className="rounded-md px-4 py-2"
                     onPress={() => setMoveDiskVm(null)}
                   >
-                    <ButtonText>Fechar</ButtonText>
+                    <ButtonText>Close</ButtonText>
                   </Button>
                 </HStack>
               </ModalFooter>
@@ -2000,18 +2131,18 @@ export default function VirtualMachinesScreen() {
                               className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
                               action="success"
                             >
-                              <ToastTitle size="sm">CPU XML atualizado</ToastTitle>
+                              <ToastTitle size="sm">CPU XML updated</ToastTitle>
                             </Toast>
                           ),
                         });
                       } catch (error) {
-                        console.error("Erro ao atualizar CPU XML:", error);
+                        console.error("Error updating CPU XML:", error);
                         const description =
                           error instanceof ApiError && typeof error.data === "string"
                             ? error.data
                             : error instanceof Error
                               ? error.message
-                              : "Não foi possível atualizar o CPU XML.";
+                              : "Unable to update CPU XML.";
                         toast.show({
                           placement: "top",
                           render: ({ id }) => (
@@ -2020,7 +2151,7 @@ export default function VirtualMachinesScreen() {
                               className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
                               action="error"
                             >
-                              <ToastTitle size="sm">Erro ao atualizar CPU XML</ToastTitle>
+                              <ToastTitle size="sm">Error updating CPU XML</ToastTitle>
                               <ToastDescription size="sm">{description}</ToastDescription>
                             </Toast>
                           ),
@@ -2034,13 +2165,13 @@ export default function VirtualMachinesScreen() {
             </ModalContent>
           </Modal>
 
-          {/* Modal: Restaurar Backup */}
+          {/* Modal: Restore Backup */}
           <Modal isOpen={!!restoreVm} onClose={() => setRestoreVm(null)}>
             <ModalBackdrop />
             <ModalContent className="rounded-lg shadow-lg">
               <ModalHeader>
                 <Heading size="md" className="text-gray-900">
-                  Restaurar Backup
+                  Restore Backup
                 </Heading>
                 <ModalCloseButton />
               </ModalHeader>
@@ -2048,7 +2179,7 @@ export default function VirtualMachinesScreen() {
                 {restoreVm && (
                   <VStack className="gap-3">
                     <Text className="text-gray-700">
-                      Confirmar restauração de backup para {restoreVm.name}?
+                      Confirm backup restore for {restoreVm.name}?
                     </Text>
                     <HStack className="justify-end gap-2">
                       <Button
@@ -2056,7 +2187,7 @@ export default function VirtualMachinesScreen() {
                         className="rounded-md px-4 py-2"
                         onPress={() => setRestoreVm(null)}
                       >
-                        <ButtonText>Cancelar</ButtonText>
+                        <ButtonText>Cancel</ButtonText>
                       </Button>
                       <Button
                         className="rounded-md px-4 py-2"
@@ -2073,7 +2204,7 @@ export default function VirtualMachinesScreen() {
                                 action="success"
                               >
                                 <ToastTitle size="sm">
-                                  Restauração iniciada
+                                  Restore started
                                 </ToastTitle>
                               </Toast>
                             ),
@@ -2081,7 +2212,7 @@ export default function VirtualMachinesScreen() {
                           setRestoreVm(null);
                         }}
                       >
-                        <ButtonText>Restaurar</ButtonText>
+                        <ButtonText>Restore</ButtonText>
                       </Button>
                     </HStack>
                   </VStack>
@@ -2135,7 +2266,7 @@ export default function VirtualMachinesScreen() {
                     }}
                   >
                     <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
-                      Partilhar Guest
+                      Share Guest
                     </ButtonText>
                   </Button>
                 </VStack>
@@ -2149,7 +2280,7 @@ export default function VirtualMachinesScreen() {
                     setConsoleOptionsVm(null);
                   }}
                 >
-                  <ButtonText>Cancelar</ButtonText>
+                  <ButtonText>Cancel</ButtonText>
                 </Button>
               </ModalFooter>
             </ModalContent>
@@ -2178,7 +2309,7 @@ export default function VirtualMachinesScreen() {
               <VStack className="gap-1">
                 {/* Configurações */}
                 <Text className="text-xs text-typography-500 px-3 py-2 font-semibold">
-                  CONFIGURAÇÕES
+                  SETTINGS
                 </Text>
                 <Pressable
                   onPress={() => {
@@ -2193,7 +2324,7 @@ export default function VirtualMachinesScreen() {
                       <Check size={16} className="text-typography-900" />
                     )}
                     <Text className="text-typography-900">
-                      Auto-start na inicialização
+                      Auto-start on boot
                     </Text>
                   </HStack>
                 </Pressable>
@@ -2202,7 +2333,7 @@ export default function VirtualMachinesScreen() {
 
                 {/* Operações */}
                 <Text className="text-xs text-typography-500 px-3 py-2 font-semibold">
-                  OPERAÇÕES
+                  OPERATIONS
                 </Text>
                 <Pressable
                   onPress={() => {
@@ -2214,7 +2345,7 @@ export default function VirtualMachinesScreen() {
                 >
                   <HStack className="items-center gap-3">
                     <Settings size={18} className="text-typography-700" />
-                    <Text className="text-typography-900">Editar Recursos</Text>
+                    <Text className="text-typography-900">Edit Resources</Text>
                   </HStack>
                 </Pressable>
                 <Pressable
@@ -2240,7 +2371,7 @@ export default function VirtualMachinesScreen() {
                 >
                   <HStack className="items-center gap-3">
                     <Copy size={18} className="text-typography-700" />
-                    <Text className="text-typography-900">Clonar VM</Text>
+                    <Text className="text-typography-900">Clone VM</Text>
                   </HStack>
                 </Pressable>
 
@@ -2248,7 +2379,7 @@ export default function VirtualMachinesScreen() {
 
                 {/* Migração & Disco */}
                 <Text className="text-xs text-typography-500 px-3 py-2 font-semibold">
-                  MIGRAÇÃO & DISCO
+                  MIGRATION & DISK
                 </Text>
                 <Pressable
                   onPress={() => {
@@ -2260,12 +2391,12 @@ export default function VirtualMachinesScreen() {
                 >
                   <HStack className="items-center gap-3">
                     <GitBranch size={18} className="text-typography-700" />
-                    <Text className="text-typography-900">Migrar VM</Text>
+                    <Text className="text-typography-900">Migrate VM</Text>
                   </HStack>
                 </Pressable>
                 <Pressable
                   onPress={() => {
-                    if (!selectedVm) return;
+                    if (!selectedVm || isExportingSelectedVm) return;
                     setMoveDiskVm(selectedVm);
                     setShowActionsheet(false);
                   }}
@@ -2273,7 +2404,22 @@ export default function VirtualMachinesScreen() {
                 >
                   <HStack className="items-center gap-3">
                     <HardDrive size={18} className="text-typography-700" />
-                    <Text className="text-typography-900">Mover Disco</Text>
+                    <Text className="text-typography-900">Move Disk</Text>
+                  </HStack>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    if (!selectedVm || isExportingSelectedVm) return;
+                    void handleExportVm(selectedVm);
+                    setShowActionsheet(false);
+                  }}
+                  className={`px-3 py-3 rounded-md ${isExportingSelectedVm ? "opacity-60" : "hover:bg-background-50"}`}
+                >
+                  <HStack className="items-center gap-3">
+                    <Download size={18} className="text-typography-700" />
+                    <Text className="text-typography-900">
+                      {isExportingSelectedVm ? "Exporting..." : "Export VM"}
+                    </Text>
                   </HStack>
                 </Pressable>
 
@@ -2291,12 +2437,12 @@ export default function VirtualMachinesScreen() {
                             className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
                             action="success"
                           >
-                            <ToastTitle size="sm">ISOs removidas</ToastTitle>
+                            <ToastTitle size="sm">ISOs removed</ToastTitle>
                           </Toast>
                         ),
                       });
                     } catch (error) {
-                      console.error("Erro ao remover ISOs:", error);
+                      console.error("Error removing ISOs:", error);
                       toast.show({
                         placement: "top",
                         render: ({ id }) => (
@@ -2305,7 +2451,7 @@ export default function VirtualMachinesScreen() {
                             className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
                             action="error"
                           >
-                            <ToastTitle size="sm">Erro ao remover ISOs</ToastTitle>
+                            <ToastTitle size="sm">Error removing ISOs</ToastTitle>
                           </Toast>
                         ),
                       });
@@ -2359,7 +2505,7 @@ export default function VirtualMachinesScreen() {
                 className="rounded-md px-4 py-2"
                 onPress={() => setShowActionsheet(false)}
               >
-                <ButtonText>Cancelar</ButtonText>
+                <ButtonText>Cancel</ButtonText>
               </Button>
             </ModalFooter>
           </ModalContent>
@@ -2387,7 +2533,7 @@ export default function VirtualMachinesScreen() {
               {/* Configurações label */}
               <ActionsheetItem isDisabled>
                 <ActionsheetItemText className="text-xs text-typography-500">
-                  CONFIGURAÇÕES
+                  SETTINGS
                 </ActionsheetItemText>
               </ActionsheetItem>
               <ActionsheetItem
@@ -2399,7 +2545,7 @@ export default function VirtualMachinesScreen() {
               >
                 <ActionsheetItemText>
                   {(selectedVm?.autoStart ? "✓ " : "") +
-                    "Auto-start na inicialização"}
+                    "Auto-start on boot"}
                 </ActionsheetItemText>
               </ActionsheetItem>
 
@@ -2407,7 +2553,7 @@ export default function VirtualMachinesScreen() {
               <Box className="h-[1px] bg-outline-100 w-full" />
               <ActionsheetItem isDisabled>
                 <ActionsheetItemText className="text-xs text-typography-500">
-                  OPERAÇÕES
+                  OPERATIONS
                 </ActionsheetItemText>
               </ActionsheetItem>
               <ActionsheetItem
@@ -2418,7 +2564,7 @@ export default function VirtualMachinesScreen() {
                 }}
               >
                 <ActionsheetIcon as={Settings} className="mr-2" />
-                <ActionsheetItemText>Editar Recursos</ActionsheetItemText>
+                <ActionsheetItemText>Edit Resources</ActionsheetItemText>
               </ActionsheetItem>
               <ActionsheetItem
                 onPress={() => {
@@ -2438,14 +2584,14 @@ export default function VirtualMachinesScreen() {
                 }}
               >
                 <ActionsheetIcon as={Copy} className="mr-2" />
-                <ActionsheetItemText>Clonar VM</ActionsheetItemText>
+                <ActionsheetItemText>Clone VM</ActionsheetItemText>
               </ActionsheetItem>
 
               {/* Migração & Disco */}
               <Box className="h-[1px] bg-outline-100 w-full" />
               <ActionsheetItem isDisabled>
                 <ActionsheetItemText className="text-xs text-typography-500">
-                  MIGRAÇÃO & DISCO
+                  MIGRATION & DISK
                 </ActionsheetItemText>
               </ActionsheetItem>
               <ActionsheetItem
@@ -2456,17 +2602,30 @@ export default function VirtualMachinesScreen() {
                 }}
               >
                 <ActionsheetIcon as={GitBranch} className="mr-2" />
-                <ActionsheetItemText>Migrar VM</ActionsheetItemText>
+                <ActionsheetItemText>Migrate VM</ActionsheetItemText>
               </ActionsheetItem>
               <ActionsheetItem
                 onPress={() => {
-                  if (!selectedVm) return;
+                  if (!selectedVm || isExportingSelectedVm) return;
                   setMoveDiskVm(selectedVm);
                   setShowActionsheet(false);
                 }}
               >
                 <ActionsheetIcon as={HardDrive} className="mr-2" />
-                <ActionsheetItemText>Mover Disco</ActionsheetItemText>
+                <ActionsheetItemText>Move Disk</ActionsheetItemText>
+              </ActionsheetItem>
+              <ActionsheetItem
+                onPress={() => {
+                  if (!selectedVm || isExportingSelectedVm) return;
+                  setShowActionsheet(false);
+                  void handleExportVm(selectedVm);
+                }}
+                isDisabled={!selectedVm || isExportingSelectedVm}
+              >
+                <ActionsheetIcon as={Download} className="mr-2" />
+                <ActionsheetItemText>
+                  {isExportingSelectedVm ? "Exporting..." : "Export VM"}
+                </ActionsheetItemText>
               </ActionsheetItem>
 
               {/* Remove All ISOs */}
@@ -2483,12 +2642,12 @@ export default function VirtualMachinesScreen() {
                           className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
                           action="success"
                         >
-                          <ToastTitle size="sm">ISOs removidas</ToastTitle>
+                          <ToastTitle size="sm">ISOs removed</ToastTitle>
                         </Toast>
                       ),
                     });
                   } catch (error) {
-                    console.error("Erro ao remover ISOs:", error);
+                    console.error("Error removing ISOs:", error);
                     toast.show({
                       placement: "top",
                       render: ({ id }) => (
@@ -2497,7 +2656,7 @@ export default function VirtualMachinesScreen() {
                           className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
                           action="error"
                         >
-                          <ToastTitle size="sm">Erro ao remover ISOs</ToastTitle>
+                          <ToastTitle size="sm">Error removing ISOs</ToastTitle>
                         </Toast>
                       ),
                     });
@@ -2625,10 +2784,10 @@ function EditVmForm({
     } catch (err) {
       const message =
         err instanceof TypeError
-          ? "Falha de rede/CORS ao contatar a API. Verifique a URL da API e se o backend permite chamadas do navegador."
+          ? "Network/CORS failure contacting the API. Check the API URL and whether the backend allows browser calls."
           : err instanceof Error
             ? err.message
-            : "Não foi possível salvar as alterações.";
+            : "Unable to save the changes.";
       setError(message);
     } finally {
       setSaving(false);
@@ -2641,7 +2800,7 @@ function EditVmForm({
         <HStack className="justify-between items-start">
           <VStack className="gap-1">
             <Text className="text-xs uppercase tracking-wide text-typography-500">
-              VM selecionada
+              Selected VM
             </Text>
             <Heading size="md" className="text-typography-900">
               {vm.name}
@@ -2656,10 +2815,10 @@ function EditVmForm({
         </HStack>
         <HStack className="mt-4 gap-3 flex-wrap">
           {[
-            { label: "vCPU", value: `${vcpu} cores`, previous: `${vm.DefinedCPUS} atuais` },
+            { label: "vCPU", value: `${vcpu} cores`, previous: `${vm.DefinedCPUS} current` },
             { label: "RAM", value: formatMemoryLabel(memory), previous: formatMemoryLabel(vm.DefinedRam) },
-            { label: "Disco", value: `${disk} GB`, previous: `${vm.diskSizeGB} GB` },
-            { label: "Rede", value: network, previous: vm.network },
+            { label: "Disk", value: `${disk} GB`, previous: `${vm.diskSizeGB} GB` },
+            { label: "Network", value: network, previous: vm.network },
           ].map((item) => (
             <Box
               key={item.label}
@@ -2685,7 +2844,7 @@ function EditVmForm({
 
       <VStack className="rounded-xl border border-outline-100 bg-background-50 dark:bg-[#0E1524] p-4 gap-4">
         <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
-          Ajustar recursos
+          Adjust resources
         </Text>
 
         <FormControl>
@@ -2721,7 +2880,7 @@ function EditVmForm({
           </Select>
           <FormControlHelper>
             <FormControlHelperText className="text-xs text-typography-500">
-              Selecione o total de CPUs virtuais disponíveis para esta VM.
+              Select the total virtual CPUs available to this VM.
             </FormControlHelperText>
           </FormControlHelper>
         </FormControl>
@@ -2729,12 +2888,12 @@ function EditVmForm({
         <FormControl>
           <FormControlLabel>
             <FormControlLabelText className="text-sm font-semibold text-typography-800">
-              Memória (MB)
+              Memory (MB)
             </FormControlLabelText>
           </FormControlLabel>
           <Input variant="outline" className="rounded-md">
             <InputField
-              placeholder="Ex.: 8192"
+              placeholder="E.g.: 8192"
               keyboardType="numeric"
               value={memory ? String(memory) : ""}
               onChangeText={(value) => handleNumericChange(value, setMemory)}
@@ -2742,25 +2901,25 @@ function EditVmForm({
           </Input>
           <FormControlHelper>
             <FormControlHelperText className="text-xs text-typography-500">
-              Digite o valor em MB (8192 MB = 8 GB).
+              Enter the value in MB (8192 MB = 8 GB).
             </FormControlHelperText>
           </FormControlHelper>
           <HStack className="mt-2 gap-2 flex-wrap">
             {quickMemoriesGb.map((gb) => {
               const mb = gb * 1024;
               return (
-              <Pressable
-                key={gb}
-                onPress={() => setMemory(mb)}
-                className={`px-3 py-2 rounded-full border ${memory === mb
-                  ? "border-primary-500 bg-primary-50"
-                  : "border-outline-200 bg-background-0"
-                  }`}
-              >
-                <Text className="text-xs font-medium text-typography-700">
-                  {gb} GB
-                </Text>
-              </Pressable>
+                <Pressable
+                  key={gb}
+                  onPress={() => setMemory(mb)}
+                  className={`px-3 py-2 rounded-full border ${memory === mb
+                    ? "border-primary-500 bg-primary-50"
+                    : "border-outline-200 bg-background-0"
+                    }`}
+                >
+                  <Text className="text-xs font-medium text-typography-700">
+                    {gb} GB
+                  </Text>
+                </Pressable>
               );
             })}
           </HStack>
@@ -2774,7 +2933,7 @@ function EditVmForm({
           </FormControlLabel>
           <Input variant="outline" className="rounded-md">
             <InputField
-              placeholder="Ex.: 60"
+              placeholder="E.g.: 60"
               keyboardType="numeric"
               value={disk ? String(disk) : ""}
               onChangeText={(value) => handleNumericChange(value, setDisk)}
@@ -2782,7 +2941,7 @@ function EditVmForm({
           </Input>
           <FormControlHelper>
             <FormControlHelperText className="text-xs text-typography-500">
-              Capacidade total do disco em GB.
+              Total disk capacity in GB.
             </FormControlHelperText>
           </FormControlHelper>
           <HStack className="mt-2 gap-2 flex-wrap">
@@ -2810,9 +2969,9 @@ function EditVmForm({
             </FormControlLabelText>
           </FormControlLabel>
           <Select
-            selectedValue={network === "default" || network === "512rede" ? network : "outro"}
+            selectedValue={network === "default" || network === "512rede" ? network : "other"}
             onValueChange={(value) => {
-              if (value === "outro") {
+              if (value === "other") {
                 setNetwork("");
               } else {
                 setNetwork(value);
@@ -2821,7 +2980,7 @@ function EditVmForm({
           >
             <SelectTrigger className="rounded-md">
               <SelectInput
-                placeholder="Selecione a rede"
+                placeholder="Select the network"
                 className="text-typography-900 dark:text-[#E8EBF0]"
               />
               <SelectIcon />
@@ -2843,8 +3002,8 @@ function EditVmForm({
                   className="text-typography-900 dark:text-[#E8EBF0]"
                 />
                 <SelectItem
-                  label="outro..."
-                  value="outro"
+                  label="other..."
+                  value="other"
                   className="text-typography-900 dark:text-[#E8EBF0]"
                 />
               </SelectContent>
@@ -2858,14 +3017,14 @@ function EditVmForm({
               <InputField
                 value={network}
                 onChangeText={setNetwork}
-                placeholder="Digite o nome da rede"
+                placeholder="Enter the network name"
                 className="text-typography-900 dark:text-[#E8EBF0]"
               />
             </Input>
           )}
           <FormControlHelper>
             <FormControlHelperText className="text-xs text-typography-500">
-              Selecione a rede para esta VM.
+              Select the network for this VM.
             </FormControlHelperText>
           </FormControlHelper>
         </FormControl>
@@ -2885,7 +3044,7 @@ function EditVmForm({
           onPress={onCancel}
           disabled={saving}
         >
-          <ButtonText>Cancelar</ButtonText>
+          <ButtonText>Cancel</ButtonText>
         </Button>
         <Button
           className="rounded-md px-4 py-2"
@@ -2893,7 +3052,7 @@ function EditVmForm({
           onPress={handleSubmit}
         >
           {saving ? <ButtonSpinner className="mr-2" /> : null}
-          <ButtonText>Salvar alterações</ButtonText>
+          <ButtonText>Save changes</ButtonText>
         </Button>
       </HStack>
     </VStack>
@@ -2932,13 +3091,23 @@ function CloneVmForm({
       setDestNfs(String(mountOptions[0].NfsShare.Id));
     }
   }, [destNfs, mountOptions]);
+  const selectedNfsLabel = React.useMemo(() => {
+    const selected = mountOptions.find((m) => String(m.NfsShare.Id) === destNfs);
+    if (!selected) {
+      return undefined;
+    }
+    const { Name, MachineName } = selected.NfsShare;
+    return Name?.trim() && Name.trim().length > 0
+      ? `${Name.trim()} (${MachineName})`
+      : `${MachineName} (${selected.NfsShare.Id})`;
+  }, [destNfs, mountOptions]);
 
   const sanitizedName = newName.trim();
   const nameError =
     sanitizedName.length === 0
-      ? "Nome é obrigatório"
-      : !/^[a-zA-Z0-9]+$/.test(sanitizedName)
-        ? "Use apenas letras e números (sem espaços ou hífens)"
+      ? "Name is required"
+      : !/^[a-zA-Z0-9-]+$/.test(sanitizedName)
+        ? "Use only letters, numbers, or hyphens (no spaces)"
         : null;
 
   const isValid = !nameError && destMachine && destNfs;
@@ -2950,7 +3119,7 @@ function CloneVmForm({
     try {
       await onClone({ newName: sanitizedName, destNfs, destMachine });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao clonar VM.");
+      setError(err instanceof Error ? err.message : "Error cloning VM.");
     } finally {
       setSaving(false);
     }
@@ -2959,7 +3128,7 @@ function CloneVmForm({
   return (
     <VStack className="gap-4">
       <Input variant="outline" className="rounded-md">
-        <InputField placeholder="Nome da nova VM" value={newName} onChangeText={setNewName} />
+        <InputField placeholder="New VM name" value={newName} onChangeText={setNewName} />
       </Input>
       {nameError && (
         <Text className="text-xs text-red-600">{nameError}</Text>
@@ -2968,7 +3137,7 @@ function CloneVmForm({
       <FormControl>
         <FormControlLabel>
           <FormControlLabelText className="text-sm font-semibold text-typography-800">
-            Destino (Slave)
+            Destination (Slave)
           </FormControlLabelText>
         </FormControlLabel>
         <Select
@@ -2977,7 +3146,7 @@ function CloneVmForm({
           isDisabled={loadingOptions || slaveOptions.length === 0}
         >
           <SelectTrigger>
-            <SelectInput placeholder={loadingOptions ? "Carregando..." : "Selecione"} />
+            <SelectInput placeholder={loadingOptions ? "Loading..." : "Select"} />
             <SelectIcon />
           </SelectTrigger>
           <SelectPortal>
@@ -2985,7 +3154,7 @@ function CloneVmForm({
             <SelectContent>
               {slaveOptions.length === 0 ? (
                 <SelectItem
-                  label={loadingOptions ? "Carregando..." : "Nenhum slave encontrado"}
+                  label={loadingOptions ? "Loading..." : "No slave found"}
                   value=""
                   isDisabled
                 />
@@ -3006,7 +3175,7 @@ function CloneVmForm({
       <FormControl>
         <FormControlLabel>
           <FormControlLabelText className="text-sm font-semibold text-typography-800">
-            NFS de destino
+            Destination NFS
           </FormControlLabelText>
         </FormControlLabel>
         <Select
@@ -3015,7 +3184,7 @@ function CloneVmForm({
           isDisabled={loadingOptions || mountOptions.length === 0}
         >
           <SelectTrigger>
-            <SelectInput placeholder={loadingOptions ? "Carregando..." : "Selecione"} />
+            <SelectInput placeholder={loadingOptions ? "Loading..." : "Select"} value={selectedNfsLabel} />
             <SelectIcon />
           </SelectTrigger>
           <SelectPortal>
@@ -3023,7 +3192,7 @@ function CloneVmForm({
             <SelectContent>
               {mountOptions.length === 0 ? (
                 <SelectItem
-                  label={loadingOptions ? "Carregando..." : "Nenhum NFS encontrado"}
+                  label={loadingOptions ? "Loading..." : "No NFS found"}
                   value=""
                   isDisabled
                 />
@@ -3050,11 +3219,11 @@ function CloneVmForm({
 
       <HStack className="justify-end gap-2 mt-2">
         <Button variant="outline" className="rounded-md px-4 py-2" onPress={onCancel} disabled={saving}>
-          <ButtonText>Cancelar</ButtonText>
+          <ButtonText>Cancel</ButtonText>
         </Button>
         <Button className="rounded-md px-4 py-2" disabled={!isValid || saving} onPress={handleSubmit}>
           {saving ? <ButtonSpinner className="mr-2" /> : null}
-          <ButtonText>Clonar</ButtonText>
+          <ButtonText>Clone</ButtonText>
         </Button>
       </HStack>
     </VStack>
@@ -3093,7 +3262,7 @@ function MigrateVmForm({
   const handleSubmit = async () => {
     setError(null);
     if (target === vm.machineName) {
-      setError("Selecione um destino diferente do host atual.");
+      setError("Select a destination different from the current host.");
       return;
     }
     let parsedTimeout: number | undefined;
@@ -3101,7 +3270,7 @@ function MigrateVmForm({
     if (shouldIncludeTimeout) {
       parsedTimeout = Number(timeout);
       if (!Number.isFinite(parsedTimeout) || parsedTimeout <= 0) {
-        setError("Timeout deve ser um número positivo.");
+        setError("Timeout must be a positive number.");
         return;
       }
     }
@@ -3118,19 +3287,19 @@ function MigrateVmForm({
           ? err.data
           : err instanceof Error
             ? err.message
-            : "Erro ao migrar VM.";
+            : "Error migrating VM.";
       setError(message);
     }
   };
   return (
     <VStack className="gap-4">
       <Text className="text-gray-700">
-        Migrar {vm.name} de <Text className="font-semibold">{vm.machineName}</Text> para:
+        Migrate {vm.name} from <Text className="font-semibold">{vm.machineName}</Text> to:
       </Text>
       <FormControl>
         <FormControlLabel>
           <FormControlLabelText className="text-sm font-semibold text-typography-800">
-            Destino (Slave)
+            Destination (Slave)
           </FormControlLabelText>
         </FormControlLabel>
         <Select
@@ -3149,7 +3318,7 @@ function MigrateVmForm({
                 <SelectDragIndicator />
               </SelectDragIndicatorWrapper>
               {uniqueChoices.length === 0 ? (
-                <SelectItem label="Nenhum slave disponível" value="" isDisabled />
+                <SelectItem label="No slave available" value="" isDisabled />
               ) : (
                 uniqueChoices.map((s) => (
                   <SelectItem
@@ -3166,7 +3335,7 @@ function MigrateVmForm({
       <FormControl>
         <FormControlLabel>
           <FormControlLabelText className="text-sm font-semibold text-typography-800">
-            Tipo de migração
+            Migration type
           </FormControlLabelText>
         </FormControlLabel>
         <HStack className="gap-2">
@@ -3175,19 +3344,19 @@ function MigrateVmForm({
             className="flex-1 rounded-md"
             onPress={() => setMode("hot")}
           >
-            <ButtonText>{`Hot (VM ligada)`}</ButtonText>
+            <ButtonText>{`Hot (VM running)`}</ButtonText>
           </Button>
           <Button
             variant={!isHot ? "solid" : "outline"}
             className="flex-1 rounded-md"
             onPress={() => setMode("cold")}
           >
-            <ButtonText>{`Cold (VM desligada)`}</ButtonText>
+            <ButtonText>{`Cold (VM off)`}</ButtonText>
           </Button>
         </HStack>
         <FormControlHelper>
           <FormControlHelperText className="text-xs text-typography-500">
-            Hot mantém a VM ligada durante a migração. Cold requer a VM desligada.
+            Hot keeps the VM running during migration. Cold requires the VM to be powered off.
           </FormControlHelperText>
         </FormControlHelper>
       </FormControl>
@@ -3203,7 +3372,7 @@ function MigrateVmForm({
           </HStack>
           <FormControlHelper>
             <FormControlHelperText className="text-xs text-typography-500">
-              Ative para migrar sem desligar a VM (quando suportado).
+              Enable to migrate without shutting down the VM (when supported).
             </FormControlHelperText>
           </FormControlHelper>
         </FormControl>
@@ -3211,7 +3380,7 @@ function MigrateVmForm({
       <FormControl>
         <FormControlLabel>
           <FormControlLabelText className="text-sm font-semibold text-typography-800">
-            Timeout (segundos)
+            Timeout (seconds)
           </FormControlLabelText>
         </FormControlLabel>
         <Input variant="outline" className="rounded-md" isDisabled={!isHot || !live}>
@@ -3225,7 +3394,7 @@ function MigrateVmForm({
         </Input>
         <FormControlHelper>
           <FormControlHelperText className="text-xs text-typography-500">
-            Tempo máximo para concluir a migração (padrão: 500 segundos). Disponível apenas em Hot e Live.
+            Maximum time to complete the migration (default: 500 seconds). Available only in Hot and Live.
           </FormControlHelperText>
         </FormControlHelper>
       </FormControl>
@@ -3239,7 +3408,7 @@ function MigrateVmForm({
           onPress={onCancel}
           disabled={loading}
         >
-          <ButtonText>Cancelar</ButtonText>
+          <ButtonText>Cancel</ButtonText>
         </Button>
         <Button
           className="rounded-md px-4 py-2"
@@ -3247,7 +3416,7 @@ function MigrateVmForm({
           disabled={loading || uniqueChoices.length === 0}
         >
           {loading ? <ButtonSpinner className="mr-2" /> : null}
-          <ButtonText>Migrar</ButtonText>
+          <ButtonText>Migrate</ButtonText>
         </Button>
       </HStack>
     </VStack>
@@ -3265,12 +3434,20 @@ function MoveDiskForm({
   mountOptions: Mount[];
   loadingOptions: boolean;
   onCancel: () => void;
-  onMove: (payload: { destNfsId: string; destDiskPath?: string }) => Promise<void>;
+  onMove: (payload: { destNfsId: string; newName: string }) => Promise<void>;
 }) {
-  const [diskPath, setDiskPath] = React.useState(vm.diskPath);
+  const [newName, setNewName] = React.useState(vm.name);
   const [destNfsId, setDestNfsId] = React.useState<string>("");
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const selectedNfsLabel = React.useMemo(() => {
+    const current = mountOptions.find((mount) => String(mount.NfsShare.Id) === destNfsId);
+    return current ? `${current.NfsShare.Name} (${current.NfsShare.MachineName})` : undefined;
+  }, [destNfsId, mountOptions]);
+
+  React.useEffect(() => {
+    setNewName(vm.name);
+  }, [vm]);
 
   React.useEffect(() => {
     if (!destNfsId && mountOptions.length > 0) {
@@ -3278,16 +3455,22 @@ function MoveDiskForm({
     }
   }, [destNfsId, mountOptions]);
 
-  const isValid = Boolean(destNfsId);
+  const isValid = Boolean(destNfsId && newName.trim());
 
   const handleSubmit = async () => {
     if (!isValid || saving) return;
     setSaving(true);
     setError(null);
+    const normalizedName = newName.trim();
+    if (!normalizedName) {
+      setError("New disk name is required.");
+      setSaving(false);
+      return;
+    }
     try {
-      await onMove({ destNfsId, destDiskPath: diskPath.trim() || undefined });
+      await onMove({ destNfsId, newName: normalizedName });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao mover disco.");
+      setError(err instanceof Error ? err.message : "Error moving disk.");
     } finally {
       setSaving(false);
     }
@@ -3296,13 +3479,13 @@ function MoveDiskForm({
   return (
     <VStack className="gap-4">
       <Text className="text-gray-700">
-        Mover disco de {vm.name} para outro NFS.
+        Move disk from {vm.name} to another NFS.
       </Text>
 
       <FormControl>
         <FormControlLabel>
           <FormControlLabelText className="text-sm font-semibold text-typography-800">
-            NFS de destino
+            Destination NFS
           </FormControlLabelText>
         </FormControlLabel>
         <Select
@@ -3311,7 +3494,10 @@ function MoveDiskForm({
           isDisabled={loadingOptions || mountOptions.length === 0}
         >
           <SelectTrigger>
-            <SelectInput placeholder={loadingOptions ? "Carregando..." : "Selecione"} />
+            <SelectInput
+              placeholder={loadingOptions ? "Loading..." : "Select"}
+              value={selectedNfsLabel}
+            />
             <SelectIcon />
           </SelectTrigger>
           <SelectPortal>
@@ -3322,7 +3508,7 @@ function MoveDiskForm({
               </SelectDragIndicatorWrapper>
               {mountOptions.length === 0 ? (
                 <SelectItem
-                  label={loadingOptions ? "Carregando..." : "Nenhum NFS encontrado"}
+                  label={loadingOptions ? "Loading..." : "No NFS found"}
                   value=""
                   isDisabled
                 />
@@ -3343,15 +3529,21 @@ function MoveDiskForm({
       <FormControl>
         <FormControlLabel>
           <FormControlLabelText className="text-sm font-semibold text-typography-800">
-            Caminho do disco (opcional)
+            New disk name
           </FormControlLabelText>
         </FormControlLabel>
         <Input variant="outline" className="rounded-md">
-          <InputField placeholder={vm.diskPath} value={diskPath} onChangeText={setDiskPath} />
+          <InputField
+            placeholder={vm.name}
+            value={newName}
+            onChangeText={setNewName}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
         </Input>
         <FormControlHelper>
           <FormControlHelperText className="text-xs text-typography-500">
-            Deixe vazio para usar o caminho padrão gerado pelo backend.
+            The new disk file name that will be created on the selected NFS.
           </FormControlHelperText>
         </FormControlHelper>
       </FormControl>
@@ -3360,11 +3552,11 @@ function MoveDiskForm({
 
       <HStack className="justify-end gap-2 mt-2">
         <Button variant="outline" className="rounded-md px-4 py-2" onPress={onCancel} disabled={saving}>
-          <ButtonText>Cancelar</ButtonText>
+          <ButtonText>Cancel</ButtonText>
         </Button>
         <Button className="rounded-md px-4 py-2" disabled={!isValid || saving} onPress={handleSubmit}>
           {saving ? <ButtonSpinner className="mr-2" /> : null}
-          <ButtonText>Mover</ButtonText>
+          <ButtonText>Move</ButtonText>
         </Button>
       </HStack>
     </VStack>
@@ -3396,7 +3588,7 @@ function UpdateCpuXmlForm({
 
   const handleFetchMutual = async () => {
     if (selectedSlaves.length === 0) {
-      setError("Selecione pelo menos um slave para calcular o CPU XML.");
+      setError("Select at least one slave to calculate the CPU XML.");
       return;
     }
     setError(null);
@@ -3405,7 +3597,7 @@ function UpdateCpuXmlForm({
       const xml = await getCpuDisableFeatures(selectedSlaves);
       setCpuXml(xml);
     } catch (err) {
-      setError("Erro ao obter Mutual CPUs. Tente novamente.");
+      setError("Error fetching mutual CPUs. Try again.");
     } finally {
       setLoadingCpu(false);
     }
@@ -3415,11 +3607,11 @@ function UpdateCpuXmlForm({
     const normalizedMachine = machineName.trim();
     const normalizedXml = cpuXml.trim();
     if (!normalizedMachine) {
-      setError("Machine name é obrigatório.");
+      setError("Machine name is required.");
       return;
     }
     if (!normalizedXml) {
-      setError("CPU XML é obrigatório.");
+      setError("CPU XML is required.");
       return;
     }
     setSaving(true);
@@ -3427,7 +3619,7 @@ function UpdateCpuXmlForm({
     try {
       await onUpdate({ machineName: normalizedMachine, cpuXml: normalizedXml });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao atualizar CPU XML.");
+      setError(err instanceof Error ? err.message : "Error updating CPU XML.");
     } finally {
       setSaving(false);
     }
@@ -3436,7 +3628,7 @@ function UpdateCpuXmlForm({
   return (
     <VStack className="gap-4">
       <Text className="text-gray-700">
-        Atualizar CPU XML da VM <Text className="font-semibold">{vm.name}</Text>.
+        Update CPU XML for VM <Text className="font-semibold">{vm.name}</Text>.
       </Text>
 
       <FormControl>
@@ -3459,7 +3651,7 @@ function UpdateCpuXmlForm({
       <FormControl>
         <FormControlLabel>
           <FormControlLabelText className="text-sm font-semibold text-typography-800">
-            Slaves para Mutual CPUs (opcional)
+            Slaves for Mutual CPUs (optional)
           </FormControlLabelText>
         </FormControlLabel>
         {selectedSlaves.length > 0 ? (
@@ -3479,7 +3671,7 @@ function UpdateCpuXmlForm({
                     }
                     className="px-0 min-h-0"
                   >
-                    <ButtonText className="text-xs text-typography-700">Remover</ButtonText>
+                    <ButtonText className="text-xs text-typography-700">Remove</ButtonText>
                   </Button>
                 </HStack>
               </Badge>
@@ -3504,8 +3696,8 @@ function UpdateCpuXmlForm({
             <SelectInput
               placeholder={
                 availableSlaves.length === 0
-                  ? "Sem outros slaves disponíveis"
-                  : "Adicionar slave"
+                  ? "No other slaves available"
+                  : "Add slave"
               }
             />
             <SelectIcon />
@@ -3517,7 +3709,7 @@ function UpdateCpuXmlForm({
                 <SelectDragIndicator />
               </SelectDragIndicatorWrapper>
               {availableSlaves.length === 0 ? (
-                <SelectItem label="Sem opções" value="" isDisabled />
+                <SelectItem label="No options" value="" isDisabled />
               ) : (
                 availableSlaves.map((s) => (
                   <SelectItem key={s} label={s} value={s} />
@@ -3528,7 +3720,7 @@ function UpdateCpuXmlForm({
         </Select>
         <FormControlHelper>
           <FormControlHelperText className="text-xs text-typography-500">
-            Selecione múltiplos slaves para calcular o XML comum antes de enviar.
+            Select multiple slaves to calculate the common XML before sending.
           </FormControlHelperText>
         </FormControlHelper>
         <Button
@@ -3539,7 +3731,7 @@ function UpdateCpuXmlForm({
         >
           {loadingCpu ? <ButtonSpinner className="mr-2" /> : <ButtonIcon as={Cpu} className="mr-2" />}
           <ButtonText>
-            {loadingCpu ? "Obtendo CPUs..." : "Get Mutual CPUs"}
+            {loadingCpu ? "Fetching CPUs..." : "Get Mutual CPUs"}
           </ButtonText>
         </Button>
       </FormControl>
@@ -3563,7 +3755,7 @@ function UpdateCpuXmlForm({
         </Input>
         <FormControlHelper>
           <FormControlHelperText className="text-xs text-typography-500">
-            Cole ou edite o XML. Ele será enviado diretamente para o backend.
+            Paste or edit the XML. It will be sent directly to the backend.
           </FormControlHelperText>
         </FormControlHelper>
       </FormControl>
@@ -3577,7 +3769,7 @@ function UpdateCpuXmlForm({
           onPress={onCancel}
           disabled={saving}
         >
-          <ButtonText>Cancelar</ButtonText>
+          <ButtonText>Cancel</ButtonText>
         </Button>
         <Button
           className="rounded-md px-4 py-2"
@@ -3585,7 +3777,7 @@ function UpdateCpuXmlForm({
           disabled={saving}
         >
           {saving ? <ButtonSpinner className="mr-2" /> : null}
-          <ButtonText>Atualizar</ButtonText>
+          <ButtonText>Update</ButtonText>
         </Button>
       </HStack>
     </VStack>

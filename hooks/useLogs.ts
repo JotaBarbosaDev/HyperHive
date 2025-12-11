@@ -112,7 +112,7 @@ export function useLogs({token, limit = 200, level}: UseLogsOptions = {}) {
       } catch (err) {
         if (!isMountedRef.current) return;
         const message =
-          err instanceof Error ? err.message : "Não foi possível carregar os logs.";
+          err instanceof Error ? err.message : "Unable to load logs.";
         setError(message);
       } finally {
         if (!isMountedRef.current) return;

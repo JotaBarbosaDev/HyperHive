@@ -77,7 +77,7 @@ const normalizeUpdateEntry = (raw: any, index: number): UpdateEntry | null => {
     if (!parsed) return null;
     return {
       id: `update-${index}`,
-      name: parsed.name || `Pacote ${index + 1}`,
+      name: parsed.name || `Package ${index + 1}`,
       currentVersion: normalizeVersion(parsed.currentVersion),
       newVersion: normalizeVersion(parsed.newVersion),
       raw,
@@ -162,7 +162,7 @@ const normalizeUpdateEntry = (raw: any, index: number): UpdateEntry | null => {
 
   return {
     id: String(id),
-    name: String(name ?? parsedFromText?.name ?? parsedFromValue?.name ?? `Pacote ${index + 1}`),
+    name: String(name ?? parsedFromText?.name ?? parsedFromValue?.name ?? `Package ${index + 1}`),
     currentVersion: normalizeVersion(currentVersion),
     newVersion: normalizeVersion(newVersion),
     architecture: architecture ? String(architecture) : undefined,
@@ -384,7 +384,7 @@ export function useUpdates({machineName, token}: UseUpdatesOptions = {}) {
       } catch (err) {
         if (!isMountedRef.current) return;
         const message =
-          err instanceof Error ? err.message : "Não foi possível carregar as atualizações.";
+          err instanceof Error ? err.message : "Unable to load updates.";
         setError(message);
       } finally {
         if (!isMountedRef.current) return;

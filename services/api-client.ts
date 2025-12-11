@@ -82,6 +82,13 @@ const withBaseUrl = (path: string) => {
   return `${normalizedBase}/${normalizedPath}`;
 };
 
+const isBinaryBody = (body: unknown): body is Blob | ArrayBuffer | ArrayBufferView => {
+  if (body instanceof ArrayBuffer || ArrayBuffer.isView(body)) {
+    return true;
+  }
+  return typeof Blob !== "undefined" && body instanceof Blob;
+};
+
 const serializeBody = (body: unknown, headers: Record<string, string>) => {
   if (body === undefined || body === null) {
     return undefined;
@@ -91,6 +98,13 @@ const serializeBody = (body: unknown, headers: Record<string, string>) => {
     typeof body === "string" ||
     (typeof FormData !== "undefined" && body instanceof FormData)
   ) {
+    return body as BodyInit;
+  }
+
+  if (isBinaryBody(body)) {
+    if (!headers["Content-Type"]) {
+      headers["Content-Type"] = "application/octet-stream";
+    }
     return body as BodyInit;
   }
 

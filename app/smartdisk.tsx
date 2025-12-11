@@ -67,17 +67,18 @@ import { BtrfsDisk } from "@/types/btrfs";
 
 const TEST_TYPES = [
   { value: "short", label: "Short Self-Test (~2 min)" },
-  { value: "extended", label: "Extended Self-Test (mais demorado)" },
+  { value: "extended", label: "Extended Self-Test (longer)" },
 ];
 
-const WEEK_DAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 const HOURS = Array.from({ length: 24 }).map((_, i) => ({ value: i, label: `${String(i).padStart(2, "0")}:00` }));
 
 const STATUS_COLOR: Record<string, string> = {
   ok: "bg-success-100 text-success-700",
   healthy: "bg-success-100 text-success-700",
-  atenção: "bg-warning-100 text-warning-700",
+  atencao: "bg-warning-100 text-warning-700",
+  attention: "bg-warning-100 text-warning-700",
   warning: "bg-warning-100 text-warning-700",
   critical: "bg-error-100 text-error-700",
 };
@@ -185,7 +186,7 @@ export default function SmartDiskScreen() {
       }
     } catch (err) {
       console.error("Failed to load machines", err);
-      showToast("Erro ao carregar máquinas", "Tente novamente.", "error");
+      showToast("Error loading machines", "Try again.", "error");
     }
   }, [selectedMachine, showToast]);
 
@@ -230,7 +231,7 @@ export default function SmartDiskScreen() {
       } catch (err) {
         console.error("Failed to load smartdisk data", err);
         if (mode === "full") {
-          showToast("Erro ao carregar", "Não foi possível obter os dados do SmartDisk.", "error");
+          showToast("Error loading", "Unable to fetch SmartDisk data.", "error");
         }
       } finally {
         if (mode === "full") setLoading(false);
@@ -268,11 +269,11 @@ export default function SmartDiskScreen() {
     setSavingAction("selftest");
     try {
       await startSelfTest(selectedMachine, { device: selfTestTarget.device, type: scheduleForm.type });
-      showToast("Self-test iniciado", `${selfTestTarget.device} em execução.`);
+      showToast("Self-test started", `${selfTestTarget.device} running.`);
       setSelfTestTarget(null);
     } catch (err) {
       console.error("Failed to start self-test", err);
-      showToast("Erro ao iniciar teste", "Tente novamente.", "error");
+      showToast("Error starting test", "Try again.", "error");
     } finally {
       setSavingAction(null);
     }
@@ -280,18 +281,18 @@ export default function SmartDiskScreen() {
 
   const handleScheduleSave = async () => {
     if (!scheduleForm.device) {
-      showToast("Dispositivo obrigatório", "Selecione um disco.", "error");
+      showToast("Device required", "Select a disk.", "error");
       return;
     }
     setSavingAction("schedule");
     try {
       await createSchedule(selectedMachine, scheduleForm);
-      showToast("Agendamento criado", "Teste será executado automaticamente.");
+      showToast("Schedule created", "Test will run automatically.");
       setScheduleModal(false);
       await loadData("silent");
     } catch (err) {
       console.error("Failed to create schedule", err);
-      showToast("Erro ao agendar", "Tente novamente.", "error");
+      showToast("Error scheduling", "Try again.", "error");
     } finally {
       setSavingAction(null);
     }
@@ -301,11 +302,11 @@ export default function SmartDiskScreen() {
     setSavingAction(`sched-${sched.id}`);
     try {
       await enableSchedule(selectedMachine, sched.id, !sched.active);
-      showToast("Agendamento atualizado", sched.active ? "Agendamento desativado." : "Agendamento ativado.");
+      showToast("Schedule updated", sched.active ? "Schedule disabled." : "Schedule enabled.");
       await loadData("silent");
     } catch (err) {
       console.error("Failed to toggle schedule", err);
-      showToast("Erro ao atualizar agendamento", "Tente novamente.", "error");
+      showToast("Error updating schedule", "Try again.", "error");
     } finally {
       setSavingAction(null);
     }
@@ -315,11 +316,11 @@ export default function SmartDiskScreen() {
     setSavingAction(`sched-del-${sched.id}`);
     try {
       await deleteSchedule(selectedMachine, sched.id);
-      showToast("Agendamento removido", "Agendamento excluído.");
+      showToast("Schedule removed", "Schedule deleted.");
       await loadData("silent");
     } catch (err) {
       console.error("Failed to delete schedule", err);
-      showToast("Erro ao remover agendamento", "Tente novamente.", "error");
+      showToast("Error removing schedule", "Try again.", "error");
     } finally {
       setSavingAction(null);
     }
@@ -328,7 +329,8 @@ export default function SmartDiskScreen() {
   const badgeStatus = (status?: string) => {
     if (!status) return null;
     const key = status.toLowerCase();
-    const cls = STATUS_COLOR[key] ?? "bg-background-100 text-typography-800";
+    const normalizedKey = key.normalize("NFD").replace(/\p{Diacritic}/gu, "");
+    const cls = STATUS_COLOR[normalizedKey] ?? STATUS_COLOR[key] ?? "bg-background-100 text-typography-800";
     return (
       <Badge className={`rounded-full px-3 py-1 ${cls}`} size="sm" action="muted" variant="solid">
         <BadgeText className="text-xs text-typography-800">{status}</BadgeText>
@@ -340,10 +342,10 @@ export default function SmartDiskScreen() {
     setSavingAction(action);
     try {
       await fn();
-      showToast("Ação enviada", "Reallocate acionado.");
+      showToast("Action sent", "Reallocate triggered.");
     } catch (err) {
       console.error("Failed realloc action", err);
-      showToast("Erro na ação", "Tente novamente.", "error");
+      showToast("Error performing action", "Try again.", "error");
     } finally {
       setSavingAction(null);
     }
@@ -365,14 +367,14 @@ export default function SmartDiskScreen() {
             SmartDisk Health
           </Heading>
           <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
-            Monitoramento SMART e testes de disco.
+            SMART monitoring and disk testing.
           </Text>
 
           <HStack className="mt-6 items-center justify-between flex-wrap gap-3">
             <HStack className="gap-3 items-center flex-wrap">
               <Select selectedValue={selectedMachine} onValueChange={(val) => setSelectedMachine(val)}>
                 <SelectTrigger className="min-w-[180px]">
-                  <SelectInput placeholder="Máquina" value={selectedMachine} />
+                  <SelectInput placeholder="Machine" value={selectedMachine} />
                   <SelectIcon as={ChevronDownIcon} />
                 </SelectTrigger>
                 <SelectPortal>
@@ -389,7 +391,7 @@ export default function SmartDiskScreen() {
               </Select>
               <Button variant="outline" action="default" size="sm" onPress={() => loadData("refresh")}>
                 <ButtonIcon as={RefreshCcw} size="sm" />
-                <ButtonText>Atualizar</ButtonText>
+                <ButtonText>Refresh</ButtonText>
               </Button>
             </HStack>
             <Button
@@ -406,7 +408,7 @@ export default function SmartDiskScreen() {
               }}
             >
               <ButtonIcon as={Plus} size="sm" />
-              <ButtonText>Novo Agendamento</ButtonText>
+              <ButtonText>New Schedule</ButtonText>
             </Button>
           </HStack>
 
@@ -423,23 +425,23 @@ export default function SmartDiskScreen() {
             <>
               <Box className="mt-6 rounded-2xl bg-background-0 border border-background-200 shadow-soft-1">
                 <HStack className="px-4 py-3 items-center justify-between">
-                  <Text className="text-typography-900 font-semibold text-base">Discos</Text>
-                  <Text className="text-typography-600 text-sm">{disks.length} itens</Text>
+                  <Text className="text-typography-900 font-semibold text-base">Disks</Text>
+                  <Text className="text-typography-600 text-sm">{disks.length} items</Text>
                 </HStack>
                 <Divider />
                 <Box className="px-4 py-2">
                   {(Array.isArray(disks) ? disks : []).length === 0 ? (
-                    <Text className="text-typography-600 text-sm py-3">Nenhum disco elegível encontrado para esta máquina.</Text>
+                    <Text className="text-typography-600 text-sm py-3">No eligible disks found for this machine.</Text>
                   ) : (
                     <>
                       <HStack className="py-2">
-                        <Text className="flex-1 text-typography-700 font-semibold">Dispositivo</Text>
-                        <Text className="flex-1 text-typography-700 font-semibold">Modelo</Text>
+                        <Text className="flex-1 text-typography-700 font-semibold">Device</Text>
+                        <Text className="flex-1 text-typography-700 font-semibold">Model</Text>
                         <Text className="w-16 text-typography-700 font-semibold">Temp</Text>
-                        <Text className="w-24 text-typography-700 font-semibold text-center">Realocados</Text>
+                        <Text className="w-24 text-typography-700 font-semibold text-center">Reallocated</Text>
                         <Text className="w-24 text-typography-700 font-semibold text-center">Pending</Text>
                         <Text className="w-20 text-typography-700 font-semibold text-center">Status</Text>
-                        <Text className="w-20 text-typography-700 font-semibold text-center">Ações</Text>
+                        <Text className="w-20 text-typography-700 font-semibold text-center">Actions</Text>
                       </HStack>
                       <Divider />
                       {(Array.isArray(disks) ? disks : []).map((disk) => (
@@ -467,13 +469,13 @@ export default function SmartDiskScreen() {
 
               <Box className="mt-6 rounded-2xl bg-background-0 border border-background-200 shadow-soft-1">
                 <HStack className="px-4 py-3 items-center justify-between">
-                  <Text className="text-typography-900 font-semibold text-base">Testes Agendados</Text>
-                  <Text className="text-typography-600 text-sm">{schedules.length} itens</Text>
+                  <Text className="text-typography-900 font-semibold text-base">Scheduled Tests</Text>
+                  <Text className="text-typography-600 text-sm">{schedules.length} items</Text>
                 </HStack>
                 <Divider />
                 {schedules.length === 0 ? (
                   <Box className="p-4">
-                    <Text className="text-typography-600 text-sm">Nenhum agendamento.</Text>
+                    <Text className="text-typography-600 text-sm">No schedules.</Text>
                   </Box>
                 ) : (
                   <VStack className="divide-y divide-background-200">
@@ -486,7 +488,7 @@ export default function SmartDiskScreen() {
                         <Text className="w-28 text-typography-700">{WEEK_DAYS[sched.week_day] ?? sched.week_day}</Text>
                         <Text className="w-16 text-typography-700">{`${String(sched.hour).padStart(2, "0")}:00`}</Text>
                         <Badge className="rounded-full px-3 py-1" size="sm" action={sched.active ? "success" : "muted"} variant="solid">
-                          <BadgeText className="text-xs text-typography-800">{sched.active ? "Ativo" : "Inativo"}</BadgeText>
+                          <BadgeText className="text-xs text-typography-800">{sched.active ? "Active" : "Inactive"}</BadgeText>
                         </Badge>
                         <HStack className="gap-2 ml-auto">
                           <Button
@@ -523,7 +525,7 @@ export default function SmartDiskScreen() {
         <ModalContent className="max-w-xl">
           <ModalHeader className="flex-row items-start justify-between">
             <Heading size="md" className="text-typography-900">
-              Executar Self-Test
+              Run Self-Test
             </Heading>
             <ModalCloseButton />
           </ModalHeader>
@@ -531,14 +533,14 @@ export default function SmartDiskScreen() {
             <Text className="text-typography-700">{selfTestTarget ? formatDeviceDisplay(selfTestTarget) : ""}</Text>
             <FormControl>
               <FormControlLabel>
-                <FormControlLabelText>Tipo de Teste</FormControlLabelText>
+                <FormControlLabelText>Test Type</FormControlLabelText>
               </FormControlLabel>
               <Select
                 selectedValue={scheduleForm.type}
                 onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, type: val }))}
               >
                 <SelectTrigger>
-                  <SelectInput placeholder="Selecione" value={scheduleForm.type} />
+                  <SelectInput placeholder="Select" value={scheduleForm.type} />
                   <SelectIcon as={ChevronDownIcon} />
                 </SelectTrigger>
                 <SelectPortal>
@@ -554,17 +556,17 @@ export default function SmartDiskScreen() {
                 </SelectPortal>
               </Select>
               <FormControlHelper>
-                <FormControlHelperText>Teste rápido ou estendido.</FormControlHelperText>
+                <FormControlHelperText>Quick or extended test.</FormControlHelperText>
               </FormControlHelper>
             </FormControl>
           </ModalBody>
           <ModalFooter className="gap-3">
             <Button variant="outline" action="default" onPress={() => setSelfTestTarget(null)} isDisabled={savingAction === "selftest"}>
-              <ButtonText>Cancelar</ButtonText>
+              <ButtonText>Cancel</ButtonText>
             </Button>
             <Button action="primary" onPress={handleStartSelfTest} isDisabled={savingAction === "selftest"}>
               {savingAction === "selftest" ? <ButtonSpinner /> : <ButtonIcon as={Play} size="sm" />}
-              <ButtonText>Iniciar Teste</ButtonText>
+              <ButtonText>Start Test</ButtonText>
             </Button>
           </ModalFooter>
         </ModalContent>
@@ -576,23 +578,23 @@ export default function SmartDiskScreen() {
           <ModalHeader className="flex-row items-start justify-between">
             <VStack>
               <Heading size="md" className="text-typography-900">
-                Novo Agendamento
+                New Schedule
               </Heading>
-              <Text className="text-typography-600 text-sm">Agendar teste SMART automático</Text>
+              <Text className="text-typography-600 text-sm">Schedule automatic SMART tests</Text>
             </VStack>
             <ModalCloseButton />
           </ModalHeader>
           <ModalBody className="gap-4">
             <FormControl isRequired>
               <FormControlLabel>
-                <FormControlLabelText>Dispositivo</FormControlLabelText>
+                <FormControlLabelText>Device</FormControlLabelText>
               </FormControlLabel>
               <Select
                 selectedValue={scheduleForm.device}
                 onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, device: val }))}
               >
                 <SelectTrigger>
-                  <SelectInput placeholder="Selecionar disco" value={getDeviceLabel(scheduleForm.device, disks, deviceMeta)} />
+                  <SelectInput placeholder="Select disk" value={getDeviceLabel(scheduleForm.device, disks, deviceMeta)} />
                   <SelectIcon as={ChevronDownIcon} />
                 </SelectTrigger>
                 <SelectPortal>
@@ -612,14 +614,14 @@ export default function SmartDiskScreen() {
 
             <FormControl>
               <FormControlLabel>
-                <FormControlLabelText>Tipo de Teste</FormControlLabelText>
+                <FormControlLabelText>Test Type</FormControlLabelText>
               </FormControlLabel>
               <Select
                 selectedValue={scheduleForm.type}
                 onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, type: val }))}
               >
                 <SelectTrigger>
-                  <SelectInput placeholder="Selecione" value={scheduleForm.type} />
+                  <SelectInput placeholder="Select" value={scheduleForm.type} />
                   <SelectIcon as={ChevronDownIcon} />
                 </SelectTrigger>
                 <SelectPortal>
@@ -638,14 +640,14 @@ export default function SmartDiskScreen() {
 
             <FormControl>
               <FormControlLabel>
-                <FormControlLabelText>Dia da Semana</FormControlLabelText>
+                <FormControlLabelText>Day of the Week</FormControlLabelText>
               </FormControlLabel>
               <Select
                 selectedValue={String(scheduleForm.week_day)}
                 onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, week_day: Number(val) }))}
               >
                 <SelectTrigger>
-                  <SelectInput placeholder="Dia" value={String(scheduleForm.week_day)} />
+                  <SelectInput placeholder="Day" value={String(scheduleForm.week_day)} />
                   <SelectIcon as={ChevronDownIcon} />
                 </SelectTrigger>
                 <SelectPortal>
@@ -664,14 +666,14 @@ export default function SmartDiskScreen() {
 
             <FormControl>
               <FormControlLabel>
-                <FormControlLabelText>Hora</FormControlLabelText>
+                <FormControlLabelText>Hour</FormControlLabelText>
               </FormControlLabel>
               <Select
                 selectedValue={String(scheduleForm.hour)}
                 onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, hour: Number(val) }))}
               >
                 <SelectTrigger>
-                  <SelectInput placeholder="Hora" value={String(scheduleForm.hour)} />
+                  <SelectInput placeholder="Hour" value={String(scheduleForm.hour)} />
                   <SelectIcon as={ChevronDownIcon} />
                 </SelectTrigger>
                 <SelectPortal>
@@ -693,16 +695,16 @@ export default function SmartDiskScreen() {
                 value={scheduleForm.active}
                 onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, active: val }))}
               />
-              <Text className="text-typography-800">Agendamento ativo</Text>
+              <Text className="text-typography-800">Active schedule</Text>
             </HStack>
           </ModalBody>
           <ModalFooter className="gap-3">
             <Button variant="outline" action="default" onPress={() => setScheduleModal(false)} isDisabled={savingAction === "schedule"}>
-              <ButtonText>Cancelar</ButtonText>
+              <ButtonText>Cancel</ButtonText>
             </Button>
             <Button action="primary" onPress={handleScheduleSave} isDisabled={savingAction === "schedule"}>
               {savingAction === "schedule" ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
-              <ButtonText>Criar</ButtonText>
+              <ButtonText>Create</ButtonText>
             </Button>
           </ModalFooter>
         </ModalContent>
@@ -714,7 +716,7 @@ export default function SmartDiskScreen() {
           <ModalHeader className="flex-row items-start justify-between">
             <VStack>
               <Heading size="md" className="text-typography-900">
-                Detalhes do Disco
+                Disk Details
               </Heading>
               <Text className="text-typography-600">{diskDetail ? formatDeviceDisplay(diskDetail) : ""}</Text>
             </VStack>
@@ -722,7 +724,7 @@ export default function SmartDiskScreen() {
           </ModalHeader>
           <ModalBody className="gap-4 max-h-[70vh]">
             <Box className="p-3 rounded-xl border border-background-200 bg-background-50">
-              <Text className="text-typography-800 font-semibold mb-2">Informações Gerais</Text>
+              <Text className="text-typography-800 font-semibold mb-2">General Information</Text>
               <VStack className="gap-2">
                 <Text className="text-typography-700">Modelo: {diskDetail?.model || "—"}</Text>
                 <Text className="text-typography-700">Serial: {diskDetail?.serial || "—"}</Text>
@@ -733,10 +735,10 @@ export default function SmartDiskScreen() {
             </Box>
 
             <Box className="p-3 rounded-xl border border-background-200">
-              <Text className="text-typography-800 font-semibold mb-2">Status de Saúde</Text>
+              <Text className="text-typography-800 font-semibold mb-2">Health Status</Text>
               <HStack className="gap-3 items-center flex-wrap">
                 <Text className="text-typography-700">Health Status: {diskDetail?.healthStatus || diskDetail?.status || "—"}</Text>
-                <Text className="text-typography-700">SMART Passed: {diskDetail?.smartPassed ? "Sim" : "Não"}</Text>
+                <Text className="text-typography-700">SMART Passed: {diskDetail?.smartPassed ? "Yes" : "No"}</Text>
                 {diskDetail?.recommendedAction ? (
                   <Badge className="rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
                     <BadgeText className="text-xs text-typography-800">{diskDetail.recommendedAction}</BadgeText>
@@ -746,18 +748,18 @@ export default function SmartDiskScreen() {
               <HStack className="gap-4 mt-3 flex-wrap">
                 <HStack className="items-center gap-2">
                   <ThermometerSun size={16} color="#0f172a" />
-                  <Text className="text-typography-700">Temp Máx: {diskDetail?.maxTemp ?? "—"}</Text>
+                  <Text className="text-typography-700">Max Temp: {diskDetail?.maxTemp ?? "—"}</Text>
                 </HStack>
                 <HStack className="items-center gap-2">
                   <ThermometerSnowflake size={16} color="#0f172a" />
-                  <Text className="text-typography-700">Temp Mín: {diskDetail?.minTemp ?? "—"}</Text>
+                  <Text className="text-typography-700">Min Temp: {diskDetail?.minTemp ?? "—"}</Text>
                 </HStack>
                 <Text className="text-typography-700">Power Cycles: {diskDetail?.powerCycles ?? "—"}</Text>
               </HStack>
             </Box>
 
             <Box className="p-3 rounded-xl border border-background-200">
-              <Text className="text-typography-800 font-semibold mb-2">Métricas SMART</Text>
+              <Text className="text-typography-800 font-semibold mb-2">SMART Metrics</Text>
               <VStack className="gap-1">
                 <Text className="text-typography-700">Reallocated Sectors: {diskDetail?.metrics?.reallocatedSectors ?? "—"}</Text>
                 <Text className="text-typography-700">Reallocated Event Count: {diskDetail?.metrics?.reallocatedEventCount ?? "—"}</Text>
@@ -779,7 +781,7 @@ export default function SmartDiskScreen() {
                   ))}
                 </VStack>
               ) : (
-                <Text className="text-typography-600 text-sm">Nenhum histórico disponível.</Text>
+                <Text className="text-typography-600 text-sm">No history available.</Text>
               )}
             </Box>
 
@@ -811,14 +813,14 @@ export default function SmartDiskScreen() {
                   isDisabled={savingAction === "realloc-cancel"}
                 >
                   {savingAction === "realloc-cancel" ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
-                  <ButtonText>Cancelar</ButtonText>
+                  <ButtonText>Cancel</ButtonText>
                 </Button>
               </HStack>
             </Box>
           </ModalBody>
           <ModalFooter className="gap-3">
             <Button action="primary" onPress={() => setDiskDetail(null)}>
-              <ButtonText>Fechar</ButtonText>
+              <ButtonText>Close</ButtonText>
             </Button>
           </ModalFooter>
         </ModalContent>

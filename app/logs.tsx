@@ -361,17 +361,17 @@ export default function LogsScreen() {
       <View style={styles.screen}>
         <Text style={styles.title}>Logs</Text>
         <Text style={styles.subtitle}>
-          Visualização em linha, ordenada dos mais recentes para os mais antigos. Toque numa linha para ver detalhe.
+          Inline view ordered from newest to oldest. Tap a line to see details.
         </Text>
 
       <View style={[styles.card, styles.filters]}>
-        <Text style={styles.sectionTitle}>Filtros e controlos</Text>
+        <Text style={styles.sectionTitle}>Filters and controls</Text>
 
         <View style={styles.filterItem}>
-          <Text style={styles.label}>Pesquisa rápida</Text>
+          <Text style={styles.label}>Quick search</Text>
           <TextInput
             style={styles.input}
-            placeholder="Filtrar por mensagem, máquina ou timestamp..."
+            placeholder="Filter by message, machine, or timestamp..."
             placeholderTextColor={theme.muted}
             value={search}
             onChangeText={setSearch}
@@ -380,17 +380,17 @@ export default function LogsScreen() {
 
         <View style={styles.filterRow}>
           <View style={[styles.filterItem, styles.flexItem]}>
-            <Text style={styles.label}>Máquina</Text>
+            <Text style={styles.label}>Machine</Text>
             <TextInput
               style={styles.input}
-              placeholder="all para todas"
+              placeholder="all for all"
               placeholderTextColor={theme.muted}
               value={machineFilter}
               onChangeText={setMachineFilter}
             />
           </View>
           <View style={[styles.filterItem, styles.smallColumn]}>
-            <Text style={styles.label}>Nível (API)</Text>
+            <Text style={styles.label}>Level (API)</Text>
             <TextInput
               style={styles.input}
               placeholder="all/0/1/2/3"
@@ -400,7 +400,7 @@ export default function LogsScreen() {
             />
           </View>
           <View style={[styles.filterItem, styles.smallColumn]}>
-            <Text style={styles.label}>Limite</Text>
+            <Text style={styles.label}>Limit</Text>
             <TextInput
               style={styles.input}
               keyboardType="numeric"
@@ -414,25 +414,25 @@ export default function LogsScreen() {
 
         <View style={styles.toggleRow}>
           <View style={styles.toggleItem}>
-            <Text style={styles.label}>Mostrar INFO</Text>
+            <Text style={styles.label}>Show INFO</Text>
             <Switch value={showInfo} onValueChange={setShowInfo} />
           </View>
           <View style={styles.toggleItem}>
-            <Text style={styles.label}>Mostrar DEBUG</Text>
+            <Text style={styles.label}>Show DEBUG</Text>
             <Switch value={showDebug} onValueChange={setShowDebug} />
           </View>
           <TouchableOpacity style={styles.button} onPress={refresh} activeOpacity={0.7}>
-            <Text style={styles.buttonText}>Recarregar</Text>
+            <Text style={styles.buttonText}>Reload</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.headerRow}>
         <Text style={{width: 6}} />
-        <Text style={[styles.headerText, {width: 96}]}>Hora</Text>
-        <Text style={[styles.headerText, {width: 112}]}>Máquina</Text>
-        <Text style={[styles.headerText, {width: 64}]}>Nível</Text>
-        <Text style={[styles.headerText, {flex: 1}]}>Mensagem</Text>
+        <Text style={[styles.headerText, {width: 96}]}>Time</Text>
+        <Text style={[styles.headerText, {width: 112}]}>Machine</Text>
+        <Text style={[styles.headerText, {width: 64}]}>Level</Text>
+        <Text style={[styles.headerText, {flex: 1}]}>Message</Text>
       </View>
 
       <View style={styles.listContainer}>
@@ -451,7 +451,7 @@ export default function LogsScreen() {
               data={visibleLogs}
               keyExtractor={(item) => item.id}
               renderItem={renderItem}
-              ListEmptyComponent={<Text style={styles.empty}>Nenhum log encontrado</Text>}
+              ListEmptyComponent={<Text style={styles.empty}>No logs found</Text>}
               refreshControl={refreshControl}
               contentContainerStyle={{paddingBottom: 12}}
             />

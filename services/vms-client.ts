@@ -58,7 +58,7 @@ const ensureApiBaseUrl = async () => {
     baseUrl = setApiBaseUrl(storedBaseUrl) ?? null;
   }
   if (!baseUrl) {
-    throw new Error("Domínio/API base não configurado. Inicia sessão novamente.");
+    throw new Error("Base domain/API not configured. Sign in again.");
   }
   return baseUrl;
 };
@@ -69,7 +69,7 @@ export const resolveToken = async () => {
   if (!storedToken) {
     setAuthToken(null);
     triggerUnauthorized();
-    throw new Error("Token de autenticação inválida.");
+    throw new Error("Invalid authentication token.");
   }
   setAuthToken(storedToken);
   return storedToken;
@@ -164,14 +164,14 @@ export async function coldMigrateVM(vmName: string, targetMachineName: string) {
   });
 }
 
-export async function moveDisk(vmName: string, destNfsId: string, destDiskPath?: string) {
+export async function moveDisk(vmName: string, destNfsId: string, newName: string) {
   const authToken = await resolveToken();
   const encodedVmName = encodeURIComponent(vmName);
   const encodedNfs = encodeURIComponent(destNfsId);
   return apiFetch<void>(`/virsh/moveDisk/${encodedVmName}/${encodedNfs}`, {
     method: "POST",
     token: authToken,
-    body: destDiskPath ? { dest_disk_path: destDiskPath } : undefined,
+    body: { new_name: newName },
   });
 }
 
@@ -247,6 +247,17 @@ export async function changeVmNetwork(vmName: string, newNetwork: string) {
   });
 }
 
+export async function getVmExportUrl(vmName: string) {
+  const authToken = await resolveToken();
+  const baseUrl = await ensureApiBaseUrl();
+  const normalizedBase = baseUrl.replace(/\/+$/, "");
+  const encodedVm = encodeURIComponent(vmName);
+  return {
+    url: `${normalizedBase}/virsh/export/${encodedVm}`,
+    token: authToken,
+  };
+}
+
 export type CreateVmPayload = {
   machine_name: string;
   name: string;
@@ -269,6 +280,92 @@ export async function createVm(payload: CreateVmPayload) {
     method: "POST",
     token: authToken,
     body: payload,
+  });
+}
+
+export type ImportVmPayload = {
+  slave_name: string;
+  nfs_share_id: number;
+  vm_name: string;
+  memory: number;
+  vcpu: number;
+  network: string;
+  VNC_password?: string;
+  cpu_xml: string;
+  live: boolean;
+};
+
+export type ImportVmFile = Blob | ArrayBuffer | ArrayBufferView;
+
+export async function importVm(
+  payload: ImportVmPayload,
+  file: ImportVmFile,
+  options?: { onProgress?: (percent: number) => void }
+) {
+  const authToken = await resolveToken();
+  const baseUrl = await ensureApiBaseUrl();
+  const normalizedBase = baseUrl.replace(/\/+$/, "");
+
+  const params = new URLSearchParams({
+    slave_name: payload.slave_name,
+    nfs_share_id: String(payload.nfs_share_id),
+    vm_name: payload.vm_name,
+    memory: String(payload.memory),
+    vcpu: String(payload.vcpu),
+    network: payload.network,
+    live: String(payload.live),
+    cpu_xml: payload.cpu_xml,
+  });
+
+  if (payload.VNC_password !== undefined) {
+    params.append("VNC_password", payload.VNC_password);
+  }
+
+  const url = `${normalizedBase}/virsh/import?${params.toString()}`;
+
+  // Web: use XMLHttpRequest to expose upload progress events
+  if (typeof XMLHttpRequest !== "undefined" && typeof window !== "undefined" && file instanceof Blob) {
+    return new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("PUT", url);
+      xhr.setRequestHeader("Content-Type", "application/octet-stream");
+      if (authToken) {
+        xhr.setRequestHeader("Authorization", authToken);
+      }
+
+      if (xhr.upload && options?.onProgress) {
+        xhr.upload.onprogress = (evt) => {
+          if (evt.lengthComputable && evt.total > 0) {
+            const percent = Math.round((evt.loaded / evt.total) * 100);
+            options.onProgress(percent);
+          }
+        };
+      }
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          options?.onProgress?.(100);
+          resolve();
+        } else {
+          reject(new Error(xhr.statusText || `Upload failed (${xhr.status})`));
+        }
+      };
+      xhr.onerror = () => {
+        reject(new Error("Network error while uploading VM image"));
+      };
+
+      xhr.send(file);
+    });
+  }
+
+  // Fallback (non-web / non-Blob): no progress
+  return apiFetch<void>(`/virsh/import?${params.toString()}`, {
+    method: "PUT",
+    token: authToken,
+    headers: {
+      "Content-Type": "application/octet-stream",
+    },
+    body: file,
   });
 }
 

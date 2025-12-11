@@ -185,7 +185,7 @@ export default function CertificatesScreen() {
         setCerts(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Failed to load certificates", err);
-        showToast("Erro ao carregar", "Não foi possível obter os certificados.", "error");
+        showToast("Error loading", "Unable to fetch certificates.", "error");
       } finally {
         if (mode === "full") setLoading(false);
         if (mode === "refresh") setRefreshing(false);
@@ -212,15 +212,15 @@ export default function CertificatesScreen() {
   const handleCreate = async () => {
     const domain_names = parseDomains(domainsInput);
     if (!domain_names.length) {
-      showToast("Domínios obrigatórios", "Informe ao menos um domínio.", "error");
+      showToast("Domains required", "Provide at least one domain.", "error");
       return;
     }
     if (!form.meta.letsencrypt_email) {
-      showToast("Email obrigatório", "Preencha o email para Let's Encrypt.", "error");
+      showToast("Email required", "Enter the email for Let's Encrypt.", "error");
       return;
     }
     if (!form.meta.letsencrypt_agree) {
-      showToast("Aceite os termos", "É necessário aceitar os termos do Let's Encrypt.", "error");
+      showToast("Accept the terms", "You must accept Let's Encrypt terms.", "error");
       return;
     }
 
@@ -235,12 +235,12 @@ export default function CertificatesScreen() {
     setSaving(true);
     try {
       await createLetsEncryptCertificate(payload);
-      showToast("Certificado criado", "Let's Encrypt em andamento.");
+      showToast("Certificate created", "Let's Encrypt in progress.");
       setModalOpen(false);
       await loadCerts("silent");
     } catch (err) {
       console.error("Failed to create certificate", err);
-      showToast("Erro ao criar", "Não foi possível criar o certificado.", "error");
+      showToast("Error creating", "Unable to create the certificate.", "error");
     } finally {
       setSaving(false);
     }
@@ -251,11 +251,11 @@ export default function CertificatesScreen() {
     setRenewingId(cert.id);
     try {
       await renewCertificate(cert.id);
-      showToast("Renovação iniciada", "O certificado está sendo renovado.");
+      showToast("Renewal started", "The certificate is being renewed.");
       await loadCerts("silent");
     } catch (err) {
       console.error("Failed to renew certificate", err);
-      showToast("Erro ao renovar", "Tente novamente mais tarde.", "error");
+      showToast("Error renewing", "Try again later.", "error");
     } finally {
       setRenewingId(null);
     }
@@ -266,10 +266,10 @@ export default function CertificatesScreen() {
     setDownloadingId(cert.id);
     try {
       await downloadCertificate(cert.id);
-      showToast("Download gerado", "O certificado foi solicitado para download.");
+      showToast("Download requested", "The certificate download was requested.");
     } catch (err) {
       console.error("Failed to download certificate", err);
-      showToast("Erro ao baixar", "Não foi possível gerar o download.", "error");
+      showToast("Error downloading", "Unable to generate the download.", "error");
     } finally {
       setDownloadingId(null);
     }
@@ -280,12 +280,12 @@ export default function CertificatesScreen() {
     setDeletingId(deleteTarget.id);
     try {
       await deleteCertificate(deleteTarget.id);
-      showToast("Certificado removido", "Certificado apagado com sucesso.");
+      showToast("Certificate removed", "Certificate deleted successfully.");
       setDeleteTarget(null);
       await loadCerts("silent");
     } catch (err) {
       console.error("Failed to delete certificate", err);
-      showToast("Erro ao apagar", "Não foi possível remover o certificado.", "error");
+      showToast("Error deleting", "Unable to remove the certificate.", "error");
     } finally {
       setDeletingId(null);
     }
@@ -322,19 +322,19 @@ export default function CertificatesScreen() {
             SSL Certificates
           </Heading>
           <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
-            Gerencie certificados SSL para seus proxy hosts.
+            Manage SSL certificates for your proxy hosts.
           </Text>
 
           <HStack className="mt-6 items-center justify-between flex-wrap gap-3">
             <Box className="flex-row items-center gap-3 px-4 py-3 rounded-xl bg-background-0 border border-background-200 shadow-soft-1">
               <Shield size={20} color="#0f172a" />
               <Text className="text-typography-900 font-semibold text-base">
-                {certs.length} certificado{certs.length === 1 ? "" : "s"} total
+                {certs.length} certificate{certs.length === 1 ? "" : "s"} total
               </Text>
             </Box>
             <Button action="primary" variant="solid" size="md" onPress={openCreateModal} className="rounded-full px-5">
               <ButtonIcon as={Plus} size="sm" />
-              <ButtonText>Adicionar Certificado</ButtonText>
+              <ButtonText>Add Certificate</ButtonText>
             </Button>
           </HStack>
 
@@ -342,9 +342,9 @@ export default function CertificatesScreen() {
             renderLoading()
           ) : certs.length === 0 ? (
             <Box className="mt-10 p-6 border border-dashed border-background-300 rounded-2xl bg-background-0 items-center">
-              <Text className="text-typography-700 font-semibold text-base">Nenhum certificado encontrado</Text>
+              <Text className="text-typography-700 font-semibold text-base">No certificates found</Text>
               <Text className="text-typography-500 text-sm mt-1 text-center">
-                Clique em &quot;Novo Certificado&quot; para emitir via Let's Encrypt.
+                Click "New Certificate" to issue via Let's Encrypt.
               </Text>
             </Box>
           ) : (
@@ -380,7 +380,7 @@ export default function CertificatesScreen() {
                           {(cert.domain_names?.length ?? 0) > 3 ? (
                             <Badge className="rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
                               <BadgeText className="text-xs text-typography-800">
-                                +{(cert.domain_names?.length ?? 0) - 3} domínios
+                                +{(cert.domain_names?.length ?? 0) - 3} domains
                               </BadgeText>
                             </Badge>
                           ) : null}
@@ -389,10 +389,10 @@ export default function CertificatesScreen() {
                           <HStack className="items-center gap-2">
                             <Calendar color={expired ? "#ef4444" : "#0f172a"} size={16} />
                             <Text className={`text-sm ${expired ? "text-error-600 font-semibold" : "text-typography-800"}`}>
-                              Expira: {formatDate(resolveExpiry(cert))}
+                              Expires: {formatDate(resolveExpiry(cert))}
                             </Text>
                           </HStack>
-                          <StatusChip label={expired ? "Expirado" : "Válido"} action={expired ? "error" : "success"} />
+                          <StatusChip label={expired ? "Expired" : "Valid"} action={expired ? "error" : "success"} />
                           {cert.meta?.dns_challenge ? (
                             <StatusChip
                               label={`DNS Challenge - ${cert.meta?.dns_provider || "provider"}`}
@@ -401,13 +401,13 @@ export default function CertificatesScreen() {
                           ) : (
                             <StatusChip label="HTTP Challenge" action="muted" />
                           )}
-                          <StatusChip label={`Criado: ${formatDate(resolveCreated(cert))}`} action="muted" />
+                          <StatusChip label={`Created: ${formatDate(resolveCreated(cert))}`} action="muted" />
                         </HStack>
                         {expired ? (
                           <HStack className="items-center gap-2">
                             <AlertTriangle size={16} color="#ef4444" />
                             <Text className="text-error-600 text-sm font-semibold">
-                              Este certificado expirou e precisa ser renovado
+                              This certificate has expired and needs to be renewed
                             </Text>
                           </HStack>
                         ) : null}
@@ -423,7 +423,7 @@ export default function CertificatesScreen() {
                           className="border-background-300"
                         >
                           {renewingId === cert.id ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
-                          <ButtonText>Renovar</ButtonText>
+                          <ButtonText>Renew</ButtonText>
                         </Button>
                         <Button
                           action="default"
@@ -460,10 +460,10 @@ export default function CertificatesScreen() {
           <ModalHeader className="flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
             <VStack className="flex-1">
               <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
-                Emitir Let's Encrypt
+                Issue Let's Encrypt
               </Heading>
               <Text className="text-typography-600 dark:text-typography-400 mt-1">
-                Gere certificados SSL via ACME com HTTP ou DNS challenge.
+                Generate SSL certificates via ACME with HTTP or DNS challenge.
               </Text>
             </VStack>
             <ModalCloseButton className="text-typography-500" />
@@ -478,18 +478,18 @@ export default function CertificatesScreen() {
               <VStack className="gap-4">
                 <FormControl isRequired>
                   <FormControlLabel>
-                    <FormControlLabelText>Domínios</FormControlLabelText>
+                    <FormControlLabelText>Domains</FormControlLabelText>
                   </FormControlLabel>
                   <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
                     <InputField
                       value={domainsInput}
                       onChangeText={setDomainsInput}
-                      placeholder="ex: *.marques.com, marques.com"
+                      placeholder="e.g.: *.marques.com, marques.com"
                       autoCapitalize="none"
                     />
                   </Input>
                   <FormControlHelper>
-                    <FormControlHelperText>Separe por vírgula ou quebra de linha.</FormControlHelperText>
+                    <FormControlHelperText>Separate by comma or line break.</FormControlHelperText>
                   </FormControlHelper>
                 </FormControl>
 
@@ -503,20 +503,20 @@ export default function CertificatesScreen() {
                       onChangeText={(val) => setForm((prev) => ({...prev, meta: {...prev.meta, letsencrypt_email: val}}))}
                       autoCapitalize="none"
                       keyboardType="email-address"
-                      placeholder="seu-email@dominio.com"
+                      placeholder="your-email@domain.com"
                     />
                   </Input>
                 </FormControl>
 
                 <VStack className="gap-3">
-                  <Text className="text-typography-800 font-semibold">Validação</Text>
+                  <Text className="text-typography-800 font-semibold">Validation</Text>
                   <HStack className="items-center gap-2">
                     <Switch
                       {...TOGGLE_PROPS}
                       value={form.meta.letsencrypt_agree ?? false}
                       onValueChange={(val) => setForm((prev) => ({...prev, meta: {...prev.meta, letsencrypt_agree: val}}))}
                     />
-                    <Text className="text-typography-800">Aceito os termos do Let's Encrypt</Text>
+                    <Text className="text-typography-800">I accept the Let's Encrypt terms</Text>
                   </HStack>
 
                   <HStack className="items-center gap-2 flex-wrap">
@@ -525,7 +525,7 @@ export default function CertificatesScreen() {
                       value={form.meta.dns_challenge ?? false}
                       onValueChange={(val) => setForm((prev) => ({...prev, meta: {...prev.meta, dns_challenge: val}}))}
                     />
-                    <Text className="text-typography-800">Usar DNS Challenge</Text>
+                    <Text className="text-typography-800">Use DNS Challenge</Text>
                   </HStack>
                 </VStack>
 
@@ -533,7 +533,7 @@ export default function CertificatesScreen() {
                   <VStack className="gap-3">
                     <FormControl>
                       <FormControlLabel>
-                        <FormControlLabelText>Provedor DNS</FormControlLabelText>
+                        <FormControlLabelText>DNS Provider</FormControlLabelText>
                       </FormControlLabel>
                       <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
                         <InputField
@@ -547,7 +547,7 @@ export default function CertificatesScreen() {
 
                     <FormControl>
                       <FormControlLabel>
-                        <FormControlLabelText>Credenciais DNS</FormControlLabelText>
+                        <FormControlLabelText>DNS Credentials</FormControlLabelText>
                       </FormControlLabel>
                       <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
                         <InputField
@@ -556,11 +556,11 @@ export default function CertificatesScreen() {
                             setForm((prev) => ({...prev, meta: {...prev.meta, dns_provider_credentials: val}}))
                           }
                           autoCapitalize="none"
-                          placeholder="dns_dynu_auth_token = SEU_TOKEN..."
+                          placeholder="dns_dynu_auth_token = YOUR_TOKEN..."
                         />
                       </Input>
                       <FormControlHelper>
-                        <FormControlHelperText>Use o formato esperado pelo lego/ACME do provider.</FormControlHelperText>
+                        <FormControlHelperText>Use the format expected by the provider's lego/ACME.</FormControlHelperText>
                       </FormControlHelper>
                     </FormControl>
                   </VStack>
@@ -571,11 +571,11 @@ export default function CertificatesScreen() {
           <ModalFooter className="px-6 pb-6 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
             <HStack className="gap-3 justify-end w-full">
               <Button variant="outline" action="default" onPress={closeModal} isDisabled={saving}>
-                <ButtonText>Cancelar</ButtonText>
+                <ButtonText>Cancel</ButtonText>
               </Button>
               <Button action="primary" onPress={handleCreate} isDisabled={saving}>
                 {saving ? <ButtonSpinner /> : <ButtonIcon as={CloudLightning} size="sm" />}
-                <ButtonText>Emitir</ButtonText>
+                <ButtonText>Issue</ButtonText>
               </Button>
             </HStack>
           </ModalFooter>
@@ -587,25 +587,25 @@ export default function CertificatesScreen() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <Heading size="md" className="text-typography-900">
-              Remover certificado?
+              Remove certificate?
             </Heading>
           </AlertDialogHeader>
           <AlertDialogBody>
             <Text className="text-typography-700">
-              Esta ação apagará{" "}
+              This action will delete{" "}
               <Text className="font-semibold">
                 {(deleteTarget?.domain_names ?? []).join(", ")}
               </Text>
-              . Deseja continuar?
+              . Do you want to continue?
             </Text>
           </AlertDialogBody>
           <AlertDialogFooter className="gap-3">
             <Button variant="outline" action="default" onPress={() => setDeleteTarget(null)} isDisabled={Boolean(deletingId)}>
-              <ButtonText>Cancelar</ButtonText>
+              <ButtonText>Cancel</ButtonText>
             </Button>
             <Button action="negative" onPress={handleDelete} isDisabled={Boolean(deletingId)}>
               {deletingId ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
-              <ButtonText>Apagar</ButtonText>
+              <ButtonText>Delete</ButtonText>
             </Button>
           </AlertDialogFooter>
           <AlertDialogCloseButton />

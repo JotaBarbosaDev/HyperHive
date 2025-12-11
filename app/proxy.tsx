@@ -162,7 +162,7 @@ export default function ProxyHostsScreen() {
 
   const handleCertificatesError = React.useCallback(
     (_error: unknown) => {
-      showToast("Erro ao carregar certificados", "Não foi possível obter os certificados SSL.", "error");
+      showToast("Error loading certificates", "Unable to fetch SSL certificates.", "error");
     },
     [showToast]
   );
@@ -178,7 +178,7 @@ export default function ProxyHostsScreen() {
         setHosts(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Failed to load proxy hosts", err);
-        showToast("Erro ao carregar", "Não foi possível obter os proxies.", "error");
+        showToast("Error loading", "Unable to fetch proxies.", "error");
       } finally {
         if (mode === "full") setLoading(false);
         if (mode === "refresh") setRefreshing(false);
@@ -250,11 +250,11 @@ export default function ProxyHostsScreen() {
   const handleSave = async () => {
     const domain_names = parseDomains(domainsInput);
     if (!domain_names.length) {
-      showToast("Domínios obrigatórios", "Informe ao menos um domínio.", "error");
+      showToast("Domains required", "Provide at least one domain.", "error");
       return;
     }
     if (!form.forward_host) {
-      showToast("Host obrigatório", "Informe o host de destino.", "error");
+      showToast("Destination host required", "Provide the destination host.", "error");
       return;
     }
     const payload: ProxyPayload = {
@@ -270,17 +270,17 @@ export default function ProxyHostsScreen() {
     try {
       if (editingHost?.id) {
         await editProxyHost(editingHost.id, payload);
-        showToast("Proxy atualizado", "Configuração atualizada.");
+        showToast("Proxy updated", "Configuration updated.");
       } else {
         await createProxyHost(payload);
-        showToast("Proxy criado", "Host proxy adicionado.");
+        showToast("Proxy created", "Proxy host added.");
       }
       setModalOpen(false);
       setEditingHost(null);
       await loadHosts("silent");
     } catch (err) {
       console.error("Failed to save proxy", err);
-      showToast("Erro ao salvar", "Verifique os dados e tente novamente.", "error");
+      showToast("Error saving", "Check the data and try again.", "error");
     } finally {
       setSaving(false);
     }
@@ -293,15 +293,15 @@ export default function ProxyHostsScreen() {
     try {
       if (enabled) {
         await disableProxyHost(host.id);
-        showToast("Proxy desativado", "Host desativado.");
+        showToast("Proxy disabled", "Host disabled.");
       } else {
         await enableProxyHost(host.id);
-        showToast("Proxy ativado", "Host ativado.");
+        showToast("Proxy enabled", "Host enabled.");
       }
       await loadHosts("silent");
     } catch (err) {
       console.error("Failed to toggle proxy", err);
-      showToast("Erro ao alterar status", "Não foi possível atualizar o host.", "error");
+      showToast("Error changing status", "Unable to update the host.", "error");
     } finally {
       setTogglingId(null);
     }
@@ -312,12 +312,12 @@ export default function ProxyHostsScreen() {
     setDeletingId(deleteTarget.id);
     try {
       await deleteProxyHost(deleteTarget.id);
-      showToast("Proxy removido", "Host removido.");
+      showToast("Proxy removed", "Host removed.");
       setDeleteTarget(null);
       await loadHosts("silent");
     } catch (err) {
       console.error("Failed to delete proxy", err);
-      showToast("Erro ao apagar", "Não foi possível remover o host.", "error");
+      showToast("Error deleting", "Unable to remove the host.", "error");
     } finally {
       setDeletingId(null);
     }
@@ -368,15 +368,15 @@ export default function ProxyHostsScreen() {
             Proxy Hosts
           </Heading>
           <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
-            Gerencie hosts de proxy reverso para rotear tráfego para seus serviços internos.
+            Manage reverse proxy hosts to route traffic to your internal services.
           </Text>
 
           <HStack className="mt-6 items-center justify-between flex-wrap gap-3">
             <HStack className="gap-2 flex-wrap">
               {[
-                {key: "all" as FilterTab, label: `Todos (${stats.total})`},
-                {key: "active" as FilterTab, label: `Ativos (${stats.active})`},
-                {key: "inactive" as FilterTab, label: `Inativos (${stats.inactive})`},
+                {key: "all" as FilterTab, label: `All (${stats.total})`},
+                {key: "active" as FilterTab, label: `Active (${stats.active})`},
+                {key: "inactive" as FilterTab, label: `Inactive (${stats.inactive})`},
               ].map((tab) => {
                 const active = filter === tab.key;
                 return (
@@ -399,7 +399,7 @@ export default function ProxyHostsScreen() {
             </HStack>
             <Button action="primary" variant="solid" size="md" onPress={openCreateModal} className="rounded-full px-5">
               <ButtonIcon as={Plus} size="sm" />
-              <ButtonText>Adicionar Proxy Host</ButtonText>
+              <ButtonText>Add Proxy Host</ButtonText>
             </Button>
           </HStack>
 
@@ -407,9 +407,9 @@ export default function ProxyHostsScreen() {
             renderLoading()
           ) : filteredHosts.length === 0 ? (
             <Box className="mt-10 p-6 border border-dashed border-background-300 rounded-2xl bg-background-0 items-center">
-              <Text className="text-typography-700 font-semibold text-base">Nenhum proxy encontrado</Text>
+              <Text className="text-typography-700 font-semibold text-base">No proxies found</Text>
               <Text className="text-typography-500 text-sm mt-1 text-center">
-                Clique em &quot;Adicionar Proxy Host&quot; para criar o primeiro host de proxy reverso.
+                Click "Add Proxy Host" to create the first reverse proxy host.
               </Text>
             </Box>
           ) : (
@@ -442,7 +442,7 @@ export default function ProxyHostsScreen() {
                           {host.ssl_forced ? (
                             <HStack className="items-center gap-1">
                               <Lock size={16} color="#16a34a" />
-                              <Text className="text-success-600 text-sm">SSL (Forçado)</Text>
+                              <Text className="text-success-600 text-sm">SSL (Forced)</Text>
                             </HStack>
                           ) : (
                             <HStack className="items-center gap-1">
@@ -468,7 +468,7 @@ export default function ProxyHostsScreen() {
                           className="border-background-300"
                         >
                           {togglingId === host.id ? <ButtonSpinner /> : <ButtonIcon as={Power} size="sm" />}
-                          <ButtonText>{enabled ? "Desativar" : "Ativar"}</ButtonText>
+                          <ButtonText>{enabled ? "Disable" : "Enable"}</ButtonText>
                         </Button>
                         <Button
                           action="default"
@@ -504,10 +504,10 @@ export default function ProxyHostsScreen() {
           <ModalHeader className="flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
             <VStack className="flex-1">
               <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
-                {editingHost ? "Editar Proxy Host" : "Adicionar Proxy Host"}
+                {editingHost ? "Edit Proxy Host" : "Add Proxy Host"}
               </Heading>
               <Text className="text-typography-600 dark:text-typography-400 mt-1">
-                Domínios, destino e SSL para o proxy selecionado.
+                Domains, destination, and SSL for the selected proxy.
               </Text>
             </VStack>
             <ModalCloseButton className="text-typography-500" />
@@ -550,24 +550,24 @@ export default function ProxyHostsScreen() {
                   <VStack className="gap-4">
                     <FormControl isRequired>
                       <FormControlLabel>
-                        <FormControlLabelText>Domínios</FormControlLabelText>
+                        <FormControlLabelText>Domains</FormControlLabelText>
                       </FormControlLabel>
                       <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
                         <InputField
                           value={domainsInput}
                           onChangeText={setDomainsInput}
-                          placeholder="ex: app.hyperhive.local, www.app.hyperhive.local"
+                          placeholder="e.g.: app.hyperhive.local, www.app.hyperhive.local"
                           autoCapitalize="none"
                         />
                       </Input>
                       <FormControlHelper>
-                        <FormControlHelperText>Separe por vírgula ou quebra de linha.</FormControlHelperText>
+                        <FormControlHelperText>Separate by comma or line break.</FormControlHelperText>
                       </FormControlHelper>
                     </FormControl>
 
                     <FormControl isRequired>
                       <FormControlLabel>
-                        <FormControlLabelText>Destino</FormControlLabelText>
+                        <FormControlLabelText>Destination</FormControlLabelText>
                       </FormControlLabel>
                       <HStack className="gap-3 flex-wrap">
                         <Input className="flex-1 min-w-[120px] rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
@@ -598,7 +598,7 @@ export default function ProxyHostsScreen() {
                     </FormControl>
 
                     <VStack className="gap-3">
-                      <Text className="text-typography-800 font-semibold">Opções rápidas</Text>
+                      <Text className="text-typography-800 font-semibold">Quick options</Text>
                       <HStack className="flex-wrap gap-4">
                         <HStack className="items-center gap-2">
                           <Switch
@@ -632,19 +632,19 @@ export default function ProxyHostsScreen() {
                 {formTab === "locations" ? (
                   <VStack className="gap-4">
                     <HStack className="items-center justify-between">
-                      <Text className="text-typography-900 font-semibold">Locations personalizados</Text>
+                      <Text className="text-typography-900 font-semibold">Custom locations</Text>
                       <Button action="primary" variant="outline" size="sm" onPress={addLocation}>
-                        <ButtonText>Adicionar Location</ButtonText>
+                        <ButtonText>Add Location</ButtonText>
                       </Button>
                     </HStack>
                     {locations.length === 0 ? (
-                      <Text className="text-typography-600 text-sm">Nenhum location definido.</Text>
+                      <Text className="text-typography-600 text-sm">No locations defined.</Text>
                     ) : (
                       locations.map((loc, idx) => (
                         <Box key={`${loc.path}-${idx}`} className="p-3 rounded-xl border border-background-200 bg-background-50 gap-3">
                           <FormControl>
                             <FormControlLabel>
-                              <FormControlLabelText>Caminho</FormControlLabelText>
+                              <FormControlLabelText>Path</FormControlLabelText>
                             </FormControlLabel>
                             <Input className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
                               <InputField
@@ -683,7 +683,7 @@ export default function ProxyHostsScreen() {
                           </HStack>
                           <HStack className="justify-end">
                             <Button action="negative" variant="outline" size="sm" onPress={() => removeLocation(idx)}>
-                              <ButtonText>Remover</ButtonText>
+                              <ButtonText>Remove</ButtonText>
                             </Button>
                           </HStack>
                         </Box>
@@ -697,7 +697,7 @@ export default function ProxyHostsScreen() {
                     <FormControl>
                       <HStack className="items-center justify-between">
                         <FormControlLabel>
-                          <FormControlLabelText>Certificado SSL</FormControlLabelText>
+                          <FormControlLabelText>SSL Certificate</FormControlLabelText>
                         </FormControlLabel>
                         <Button
                           variant="link"
@@ -707,7 +707,7 @@ export default function ProxyHostsScreen() {
                           onPress={() => void refreshCertificates()}
                           isDisabled={loadingCertificates}
                         >
-                          {loadingCertificates ? <ButtonSpinner /> : <ButtonText>Atualizar</ButtonText>}
+                          {loadingCertificates ? <ButtonSpinner /> : <ButtonText>Refresh</ButtonText>}
                         </Button>
                       </HStack>
                       <Select
@@ -717,7 +717,7 @@ export default function ProxyHostsScreen() {
                       >
                         <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] h-11 px-4">
                           <SelectInput
-                            placeholder={loadingCertificates ? "A carregar certificados..." : "Seleciona um certificado"}
+                            placeholder={loadingCertificates ? "Loading certificates..." : "Select a certificate"}
                             className="text-typography-900 dark:text-[#E8EBF0]"
                           />
                           <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-typography-400" />
@@ -742,19 +742,19 @@ export default function ProxyHostsScreen() {
                         </SelectPortal>
                       </Select>
                       <FormControlHelper>
-                        <FormControlHelperText>Mostra os certificados disponíveis. Deixa em branco para HTTP.</FormControlHelperText>
+                        <FormControlHelperText>Shows the available certificates. Leave blank for HTTP.</FormControlHelperText>
                       </FormControlHelper>
                     </FormControl>
 
                     <FormControl>
                       <FormControlLabel>
-                        <FormControlLabelText>Configuração avançada (opcional)</FormControlLabelText>
+                        <FormControlLabelText>Advanced configuration (optional)</FormControlLabelText>
                       </FormControlLabel>
                       <Textarea className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]" size="md">
                         <TextareaInput
                           value={form.advanced_config}
                           onChangeText={(text) => setForm((prev) => ({...prev, advanced_config: text}))}
-                          placeholder="Configuração Nginx adicional (opcional)..."
+                          placeholder="Additional Nginx configuration (optional)..."
                         />
                       </Textarea>
                     </FormControl>
@@ -768,7 +768,7 @@ export default function ProxyHostsScreen() {
                             value={form.ssl_forced}
                             onValueChange={(val) => setForm((prev) => ({...prev, ssl_forced: val}))}
                           />
-                          <Text className="text-typography-800">Forçar SSL</Text>
+                          <Text className="text-typography-800">Force SSL</Text>
                         </HStack>
                         <HStack className="items-center gap-2">
                           <Switch
@@ -794,7 +794,7 @@ export default function ProxyHostsScreen() {
                             isDisabled={!form.hsts_enabled}
                           />
                           <Text className={`text-typography-800 ${!form.hsts_enabled ? "text-typography-500" : ""}`}>
-                            HSTS Subdomínios
+                            HSTS Subdomains
                           </Text>
                         </HStack>
                       </HStack>
@@ -807,11 +807,11 @@ export default function ProxyHostsScreen() {
           <ModalFooter className="px-6 pb-6 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
             <HStack className="gap-3 justify-end w-full">
               <Button variant="outline" action="default" onPress={closeModal} isDisabled={saving}>
-                <ButtonText>Cancelar</ButtonText>
+                <ButtonText>Cancel</ButtonText>
               </Button>
               <Button action="primary" onPress={handleSave} isDisabled={saving}>
                 {saving ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
-                <ButtonText>{editingHost ? "Salvar alterações" : "Criar proxy"}</ButtonText>
+                <ButtonText>{editingHost ? "Save changes" : "Create proxy"}</ButtonText>
               </Button>
             </HStack>
           </ModalFooter>
@@ -823,25 +823,25 @@ export default function ProxyHostsScreen() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <Heading size="md" className="text-typography-900">
-              Remover proxy?
+              Remove proxy?
             </Heading>
           </AlertDialogHeader>
           <AlertDialogBody>
             <Text className="text-typography-700">
-              Esta ação apagará{" "}
+              This action will delete{" "}
               <Text className="font-semibold">
                 {(deleteTarget?.domain_names ?? []).join(", ")}
               </Text>
-              . Deseja continuar?
+              . Do you want to continue?
             </Text>
           </AlertDialogBody>
           <AlertDialogFooter className="gap-3">
             <Button variant="outline" action="default" onPress={() => setDeleteTarget(null)} isDisabled={Boolean(deletingId)}>
-              <ButtonText>Cancelar</ButtonText>
+              <ButtonText>Cancel</ButtonText>
             </Button>
             <Button action="negative" onPress={handleDelete} isDisabled={Boolean(deletingId)}>
               {deletingId ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
-              <ButtonText>Apagar</ButtonText>
+              <ButtonText>Delete</ButtonText>
             </Button>
           </AlertDialogFooter>
           <AlertDialogCloseButton />

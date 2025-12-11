@@ -40,7 +40,7 @@ const buildEndpointLabel = (peer?: WireguardPeer, fallbackEndpoint?: string) => 
   if (endpoint?.IP) {
     return endpoint.Port ? `${endpoint.IP}:${endpoint.Port}` : endpoint.IP;
   }
-  return fallbackEndpoint || "Aguardando endpoint";
+  return fallbackEndpoint || "Waiting for endpoint";
 };
 
 export default function WireGuardScreen() {
@@ -85,7 +85,7 @@ export default function WireGuardScreen() {
 
     const baseDir = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
     if (!baseDir) {
-      throw new Error("Não foi possível aceder ao diretório de armazenamento.");
+      throw new Error("Unable to access the storage directory.");
     }
 
     const targetPath = `${baseDir}${filename}`;
@@ -112,8 +112,8 @@ export default function WireGuardScreen() {
     const firstPeer = peers[0];
     return {
       endpoint: buildEndpointLabel(firstPeer, formPeerEndpoint),
-      publicKey: firstPeer?.public_key ?? "Gerada após criar peers",
-      network: firstPeer?.client_ip ?? "Aguardando peers",
+      publicKey: firstPeer?.public_key ?? "Generated after creating peers",
+      network: firstPeer?.client_ip ?? "Waiting for peers",
     };
   }, [vpnReady, peers, formPeerEndpoint]);
 
@@ -127,7 +127,7 @@ export default function WireGuardScreen() {
           className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
           action="success"
         >
-          <ToastTitle size="sm">{label} copiado!</ToastTitle>
+          <ToastTitle size="sm">{label} copied!</ToastTitle>
         </Toast>
       ),
     });
@@ -147,26 +147,26 @@ export default function WireGuardScreen() {
         toast.show({
           placement: "top",
           render: ({ id }) => (
-            <Toast
-              nativeID={"toast-" + id}
-              className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-              action="success"
-            >
-              <ToastTitle size="sm">Peer removido</ToastTitle>
-            </Toast>
-          ),
-        });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Não foi possível remover o peer.";
+        <Toast
+          nativeID={"toast-" + id}
+          className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+          action="success"
+        >
+          <ToastTitle size="sm">Peer removed</ToastTitle>
+        </Toast>
+      ),
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unable to remove the peer.";
         toast.show({
           placement: "top",
           render: ({ id }) => (
-            <Toast
-              nativeID={"toast-" + id}
-              className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-              action="error"
-            >
-              <ToastTitle size="sm">{message}</ToastTitle>
+        <Toast
+          nativeID={"toast-" + id}
+          className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+          action="error"
+        >
+          <ToastTitle size="sm">{message}</ToastTitle>
             </Toast>
           ),
         });
@@ -186,17 +186,17 @@ export default function WireGuardScreen() {
       toast.show({
         placement: "top",
         render: ({ id }) => (
-          <Toast
-            nativeID={"toast-" + id}
-            className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-            action="success"
-          >
-            <ToastTitle size="sm">VPN criada com sucesso!</ToastTitle>
-          </Toast>
-        ),
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Não foi possível criar a VPN.";
+      <Toast
+        nativeID={"toast-" + id}
+        className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+        action="success"
+      >
+        <ToastTitle size="sm">VPN created successfully!</ToastTitle>
+      </Toast>
+    ),
+  });
+} catch (err) {
+  const message = err instanceof Error ? err.message : "Unable to create the VPN.";
       toast.show({
         placement: "top",
         render: ({ id }) => (
@@ -224,7 +224,7 @@ export default function WireGuardScreen() {
             className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
             action="error"
           >
-            <ToastTitle size="sm">Preencha nome e endpoint</ToastTitle>
+            <ToastTitle size="sm">Fill in name and endpoint</ToastTitle>
           </Toast>
         ),
       });
@@ -242,7 +242,7 @@ export default function WireGuardScreen() {
         keepalive_seconds: keepaliveSeconds,
       });
       if (!configText) {
-        throw new Error("Não foi possível obter a configuração do peer.");
+        throw new Error("Unable to get the peer configuration.");
       }
 
       await downloadConfigFile(configText);
@@ -254,17 +254,17 @@ export default function WireGuardScreen() {
       toast.show({
         placement: "top",
         render: ({ id }) => (
-          <Toast
-            nativeID={"toast-" + id}
-            className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-            action="success"
-          >
-            <ToastTitle size="sm">Peer adicionado e wg0.conf gerado!</ToastTitle>
-          </Toast>
-        ),
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Não foi possível adicionar o peer.";
+        <Toast
+          nativeID={"toast-" + id}
+          className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+          action="success"
+        >
+          <ToastTitle size="sm">Peer added and wg0.conf generated!</ToastTitle>
+        </Toast>
+      ),
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unable to add the peer.";
       toast.show({
         placement: "top",
         render: ({ id }) => (
@@ -283,7 +283,7 @@ export default function WireGuardScreen() {
   };
 
   const handleDeletePeer = (peer: WireguardPeer) => {
-    const confirmMessage = `Tem certeza que deseja remover o peer "${peer.name}"?`;
+    const confirmMessage = `Are you sure you want to remove peer "${peer.name}"?`;
 
     if (Platform.OS === "web") {
       const confirmed = typeof window !== "undefined" ? window.confirm(confirmMessage) : true;
@@ -293,10 +293,10 @@ export default function WireGuardScreen() {
       return;
     }
 
-    Alert.alert("Confirmar Exclusão", confirmMessage, [
-      { text: "Cancelar", style: "cancel" },
+    Alert.alert("Confirm Deletion", confirmMessage, [
+      { text: "Cancel", style: "cancel" },
       {
-        text: "Remover",
+        text: "Remove",
         style: "destructive",
         onPress: () => {
           void deletePeer(peer);
@@ -340,7 +340,7 @@ export default function WireGuardScreen() {
             WireGuard VPN
           </Heading>
           <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl mb-6">
-            Configure e gerencie a VPN WireGuard para acesso seguro ao cluster com criptografia de ponta a ponta.
+            Configure and manage the WireGuard VPN for secure cluster access with end-to-end encryption.
           </Text>
 
           {error ? (
@@ -361,7 +361,7 @@ export default function WireGuardScreen() {
                   className="text-typography-600 dark:text-typography-400 text-center"
                   style={{ fontFamily: "Inter_500Medium" }}
                 >
-                  Carregando informações da VPN...
+                  Loading VPN information...
                 </Text>
               </Box>
             ) : (
@@ -374,13 +374,13 @@ export default function WireGuardScreen() {
                     className="text-typography-900 dark:text-[#E8EBF0] text-center"
                     style={{ fontFamily: "Inter_600SemiBold" }}
                   >
-                    Nenhuma VPN Configurada
+                    No VPN Configured
                   </Heading>
                   <Text
                     className="text-typography-600 dark:text-typography-400 text-center max-w-md"
                     style={{ fontFamily: "Inter_400Regular" }}
                   >
-                    Configure uma VPN WireGuard para conectar-se de forma segura ao seu cluster de qualquer lugar.
+                    Set up a WireGuard VPN to securely connect to your cluster from anywhere.
                   </Text>
                   <Button
                     size="lg"
@@ -392,7 +392,7 @@ export default function WireGuardScreen() {
                       className="text-background-0 dark:text-typography-900"
                       style={{ fontFamily: "Inter_600SemiBold" }}
                     >
-                      Criar VPN
+                      Create VPN
                     </ButtonText>
                   </Button>
                 </VStack>
@@ -422,7 +422,7 @@ export default function WireGuardScreen() {
                       >
                         <ButtonIcon as={Plus} className="text-background-0 dark:text-typography-900" />
                         <ButtonText className="text-background-0 dark:text-typography-900">
-                          Adicionar Peer
+                          Add Peer
                         </ButtonText>
                       </Button>
                     </Box>
@@ -436,7 +436,7 @@ export default function WireGuardScreen() {
                       className="text-center text-typography-600 dark:text-typography-400"
                       style={{ fontFamily: "Inter_400Regular" }}
                     >
-                      Nenhum peer configurado
+                      No peers configured
                     </Text>
                   </Box>
                 ) : (
@@ -448,7 +448,7 @@ export default function WireGuardScreen() {
                           className="flex-1 min-w-[120px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                           style={{ fontFamily: "Inter_600SemiBold" }}
                         >
-                          NOME
+                          NAME
                         </Text>
                         <Text
                           className="w-[120px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
@@ -472,7 +472,7 @@ export default function WireGuardScreen() {
                           className="w-[80px] text-xs text-[#9AA4B8] dark:text-[#8A94A8] text-right"
                           style={{ fontFamily: "Inter_600SemiBold" }}
                         >
-                          AÇÕES
+                          ACTIONS
                         </Text>
                       </HStack>
 
@@ -560,7 +560,7 @@ export default function WireGuardScreen() {
         </Fab>
       )}
 
-      {/* Modal: Criar VPN */}
+      {/* Modal: Create VPN */}
       <Modal isOpen={showCreateVpnModal} onClose={() => setShowCreateVpnModal(false)}>
         <ModalBackdrop className="bg-black/60" />
         <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] shadow-2xl max-w-lg p-6">
@@ -570,7 +570,7 @@ export default function WireGuardScreen() {
               className="text-typography-900 dark:text-[#E8EBF0]"
               style={{ fontFamily: "Inter_700Bold" }}
             >
-              Criar VPN WireGuard
+              Create WireGuard VPN
             </Heading>
             <ModalCloseButton className="text-typography-600 dark:text-typography-400" />
           </ModalHeader>
@@ -583,7 +583,7 @@ export default function WireGuardScreen() {
                   className="flex-1 text-sm text-[#1E3A8A] dark:text-[#93C5FD]"
                   style={{ fontFamily: "Inter_400Regular" }}
                 >
-                  As chaves públicas e privadas serão geradas automaticamente e a interface WireGuard será inicializada.
+                  Public and private keys will be generated automatically and the WireGuard interface will be initialized.
                 </Text>
               </HStack>
 
@@ -591,7 +591,7 @@ export default function WireGuardScreen() {
                 className="text-sm text-typography-600 dark:text-typography-400"
                 style={{ fontFamily: "Inter_400Regular" }}
               >
-                Depois de criada, utilize o botão de adicionar peer para gerar as configurações de cliente.
+                After it is created, use the add peer button to generate client configurations.
               </Text>
             </VStack>
           </ModalBody>
@@ -606,7 +606,7 @@ export default function WireGuardScreen() {
                   className="text-typography-700 dark:text-[#E8EBF0]"
                   style={{ fontFamily: "Inter_500Medium" }}
                 >
-                  Cancelar
+                  Cancel
                 </ButtonText>
               </Button>
               <Button
@@ -621,7 +621,7 @@ export default function WireGuardScreen() {
                   className="text-background-0 dark:text-typography-900"
                   style={{ fontFamily: "Inter_600SemiBold" }}
                 >
-                  {creatingVpn ? "Criando..." : "Criar"}
+                  {creatingVpn ? "Creating..." : "Create"}
                 </ButtonText>
               </Button>
             </HStack>
@@ -629,7 +629,7 @@ export default function WireGuardScreen() {
         </ModalContent>
       </Modal>
 
-      {/* Modal: Adicionar Peer */}
+      {/* Modal: Add Peer */}
       <Modal isOpen={showAddPeerModal} onClose={() => setShowAddPeerModal(false)}>
         <ModalBackdrop className="bg-black/60" />
         <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] shadow-2xl max-w-lg p-6">
@@ -639,7 +639,7 @@ export default function WireGuardScreen() {
               className="text-typography-900 dark:text-[#E8EBF0]"
               style={{ fontFamily: "Inter_700Bold" }}
             >
-              Adicionar Peer
+              Add Peer
             </Heading>
             <ModalCloseButton className="text-typography-600 dark:text-typography-400" />
           </ModalHeader>
@@ -652,7 +652,7 @@ export default function WireGuardScreen() {
                   className="flex-1 text-sm text-[#1E3A8A] dark:text-[#93C5FD]"
                   style={{ fontFamily: "Inter_400Regular" }}
                 >
-                  Um par de chaves será gerado automaticamente para este peer
+                  A key pair will be generated automatically for this peer.
                 </Text>
               </HStack>
 
@@ -660,7 +660,7 @@ export default function WireGuardScreen() {
                 className="text-sm text-typography-600 dark:text-typography-400"
                 style={{ fontFamily: "Inter_400Regular" }}
               >
-                O IP será atribuído automaticamente ao gerar o peer.
+                The IP will be assigned automatically when generating the peer.
               </Text>
 
               <VStack className="gap-2">
@@ -668,7 +668,7 @@ export default function WireGuardScreen() {
                   className="text-sm text-typography-700 dark:text-[#E8EBF0]"
                   style={{ fontFamily: "Inter_500Medium" }}
                 >
-                  Nome do Peer <Text className="text-red-500 dark:text-[#f87171]">*</Text>
+                  Peer Name <Text className="text-red-500 dark:text-[#f87171]">*</Text>
                 </Text>
                 <Input
                   variant="outline"
@@ -688,14 +688,14 @@ export default function WireGuardScreen() {
                   className="text-sm text-typography-700 dark:text-[#E8EBF0]"
                   style={{ fontFamily: "Inter_500Medium" }}
                 >
-                  Endpoint do servidor <Text className="text-red-500 dark:text-[#f87171]">*</Text>
+                  Server endpoint <Text className="text-red-500 dark:text-[#f87171]">*</Text>
                 </Text>
                 <Input
                   variant="outline"
                   className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]"
                 >
                   <InputField
-                    placeholder="ex: vpn.seudominio.com:51820"
+                    placeholder="e.g.: vpn.yourdomain.com:51820"
                     value={formPeerEndpoint}
                     onChangeText={setFormPeerEndpoint}
                     className="text-typography-900 dark:text-[#E8EBF0]"
@@ -708,7 +708,7 @@ export default function WireGuardScreen() {
                   className="text-sm text-typography-700 dark:text-[#E8EBF0]"
                   style={{ fontFamily: "Inter_500Medium" }}
                 >
-                  Keepalive (segundos)
+                  Keepalive (seconds)
                 </Text>
                 <Input
                   variant="outline"
@@ -726,7 +726,7 @@ export default function WireGuardScreen() {
                   className="text-xs text-typography-500 dark:text-typography-400"
                   style={{ fontFamily: "Inter_400Regular" }}
                 >
-                  Use 0 para desativar ou deixe em branco para usar o padrão recomendado.
+                  Use 0 to disable or leave blank to use the recommended default.
                 </Text>
               </VStack>
             </VStack>
@@ -742,7 +742,7 @@ export default function WireGuardScreen() {
                   className="text-typography-700 dark:text-[#E8EBF0]"
                   style={{ fontFamily: "Inter_500Medium" }}
                 >
-                  Cancelar
+                  Cancel
                 </ButtonText>
               </Button>
               <Button
@@ -757,7 +757,7 @@ export default function WireGuardScreen() {
                   className="text-background-0 dark:text-typography-900"
                   style={{ fontFamily: "Inter_600SemiBold" }}
                 >
-                  {creatingPeer ? "Adicionando..." : "Adicionar"}
+                  {creatingPeer ? "Adding..." : "Add"}
                 </ButtonText>
               </Button>
             </HStack>

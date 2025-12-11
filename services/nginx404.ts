@@ -13,7 +13,7 @@ const ensureApiBaseUrl = async () => {
     baseUrl = setApiBaseUrl(storedBaseUrl) ?? null;
   }
   if (!baseUrl) {
-    throw new Error("Domínio/API base não configurado. Inicia sessão novamente.");
+    throw new Error("Base domain/API not configured. Sign in again.");
   }
   return baseUrl;
 };
@@ -24,7 +24,7 @@ const resolveToken = async () => {
   if (!storedToken) {
     setAuthToken(null);
     triggerUnauthorized();
-    throw new Error("Token de autenticação inválida.");
+    throw new Error("Invalid authentication token.");
   }
   setAuthToken(storedToken);
   return storedToken;

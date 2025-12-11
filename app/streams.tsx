@@ -126,14 +126,14 @@ export default function StreamsScreen() {
 
   const handleCertificatesError = React.useCallback(
     (_error: unknown) => {
-      showToast("Erro ao carregar certificados", "Não foi possível obter os certificados SSL.", "error");
+      showToast("Error loading certificates", "Unable to fetch SSL certificates.", "error");
     },
     [showToast]
   );
 
   const {certificateOptions, loadingCertificates, refreshCertificates} = useCertificatesOptions(handleCertificatesError);
   const selectedCertificateLabel =
-    certificateOptions.find((option) => option.value === String(form.certificate_id ?? 0))?.label || "Sem certificado";
+    certificateOptions.find((option) => option.value === String(form.certificate_id ?? 0))?.label || "No certificate";
 
   const loadItems = React.useCallback(
     async (mode: "full" | "refresh" | "silent" = "full") => {
@@ -144,7 +144,7 @@ export default function StreamsScreen() {
         setItems(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Failed to load streams", err);
-        showToast("Erro ao carregar", "Não foi possível obter as streams.", "error");
+        showToast("Error loading", "Unable to fetch streams.", "error");
       } finally {
         if (mode === "full") setLoading(false);
         if (mode === "refresh") setRefreshing(false);
@@ -205,7 +205,7 @@ export default function StreamsScreen() {
 
   const handleSave = async () => {
     if (!form.incoming_port || !form.forwarding_host || !form.forwarding_port) {
-      showToast("Campos obrigatórios", "Informe porta de entrada, host e porta de destino.", "error");
+      showToast("Required fields", "Provide incoming port, host, and destination port.", "error");
       return;
     }
     const payload: StreamPayload = {
@@ -219,17 +219,17 @@ export default function StreamsScreen() {
     try {
       if (editingHost?.id) {
         await editStream(editingHost.id, payload);
-        showToast("Stream atualizada", "Configuração salva.");
+        showToast("Stream updated", "Configuration saved.");
       } else {
         await createStream(payload);
-        showToast("Stream criada", "Nova stream adicionada.");
+        showToast("Stream created", "New stream added.");
       }
       setModalOpen(false);
       setEditingHost(null);
       await loadItems("silent");
     } catch (err) {
       console.error("Failed to save stream", err);
-      showToast("Erro ao salvar", "Verifique os dados e tente novamente.", "error");
+      showToast("Error saving", "Check the data and try again.", "error");
     } finally {
       setSaving(false);
     }
@@ -242,15 +242,15 @@ export default function StreamsScreen() {
     try {
       if (enabled) {
         await disableStream(host.id);
-        showToast("Stream desativada", "Host desativado.");
+        showToast("Stream disabled", "Host disabled.");
       } else {
         await enableStream(host.id);
-        showToast("Stream ativada", "Host ativado.");
+        showToast("Stream enabled", "Host enabled.");
       }
       await loadItems("silent");
     } catch (err) {
       console.error("Failed to toggle stream", err);
-      showToast("Erro ao alterar status", "Não foi possível atualizar o host.", "error");
+      showToast("Error changing status", "Unable to update the host.", "error");
     } finally {
       setTogglingId(null);
     }
@@ -261,12 +261,12 @@ export default function StreamsScreen() {
     setDeletingId(deleteTarget.id);
     try {
       await deleteStream(deleteTarget.id);
-      showToast("Stream removida", "Host apagado.");
+      showToast("Stream removed", "Host deleted.");
       setDeleteTarget(null);
       await loadItems("silent");
     } catch (err) {
       console.error("Failed to delete stream", err);
-      showToast("Erro ao apagar", "Não foi possível remover o host.", "error");
+      showToast("Error deleting", "Unable to remove the host.", "error");
     } finally {
       setDeletingId(null);
     }
@@ -318,15 +318,15 @@ export default function StreamsScreen() {
             Streams
           </Heading>
           <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
-            Configure port forwarding TCP/UDP para serviços não-HTTP.
+            Configure TCP/UDP port forwarding for non-HTTP services.
           </Text>
 
           <HStack className="mt-6 items-center justify-between flex-wrap gap-3">
             <HStack className="gap-2 flex-wrap">
               {[
-                {key: "all" as FilterTab, label: `Todos (${stats.total})`},
-                {key: "active" as FilterTab, label: `Ativos (${stats.active})`},
-                {key: "inactive" as FilterTab, label: `Inativos (${stats.inactive})`},
+                {key: "all" as FilterTab, label: `All (${stats.total})`},
+                {key: "active" as FilterTab, label: `Active (${stats.active})`},
+                {key: "inactive" as FilterTab, label: `Inactive (${stats.inactive})`},
               ].map((tab) => {
                 const active = filter === tab.key;
                 return (
@@ -349,7 +349,7 @@ export default function StreamsScreen() {
             </HStack>
             <Button action="primary" variant="solid" size="md" onPress={openCreateModal} className="rounded-full px-5">
               <ButtonIcon as={Plus} size="sm" />
-              <ButtonText>Adicionar Stream</ButtonText>
+              <ButtonText>Add Stream</ButtonText>
             </Button>
           </HStack>
 
@@ -357,9 +357,9 @@ export default function StreamsScreen() {
             renderLoading()
           ) : filteredItems.length === 0 ? (
             <Box className="mt-10 p-6 border border-dashed border-background-300 rounded-2xl bg-background-0 items-center">
-              <Text className="text-typography-700 font-semibold text-base">Nenhuma stream encontrada</Text>
+              <Text className="text-typography-700 font-semibold text-base">No streams found</Text>
               <Text className="text-typography-500 text-sm mt-1 text-center">
-                Clique em &quot;Adicionar Stream&quot; para criar a primeira regra.
+                Click "Add Stream" to create the first rule.
               </Text>
             </Box>
           ) : (
@@ -405,7 +405,7 @@ export default function StreamsScreen() {
                           ) : (
                             <HStack className="items-center gap-1">
                               <Shield size={16} color="#9ca3af" />
-                              <Text className="text-typography-600 text-sm">Sem SSL</Text>
+                              <Text className="text-typography-600 text-sm">No SSL</Text>
                             </HStack>
                           )}
                         </HStack>
@@ -421,7 +421,7 @@ export default function StreamsScreen() {
                           className="border-background-300"
                         >
                           {togglingId === host.id ? <ButtonSpinner /> : <ButtonIcon as={Power} size="sm" />}
-                          <ButtonText>{enabled ? "Desativar" : "Ativar"}</ButtonText>
+                          <ButtonText>{enabled ? "Disable" : "Enable"}</ButtonText>
                         </Button>
                         <Button
                           action="default"
@@ -457,10 +457,10 @@ export default function StreamsScreen() {
           <ModalHeader className="flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
             <VStack className="flex-1">
               <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
-                {editingHost ? "Editar Stream" : "Adicionar Stream"}
+                {editingHost ? "Edit Stream" : "Add Stream"}
               </Heading>
               <Text className="text-typography-600 dark:text-typography-400 mt-1">
-                Encaminhamento de portas TCP/UDP com opção de certificado SNI.
+                TCP/UDP port forwarding with optional SNI certificate.
               </Text>
             </VStack>
             <ModalCloseButton className="text-typography-500" />
@@ -502,7 +502,7 @@ export default function StreamsScreen() {
                   <VStack className="gap-4">
                     <FormControl isRequired>
                       <FormControlLabel>
-                        <FormControlLabelText>Porta de entrada</FormControlLabelText>
+                        <FormControlLabelText>Incoming port</FormControlLabelText>
                       </FormControlLabel>
                       <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
                         <InputField
@@ -516,7 +516,7 @@ export default function StreamsScreen() {
 
                     <FormControl isRequired>
                       <FormControlLabel>
-                        <FormControlLabelText>Destino</FormControlLabelText>
+                        <FormControlLabelText>Destination</FormControlLabelText>
                       </FormControlLabel>
                       <HStack className="gap-3 flex-wrap">
                         <Input className="flex-1 min-w-[160px] rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
@@ -539,7 +539,7 @@ export default function StreamsScreen() {
                     </FormControl>
 
                     <VStack className="gap-3">
-                      <Text className="text-typography-800 font-semibold">Protocolos</Text>
+                      <Text className="text-typography-800 font-semibold">Protocols</Text>
                       <HStack className="flex-wrap gap-4">
                         <HStack className="items-center gap-2">
                           <Switch
@@ -567,7 +567,7 @@ export default function StreamsScreen() {
                     <FormControl>
                       <HStack className="items-center justify-between">
                         <FormControlLabel>
-                          <FormControlLabelText>Certificado SSL</FormControlLabelText>
+                          <FormControlLabelText>SSL Certificate</FormControlLabelText>
                         </FormControlLabel>
                         <Button
                           variant="link"
@@ -577,7 +577,7 @@ export default function StreamsScreen() {
                           onPress={() => void refreshCertificates()}
                           isDisabled={loadingCertificates}
                         >
-                          {loadingCertificates ? <ButtonSpinner /> : <ButtonText>Atualizar</ButtonText>}
+                          {loadingCertificates ? <ButtonSpinner /> : <ButtonText>Refresh</ButtonText>}
                         </Button>
                       </HStack>
                       <Select
@@ -587,7 +587,7 @@ export default function StreamsScreen() {
                       >
                         <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] h-11 px-4">
                           <SelectInput
-                            placeholder={loadingCertificates ? "A carregar certificados..." : selectedCertificateLabel}
+                            placeholder={loadingCertificates ? "Loading certificates..." : selectedCertificateLabel}
                             className="text-typography-900 dark:text-[#E8EBF0]"
                           />
                           <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-typography-400" />
@@ -612,7 +612,7 @@ export default function StreamsScreen() {
                         </SelectPortal>
                       </Select>
                       <FormControlHelper>
-                        <FormControlHelperText>Selecione um certificado para TLS ou deixe &quot;Sem certificado&quot;.</FormControlHelperText>
+                        <FormControlHelperText>Select a certificate for TLS or leave it as "No certificate".</FormControlHelperText>
                       </FormControlHelper>
                     </FormControl>
                   </VStack>
@@ -623,11 +623,11 @@ export default function StreamsScreen() {
           <ModalFooter className="px-6 pb-6 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
             <HStack className="gap-3 justify-end w-full">
               <Button variant="outline" action="default" onPress={closeModal} isDisabled={saving}>
-                <ButtonText>Cancelar</ButtonText>
+                <ButtonText>Cancel</ButtonText>
               </Button>
               <Button action="primary" onPress={handleSave} isDisabled={saving}>
                 {saving ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
-                <ButtonText>{editingHost ? "Salvar alterações" : "Criar stream"}</ButtonText>
+                <ButtonText>{editingHost ? "Save changes" : "Create stream"}</ButtonText>
               </Button>
             </HStack>
           </ModalFooter>
@@ -639,25 +639,25 @@ export default function StreamsScreen() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <Heading size="md" className="text-typography-900">
-              Remover stream?
+              Remove stream?
             </Heading>
           </AlertDialogHeader>
           <AlertDialogBody>
             <Text className="text-typography-700">
-              Esta ação apagará{" "}
+              This action will delete{" "}
               <Text className="font-semibold">
                 Port {deleteTarget?.incoming_port}
               </Text>
-              . Deseja continuar?
+              . Do you want to continue?
             </Text>
           </AlertDialogBody>
           <AlertDialogFooter className="gap-3">
             <Button variant="outline" action="default" onPress={() => setDeleteTarget(null)} isDisabled={Boolean(deletingId)}>
-              <ButtonText>Cancelar</ButtonText>
+              <ButtonText>Cancel</ButtonText>
             </Button>
             <Button action="negative" onPress={handleDelete} isDisabled={Boolean(deletingId)}>
               {deletingId ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
-              <ButtonText>Apagar</ButtonText>
+              <ButtonText>Delete</ButtonText>
             </Button>
           </AlertDialogFooter>
           <AlertDialogCloseButton />

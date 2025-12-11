@@ -22,6 +22,7 @@ export type Certificate = {
   expires?: string | number;
   expires_at?: string;
   expires_on?: string;
+  created?: string | number;
   valid?: boolean;
 };
 

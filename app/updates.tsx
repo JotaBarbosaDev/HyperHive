@@ -43,7 +43,7 @@ const formatDateTime = (value?: string | null) => {
   if (!value) return null;
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
-  return new Intl.DateTimeFormat("pt-PT", {
+  return new Intl.DateTimeFormat("en-US", {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -135,7 +135,7 @@ const UpdateCard = ({
           )}
           {update.rebootRequired && (
             <Badge size="sm" variant="solid" className="bg-[#F97316]">
-              <BadgeText className="text-white text-[11px]">Requer reboot</BadgeText>
+              <BadgeText className="text-white text-[11px]">Reboot required</BadgeText>
             </Badge>
           )}
         </HStack>
@@ -158,7 +158,7 @@ const UpdateCard = ({
         ) : (
           <>
             <ButtonIcon as={ArrowUpCircle} />
-            <ButtonText>Atualizar</ButtonText>
+            <ButtonText>Update</ButtonText>
           </>
         )}
       </Button>
@@ -201,7 +201,7 @@ export default function UpdatesScreen() {
       } catch (err) {
         if (!isActive) return;
         const message =
-          err instanceof Error ? err.message : "Não foi possível carregar as máquinas.";
+          err instanceof Error ? err.message : "Unable to load machines.";
         toast.show({
           placement: "top",
           render: ({id}) => (
@@ -237,7 +237,7 @@ export default function UpdatesScreen() {
           className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
           action="success"
         >
-          <ToastTitle size="sm">Updates atualizadas</ToastTitle>
+          <ToastTitle size="sm">Updates refreshed</ToastTitle>
         </Toast>
       ),
     });
@@ -266,7 +266,7 @@ export default function UpdatesScreen() {
             action="success"
           >
             <ToastTitle size="sm">
-              {pkgName ? `Atualização de ${pkgName} enviada` : "Atualização completa iniciada"}
+              {pkgName ? `Update for ${pkgName} sent` : "Full update started"}
             </ToastTitle>
           </Toast>
         ),
@@ -274,7 +274,7 @@ export default function UpdatesScreen() {
       await refresh();
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Não foi possível iniciar a atualização.";
+        err instanceof Error ? err.message : "Unable to start the update.";
       toast.show({
         placement: "top",
         render: ({id}) => (
@@ -341,8 +341,7 @@ export default function UpdatesScreen() {
             Updates
           </Heading>
           <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
-            Consulte pacotes pendentes por máquina e dispare atualizações individuais ou completas com opção
-            de reboot automático.
+            Review pending packages per machine and trigger individual or full updates with optional automatic reboot.
           </Text>
 
           <VStack className="mt-6 gap-3">
@@ -359,7 +358,7 @@ export default function UpdatesScreen() {
                     className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]"
                   >
                     <SelectInput
-                      placeholder={loadingMachines ? "A carregar..." : "Escolhe uma máquina"}
+                      placeholder={loadingMachines ? "Loading..." : "Choose a machine"}
                       className="text-typography-900 dark:text-[#E8EBF0]"
                       style={{fontFamily: "Inter_500Medium"}}
                     />
@@ -405,7 +404,7 @@ export default function UpdatesScreen() {
                 ) : (
                   <>
                     <ButtonIcon as={ArrowUpCircle} />
-                    <ButtonText>Atualizar tudo</ButtonText>
+                    <ButtonText>Update all</ButtonText>
                   </>
                 )}
               </Button>
@@ -422,7 +421,7 @@ export default function UpdatesScreen() {
                     <InputIcon as={Search} className="text-typography-400" />
                   </InputSlot>
                   <InputField
-                    placeholder="Filtrar por nome, repositório ou arquitetura..."
+                    placeholder="Filter by name, repository, or architecture..."
                     value={searchTerm}
                     onChangeText={setSearchTerm}
                     className="text-typography-900 dark:text-[#E8EBF0]"
@@ -432,12 +431,12 @@ export default function UpdatesScreen() {
               <HStack className="items-center gap-3 px-4 py-3 rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
                 <VStack className="gap-1">
                   <Text className="text-typography-600 dark:text-typography-400 text-xs">
-                    Reboot após atualizar
+                    Reboot after updating
                   </Text>
                   <HStack className="items-center gap-2">
                     <Power size={16} className="text-typography-400" />
                     <Text className="text-typography-900 dark:text-[#E8EBF0] text-sm">
-                      {rebootAfter ? "Ativado" : "Desativado"}
+                      {rebootAfter ? "Enabled" : "Disabled"}
                     </Text>
                   </HStack>
                 </VStack>
@@ -448,30 +447,30 @@ export default function UpdatesScreen() {
 
           <HStack className="mt-6 gap-3 flex-wrap">
             <StatCard
-              label="Máquina"
+              label="Machine"
               value={selectedMachine ?? "—"}
               icon={<Server size={16} className="text-typography-400" />}
             />
             <StatCard
-              label="Pendentes"
+              label="Pending"
               value={totalPending}
               icon={<RefreshCw size={16} className="text-typography-400" />}
             />
             <StatCard
-              label="Segurança"
+              label="Security"
               value={securityCount}
               icon={<Shield size={16} className="text-typography-400" />}
             />
             <StatCard
-              label="Reboot esperado"
-              value={rebootExpected ? "Provável" : "Não previsto"}
+              label="Reboot expected"
+              value={rebootExpected ? "Likely" : "Not expected"}
               icon={<Power size={16} className="text-typography-400" />}
             />
           </HStack>
 
           {lastCheckedLabel ? (
             <Text className="text-typography-500 dark:text-typography-400 text-xs mt-2">
-              Última leitura: {lastCheckedLabel}
+              Last checked: {lastCheckedLabel}
             </Text>
           ) : null}
 
@@ -481,7 +480,7 @@ export default function UpdatesScreen() {
                 <AlertCircle size={18} className="text-[#DC2626]" />
                 <VStack className="gap-1">
                   <Text className="text-[#DC2626]" style={{fontFamily: "Inter_600SemiBold"}}>
-                    Falha ao carregar updates
+                    Failed to load updates
                   </Text>
                   <Text className="text-[#991B1B] text-sm">{error}</Text>
                 </VStack>
@@ -493,7 +492,7 @@ export default function UpdatesScreen() {
             <Box className="mt-8 items-center justify-center flex-row gap-3">
               <Spinner size="large" />
               <Text className="text-typography-500 dark:text-typography-400">
-                {loadingMachines ? "A carregar máquinas..." : "A carregar updates..."}
+                {loadingMachines ? "Loading machines..." : "Loading updates..."}
               </Text>
             </Box>
           ) : null}
@@ -513,22 +512,22 @@ export default function UpdatesScreen() {
                 ) : (
                   <Box className="p-6 rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] items-center">
                     <Text className="text-typography-900 dark:text-[#E8EBF0] mb-1" style={{fontFamily: "Inter_600SemiBold"}}>
-                      Nenhuma atualização pendente
+                      No pending updates
                     </Text>
                     <Text className="text-typography-600 dark:text-typography-400 text-sm text-center">
                       {searchTerm
-                        ? "Nenhum pacote corresponde ao filtro aplicado."
-                        : "Esta máquina não tem updates disponíveis de momento."}
+                        ? "No package matches the applied filter."
+                        : "This machine currently has no updates available."}
                     </Text>
                   </Box>
                 )
               ) : (
                 <Box className="p-6 rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] items-center">
                   <Text className="text-typography-900 dark:text-[#E8EBF0] mb-1" style={{fontFamily: "Inter_600SemiBold"}}>
-                    Escolhe uma máquina
+                    Choose a machine
                   </Text>
                   <Text className="text-typography-600 dark:text-typography-400 text-sm text-center">
-                    Seleciona uma máquina para listar os pacotes pendentes.
+                    Select a machine to list the pending packages.
                   </Text>
                 </Box>
               )}
