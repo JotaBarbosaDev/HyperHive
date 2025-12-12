@@ -1,118 +1,79 @@
 import React from "react";
-import {ScrollView, RefreshControl, useColorScheme, Alert, Platform} from "react-native";
-import {Box} from "@/components/ui/box";
-import {Text} from "@/components/ui/text";
-import {Heading} from "@/components/ui/heading";
-import {VStack} from "@/components/ui/vstack";
-import {HStack} from "@/components/ui/hstack";
-import {Button, ButtonText, ButtonIcon, ButtonSpinner} from "@/components/ui/button";
-import {Badge, BadgeText} from "@/components/ui/badge";
-import {Input, InputField} from "@/components/ui/input";
-import {Modal, ModalBackdrop, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton} from "@/components/ui/modal";
-import {Select, SelectTrigger, SelectInput, SelectItem, SelectIcon, SelectPortal, SelectBackdrop as SelectBackdropContent, SelectContent, SelectDragIndicator, SelectDragIndicatorWrapper} from "@/components/ui/select";
-import {Checkbox, CheckboxIndicator, CheckboxIcon, CheckboxLabel} from "@/components/ui/checkbox";
-import {ChevronDownIcon} from "@/components/ui/icon";
-import {Toast, ToastTitle, useToast} from "@/components/ui/toast";
-import {Fab, FabIcon, FabLabel} from "@/components/ui/fab";
-import {Calendar, Database, TrendingUp, RefreshCw, Trash2, Edit, Power, PowerOff, Plus, Clock, Check} from "lucide-react-native";
+import { ScrollView, RefreshControl, useColorScheme, Alert } from "react-native";
+import { Box } from "@/components/ui/box";
+import { Text } from "@/components/ui/text";
+import { Heading } from "@/components/ui/heading";
+import { VStack } from "@/components/ui/vstack";
+import { HStack } from "@/components/ui/hstack";
+import { Button, ButtonText, ButtonIcon, ButtonSpinner } from "@/components/ui/button";
+import { Badge, BadgeText } from "@/components/ui/badge";
+import { Input, InputField } from "@/components/ui/input";
+import { Modal, ModalBackdrop, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton } from "@/components/ui/modal";
+import { Select, SelectTrigger, SelectInput, SelectItem, SelectIcon, SelectPortal, SelectBackdrop as SelectBackdropContent, SelectContent, SelectDragIndicator, SelectDragIndicatorWrapper } from "@/components/ui/select";
+import { Checkbox, CheckboxIndicator, CheckboxIcon, CheckboxLabel } from "@/components/ui/checkbox";
+import { ChevronDownIcon } from "@/components/ui/icon";
+import { Toast, ToastTitle, useToast } from "@/components/ui/toast";
+import { Fab, FabIcon, FabLabel } from "@/components/ui/fab";
+import { Calendar, Database, TrendingUp, RefreshCw, Trash2, Edit, Power, PowerOff, Plus, Clock, Check, Info } from "lucide-react-native";
+import {
+  listAutoBackups,
+  createAutoBackup,
+  updateAutoBackup,
+  deleteAutoBackup,
+  enableAutoBackup,
+  disableAutoBackup,
+  AutoBackupRecord,
+} from "@/services/autobackups";
+import { listMounts } from "@/services/hyperhive";
+import { getAllVMs, VirtualMachine } from "@/services/vms-client";
+import { Mount } from "@/types/mount";
 
-// Interfaces TypeScript
-interface AutoBackup {
+type AutoBackup = {
   id: string;
   vmName: string;
-  machineName: string;
   frequencyDays: number;
-  minTime: string; // HH:MM
-  maxTime: string; // HH:MM
+  minTime: string;
+  maxTime: string;
   nfsShareId: number;
-  retention: number; // número de backups a manter
+  retention: number;
   lastBackup: Date | null;
   isEnabled: boolean;
-  isLive: boolean;
-}
+};
 
-interface AutoBackupStats {
+type AutoBackupStats = {
   total: number;
   active: number;
   totalVms: number;
   avgFrequency: number;
-}
-
-// Mock Data
-const MOCK_AUTO_BACKUPS: AutoBackup[] = [
-  {
-    id: "ab-001",
-    vmName: "IEOP",
-    machineName: "marques512sv",
-    frequencyDays: 1,
-    minTime: "03:00",
-    maxTime: "05:00",
-    nfsShareId: 1,
-    retention: 7,
-    lastBackup: new Date("2025-11-27T03:30:00"),
-    isEnabled: true,
-    isLive: false,
-  },
-  {
-    id: "ab-002",
-    vmName: "test",
-    machineName: "marques2673sv",
-    frequencyDays: 7,
-    minTime: "02:00",
-    maxTime: "04:00",
-    nfsShareId: 2,
-    retention: 4,
-    lastBackup: new Date("2025-11-23T02:45:00"),
-    isEnabled: true,
-    isLive: true,
-  },
-  {
-    id: "ab-003",
-    vmName: "win10",
-    machineName: "marques512sv",
-    frequencyDays: 30,
-    minTime: "01:00",
-    maxTime: "03:00",
-    nfsShareId: 1,
-    retention: 3,
-    lastBackup: null,
-    isEnabled: false,
-    isLive: false,
-  },
-  {
-    id: "ab-004",
-    vmName: "test",
-    machineName: "marques2673sv",
-    frequencyDays: 1,
-    minTime: "04:00",
-    maxTime: "06:00",
-    nfsShareId: 2,
-    retention: 14,
-    lastBackup: new Date("2025-11-27T04:15:00"),
-    isEnabled: true,
-    isLive: false,
-  },
-];
-
-const NFS_SHARES: Record<number, string> = {
-  1: "marques512sv_500gymKlE2",
-  2: "marques2673sv_testeraidRItPmt",
 };
 
 const FREQUENCY_OPTIONS = [
-  {label: "Daily", value: 1},
-  {label: "Weekly", value: 7},
-  {label: "Monthly", value: 30},
+  { label: "Daily", value: 1 },
+  { label: "Weekly", value: 7 },
+  { label: "Monthly", value: 30 },
+];
+
+const TIME_OPTIONS = [
+  ...Array.from({ length: 96 }, (_, idx) => {
+    const hours = String(Math.floor(idx / 4)).padStart(2, "0");
+    const minutes = String((idx % 4) * 15).padStart(2, "0");
+    return `${hours}:${minutes}`;
+  }),
+  "23:59",
 ];
 
 export default function AutoBackupsScreen() {
   const colorScheme = useColorScheme();
   const toast = useToast();
-  const [schedules, setSchedules] = React.useState<AutoBackup[]>(MOCK_AUTO_BACKUPS);
+  const [schedules, setSchedules] = React.useState<AutoBackup[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [showCreateModal, setShowCreateModal] = React.useState(false);
   const [editSchedule, setEditSchedule] = React.useState<AutoBackup | null>(null);
-  
+  const [nfsShares, setNfsShares] = React.useState<Record<number, string>>({});
+  const [vmOptions, setVmOptions] = React.useState<VirtualMachine[]>([]);
+  const [loadingOptions, setLoadingOptions] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+
   // Form state
   const [formVm, setFormVm] = React.useState("");
   const [formFrequency, setFormFrequency] = React.useState(1);
@@ -120,46 +81,27 @@ export default function AutoBackupsScreen() {
   const [formMaxTime, setFormMaxTime] = React.useState("");
   const [formNfsShare, setFormNfsShare] = React.useState<number | null>(null);
   const [formRetention, setFormRetention] = React.useState("");
-  const [formIsLive, setFormIsLive] = React.useState(false);
 
-  // Agrupar schedules por VM
-  const schedulesByVm = React.useMemo(() => {
-    const grouped: Record<string, AutoBackup[]> = {};
-    schedules.forEach((schedule) => {
-      const key = `${schedule.vmName}@${schedule.machineName}`;
-      if (!grouped[key]) {
-        grouped[key] = [];
-      }
-      grouped[key].push(schedule);
-    });
-    // Ordenar schedules por frequência (ascendente)
-    Object.keys(grouped).forEach((key) => {
-      grouped[key].sort((a, b) => a.frequencyDays - b.frequencyDays);
-    });
-    return grouped;
-  }, [schedules]);
-
-  // Estatísticas
-  const stats: AutoBackupStats = React.useMemo(() => {
-    const total = schedules.length;
-    const active = schedules.filter((s) => s.isEnabled).length;
-    const uniqueVms = new Set(schedules.map((s) => `${s.vmName}@${s.machineName}`));
-    const totalVms = uniqueVms.size;
-    const avgFrequency = total > 0
-      ? Math.round(schedules.reduce((sum, s) => sum + s.frequencyDays, 0) / total)
-      : 0;
-    return {total, active, totalVms, avgFrequency};
-  }, [schedules]);
-
-  const getFrequencyLabel = (days: number): string => {
-    if (days === 1) return "Daily";
-    if (days === 7) return "Weekly";
-    if (days === 30) return "Monthly";
-    return `${days} days`;
-  };
+  const showToastMessage = React.useCallback(
+    (title: string, action: "success" | "error" = "success") => {
+      toast.show({
+        placement: "top",
+        render: ({ id }) => (
+          <Toast
+            nativeID={"toast-" + id}
+            className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+            action={action}
+          >
+            <ToastTitle size="sm">{title}</ToastTitle>
+          </Toast>
+        ),
+      });
+    },
+    [toast]
+  );
 
   const formatDate = (date: Date | null): string => {
-    if (!date) return "Never";
+    if (!date || Number.isNaN(date.getTime())) return "Never";
     return new Intl.DateTimeFormat("en-US", {
       day: "2-digit",
       month: "short",
@@ -169,187 +111,231 @@ export default function AutoBackupsScreen() {
     }).format(date);
   };
 
-  const getNfsName = (id: number): string => {
-    return NFS_SHARES[id] || `NFS #${id}`;
+  const timeToMinutes = (time: string): number | null => {
+    if (!time || !/^\d{2}:\d{2}$/.test(time)) return null;
+    const [h, m] = time.split(":").map((v) => Number(v));
+    if (Number.isNaN(h) || Number.isNaN(m)) return null;
+    return h * 60 + m;
   };
 
-  const handleRefresh = async () => {
-    setLoading(true);
+  const mapRecord = (record: AutoBackupRecord): AutoBackup => {
+    return {
+      id: String(record.Id),
+      vmName: record.VmName,
+      frequencyDays: record.FrequencyDays,
+      minTime: record.MinTime,
+      maxTime: record.MaxTime,
+      nfsShareId: record.NfsMountId,
+      retention: record.MaxBackupsRetain,
+      lastBackup: record.LastBackupTime ? new Date(record.LastBackupTime) : null,
+      isEnabled: Boolean(record.Enabled),
+    };
+  };
+
+  const loadOptions = React.useCallback(async () => {
+    setLoadingOptions(true);
     try {
-      await new Promise((res) => setTimeout(res, 800));
-      toast.show({
-        placement: "top",
-        render: ({id}) => (
-          <Toast
-            nativeID={"toast-" + id}
-            className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-            action="success"
-          >
-            <ToastTitle size="sm">Schedules updated</ToastTitle>
-          </Toast>
-        ),
-      });
+      const [mounts, vms] = await Promise.all([
+        listMounts().catch(() => [] as Mount[]),
+        getAllVMs().catch(() => [] as VirtualMachine[]),
+      ]);
+      if (Array.isArray(mounts)) {
+        const mapped: Record<number, string> = {};
+        mounts.forEach((m) => {
+          if (!m?.NfsShare) return;
+          mapped[m.NfsShare.Id] =
+            m.NfsShare.Name || m.NfsShare.Target || m.NfsShare.FolderPath || `NFS #${m.NfsShare.Id}`;
+        });
+        setNfsShares(mapped);
+        if (formNfsShare == null && Object.keys(mapped).length) {
+          const first = Number(Object.keys(mapped)[0]);
+          setFormNfsShare(first);
+        }
+      }
+      if (Array.isArray(vms)) {
+        setVmOptions(vms);
+        if (!formVm && vms.length) {
+          setFormVm(vms[0].name);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading auto-backup options", err);
+      const message = err instanceof Error ? err.message : "Failed to load options.";
+      showToastMessage(message, "error");
     } finally {
-      setLoading(false);
+      setLoadingOptions(false);
     }
+  }, [formNfsShare, formVm, showToastMessage]);
+
+  const refreshSchedules = React.useCallback(
+    async (showMessage = false) => {
+      setLoading(true);
+      try {
+        const data = await listAutoBackups();
+        const mapped = Array.isArray(data) ? data.map(mapRecord) : [];
+        setSchedules(mapped);
+        if (showMessage) {
+          showToastMessage("Auto-backups updated");
+        }
+      } catch (err) {
+        console.error("Error loading auto-backups", err);
+        const message = err instanceof Error ? err.message : "Unable to load auto-backups.";
+        showToastMessage(message, "error");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [showToastMessage]
+  );
+
+  React.useEffect(() => {
+    refreshSchedules();
+    loadOptions();
+  }, [refreshSchedules, loadOptions]);
+
+  React.useEffect(() => {
+    if (!formMinTime) {
+      setFormMinTime(TIME_OPTIONS[0]);
+    }
+    if (!formMaxTime) {
+      setFormMaxTime(TIME_OPTIONS[TIME_OPTIONS.length - 1]);
+    }
+  }, [formMinTime, formMaxTime]);
+
+  const resetForm = () => {
+    setFormVm(vmOptions[0]?.name ?? "");
+    setFormFrequency(1);
+    setFormMinTime(TIME_OPTIONS[0]);
+    setFormMaxTime(TIME_OPTIONS[TIME_OPTIONS.length - 1]);
+    setFormNfsShare(nfsShares ? Number(Object.keys(nfsShares)[0]) || null : null);
+    setFormRetention("");
+    setEditSchedule(null);
   };
 
-  const handleToggleEnabled = (schedule: AutoBackup) => {
-    setSchedules((prev) =>
-      prev.map((s) =>
-        s.id === schedule.id ? {...s, isEnabled: !s.isEnabled} : s
-      )
-    );
-    toast.show({
-      placement: "top",
-      render: ({id}) => (
-        <Toast
-          nativeID={"toast-" + id}
-          className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-          action="success"
-        >
-          <ToastTitle size="sm">
-            Schedule {!schedule.isEnabled ? "enabled" : "disabled"}
-          </ToastTitle>
-        </Toast>
-      ),
-    });
+  const stats: AutoBackupStats = React.useMemo(() => {
+    const total = schedules.length;
+    const active = schedules.filter((s) => s.isEnabled).length;
+    const uniqueVms = new Set(schedules.map((s) => s.vmName));
+    const totalVms = uniqueVms.size;
+    const avgFrequency =
+      total > 0
+        ? Math.round(schedules.reduce((sum, s) => sum + s.frequencyDays, 0) / total)
+        : 0;
+    return { total, active, totalVms, avgFrequency };
+  }, [schedules]);
+
+  const getFrequencyLabel = (days: number): string => {
+    if (days === 1) return "Daily";
+    if (days === 7) return "Weekly";
+    if (days === 30) return "Monthly";
+    return `${days} days`;
   };
 
-  const handleEdit = (schedule: AutoBackup) => {
-    setEditSchedule(schedule);
-    setFormVm(`${schedule.vmName}@${schedule.machineName}`);
-    setFormFrequency(schedule.frequencyDays);
-    setFormMinTime(schedule.minTime);
-    setFormMaxTime(schedule.maxTime);
-    setFormNfsShare(schedule.nfsShareId);
-    setFormRetention(String(schedule.retention));
-    setFormIsLive(schedule.isLive);
-    setShowCreateModal(true);
-  };
+  const getNfsName = (id: number): string => nfsShares[id] || `NFS #${id}`;
+  const selectedNfsLabel = formNfsShare != null ? getNfsName(formNfsShare) : "";
+
+  const handleRefresh = () => refreshSchedules(true);
 
   const handleDelete = (schedule: AutoBackup) => {
     Alert.alert(
-      "Confirm deletion",
-      `Are you sure you want to delete the schedule for ${schedule.vmName}?`,
+      "Delete schedule",
+      `Delete auto-backup for ${schedule.vmName}?`,
       [
-        {text: "Cancel", style: "cancel"},
+        { text: "Cancel", style: "cancel" },
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => {
-            setSchedules((prev) => prev.filter((s) => s.id !== schedule.id));
-            toast.show({
-              placement: "top",
-              render: ({id}) => (
-                <Toast
-                  nativeID={"toast-" + id}
-                  className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-                  action="success"
-                >
-                  <ToastTitle size="sm">Schedule deleted</ToastTitle>
-                </Toast>
-              ),
-            });
+          onPress: async () => {
+            try {
+              await deleteAutoBackup(schedule.id);
+              setSchedules((prev) => prev.filter((s) => s.id !== schedule.id));
+              showToastMessage("Schedule deleted");
+            } catch (err) {
+              console.error("Error deleting auto-backup", err);
+              const message = err instanceof Error ? err.message : "Failed to delete schedule.";
+              showToastMessage(message, "error");
+            }
           },
         },
       ]
     );
   };
 
-  const resetForm = () => {
-    setFormVm("");
-    setFormFrequency(1);
-    setFormMinTime("");
-    setFormMaxTime("");
-    setFormNfsShare(null);
-    setFormRetention("");
-    setFormIsLive(false);
-    setEditSchedule(null);
+  const openEdit = (schedule: AutoBackup) => {
+    setEditSchedule(schedule);
+    setFormVm(schedule.vmName);
+    setFormFrequency(schedule.frequencyDays);
+    setFormMinTime(schedule.minTime);
+    setFormMaxTime(schedule.maxTime);
+    setFormNfsShare(schedule.nfsShareId);
+    setFormRetention(String(schedule.retention));
+    setShowCreateModal(true);
   };
 
-  const handleSubmit = () => {
-    if (!formVm || !formNfsShare) {
-      toast.show({
-        placement: "top",
-        render: ({id}) => (
-          <Toast
-            nativeID={"toast-" + id}
-            className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-            action="error"
-          >
-            <ToastTitle size="sm">Fill all required fields</ToastTitle>
-          </Toast>
-        ),
-      });
+  const handleToggleEnabled = async (schedule: AutoBackup) => {
+    try {
+      if (schedule.isEnabled) {
+        await disableAutoBackup(schedule.id);
+      } else {
+        await enableAutoBackup(schedule.id);
+      }
+      setSchedules((prev) =>
+        prev.map((s) =>
+          s.id === schedule.id ? { ...s, isEnabled: !schedule.isEnabled } : s
+        )
+      );
+    } catch (err) {
+      console.error("Error toggling auto-backup", err);
+      const message = err instanceof Error ? err.message : "Failed to update schedule.";
+      showToastMessage(message, "error");
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!formVm || !formMinTime || !formMaxTime || !formNfsShare || !formRetention) {
+      showToastMessage("Fill all required fields", "error");
       return;
     }
 
-    const [vmName, machineName] = formVm.split("@");
-
-    if (editSchedule) {
-      // Editar
-      setSchedules((prev) =>
-        prev.map((s) =>
-          s.id === editSchedule.id
-            ? {
-                ...s,
-                vmName,
-                machineName,
-                frequencyDays: formFrequency,
-                minTime: formMinTime,
-                maxTime: formMaxTime,
-                nfsShareId: formNfsShare,
-                retention: Number(formRetention) || 7,
-                isLive: formIsLive,
-              }
-            : s
-        )
-      );
-      toast.show({
-        placement: "top",
-        render: ({id}) => (
-          <Toast
-            nativeID={"toast-" + id}
-            className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-            action="success"
-          >
-            <ToastTitle size="sm">Schedule updated</ToastTitle>
-          </Toast>
-        ),
-      });
-    } else {
-      // Criar
-      const newSchedule: AutoBackup = {
-        id: `ab-${Date.now()}`,
-        vmName,
-        machineName,
-        frequencyDays: formFrequency,
-        minTime: formMinTime,
-        maxTime: formMaxTime,
-        nfsShareId: formNfsShare,
-        retention: Number(formRetention) || 7,
-        lastBackup: null,
-        isEnabled: true,
-        isLive: formIsLive,
-      };
-      setSchedules((prev) => [...prev, newSchedule]);
-      toast.show({
-        placement: "top",
-        render: ({id}) => (
-          <Toast
-            nativeID={"toast-" + id}
-            className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-            action="success"
-          >
-            <ToastTitle size="sm">Schedule created</ToastTitle>
-          </Toast>
-        ),
-      });
+    const minMinutes = timeToMinutes(formMinTime);
+    const maxMinutes = timeToMinutes(formMaxTime);
+    if (minMinutes == null || maxMinutes == null) {
+      showToastMessage("Use HH:MM for times", "error");
+      return;
+    }
+    if (maxMinutes <= minMinutes) {
+      showToastMessage("Max time must be after min time", "error");
+      return;
     }
 
-    setShowCreateModal(false);
-    resetForm();
+    const payload = {
+      vm_name: formVm,
+      frequency_days: formFrequency,
+      min_time: formMinTime,
+      max_time: formMaxTime,
+      nfs_mount_id: formNfsShare,
+      max_backups_retain: Number(formRetention) || 0,
+    };
+
+    setSaving(true);
+    try {
+      if (editSchedule) {
+        await updateAutoBackup(editSchedule.id, payload);
+        showToastMessage("Schedule updated");
+      } else {
+        await createAutoBackup(payload);
+        showToastMessage("Schedule created");
+      }
+      setShowCreateModal(false);
+      resetForm();
+      await refreshSchedules();
+    } catch (err) {
+      console.error("Error saving auto-backup", err);
+      const message = err instanceof Error ? err.message : "Failed to save schedule.";
+      showToastMessage(message, "error");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const refreshControlTint = colorScheme === "dark" ? "#F8FAFC" : "#0F172A";
@@ -359,7 +345,7 @@ export default function AutoBackupsScreen() {
     <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{paddingBottom: 100}}
+        contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={
           <RefreshControl
             refreshing={loading}
@@ -376,7 +362,7 @@ export default function AutoBackupsScreen() {
               <Heading
                 size="2xl"
                 className="text-typography-900 dark:text-[#E8EBF0] web:text-4xl"
-                style={{fontFamily: "Inter_700Bold"}}
+                style={{ fontFamily: "Inter_700Bold" }}
               >
                 Auto-Backups
               </Heading>
@@ -384,80 +370,45 @@ export default function AutoBackupsScreen() {
                 Configure automatic backup schedules for your VMs with frequency and retention control.
               </Text>
             </VStack>
-            {/* Botão desktop */}
             <Box className="hidden web:flex">
-              <Button
-                size="md"
-                onPress={() => {
-                  resetForm();
-                  setShowCreateModal(true);
-                }}
-                className="rounded-lg bg-typography-900 dark:bg-[#E8EBF0]"
-              >
-                <ButtonIcon
-                  as={Plus}
-                  className="text-background-0 dark:text-typography-900"
-                />
-                <ButtonText className="text-background-0 dark:text-typography-900">
-                  New Schedule
+              <Button className="rounded-lg px-4" onPress={() => setShowCreateModal(true)}>
+                <ButtonIcon as={Plus} className="text-background-0 mr-1.5" />
+                <ButtonText className="text-background-0" style={{ fontFamily: "Inter_600SemiBold" }}>
+                  New schedule
                 </ButtonText>
               </Button>
             </Box>
           </HStack>
 
           {/* Stats Overview */}
-          <HStack className="mb-6 mt-6 gap-4 flex-wrap web:grid web:grid-cols-4">
+          <HStack className="mb-6 gap-4 flex-wrap web:grid web:grid-cols-4">
             <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
               <HStack className="items-center gap-2 mb-2">
                 <Calendar size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Total Schedules
                 </Text>
               </HStack>
-              <Text
-                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{fontFamily: "Inter_700Bold"}}
-              >
+              <Text className="text-2xl text-typography-900 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_700Bold" }}>
                 {stats.total}
               </Text>
             </Box>
 
             <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
               <HStack className="items-center gap-2 mb-2">
-                <Power size={16} className="text-[#2DD4BF] dark:text-[#5EEAD4]" />
+                <Database size={16} className="text-[#2DD4BF] dark:text-[#5EEAD4]" />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Active
                 </Text>
               </HStack>
-              <Text
-                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{fontFamily: "Inter_700Bold"}}
-              >
+              <Text className="text-2xl text-typography-900 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_700Bold" }}>
                 {stats.active}
-              </Text>
-            </Box>
-
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
-              <HStack className="items-center gap-2 mb-2">
-                <Database size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
-                <Text
-                  className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{fontFamily: "Inter_500Medium"}}
-                >
-                  VMs
-                </Text>
-              </HStack>
-              <Text
-                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{fontFamily: "Inter_700Bold"}}
-              >
-                {stats.totalVms}
               </Text>
             </Box>
 
@@ -466,292 +417,192 @@ export default function AutoBackupsScreen() {
                 <TrendingUp size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
-                  Average Frequency
+                  Avg Frequency
                 </Text>
               </HStack>
-              <Text
-                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{fontFamily: "Inter_700Bold"}}
-              >
-                {stats.avgFrequency} days
+              <Text className="text-2xl text-typography-900 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_700Bold" }}>
+                {stats.avgFrequency} d
+              </Text>
+            </Box>
+
+            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
+              <HStack className="items-center gap-2 mb-2">
+                <Clock size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
+                <Text
+                  className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
+                  style={{ fontFamily: "Inter_500Medium" }}
+                >
+                  VMs Covered
+                </Text>
+              </HStack>
+              <Text className="text-2xl text-typography-900 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_700Bold" }}>
+                {stats.totalVms}
               </Text>
             </Box>
           </HStack>
 
-          {/* Schedules List */}
-          {Object.keys(schedulesByVm).length === 0 ? (
+          {/* Search/Actions */}
+          <HStack className="mb-6 gap-2">
+            <Button
+              variant="outline"
+              size="md"
+              onPress={handleRefresh}
+              disabled={loading}
+              className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+            >
+              {loading ? (
+                <ButtonSpinner />
+              ) : (
+                <ButtonIcon
+                  as={RefreshCw}
+                  className="text-typography-700 dark:text-[#E8EBF0]"
+                />
+              )}
+            </Button>
+          </HStack>
+
+          {/* Schedules */}
+          {schedules.length === 0 ? (
             <Box className="p-8 web:rounded-2xl web:bg-background-0/80 dark:web:bg-[#151F30]/80">
               <VStack className="items-center gap-4">
                 <Calendar size={48} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
                 <Text
                   className="text-typography-900 dark:text-[#E8EBF0] text-lg text-center"
-                  style={{fontFamily: "Inter_600SemiBold"}}
+                  style={{ fontFamily: "Inter_600SemiBold" }}
                 >
-                  No schedules found
+                  No auto-backups yet
                 </Text>
                 <Text
                   className="text-[#9AA4B8] dark:text-[#8A94A8] text-center"
-                  style={{fontFamily: "Inter_400Regular"}}
+                  style={{ fontFamily: "Inter_400Regular" }}
                 >
-                  Create your first automatic schedule
+                  Create a schedule to start automatic backups.
                 </Text>
               </VStack>
             </Box>
           ) : (
-            <VStack className="gap-6">
-              {Object.entries(schedulesByVm).map(([key, vmSchedules]) => {
-                const [vmName, machineName] = key.split("@");
-                return (
-                  <Box
-                    key={key}
-                    className="rounded-2xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] overflow-hidden web:shadow-md dark:web:shadow-none"
-                  >
-                    {/* Header */}
-                    <Box className="border-b border-outline-100 dark:border-[#2A3B52] p-4 web:p-6">
-                      <Heading
-                        size="lg"
-                        className="text-typography-900 dark:text-[#E8EBF0] mb-1"
-                        style={{fontFamily: "Inter_700Bold"}}
-                      >
-                        {vmName}
+            <VStack className="gap-4">
+              {schedules.map((schedule) => (
+                <Box
+                  key={schedule.id}
+                  className="rounded-2xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4 web:p-6"
+                >
+                  <HStack className="justify-between items-start">
+                    <VStack className="gap-1">
+                      <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_700Bold" }}>
+                        {schedule.vmName}
                       </Heading>
-                      <Text
-                        className="text-sm text-[#9AA4B8] dark:text-[#8A94A8]"
-                        style={{fontFamily: "Inter_400Regular"}}
-                      >
-                        {machineName} • {vmSchedules.length} schedule
-                        {vmSchedules.length > 1 ? "s" : ""}
+                      <Text className="text-sm text-[#9AA4B8] dark:text-[#8A94A8]" style={{ fontFamily: "Inter_400Regular" }}>
+                        {getFrequencyLabel(schedule.frequencyDays)} • {schedule.minTime} - {schedule.maxTime}
                       </Text>
-                    </Box>
-
-                    {/* Table */}
-                    <Box className="overflow-x-auto">
-                      <Box className="min-w-[1000px]">
-                        {/* Table Header */}
-                        <HStack className="bg-background-50 dark:bg-[#0A1628] px-4 py-3 border-b border-outline-100 dark:border-[#1E2F47]">
-                          <Text
-                            className="w-[60px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                            style={{fontFamily: "Inter_600SemiBold"}}
-                          >
-                            ID
-                          </Text>
-                          <Text
-                            className="w-[120px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                            style={{fontFamily: "Inter_600SemiBold"}}
-                          >
-                            FREQUENCY
-                          </Text>
-                          <Text
-                            className="w-[150px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                            style={{fontFamily: "Inter_600SemiBold"}}
-                          >
-                            TIME WINDOW
-                          </Text>
-                          <Text
-                            className="flex-1 min-w-[150px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                            style={{fontFamily: "Inter_600SemiBold"}}
-                          >
-                            NFS SHARE
-                          </Text>
-                          <Text
-                            className="w-[100px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                            style={{fontFamily: "Inter_600SemiBold"}}
-                          >
-                            RETENTION
-                          </Text>
-                          <Text
-                            className="w-[150px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                            style={{fontFamily: "Inter_600SemiBold"}}
-                          >
-                            LAST BACKUP
-                          </Text>
-                          <Text
-                            className="w-[80px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                            style={{fontFamily: "Inter_600SemiBold"}}
-                          >
-                            STATUS
-                          </Text>
-                          <Text
-                            className="w-[140px] text-xs text-[#9AA4B8] dark:text-[#8A94A8] text-right"
-                            style={{fontFamily: "Inter_600SemiBold"}}
-                          >
-                            ACTIONS
-                          </Text>
-                        </HStack>
-
-                        {/* Table Rows */}
-                        {vmSchedules.map((schedule, index) => (
-                          <HStack
-                            key={schedule.id}
-                            className={`px-4 py-3 items-center ${
-                              index !== vmSchedules.length - 1
-                                ? "border-b border-outline-100 dark:border-[#1E2F47]"
-                                : ""
-                            }`}
-                          >
-                            <Text
-                              className="w-[60px] text-xs text-typography-600 dark:text-typography-400"
-                              style={{fontFamily: "Inter_400Regular"}}
-                            >
-                              #{schedule.id.split("-")[1]}
-                            </Text>
-                            <Text
-                              className="w-[120px] text-sm text-typography-900 dark:text-[#E8EBF0]"
-                              style={{fontFamily: "Inter_500Medium"}}
-                            >
-                              {getFrequencyLabel(schedule.frequencyDays)}
-                            </Text>
-                            <HStack className="w-[150px] items-center gap-1">
-                              <Clock size={14} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
-                              <Text
-                                className="text-sm text-typography-900 dark:text-[#E8EBF0]"
-                                style={{fontFamily: "Inter_400Regular"}}
-                              >
-                                {schedule.minTime} - {schedule.maxTime}
-                              </Text>
-                            </HStack>
-                            <Text
-                              className="flex-1 min-w-[150px] text-sm text-typography-600 dark:text-typography-400"
-                              style={{fontFamily: "Inter_400Regular"}}
-                            >
-                              {getNfsName(schedule.nfsShareId)}
-                            </Text>
-                            <Text
-                              className="w-[100px] text-sm text-typography-900 dark:text-[#E8EBF0]"
-                              style={{fontFamily: "Inter_400Regular"}}
-                            >
-                              {schedule.retention} backups
-                            </Text>
-                            <Text
-                              className="w-[150px] text-sm text-typography-600 dark:text-typography-400"
-                              style={{fontFamily: "Inter_400Regular"}}
-                            >
-                              {formatDate(schedule.lastBackup)}
-                            </Text>
-                            <Box className="w-[80px]">
-                              <Badge
-                                size="sm"
-                                variant="outline"
-                                className={`rounded-full w-fit ${
-                                  schedule.isEnabled
-                                    ? "bg-[#2dd4be19] border-[#2DD4BF] dark:bg-[#2DD4BF25] dark:border-[#5EEAD4]"
-                                    : "bg-[#94a3b819] border-[#94A3B8] dark:bg-[#94A3B825] dark:border-[#CBD5E1]"
-                                }`}
-                              >
-                                <BadgeText
-                                  className={`text-xs ${
-                                    schedule.isEnabled
-                                      ? "text-[#2DD4BF] dark:text-[#5EEAD4]"
-                                      : "text-[#64748B] dark:text-[#94A3B8]"
-                                  }`}
-                                  style={{fontFamily: "Inter_500Medium"}}
-                                >
-                                  {schedule.isEnabled ? "Active" : "Inactive"}
-                                </BadgeText>
-                              </Badge>
-                            </Box>
-                            <HStack className="w-[140px] gap-1 justify-end">
-                              <Button
-                                size="xs"
-                                variant="outline"
-                                className={`rounded-md ${
-                                  !schedule.isEnabled
-                                    ? "border-green-500"
-                                    : ""
-                                }`}
-                                onPress={() => handleToggleEnabled(schedule)}
-                              >
-                                <ButtonIcon
-                                  as={schedule.isEnabled ? PowerOff : Power}
-                                  size="xs"
-                                  className={
-                                    schedule.isEnabled
-                                      ? "text-typography-700 dark:text-[#E8EBF0]"
-                                      : "text-green-500"
-                                  }
-                                />
-                              </Button>
-                              <Button
-                                size="xs"
-                                variant="outline"
-                                className="rounded-md"
-                                onPress={() => handleEdit(schedule)}
-                              >
-                                <ButtonIcon
-                                  as={Edit}
-                                  size="xs"
-                                  className="text-typography-700 dark:text-[#E8EBF0]"
-                                />
-                              </Button>
-                              <Button
-                                size="xs"
-                                variant="outline"
-                                className="rounded-md border-red-500"
-                                onPress={() => handleDelete(schedule)}
-                              >
-                                <ButtonIcon
-                                  as={Trash2}
-                                  size="xs"
-                                  className="text-red-500"
-                                />
-                              </Button>
-                            </HStack>
-                          </HStack>
-                        ))}
-                      </Box>
-                    </Box>
-                  </Box>
-                );
-              })}
+                      <Text className="text-sm text-[#9AA4B8] dark:text-[#8A94A8]" style={{ fontFamily: "Inter_400Regular" }}>
+                        NFS: {getNfsName(schedule.nfsShareId)} • Retain {schedule.retention} backups
+                      </Text>
+                      <Text className="text-xs text-typography-600 dark:text-typography-400" style={{ fontFamily: "Inter_400Regular" }}>
+                        Last backup: {formatDate(schedule.lastBackup)}
+                      </Text>
+                    </VStack>
+                    <HStack className="gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-md"
+                        onPress={() => openEdit(schedule)}
+                      >
+                        <ButtonIcon as={Edit} className="text-typography-700 dark:text-[#E8EBF0]" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-md border-red-500"
+                        onPress={() => handleDelete(schedule)}
+                      >
+                        <ButtonIcon as={Trash2} className="text-red-500" />
+                      </Button>
+                    </HStack>
+                  </HStack>
+                  <HStack className="mt-4 items-center gap-3">
+                    <Badge
+                      size="sm"
+                      variant="outline"
+                      className={`rounded-full w-fit ${schedule.isEnabled
+                          ? "bg-[#22c55e19] border-[#22c55e] dark:bg-[#22c55e25] dark:border-[#4ade80]"
+                          : "bg-[#fbbf2419] border-[#FBBF24] dark:bg-[#FBBF2425] dark:border-[#FCD34D]"
+                        }`}
+                    >
+                      <BadgeText
+                        className={`text-xs ${schedule.isEnabled
+                            ? "text-[#22c55e] dark:text-[#4ade80]"
+                            : "text-[#FBBF24] dark:text-[#FCD34D]"
+                          }`}
+                        style={{ fontFamily: "Inter_500Medium" }}
+                      >
+                        {schedule.isEnabled ? "Enabled" : "Disabled"}
+                      </BadgeText>
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-md"
+                      onPress={() => handleToggleEnabled(schedule)}
+                    >
+                      <ButtonIcon
+                        as={schedule.isEnabled ? PowerOff : Power}
+                        className="text-typography-700 dark:text-[#E8EBF0] mr-1.5"
+                      />
+                      <ButtonText className="text-typography-700 dark:text-[#E8EBF0]">
+                        {schedule.isEnabled ? "Disable" : "Enable"}
+                      </ButtonText>
+                    </Button>
+                  </HStack>
+                </Box>
+              ))}
             </VStack>
           )}
         </Box>
       </ScrollView>
 
-      {/* FAB - Mobile only */}
-      {Platform.OS !== "web" && (
-        <Fab
-          size="lg"
-          placement="bottom right"
-          className="bg-typography-900 dark:bg-[#E8EBF0] shadow-lg"
-          onPress={() => {
-            resetForm();
-            setShowCreateModal(true);
-          }}
+      {/* FAB mobile */}
+      <Fab placement="bottom right" size="lg" onPress={() => setShowCreateModal(true)} className="md:hidden">
+        <FabIcon as={Plus} className="text-background-0" />
+        <FabLabel
+          className="text-background-0"
+          style={{ fontFamily: "Inter_600SemiBold" }}
         >
-          <FabIcon as={Plus} className="text-background-0 dark:text-typography-900" />
-        </Fab>
-      )}
+          New
+        </FabLabel>
+      </Fab>
 
-      {/* Modal: Criar/Editar Agendamento */}
+      {/* Modal create/edit */}
       <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)}>
         <ModalBackdrop className="bg-black/60" />
         <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] shadow-2xl max-w-lg p-6">
           <ModalHeader className="pb-4">
-            <Heading 
-              size="lg" 
+            <Heading
+              size="lg"
               className="text-typography-900 dark:text-[#E8EBF0]"
-              style={{fontFamily: "Inter_700Bold"}}
+              style={{ fontFamily: "Inter_700Bold" }}
             >
-              {editSchedule ? "Edit" : "New"} Schedule
+              {editSchedule ? "Edit Auto-Backup" : "New Auto-Backup"}
             </Heading>
             <ModalCloseButton className="text-typography-600 dark:text-typography-400" />
           </ModalHeader>
           <ModalBody className="py-4">
-            <VStack className="gap-5">
+            <VStack className="gap-4">
               <VStack className="gap-2">
-                <Text 
-                  className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                  style={{fontFamily: "Inter_500Medium"}}
-                >
-                  VM <Text className="text-red-500 dark:text-[#f87171]">*</Text>
+                <Text className="text-sm text-typography-700 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_500Medium" }}>
+                  VM
                 </Text>
-                <Select>
+                <Select
+                  selectedValue={formVm}
+                  onValueChange={setFormVm}
+                  isDisabled={loadingOptions || vmOptions.length === 0}
+                >
                   <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
                     <SelectInput
-                      placeholder="Select a VM..."
+                      placeholder={loadingOptions ? "Loading..." : "Choose a VM..."}
                       value={formVm}
                       className="text-typography-900 dark:text-[#E8EBF0]"
                     />
@@ -763,109 +614,134 @@ export default function AutoBackupsScreen() {
                       <SelectDragIndicatorWrapper>
                         <SelectDragIndicator />
                       </SelectDragIndicatorWrapper>
-                      <SelectItem
-                        label="IEOP (marques512sv)"
-                        value="IEOP@marques512sv"
-                      />
-                      <SelectItem
-                        label="test (marques2673sv)"
-                        value="test@marques2673sv"
-                      />
-                      <SelectItem
-                        label="win10 (marques512sv)"
-                        value="win10@marques512sv"
-                      />
-                    </SelectContent>
-                  </SelectPortal>
-                </Select>
-              </VStack>
-
-              <VStack className="gap-2">
-                <Text 
-                  className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                  style={{fontFamily: "Inter_500Medium"}}
-                >
-                  Frequency
-                </Text>
-                <Select>
-                  <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
-                    <SelectInput
-                      placeholder={getFrequencyLabel(formFrequency)}
-                      className="text-typography-900 dark:text-[#E8EBF0]"
-                    />
-                    <SelectIcon className="mr-3 text-typography-500 dark:text-typography-400" as={ChevronDownIcon} />
-                  </SelectTrigger>
-                  <SelectPortal>
-                    <SelectBackdropContent />
-                    <SelectContent>
-                      <SelectDragIndicatorWrapper>
-                        <SelectDragIndicator />
-                      </SelectDragIndicatorWrapper>
-                      {FREQUENCY_OPTIONS.map((opt) => (
-                        <SelectItem
-                          key={opt.value}
-                          label={opt.label}
-                          value={String(opt.value)}
-                        />
-                      ))}
+                      {vmOptions.length === 0 ? (
+                        <SelectItem label={loadingOptions ? "Loading..." : "No VMs available"} value="" isDisabled />
+                      ) : (
+                        vmOptions.map((vm) => (
+                          <SelectItem key={vm.name} label={`${vm.name} (${vm.machineName})`} value={vm.name} />
+                        ))
+                      )}
                     </SelectContent>
                   </SelectPortal>
                 </Select>
               </VStack>
 
               <HStack className="gap-3">
-                <VStack className="gap-2 flex-1">
-                <Text 
-                  className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                  style={{fontFamily: "Inter_500Medium"}}
-                >
-                  Minimum Time
-                </Text>
-                  <Input 
-                    variant="outline" 
-                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]"
-                  >
-                    <InputField
-                      placeholder="HH:MM"
-                      value={formMinTime}
-                      onChangeText={setFormMinTime}
-                      className="text-typography-900 dark:text-[#E8EBF0]"
-                    />
-                  </Input>
+                <VStack className="flex-1 gap-2">
+                  <Text className="text-sm text-typography-700 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_500Medium" }}>
+                    Frequency
+                  </Text>
+                  <Select selectedValue={String(formFrequency)} onValueChange={(val) => setFormFrequency(Number(val) || 1)}>
+                    <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
+                      <SelectInput
+                        placeholder="Select frequency"
+                        value={String(formFrequency)}
+                        className="text-typography-900 dark:text-[#E8EBF0]"
+                      />
+                      <SelectIcon className="mr-3 text-typography-500 dark:text-typography-400" as={ChevronDownIcon} />
+                    </SelectTrigger>
+                    <SelectPortal>
+                      <SelectBackdropContent />
+                      <SelectContent>
+                        <SelectDragIndicatorWrapper>
+                          <SelectDragIndicator />
+                        </SelectDragIndicatorWrapper>
+                        {FREQUENCY_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} label={opt.label} value={String(opt.value)} />
+                        ))}
+                      </SelectContent>
+                    </SelectPortal>
+                  </Select>
                 </VStack>
-                <VStack className="gap-2 flex-1">
-                <Text 
-                  className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                  style={{fontFamily: "Inter_500Medium"}}
-                >
-                  Maximum Time
-                </Text>
-                  <Input 
-                    variant="outline" 
-                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]"
-                  >
+                <VStack className="flex-1 gap-2">
+                  <Text className="text-sm text-typography-700 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_500Medium" }}>
+                    Retention (backups)
+                  </Text>
+                  <Input variant="outline" className="rounded-lg">
                     <InputField
-                      placeholder="HH:MM"
-                      value={formMaxTime}
-                      onChangeText={setFormMaxTime}
-                      className="text-typography-900 dark:text-[#E8EBF0]"
+                      keyboardType="numeric"
+                      value={formRetention}
+                      onChangeText={setFormRetention}
+                      placeholder="e.g. 5"
                     />
                   </Input>
                 </VStack>
               </HStack>
 
+              <HStack className="gap-3">
+                <VStack className="flex-1 gap-2">
+                  <Text className="text-sm text-typography-700 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_500Medium" }}>
+                    Min time
+                  </Text>
+                  <Select
+                    selectedValue={formMinTime || undefined}
+                    onValueChange={(val) => setFormMinTime(val)}
+                  >
+                    <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
+                      <SelectInput
+                        placeholder="Select time"
+                        value={formMinTime}
+                        className="text-typography-900 dark:text-[#E8EBF0]"
+                      />
+                      <SelectIcon className="mr-3 text-typography-500 dark:text-typography-400" as={ChevronDownIcon} />
+                    </SelectTrigger>
+                    <SelectPortal>
+                      <SelectBackdropContent />
+                      <SelectContent>
+                        <SelectDragIndicatorWrapper>
+                          <SelectDragIndicator />
+                        </SelectDragIndicatorWrapper>
+                        {TIME_OPTIONS.map((time) => (
+                          <SelectItem key={time} label={time} value={time} />
+                        ))}
+                      </SelectContent>
+                    </SelectPortal>
+                  </Select>
+                </VStack>
+                <VStack className="flex-1 gap-2">
+                  <Text className="text-sm text-typography-700 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_500Medium" }}>
+                    Max time
+                  </Text>
+                  <Select
+                    selectedValue={formMaxTime || undefined}
+                    onValueChange={(val) => setFormMaxTime(val)}
+                  >
+                    <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
+                      <SelectInput
+                        placeholder="Select time"
+                        value={formMaxTime}
+                        className="text-typography-900 dark:text-[#E8EBF0]"
+                      />
+                      <SelectIcon className="mr-3 text-typography-500 dark:text-typography-400" as={ChevronDownIcon} />
+                    </SelectTrigger>
+                    <SelectPortal>
+                      <SelectBackdropContent />
+                      <SelectContent>
+                        <SelectDragIndicatorWrapper>
+                          <SelectDragIndicator />
+                        </SelectDragIndicatorWrapper>
+                        {TIME_OPTIONS.map((time) => (
+                          <SelectItem key={time} label={time} value={time} />
+                        ))}
+                      </SelectContent>
+                    </SelectPortal>
+                  </Select>
+                </VStack>
+              </HStack>
+
               <VStack className="gap-2">
-                <Text 
-                  className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                  style={{fontFamily: "Inter_500Medium"}}
-                >
-                  NFS Share <Text className="text-red-500 dark:text-[#f87171]">*</Text>
+                <Text className="text-sm text-typography-700 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_500Medium" }}>
+                  NFS share
                 </Text>
-                <Select>
+                <Select
+                  selectedValue={formNfsShare != null ? String(formNfsShare) : ""}
+                  onValueChange={(val) => setFormNfsShare(Number(val))}
+                  isDisabled={loadingOptions || Object.keys(nfsShares).length === 0}
+                >
                   <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
                     <SelectInput
-                      placeholder="Select an NFS..."
-                      value={formNfsShare ? getNfsName(formNfsShare) : ""}
+                      placeholder={loadingOptions ? "Loading..." : "Choose a NFS share..."}
+                      value={selectedNfsLabel}
                       className="text-typography-900 dark:text-[#E8EBF0]"
                     />
                     <SelectIcon className="mr-3 text-typography-500 dark:text-typography-400" as={ChevronDownIcon} />
@@ -876,56 +752,31 @@ export default function AutoBackupsScreen() {
                       <SelectDragIndicatorWrapper>
                         <SelectDragIndicator />
                       </SelectDragIndicatorWrapper>
-                      <SelectItem
-                        label={getNfsName(1)}
-                        value="1"
-                      />
-                      <SelectItem
-                        label={getNfsName(2)}
-                        value="2"
-                      />
+                      {Object.keys(nfsShares).length === 0 ? (
+                        <SelectItem label={loadingOptions ? "Loading..." : "No NFS shares"} value="" isDisabled />
+                      ) : (
+                        Object.entries(nfsShares).map(([id, label]) => (
+                          <SelectItem key={id} label={label} value={id} />
+                        ))
+                      )}
                     </SelectContent>
                   </SelectPortal>
                 </Select>
               </VStack>
 
-              <VStack className="gap-2">
-                <Text 
-                  className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                  style={{fontFamily: "Inter_500Medium"}}
+              <HStack className="items-center gap-2">
+                <Checkbox
+                  isDisabled
+                  value="live-required"
+                  isChecked
+                  aria-label="Live backups require qemu-guest-agent"
                 >
-                  Retention (backups)
-                </Text>
-                <Input 
-                  variant="outline" 
-                  className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]"
-                >
-                  <InputField
-                    placeholder="7"
-                    keyboardType="numeric"
-                    value={formRetention}
-                    onChangeText={setFormRetention}
-                    className="text-typography-900 dark:text-[#E8EBF0]"
-                  />
-                </Input>
-              </VStack>
-
-              <Checkbox
-                value="live"
-                isChecked={formIsLive}
-                onChange={setFormIsLive}
-                className="gap-3 items-center"
-              >
-                <CheckboxIndicator className="border-outline-200 dark:border-[#2A3B52]">
-                  <CheckboxIcon as={Check} className="text-typography-900 dark:text-[#E8EBF0]" />
-                </CheckboxIndicator>
-                <CheckboxLabel 
-                  className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                  style={{fontFamily: "Inter_400Regular"}}
-                >
-                  Live Backup (without stopping VM)
-                </CheckboxLabel>
-              </Checkbox>
+                  
+                  <CheckboxLabel className="text-sm text-typography-600 dark:text-typography-400">
+                    VMs need qemu-guest-agent for live backups
+                  </CheckboxLabel>
+                </Checkbox>
+              </HStack>
             </VStack>
           </ModalBody>
           <ModalFooter className="pt-6 border-t border-outline-100 dark:border-[#2A3B52]">
@@ -933,14 +784,12 @@ export default function AutoBackupsScreen() {
               <Button
                 variant="outline"
                 className="rounded-lg px-6 py-2.5 border-outline-200 dark:border-[#2A3B52]"
-                onPress={() => {
-                  setShowCreateModal(false);
-                  resetForm();
-                }}
+                onPress={() => setShowCreateModal(false)}
+                disabled={saving}
               >
-                <ButtonText 
+                <ButtonText
                   className="text-typography-700 dark:text-[#E8EBF0]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Cancel
                 </ButtonText>
@@ -948,13 +797,18 @@ export default function AutoBackupsScreen() {
               <Button
                 className="rounded-lg px-6 py-2.5 bg-typography-900 dark:bg-[#E8EBF0]"
                 onPress={handleSubmit}
+                disabled={saving}
               >
-                <ButtonText 
-                  className="text-background-0 dark:text-typography-900"
-                  style={{fontFamily: "Inter_600SemiBold"}}
-                >
-                  {editSchedule ? "Save" : "Create"}
-                </ButtonText>
+                {saving ? (
+                  <ButtonSpinner />
+                ) : (
+                  <ButtonText
+                    className="text-background-0 dark:text-typography-900"
+                    style={{ fontFamily: "Inter_600SemiBold" }}
+                  >
+                    {editSchedule ? "Save changes" : "Create"}
+                  </ButtonText>
+                )}
               </Button>
             </HStack>
           </ModalFooter>

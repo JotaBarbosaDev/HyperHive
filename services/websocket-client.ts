@@ -122,12 +122,34 @@ export const ensureHyperHiveWebsocket = async (options?: {
     notifyListeners(payload);
   };
 
+  const safeDescribeEvent = (ev: any) => {
+    try {
+      if (!ev) return String(ev);
+      // Common fields for close/error events
+      const target = ev.target ?? ev.currentTarget ?? ev._target ?? null;
+      const url = target?.url ?? ev.url ?? null;
+      const readyState = target?.readyState ?? ev.readyState ?? null;
+      const code = ev.code ?? ev.statusCode ?? null;
+      const reason = ev.reason ?? ev.message ?? null;
+      const wasClean = ev.wasClean ?? null;
+      const parts = [] as string[];
+      if (url) parts.push(`url=${url}`);
+      if (readyState !== null) parts.push(`readyState=${readyState}`);
+      if (code !== null) parts.push(`code=${code}`);
+      if (wasClean !== null) parts.push(`wasClean=${wasClean}`);
+      if (reason) parts.push(`reason=${String(reason)}`);
+      return parts.length > 0 ? parts.join(" ") : String(ev);
+    } catch (err) {
+      return "<unserializable event>";
+    }
+  };
+
   socket.onerror = (event) => {
-    console.error("[WS] Error", event);
+    console.error("[WS] Error", safeDescribeEvent(event));
   };
 
   socket.onclose = (event) => {
-    console.warn("[WS] Connection closed", event);
+    console.warn("[WS] Connection closed", safeDescribeEvent(event));
     resetActiveSocket(socket);
   };
 

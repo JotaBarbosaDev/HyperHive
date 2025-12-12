@@ -72,6 +72,7 @@ import {
   Slave,
   editVmResources,
   changeVmNetwork,
+  changeVncPassword,
   removeAllIsos,
   getCpuDisableFeatures,
   updateCpuXml,
@@ -118,6 +119,7 @@ import {
   Disc3,
   Download,
   Upload,
+  Lock,
 } from "lucide-react-native";
 
 // Interfaces TypeScript
@@ -206,6 +208,7 @@ export default function VirtualMachinesScreen() {
   const [moveDiskVm, setMoveDiskVm] = React.useState<VM | null>(null);
   const [updateCpuVm, setUpdateCpuVm] = React.useState<VM | null>(null);
   const [restoreVm, setRestoreVm] = React.useState<VM | null>(null);
+  const [changeVncVm, setChangeVncVm] = React.useState<VM | null>(null);
   const [pendingVmNames, setPendingVmNames] = React.useState<Set<string>>(new Set());
   const [mountOptions, setMountOptions] = React.useState<Mount[]>([]);
   const [slaveOptions, setSlaveOptions] = React.useState<Slave[]>([]);
@@ -427,10 +430,11 @@ export default function VirtualMachinesScreen() {
 
   const fetchAndSetVms = React.useCallback(async () => {
     const data = await getAllVMs();
-    setVms(data.map(mapVirtualMachineToVM));
+    const vmArray = Array.isArray(data) ? data : [];
+    setVms(vmArray.map(mapVirtualMachineToVM));
     setPendingVmNames((prev) => {
       const next = new Set(prev);
-      data.forEach((vm) => next.delete(vm.name));
+      vmArray.forEach((vm) => next.delete(vm.name));
       return new Set(next);
     });
     return data;
@@ -584,7 +588,9 @@ export default function VirtualMachinesScreen() {
     const fetchCloneOptions = async () => {
       setCloneOptionsLoading(true);
       try {
-        const [mounts, slaves] = await Promise.all([listMounts(), listSlaves()]);
+        const [mountsResp, slavesResp] = await Promise.all([listMounts(), listSlaves()]);
+        const mounts = Array.isArray(mountsResp) ? mountsResp : [];
+        const slaves = Array.isArray(slavesResp) ? slavesResp : [];
         setMountOptions(mounts);
         setSlaveOptions(slaves);
       } catch (error) {
@@ -1876,35 +1882,35 @@ export default function VirtualMachinesScreen() {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         toast.show({
                           placement: "top",
-                      render: ({ id }) => (
-                        <Toast
-                          nativeID={"toast-" + id}
-                          className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-                          action="success"
-                        >
-                          <ToastTitle size="sm">VM cloned</ToastTitle>
-                        </Toast>
-                      ),
-                    });
-                  } catch (error) {
-                    console.error("Error cloning VM:", error);
-                    toast.show({
-                      placement: "top",
                           render: ({ id }) => (
                             <Toast
-                          nativeID={"toast-" + id}
-                          className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-                          action="error"
-                        >
-                          <ToastTitle size="sm">Error cloning VM</ToastTitle>
-                          <ToastDescription size="sm">
-                            {error instanceof ApiError && typeof error.data === "string"
-                              ? error.data
-                              : "Check the name, NFS, and slave and try again."}
-                          </ToastDescription>
-                        </Toast>
-                      ),
-                    });
+                              nativeID={"toast-" + id}
+                              className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+                              action="success"
+                            >
+                              <ToastTitle size="sm">VM cloned</ToastTitle>
+                            </Toast>
+                          ),
+                        });
+                      } catch (error) {
+                        console.error("Error cloning VM:", error);
+                        toast.show({
+                          placement: "top",
+                          render: ({ id }) => (
+                            <Toast
+                              nativeID={"toast-" + id}
+                              className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+                              action="error"
+                            >
+                              <ToastTitle size="sm">Error cloning VM</ToastTitle>
+                              <ToastDescription size="sm">
+                                {error instanceof ApiError && typeof error.data === "string"
+                                  ? error.data
+                                  : "Check the name, NFS, and slave and try again."}
+                              </ToastDescription>
+                            </Toast>
+                          ),
+                        });
                         if (error instanceof ApiError) {
                           const message =
                             typeof error.data === "string"
@@ -2054,18 +2060,18 @@ export default function VirtualMachinesScreen() {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         toast.show({
                           placement: "top",
-                      render: ({ id }) => (
-                        <Toast
-                          nativeID={"toast-" + id}
-                          className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-                          action="success"
-                        >
-                          <ToastTitle size="sm">Disk moved</ToastTitle>
-                        </Toast>
-                      ),
-                    });
-                  } catch (error) {
-                    console.error("Error moving disk:", error);
+                          render: ({ id }) => (
+                            <Toast
+                              nativeID={"toast-" + id}
+                              className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+                              action="success"
+                            >
+                              <ToastTitle size="sm">Disk moved</ToastTitle>
+                            </Toast>
+                          ),
+                        });
+                      } catch (error) {
+                        console.error("Error moving disk:", error);
                         toast.show({
                           placement: "top",
                           render: ({ id }) => (
@@ -2095,6 +2101,69 @@ export default function VirtualMachinesScreen() {
                   </Button>
                 </HStack>
               </ModalFooter>
+            </ModalContent>
+          </Modal>
+
+          {/* Modal: Change VNC Password */}
+          <Modal isOpen={!!changeVncVm} onClose={() => setChangeVncVm(null)}>
+            <ModalBackdrop />
+            <ModalContent className="rounded-lg shadow-lg">
+              <ModalHeader>
+                <Heading size="md" className="text-gray-900">
+                  Change VNC Password
+                </Heading>
+                <ModalCloseButton />
+              </ModalHeader>
+              <ModalBody>
+                {changeVncVm && (
+                  <ChangeVncPasswordForm
+                    vm={changeVncVm}
+                    onCancel={() => setChangeVncVm(null)}
+                    onSubmit={async (password) => {
+                      try {
+                        await changeVncPassword(changeVncVm.name, password);
+                        await fetchAndSetVms();
+                        setChangeVncVm(null);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        toast.show({
+                          placement: "top",
+                          render: ({ id }) => (
+                            <Toast
+                              nativeID={"toast-" + id}
+                              className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+                              action="success"
+                            >
+                              <ToastTitle size="sm">VNC password updated</ToastTitle>
+                            </Toast>
+                          ),
+                        });
+                      } catch (error) {
+                        console.error("Error changing VNC password:", error);
+                        const description =
+                          error instanceof ApiError && error.data
+                            ? String(error.data)
+                            : error instanceof Error
+                              ? error.message
+                              : "Unable to change VNC password.";
+                        toast.show({
+                          placement: "top",
+                          render: ({ id }) => (
+                            <Toast
+                              nativeID={"toast-" + id}
+                              className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+                              action="error"
+                            >
+                              <ToastTitle size="sm">Error changing VNC password</ToastTitle>
+                              <ToastDescription size="sm">{description}</ToastDescription>
+                            </Toast>
+                          ),
+                        });
+                        throw new Error(description);
+                      }
+                    }}
+                  />
+                )}
+              </ModalBody>
             </ModalContent>
           </Modal>
 
@@ -2364,6 +2433,19 @@ export default function VirtualMachinesScreen() {
                 <Pressable
                   onPress={() => {
                     if (!selectedVm) return;
+                    setChangeVncVm(selectedVm);
+                    setShowActionsheet(false);
+                  }}
+                  className="px-3 py-3 hover:bg-background-50 rounded-md"
+                >
+                  <HStack className="items-center gap-3">
+                    <Lock size={18} className="text-typography-700" />
+                    <Text className="text-typography-900">Change VNC Password</Text>
+                  </HStack>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    if (!selectedVm) return;
                     setCloneVm(selectedVm);
                     setShowActionsheet(false);
                   }}
@@ -2575,6 +2657,16 @@ export default function VirtualMachinesScreen() {
               >
                 <ActionsheetIcon as={Cpu} className="mr-2" />
                 <ActionsheetItemText>Update CPU XML</ActionsheetItemText>
+              </ActionsheetItem>
+              <ActionsheetItem
+                onPress={() => {
+                  if (!selectedVm) return;
+                  setChangeVncVm(selectedVm);
+                  setShowActionsheet(false);
+                }}
+              >
+                <ActionsheetIcon as={Lock} className="mr-2" />
+                <ActionsheetItemText>Change VNC Password</ActionsheetItemText>
               </ActionsheetItem>
               <ActionsheetItem
                 onPress={() => {
@@ -3417,6 +3509,90 @@ function MigrateVmForm({
         >
           {loading ? <ButtonSpinner className="mr-2" /> : null}
           <ButtonText>Migrate</ButtonText>
+        </Button>
+      </HStack>
+    </VStack>
+  );
+}
+
+function ChangeVncPasswordForm({
+  vm,
+  onCancel,
+  onSubmit,
+}: {
+  vm: VM;
+  onCancel: () => void;
+  onSubmit: (password: string) => Promise<void>;
+}) {
+  const [password, setPassword] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const handleSubmit = async () => {
+    const trimmed = password.trim();
+    if (!trimmed) {
+      setError("Password is required.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await onSubmit(trimmed);
+      setPassword("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error changing VNC password.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <VStack className="gap-4">
+      <Text className="text-gray-700">
+        Set a new VNC password for <Text className="font-semibold">{vm.name}</Text>.
+      </Text>
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText className="text-sm font-semibold text-typography-800">
+            New password
+          </FormControlLabelText>
+        </FormControlLabel>
+        <Input variant="outline" className="rounded-md">
+          <InputField
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Enter new VNC password"
+            secureTextEntry
+          />
+        </Input>
+        <FormControlHelper>
+          <FormControlHelperText className="text-xs text-typography-500">
+            This updates the password used by the NoVNC console.
+          </FormControlHelperText>
+        </FormControlHelper>
+      </FormControl>
+
+      {error && (
+        <Text className="text-sm text-red-600">{error}</Text>
+      )}
+
+      <HStack className="justify-end gap-2 mt-2">
+        <Button
+          variant="outline"
+          className="rounded-md px-4 py-2"
+          onPress={onCancel}
+          disabled={saving}
+        >
+          <ButtonText>Cancel</ButtonText>
+        </Button>
+        <Button
+          className="rounded-md px-4 py-2"
+          onPress={handleSubmit}
+          disabled={saving || !password.trim()}
+        >
+          {saving ? <ButtonSpinner className="mr-2" /> : null}
+          <ButtonText>Update</ButtonText>
         </Button>
       </HStack>
     </VStack>

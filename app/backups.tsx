@@ -11,19 +11,30 @@ import {Input, InputField, InputSlot, InputIcon} from "@/components/ui/input";
 import {Modal, ModalBackdrop, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton} from "@/components/ui/modal";
 import {Select, SelectTrigger, SelectInput, SelectItem, SelectIcon, SelectPortal, SelectBackdrop as SelectBackdropContent, SelectContent, SelectDragIndicator, SelectDragIndicatorWrapper} from "@/components/ui/select";
 import {Toast, ToastTitle, useToast} from "@/components/ui/toast";
+import {Switch} from "@/components/ui/switch";
 import {ChevronDownIcon} from "@/components/ui/icon";
-import {Search, HardDrive, Calendar, Database, RefreshCw, Trash2, RotateCcw} from "lucide-react-native";
+import {Search, HardDrive, Calendar, Database, RefreshCw, Trash2, RotateCcw, Plus} from "lucide-react-native";
+import {listBackups, deleteBackup as deleteBackupApi, createBackup as createBackupApi, useBackup as useBackupApi} from "@/services/backups";
+import {getAllVMs, listSlaves, VirtualMachine, Slave} from "@/services/vms-client";
+import {listMounts} from "@/services/hyperhive";
+import {Mount} from "@/types/mount";
 
 // Interfaces TypeScript
+type BackupStatus = "complete" | "partial" | "failed" | string;
+type BackupType = "full" | "incremental" | string;
+
 interface Backup {
   id: string;
   vmName: string;
   machineName: string;
   backupDate: Date;
-  size: number; // em GB
-  nfsShareId: number;
-  status: "complete" | "partial" | "failed";
-  type: "full" | "incremental";
+  size: number | null; // em GB
+  nfsShareId: number | null;
+  status?: BackupStatus | null;
+  type?: BackupType | null;
+  live?: boolean;
+  automatic?: boolean;
+  path?: string;
 }
 
 interface BackupStats {
@@ -33,73 +44,266 @@ interface BackupStats {
   lastBackup: Date | null;
 }
 
-// Mock Data
-const MOCK_BACKUPS: Backup[] = [
-  {
-    id: "bkp-001",
-    vmName: "IEOP",
-    machineName: "marques512sv",
-    backupDate: new Date("2025-11-27T03:00:00"),
-    size: 45.2,
-    nfsShareId: 1,
-    status: "complete",
-    type: "full",
-  },
-  {
-    id: "bkp-002",
-    vmName: "IEOP",
-    machineName: "marques512sv",
-    backupDate: new Date("2025-11-26T03:00:00"),
-    size: 8.5,
-    nfsShareId: 1,
-    status: "complete",
-    type: "incremental",
-  },
-  {
-    id: "bkp-003",
-    vmName: "test",
-    machineName: "marques2673sv",
-    backupDate: new Date("2025-11-27T03:00:00"),
-    size: 38.7,
-    nfsShareId: 2,
-    status: "complete",
-    type: "full",
-  },
-  {
-    id: "bkp-004",
-    vmName: "win10",
-    machineName: "marques512sv",
-    backupDate: new Date("2025-11-25T03:00:00"),
-    size: 52.1,
-    nfsShareId: 1,
-    status: "complete",
-    type: "full",
-  },
-  {
-    id: "bkp-005",
-    vmName: "test",
-    machineName: "marques2673sv",
-    backupDate: new Date("2025-11-26T03:00:00"),
-    size: 5.2,
-    nfsShareId: 2,
-    status: "complete",
-    type: "incremental",
-  },
-];
-
-const NFS_SHARES: Record<number, string> = {
-  1: "marques512sv_500gymKlE2",
-  2: "marques2673sv_testeraidRItPmt",
-};
-
 export default function BackupsScreen() {
   const colorScheme = useColorScheme();
   const toast = useToast();
-  const [backups, setBackups] = React.useState<Backup[]>(MOCK_BACKUPS);
-  const [loading, setLoading] = React.useState(false);
+  const [backups, setBackups] = React.useState<Backup[]>([]);
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [restoreBackup, setRestoreBackup] = React.useState<Backup | null>(null);
-  const [selectedMachine, setSelectedMachine] = React.useState<string>("");
+  const [restoreMachine, setRestoreMachine] = React.useState<string>("");
+  const [restoreVmName, setRestoreVmName] = React.useState("");
+  const [restoreMemory, setRestoreMemory] = React.useState("");
+  const [restoreVcpu, setRestoreVcpu] = React.useState("");
+  const [restoreNetwork, setRestoreNetwork] = React.useState("");
+  const [restorePassword, setRestorePassword] = React.useState("");
+  const [restoreNfsShare, setRestoreNfsShare] = React.useState<string>("");
+  const [restoreCpuXml, setRestoreCpuXml] = React.useState("");
+  const [restoreLive, setRestoreLive] = React.useState(false);
+  const [restoring, setRestoring] = React.useState(false);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = React.useState(false);
+  const [createVmName, setCreateVmName] = React.useState("");
+  const [createNfsId, setCreateNfsId] = React.useState<string>("");
+  const [creatingBackup, setCreatingBackup] = React.useState(false);
+  const [nfsShares, setNfsShares] = React.useState<Record<number, string>>({});
+  const [vmOptions, setVmOptions] = React.useState<VirtualMachine[]>([]);
+  const [machineOptions, setMachineOptions] = React.useState<Slave[]>([]);
+  const [loadingOptions, setLoadingOptions] = React.useState(false);
+
+  const showToastMessage = React.useCallback(
+    (title: string, action: "success" | "error" = "success") => {
+      toast.show({
+        placement: "top",
+        render: ({id}) => (
+          <Toast
+            nativeID={"toast-" + id}
+            className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+            action={action}
+          >
+            <ToastTitle size="sm">{title}</ToastTitle>
+          </Toast>
+        ),
+      });
+    },
+    [toast]
+  );
+
+  const parseBackupDate = (value: unknown) => {
+    const candidates = Array.isArray(value) ? value : [value];
+    const knownKeys = [
+      "backupDate",
+      "backup_date",
+      "date",
+      "created_at",
+      "timestamp",
+      "time",
+      "CreatedAt",
+    ];
+    if (value && typeof value === "object") {
+      for (const key of knownKeys) {
+        const candidate = (value as Record<string, unknown>)[key];
+        if (candidate) {
+          const parsed = new Date(String(candidate));
+          if (!Number.isNaN(parsed.getTime())) {
+            return parsed;
+          }
+        }
+      }
+    }
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+      const parsed = new Date(String(candidate));
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed;
+      }
+    }
+    return new Date();
+  };
+
+  const extractShareFromPath = (path?: string | null) => {
+    if (!path) return "";
+    const parts = path.split("/").filter(Boolean);
+    const sharedIndex = parts.findIndex((p) => p === "shared");
+    if (sharedIndex >= 0 && parts[sharedIndex + 1]) {
+      return parts[sharedIndex + 1];
+    }
+    return "";
+  };
+
+  const mapBackup = React.useCallback((item: any, index: number): Backup => {
+    const source = item?.db_res ?? item;
+    const fallbackId = `backup-${index}`;
+    const id =
+      source?.Id ??
+      item?.id ??
+      item?.backup_id ??
+      item?.bak_id ??
+      item?._id ??
+      source?.Name ??
+      fallbackId;
+    const vmName = source?.Name ?? item?.vm_name ?? item?.vmName ?? item?.vm ?? "Unknown VM";
+    const path = source?.Path ?? item?.path ?? "";
+    const machineName =
+      extractShareFromPath(path) ||
+      item?.machine_name ||
+      item?.slave_name ||
+      item?.machine ||
+      item?.host ||
+      "Unknown host";
+    const sizeRaw =
+      source?.Size ??
+      source?.size ??
+      source?.size_gb ??
+      source?.sizeGB ??
+      source?.total_size_gb ??
+      item?.size ??
+      null;
+    const parsedSize =
+      typeof sizeRaw === "number"
+        ? sizeRaw
+        : typeof sizeRaw === "string"
+        ? Number(sizeRaw)
+        : null;
+    const nfsRaw =
+      source?.NfsId ??
+      item?.nfs_share_id ??
+      item?.nfsShareId ??
+      item?.nfs_id ??
+      item?.nfs ??
+      item?.nfsId;
+    const nfsShareId =
+      nfsRaw === undefined || nfsRaw === null || Number.isNaN(Number(nfsRaw))
+        ? null
+        : Number(nfsRaw);
+    const status =
+      item?.status ??
+      item?.state ??
+      item?.backup_status ??
+      source?.status ??
+      ("complete" as BackupStatus | null);
+    const type = item?.type ?? item?.backup_type ?? source?.type ?? ("full" as BackupType | null);
+    const live = Boolean(item?.live ?? item?.isLive ?? source?.live);
+    const automatic = Boolean(source?.Automatic ?? item?.automatic ?? item?.Automatic);
+
+    return {
+      id: String(id),
+      vmName: String(vmName),
+      machineName: String(machineName),
+      backupDate: parseBackupDate(
+        item?.backupDate ?? item?.created_at ?? item?.date ?? source?.CreatedAt ?? item
+      ),
+      size: Number.isFinite(parsedSize) ? Number(parsedSize) : null,
+      nfsShareId,
+      status,
+      type,
+      live,
+      automatic,
+      path,
+    };
+  }, []);
+
+  const loadOptions = React.useCallback(async () => {
+    setLoadingOptions(true);
+    try {
+      const [mounts, vms, slaves] = await Promise.all([
+        listMounts().catch(() => [] as Mount[]),
+        getAllVMs().catch(() => [] as VirtualMachine[]),
+        listSlaves().catch(() => [] as Slave[]),
+      ]);
+      if (Array.isArray(mounts)) {
+        const mapped: Record<number, string> = {};
+        mounts.forEach((mount) => {
+          if (!mount?.NfsShare) return;
+          const id = mount.NfsShare.Id;
+          const label =
+            mount.NfsShare.Name ||
+            mount.NfsShare.Target ||
+            mount.NfsShare.FolderPath ||
+            `NFS #${id}`;
+          mapped[id] = label;
+        });
+        setNfsShares(mapped);
+      }
+      if (Array.isArray(vms)) {
+        setVmOptions(vms);
+      }
+      if (Array.isArray(slaves)) {
+        setMachineOptions(slaves);
+      }
+    } catch (err) {
+      console.error("Error loading backup dependencies", err);
+      const message = err instanceof Error ? err.message : "Failed to load backup options.";
+      showToastMessage(message, "error");
+    } finally {
+      setLoadingOptions(false);
+    }
+  }, [showToastMessage]);
+
+  const refreshBackups = React.useCallback(
+    async (showMessage = false) => {
+      setIsRefreshing(true);
+      try {
+        const data = await listBackups();
+        const mapped = Array.isArray(data) ? data.map(mapBackup) : [];
+        setBackups(mapped);
+        if (showMessage) {
+          showToastMessage("Backups updated");
+        }
+      } catch (err) {
+        console.error("Error fetching backups", err);
+        const message = err instanceof Error ? err.message : "Unable to load backups.";
+        showToastMessage(message, "error");
+      } finally {
+        setIsRefreshing(false);
+      }
+    },
+    [mapBackup, showToastMessage]
+  );
+
+  React.useEffect(() => {
+    refreshBackups();
+    loadOptions();
+  }, [refreshBackups, loadOptions]);
+
+  React.useEffect(() => {
+    if (!restoreBackup) return;
+    const vmMatch = vmOptions.find((vm) => vm.name === restoreBackup.vmName);
+    const defaultMachine =
+      restoreBackup.machineName ||
+      vmMatch?.machineName ||
+      machineOptions[0]?.MachineName ||
+      "";
+    const defaultNfs =
+      restoreBackup.nfsShareId != null
+        ? String(restoreBackup.nfsShareId)
+        : Object.keys(nfsShares)[0] ?? "";
+    const memoryValue = vmMatch?.DefinedRam ?? vmMatch?.memoryMB ?? null;
+    const vcpuValue = vmMatch?.DefinedCPUS ?? vmMatch?.cpuCount ?? null;
+    const defaultNetwork = vmMatch?.network ?? "";
+
+    setRestoreVmName(restoreBackup.vmName);
+    setRestoreMachine(defaultMachine);
+    setRestoreMemory(memoryValue ? String(memoryValue) : "");
+    setRestoreVcpu(vcpuValue ? String(vcpuValue) : "");
+    setRestoreNetwork(defaultNetwork || "default");
+    setRestorePassword(vmMatch?.VNCPassword ?? "");
+    setRestoreNfsShare(defaultNfs);
+    setRestoreCpuXml(vmMatch?.CPUXML ?? "");
+    setRestoreLive(Boolean(restoreBackup.live ?? vmMatch?.isLive));
+  }, [restoreBackup, vmOptions, machineOptions, nfsShares]);
+
+  React.useEffect(() => {
+    if (!createVmName && vmOptions.length > 0) {
+      setCreateVmName(vmOptions[0].name);
+    }
+  }, [createVmName, vmOptions]);
+
+  React.useEffect(() => {
+    if (!createNfsId && Object.keys(nfsShares).length > 0) {
+      setCreateNfsId(Object.keys(nfsShares)[0]);
+    }
+  }, [createNfsId, nfsShares]);
 
   // Agrupar backups por VM
   const backupsByVm = React.useMemo(() => {
@@ -110,32 +314,38 @@ export default function BackupsScreen() {
     );
     const grouped: Record<string, Backup[]> = {};
     filtered.forEach((backup) => {
-      const key = `${backup.vmName}@${backup.machineName}`;
+      const key = backup.vmName;
       if (!grouped[key]) {
         grouped[key] = [];
       }
       grouped[key].push(backup);
     });
-    // Ordenar backups por data (mais recente primeiro)
     Object.keys(grouped).forEach((key) => {
       grouped[key].sort((a, b) => b.backupDate.getTime() - a.backupDate.getTime());
     });
     return grouped;
   }, [backups, searchQuery]);
 
-  // Estatísticas
   const stats: BackupStats = React.useMemo(() => {
     const total = backups.length;
-    const complete = backups.filter((b) => b.status === "complete").length;
-    const totalSize = backups.reduce((sum, b) => sum + b.size, 0);
-    const lastBackup =
-      backups.length > 0
-        ? new Date(Math.max(...backups.map((b) => b.backupDate.getTime())))
-        : null;
+    const complete = backups.filter(
+      (b) => (b.status ?? "").toString().toLowerCase() === "complete"
+    ).length;
+    const totalSize = backups.reduce(
+      (sum, b) => sum + (typeof b.size === "number" && Number.isFinite(b.size) ? b.size : 0),
+      0
+    );
+    const timestamps = backups
+      .map((b) => b.backupDate?.getTime?.())
+      .filter((value): value is number => typeof value === "number" && !Number.isNaN(value));
+    const lastBackup = timestamps.length ? new Date(Math.max(...timestamps)) : null;
     return {total, complete, totalSize, lastBackup};
   }, [backups]);
 
   const formatDate = (date: Date): string => {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+      return "Invalid date";
+    }
     return new Intl.DateTimeFormat("en-US", {
       day: "2-digit",
       month: "short",
@@ -145,30 +355,15 @@ export default function BackupsScreen() {
     }).format(date);
   };
 
-  const getNfsName = (id: number): string => {
-    return NFS_SHARES[id] || `NFS #${id}`;
+  const getNfsName = (id: number | null | undefined): string => {
+    if (id == null) return "N/A";
+    return nfsShares[id] || `NFS #${id}`;
   };
+  const restoreNfsLabel = restoreNfsShare ? getNfsName(Number(restoreNfsShare)) : "";
+  const createNfsLabel = createNfsId ? getNfsName(Number(createNfsId)) : "";
 
-  const handleRefresh = async () => {
-    setLoading(true);
-    try {
-      // Simulação de fetch
-      await new Promise((res) => setTimeout(res, 800));
-      toast.show({
-        placement: "top",
-        render: ({id}) => (
-          <Toast
-            nativeID={"toast-" + id}
-            className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-            action="success"
-          >
-            <ToastTitle size="sm">Backups updated</ToastTitle>
-          </Toast>
-        ),
-      });
-    } finally {
-      setLoading(false);
-    }
+  const handleRefresh = () => {
+    refreshBackups(true);
   };
 
   const handleDelete = (backup: Backup) => {
@@ -180,43 +375,90 @@ export default function BackupsScreen() {
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => {
-            setBackups((prev) => prev.filter((b) => b.id !== backup.id));
-            toast.show({
-              placement: "top",
-              render: ({id}) => (
-                <Toast
-                  nativeID={"toast-" + id}
-                  className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-                  action="success"
-                >
-                  <ToastTitle size="sm">Backup deleted</ToastTitle>
-                </Toast>
-              ),
-            });
+          onPress: async () => {
+            setDeletingId(backup.id);
+            try {
+              await deleteBackupApi(backup.id);
+              setBackups((prev) => prev.filter((b) => b.id !== backup.id));
+              showToastMessage("Backup deleted");
+            } catch (err) {
+              console.error("Error deleting backup", err);
+              const message = err instanceof Error ? err.message : "Failed to delete backup.";
+              showToastMessage(message, "error");
+            } finally {
+              setDeletingId(null);
+            }
           },
         },
       ]
     );
   };
 
-  const handleRestoreSubmit = () => {
-    if (!restoreBackup || !selectedMachine) return;
-    
-    toast.show({
-      placement: "top",
-      render: ({id}) => (
-        <Toast
-          nativeID={"toast-" + id}
-          className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-          action="success"
-        >
-          <ToastTitle size="sm">Restore started</ToastTitle>
-        </Toast>
-      ),
-    });
-    setRestoreBackup(null);
-    setSelectedMachine("");
+  const resetRestoreForm = React.useCallback(() => {
+    setRestoreMachine("");
+    setRestoreVmName("");
+    setRestoreMemory("");
+    setRestoreVcpu("");
+    setRestoreNetwork("");
+    setRestorePassword("");
+    setRestoreNfsShare("");
+    setRestoreCpuXml("");
+    setRestoreLive(false);
+  }, []);
+
+  const handleRestoreSubmit = async () => {
+    if (!restoreBackup) return;
+    const vmName = restoreVmName || restoreBackup.vmName;
+    const machine = restoreMachine || restoreBackup.machineName;
+    const nfsIdRaw = restoreNfsShare || (restoreBackup.nfsShareId != null ? String(restoreBackup.nfsShareId) : "");
+    const memory = Number(restoreMemory || 0);
+    const vcpu = Number(restoreVcpu || 0);
+    const nfsId = Number(nfsIdRaw || 0);
+
+    setRestoring(true);
+    try {
+      await useBackupApi(restoreBackup.id, {
+        slave_name: machine,
+        vm_name: vmName,
+        memory: Number.isFinite(memory) ? memory : 0,
+        vcpu: Number.isFinite(vcpu) ? vcpu : 0,
+        network: restoreNetwork || "default",
+        VNC_password: restorePassword,
+        nfs_share_id: Number.isFinite(nfsId) ? nfsId : 0,
+        cpu_xml: restoreCpuXml ?? "",
+        live: restoreLive,
+      });
+      showToastMessage("Restore started");
+      setRestoreBackup(null);
+      resetRestoreForm();
+    } catch (err) {
+      console.error("Error restoring backup", err);
+      const message = err instanceof Error ? err.message : "Failed to start restore.";
+      showToastMessage(message, "error");
+    } finally {
+      setRestoring(false);
+    }
+  };
+
+  const handleCreateBackup = async () => {
+    if (!createVmName || !createNfsId) {
+      showToastMessage("Select a VM and NFS target", "error");
+      return;
+    }
+
+    setCreatingBackup(true);
+    try {
+      await createBackupApi(createVmName, Number(createNfsId));
+      showToastMessage("Backup started");
+      setShowCreateModal(false);
+      await refreshBackups(true);
+    } catch (err) {
+      console.error("Error creating backup", err);
+      const message = err instanceof Error ? err.message : "Failed to start backup.";
+      showToastMessage(message, "error");
+    } finally {
+      setCreatingBackup(false);
+    }
   };
 
   const refreshControlTint = colorScheme === "dark" ? "#F8FAFC" : "#0F172A";
@@ -229,7 +471,7 @@ export default function BackupsScreen() {
         contentContainerStyle={{paddingBottom: 64}}
         refreshControl={
           <RefreshControl
-            refreshing={loading}
+            refreshing={isRefreshing}
             onRefresh={handleRefresh}
             tintColor={refreshControlTint}
             colors={[refreshControlTint]}
@@ -327,7 +569,7 @@ export default function BackupsScreen() {
           </HStack>
 
           {/* Search Bar */}
-          <HStack className="mb-6 gap-2">
+          <HStack className="mb-6 gap-2 flex-wrap">
             <Input variant="outline" className="flex-1 rounded-lg">
               <InputSlot className="pl-3">
                 <InputIcon as={Search} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
@@ -342,16 +584,33 @@ export default function BackupsScreen() {
               variant="outline"
               size="md"
               onPress={handleRefresh}
-              disabled={loading}
+              disabled={isRefreshing}
               className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
             >
-              {loading ? (
+              {isRefreshing ? (
                 <ButtonSpinner />
               ) : (
                 <ButtonIcon
                   as={RefreshCw}
                   className="text-typography-700 dark:text-[#E8EBF0]"
                 />
+              )}
+            </Button>
+            <Button
+              size="md"
+              className="rounded-lg px-4"
+              onPress={() => setShowCreateModal(true)}
+              disabled={creatingBackup}
+            >
+              {creatingBackup ? (
+                <ButtonSpinner />
+              ) : (
+                <>
+                  <ButtonIcon as={Plus} className="text-background-0 mr-1.5" />
+                  <ButtonText className="text-background-0" style={{fontFamily: "Inter_600SemiBold"}}>
+                    New backup
+                  </ButtonText>
+                </>
               )}
             </Button>
           </HStack>
@@ -379,11 +638,11 @@ export default function BackupsScreen() {
             </Box>
           ) : (
             <VStack className="gap-6">
-              {Object.entries(backupsByVm).map(([key, vmBackups]) => {
-                const [vmName, machineName] = key.split("@");
+              {Object.entries(backupsByVm).map(([vmName, vmBackups]) => {
+                const firstBackup = vmBackups[0];
                 return (
                   <Box
-                    key={key}
+                    key={vmName}
                     className="rounded-2xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] overflow-hidden web:shadow-md dark:web:shadow-none"
                   >
                     {/* Header */}
@@ -399,7 +658,7 @@ export default function BackupsScreen() {
                         className="text-sm text-[#9AA4B8] dark:text-[#8A94A8]"
                         style={{fontFamily: "Inter_400Regular"}}
                       >
-                        {machineName} • {vmBackups.length} backup
+                        {getNfsName(firstBackup?.nfsShareId ?? null)} • {vmBackups.length} backup
                         {vmBackups.length > 1 ? "s" : ""}
                       </Text>
                     </Box>
@@ -416,18 +675,6 @@ export default function BackupsScreen() {
                             DATE
                           </Text>
                           <Text
-                            className="flex-1 text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                            style={{fontFamily: "Inter_600SemiBold"}}
-                          >
-                            TYPE
-                          </Text>
-                          <Text
-                            className="flex-1 text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                            style={{fontFamily: "Inter_600SemiBold"}}
-                          >
-                            SIZE
-                          </Text>
-                          <Text
                             className="flex-[2] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                             style={{fontFamily: "Inter_600SemiBold"}}
                           >
@@ -437,7 +684,13 @@ export default function BackupsScreen() {
                             className="flex-1 text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                             style={{fontFamily: "Inter_600SemiBold"}}
                           >
-                            STATUS
+                            AUTOMATIC
+                          </Text>
+                          <Text
+                            className="flex-1 text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
+                            style={{fontFamily: "Inter_600SemiBold"}}
+                          >
+                            LIVE
                           </Text>
                           <Text
                             className="flex-1 text-xs text-[#9AA4B8] dark:text-[#8A94A8] text-right"
@@ -448,113 +701,110 @@ export default function BackupsScreen() {
                         </HStack>
 
                         {/* Table Rows */}
-                        {vmBackups.map((backup, index) => (
-                          <HStack
-                            key={backup.id}
-                            className={`px-4 py-3 items-center ${
-                              index !== vmBackups.length - 1
-                                ? "border-b border-outline-100 dark:border-[#1E2F47]"
-                                : ""
-                            }`}
-                          >
-                            <Text
-                              className="flex-[2] text-sm text-typography-900 dark:text-[#E8EBF0]"
-                              style={{fontFamily: "Inter_400Regular"}}
+                        {vmBackups.map((backup, index) => {
+                          const automatic = Boolean(backup.automatic);
+                          const live = Boolean(backup.live);
+
+                          return (
+                            <HStack
+                              key={backup.id}
+                              className={`px-4 py-3 items-center ${
+                                index !== vmBackups.length - 1
+                                  ? "border-b border-outline-100 dark:border-[#1E2F47]"
+                                  : ""
+                              }`}
                             >
-                              {formatDate(backup.backupDate)}
-                            </Text>
-                            <Box className="flex-1">
-                              <Badge
-                                size="sm"
-                                variant="outline"
-                                className={`rounded-full w-fit ${
-                                  backup.type === "full"
-                                    ? "bg-[#3b82f619] border-[#3b82f6] dark:bg-[#3b82f625] dark:border-[#60a5fa]"
-                                    : "bg-[#8b5cf619] border-[#8b5cf6] dark:bg-[#8b5cf625] dark:border-[#a78bfa]"
-                                }`}
+                              <Text
+                                className="flex-[2] text-sm text-typography-900 dark:text-[#E8EBF0]"
+                                style={{fontFamily: "Inter_400Regular"}}
                               >
-                                <BadgeText
-                                  className={`text-xs ${
-                                    backup.type === "full"
-                                      ? "text-[#3b82f6] dark:text-[#60a5fa]"
-                                      : "text-[#8b5cf6] dark:text-[#a78bfa]"
+                                {formatDate(backup.backupDate)}
+                              </Text>
+                              <Text
+                                className="flex-[2] text-sm text-typography-600 dark:text-typography-400"
+                                style={{fontFamily: "Inter_400Regular"}}
+                              >
+                                {getNfsName(backup.nfsShareId)}
+                              </Text>
+                              <Box className="flex-1">
+                                <Badge
+                                  size="sm"
+                                  variant="outline"
+                                  className={`rounded-full w-fit ${
+                                    automatic
+                                      ? "bg-[#3b82f619] border-[#3b82f6] dark:bg-[#3b82f625] dark:border-[#60a5fa]"
+                                      : "bg-[#ef444419] border-[#ef4444] dark:bg-[#ef444425] dark:border-[#f87171]"
                                   }`}
-                                  style={{fontFamily: "Inter_500Medium"}}
                                 >
-                                  {backup.type === "full" ? "Full" : "Incremental"}
-                                </BadgeText>
-                              </Badge>
-                            </Box>
-                            <Text
-                              className="flex-1 text-sm text-typography-900 dark:text-[#E8EBF0]"
-                              style={{fontFamily: "Inter_400Regular"}}
-                            >
-                              {backup.size.toFixed(1)} GB
-                            </Text>
-                            <Text
-                              className="flex-[2] text-sm text-typography-600 dark:text-typography-400"
-                              style={{fontFamily: "Inter_400Regular"}}
-                            >
-                              {getNfsName(backup.nfsShareId)}
-                            </Text>
-                            <Box className="flex-1">
-                              <Badge
-                                size="sm"
-                                variant="outline"
-                                className={`rounded-full w-fit ${
-                                  backup.status === "complete"
-                                    ? "bg-[#2dd4be19] border-[#2DD4BF] dark:bg-[#2DD4BF25] dark:border-[#5EEAD4]"
-                                    : backup.status === "partial"
-                                    ? "bg-[#fbbf2419] border-[#FBBF24] dark:bg-[#FBBF2425] dark:border-[#FCD34D]"
-                                    : "bg-[#ef444419] border-[#ef4444] dark:bg-[#ef444425] dark:border-[#f87171]"
-                                }`}
-                              >
-                                <BadgeText
-                                  className={`text-xs ${
-                                    backup.status === "complete"
-                                      ? "text-[#2DD4BF] dark:text-[#5EEAD4]"
-                                      : backup.status === "partial"
-                                      ? "text-[#FBBF24] dark:text-[#FCD34D]"
-                                      : "text-[#ef4444] dark:text-[#f87171]"
+                                  <BadgeText
+                                    className={`text-xs ${
+                                      automatic
+                                        ? "text-[#3b82f6] dark:text-[#60a5fa]"
+                                        : "text-[#ef4444] dark:text-[#f87171]"
+                                    }`}
+                                    style={{fontFamily: "Inter_500Medium"}}
+                                  >
+                                    {automatic ? "Automatic" : "Manual"}
+                                  </BadgeText>
+                                </Badge>
+                              </Box>
+                              <Box className="flex-1">
+                                <Badge
+                                  size="sm"
+                                  variant="outline"
+                                  className={`rounded-full w-fit ${
+                                    live
+                                      ? "bg-[#22c55e19] border-[#22c55e] dark:bg-[#22c55e25] dark:border-[#4ade80]"
+                                      : "bg-[#9AA4B819] border-[#9AA4B8] dark:bg-[#9AA4B825] dark:border-[#94a3b8]"
                                   }`}
-                                  style={{fontFamily: "Inter_500Medium"}}
                                 >
-                                  {backup.status === "complete"
-                                    ? "Complete"
-                                    : backup.status === "partial"
-                                    ? "Partial"
-                                    : "Failed"}
-                                </BadgeText>
-                              </Badge>
-                            </Box>
-                            <HStack className="flex-1 gap-2 justify-end">
-                              <Button
-                                size="xs"
-                                variant="outline"
-                                className="rounded-md"
-                                onPress={() => setRestoreBackup(backup)}
-                              >
-                                <ButtonIcon
-                                  as={RotateCcw}
+                                  <BadgeText
+                                    className={`text-xs ${
+                                      live
+                                        ? "text-[#22c55e] dark:text-[#4ade80]"
+                                        : "text-[#475569] dark:text-[#cbd5e1]"
+                                    }`}
+                                    style={{fontFamily: "Inter_500Medium"}}
+                                  >
+                                    {live ? "Live" : "Cold"}
+                                  </BadgeText>
+                                </Badge>
+                              </Box>
+                              <HStack className="flex-1 gap-2 justify-end">
+                                <Button
                                   size="xs"
-                                  className="text-typography-700 dark:text-[#E8EBF0]"
-                                />
-                              </Button>
-                              <Button
-                                size="xs"
-                                variant="outline"
-                                className="rounded-md border-red-500"
-                                onPress={() => handleDelete(backup)}
-                              >
-                                <ButtonIcon
-                                  as={Trash2}
+                                  variant="outline"
+                                  className="rounded-md"
+                                  onPress={() => setRestoreBackup(backup)}
+                                  disabled={restoring}
+                                >
+                                  <ButtonIcon
+                                    as={RotateCcw}
+                                    size="xs"
+                                    className="text-typography-700 dark:text-[#E8EBF0]"
+                                  />
+                                </Button>
+                                <Button
                                   size="xs"
-                                  className="text-red-500"
-                                />
-                              </Button>
+                                  variant="outline"
+                                  className="rounded-md border-red-500"
+                                  onPress={() => handleDelete(backup)}
+                                  disabled={deletingId === backup.id}
+                                >
+                                  {deletingId === backup.id ? (
+                                    <ButtonSpinner />
+                                  ) : (
+                                    <ButtonIcon
+                                      as={Trash2}
+                                      size="xs"
+                                      className="text-red-500"
+                                    />
+                                  )}
+                                </Button>
+                              </HStack>
                             </HStack>
-                          </HStack>
-                        ))}
+                          );
+                        })}
                       </Box>
                     </Box>
                   </Box>
@@ -566,7 +816,13 @@ export default function BackupsScreen() {
       </ScrollView>
 
       {/* Modal: Restaurar Backup */}
-      <Modal isOpen={!!restoreBackup} onClose={() => setRestoreBackup(null)}>
+      <Modal
+        isOpen={!!restoreBackup}
+        onClose={() => {
+          setRestoreBackup(null);
+          resetRestoreForm();
+        }}
+      >
         <ModalBackdrop className="bg-black/60" />
         <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] shadow-2xl max-w-lg p-6">
           <ModalHeader className="pb-4">
@@ -582,31 +838,33 @@ export default function BackupsScreen() {
           <ModalBody className="py-4">
             {restoreBackup && (
               <VStack className="gap-5">
-                <VStack className="gap-2">
-                  <Text 
-                    className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                    style={{fontFamily: "Inter_500Medium"}}
-                  >
-                    VM
-                  </Text>
-                  <Text
-                    className="text-base text-typography-900 dark:text-[#E8EBF0]"
-                    style={{fontFamily: "Inter_600SemiBold"}}
-                  >
-                    {restoreBackup.vmName}
-                  </Text>
-                </VStack>
-                <VStack className="gap-2">
-                  <Text 
-                    className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                    style={{fontFamily: "Inter_500Medium"}}
-                  >
-                    Backup Date
-                  </Text>
-                  <Text className="text-base text-typography-900 dark:text-[#E8EBF0]">
-                    {formatDate(restoreBackup.backupDate)}
-                  </Text>
-                </VStack>
+                <HStack className="gap-4">
+                  <VStack className="flex-1 gap-2">
+                    <Text 
+                      className="text-sm text-typography-700 dark:text-[#E8EBF0]"
+                      style={{fontFamily: "Inter_500Medium"}}
+                    >
+                      VM
+                    </Text>
+                    <Text
+                      className="text-base text-typography-900 dark:text-[#E8EBF0]"
+                      style={{fontFamily: "Inter_600SemiBold"}}
+                    >
+                      {restoreBackup.vmName}
+                    </Text>
+                  </VStack>
+                  <VStack className="flex-1 gap-2">
+                    <Text 
+                      className="text-sm text-typography-700 dark:text-[#E8EBF0]"
+                      style={{fontFamily: "Inter_500Medium"}}
+                    >
+                      Backup Date
+                    </Text>
+                    <Text className="text-base text-typography-900 dark:text-[#E8EBF0]">
+                      {formatDate(restoreBackup.backupDate)}
+                    </Text>
+                  </VStack>
+                </HStack>
                 <VStack className="gap-2">
                   <Text 
                     className="text-sm text-typography-700 dark:text-[#E8EBF0]"
@@ -615,21 +873,40 @@ export default function BackupsScreen() {
                     Size
                   </Text>
                   <Text className="text-base text-typography-900 dark:text-[#E8EBF0]">
-                    {restoreBackup.size.toFixed(1)} GB
+                    {typeof restoreBackup.size === "number" && Number.isFinite(restoreBackup.size)
+                      ? `${restoreBackup.size.toFixed(1)} GB`
+                      : "—"}
                   </Text>
                 </VStack>
+
                 <VStack className="gap-2">
                   <Text 
                     className="text-sm text-typography-700 dark:text-[#E8EBF0]"
                     style={{fontFamily: "Inter_500Medium"}}
                   >
-                    Select target machine
+                    VM name
                   </Text>
-                  <Select>
+                  <Input variant="outline" className="rounded-lg">
+                    <InputField value={restoreVmName} onChangeText={setRestoreVmName} />
+                  </Input>
+                </VStack>
+
+                <VStack className="gap-2">
+                  <Text 
+                    className="text-sm text-typography-700 dark:text-[#E8EBF0]"
+                    style={{fontFamily: "Inter_500Medium"}}
+                  >
+                    Target machine
+                  </Text>
+                  <Select
+                    selectedValue={restoreMachine}
+                    onValueChange={setRestoreMachine}
+                    isDisabled={loadingOptions || machineOptions.length === 0}
+                  >
                     <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
                       <SelectInput
-                        placeholder="Choose a machine..."
-                        value={selectedMachine}
+                        placeholder={loadingOptions ? "Loading..." : "Choose a machine..."}
+                        value={restoreMachine}
                         className="text-typography-900 dark:text-[#E8EBF0]"
                       />
                       <SelectIcon className="mr-3 text-typography-500 dark:text-typography-400" as={ChevronDownIcon} />
@@ -640,22 +917,146 @@ export default function BackupsScreen() {
                         <SelectDragIndicatorWrapper>
                           <SelectDragIndicator />
                         </SelectDragIndicatorWrapper>
-                        <SelectItem
-                          label="marques512sv"
-                          value="marques512sv"
-                        />
-                        <SelectItem
-                          label="marques2673sv"
-                          value="marques2673sv"
-                        />
-                        <SelectItem
-                          label="swift512"
-                          value="swift512"
-                        />
+                        {machineOptions.length === 0 ? (
+                          <SelectItem label={loadingOptions ? "Loading..." : "No machines"} value="" isDisabled />
+                        ) : (
+                          machineOptions.map((machine) => (
+                            <SelectItem
+                              key={machine.MachineName}
+                              label={machine.MachineName}
+                              value={machine.MachineName}
+                            />
+                          ))
+                        )}
                       </SelectContent>
                     </SelectPortal>
                   </Select>
                 </VStack>
+
+                <HStack className="gap-3">
+                  <VStack className="flex-1 gap-2">
+                    <Text 
+                      className="text-sm text-typography-700 dark:text-[#E8EBF0]"
+                      style={{fontFamily: "Inter_500Medium"}}
+                    >
+                      Memory (MB)
+                    </Text>
+                    <Input variant="outline" className="rounded-lg">
+                      <InputField
+                        keyboardType="numeric"
+                        value={restoreMemory}
+                        onChangeText={setRestoreMemory}
+                      />
+                    </Input>
+                  </VStack>
+                  <VStack className="flex-1 gap-2">
+                    <Text 
+                      className="text-sm text-typography-700 dark:text-[#E8EBF0]"
+                      style={{fontFamily: "Inter_500Medium"}}
+                    >
+                      vCPU
+                    </Text>
+                    <Input variant="outline" className="rounded-lg">
+                      <InputField
+                        keyboardType="numeric"
+                        value={restoreVcpu}
+                        onChangeText={setRestoreVcpu}
+                      />
+                    </Input>
+                  </VStack>
+                </HStack>
+
+                <VStack className="gap-2">
+                  <Text 
+                    className="text-sm text-typography-700 dark:text-[#E8EBF0]"
+                    style={{fontFamily: "Inter_500Medium"}}
+                  >
+                    Network
+                  </Text>
+                  <Input variant="outline" className="rounded-lg">
+                    <InputField value={restoreNetwork} onChangeText={setRestoreNetwork} />
+                  </Input>
+                </VStack>
+
+                <VStack className="gap-2">
+                  <Text 
+                    className="text-sm text-typography-700 dark:text-[#E8EBF0]"
+                    style={{fontFamily: "Inter_500Medium"}}
+                  >
+                    VNC password
+                  </Text>
+                  <Input variant="outline" className="rounded-lg">
+                    <InputField
+                      value={restorePassword}
+                      onChangeText={setRestorePassword}
+                      placeholder="Optional"
+                    />
+                  </Input>
+                </VStack>
+
+                <VStack className="gap-2">
+                  <Text 
+                    className="text-sm text-typography-700 dark:text-[#E8EBF0]"
+                    style={{fontFamily: "Inter_500Medium"}}
+                  >
+                    NFS share
+                  </Text>
+                  <Select
+                    selectedValue={restoreNfsShare}
+                    onValueChange={setRestoreNfsShare}
+                    isDisabled={loadingOptions || Object.keys(nfsShares).length === 0}
+                  >
+                    <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
+                      <SelectInput
+                        placeholder={loadingOptions ? "Loading..." : "Choose a NFS share..."}
+                        value={restoreNfsLabel}
+                        className="text-typography-900 dark:text-[#E8EBF0]"
+                      />
+                      <SelectIcon className="mr-3 text-typography-500 dark:text-typography-400" as={ChevronDownIcon} />
+                    </SelectTrigger>
+                    <SelectPortal>
+                      <SelectBackdropContent />
+                      <SelectContent>
+                        <SelectDragIndicatorWrapper>
+                          <SelectDragIndicator />
+                        </SelectDragIndicatorWrapper>
+                        {Object.keys(nfsShares).length === 0 ? (
+                          <SelectItem label={loadingOptions ? "Loading..." : "No NFS shares"} value="" isDisabled />
+                        ) : (
+                          Object.entries(nfsShares).map(([id, label]) => (
+                            <SelectItem key={id} label={label} value={id} />
+                          ))
+                        )}
+                      </SelectContent>
+                    </SelectPortal>
+                  </Select>
+                </VStack>
+
+                <VStack className="gap-2">
+                  <Text 
+                    className="text-sm text-typography-700 dark:text-[#E8EBF0]"
+                    style={{fontFamily: "Inter_500Medium"}}
+                  >
+                    CPU XML
+                  </Text>
+                  <Input variant="outline" className="rounded-lg">
+                    <InputField
+                      value={restoreCpuXml}
+                      onChangeText={setRestoreCpuXml}
+                      placeholder="Optional CPU XML override"
+                    />
+                  </Input>
+                </VStack>
+
+                <HStack className="items-center justify-between">
+                  <Text 
+                    className="text-sm text-typography-700 dark:text-[#E8EBF0]"
+                    style={{fontFamily: "Inter_500Medium"}}
+                  >
+                    Live restore
+                  </Text>
+                  <Switch value={restoreLive} onValueChange={setRestoreLive} />
+                </HStack>
               </VStack>
             )}
           </ModalBody>
@@ -664,7 +1065,10 @@ export default function BackupsScreen() {
               <Button
                 variant="outline"
                 className="rounded-lg px-6 py-2.5 border-outline-200 dark:border-[#2A3B52]"
-                onPress={() => setRestoreBackup(null)}
+                onPress={() => {
+                  setRestoreBackup(null);
+                  resetRestoreForm();
+                }}
               >
                 <ButtonText 
                   className="text-typography-700 dark:text-[#E8EBF0]"
@@ -675,15 +1079,153 @@ export default function BackupsScreen() {
               </Button>
               <Button
                 className="rounded-lg px-6 py-2.5 bg-typography-900 dark:bg-[#E8EBF0]"
-                disabled={!selectedMachine}
+                disabled={
+                  restoring ||
+                  !restoreMachine ||
+                  !restoreVmName ||
+                  !restoreNfsShare
+                }
                 onPress={handleRestoreSubmit}
               >
-                <ButtonText 
-                  className="text-background-0 dark:text-typography-900"
-                  style={{fontFamily: "Inter_600SemiBold"}}
+                {restoring ? (
+                  <ButtonSpinner />
+                ) : (
+                  <ButtonText 
+                    className="text-background-0 dark:text-typography-900"
+                    style={{fontFamily: "Inter_600SemiBold"}}
+                  >
+                    Restore
+                  </ButtonText>
+                )}
+              </Button>
+            </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Modal: Criar Backup */}
+      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)}>
+        <ModalBackdrop className="bg-black/60" />
+        <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] shadow-2xl max-w-lg p-6">
+          <ModalHeader className="pb-4">
+            <Heading 
+              size="lg" 
+              className="text-typography-900 dark:text-[#E8EBF0]"
+              style={{fontFamily: "Inter_700Bold"}}
+            >
+              Create Backup
+            </Heading>
+            <ModalCloseButton className="text-typography-600 dark:text-typography-400" />
+          </ModalHeader>
+          <ModalBody className="py-4">
+            <VStack className="gap-5">
+              <VStack className="gap-2">
+                <Text 
+                  className="text-sm text-typography-700 dark:text-[#E8EBF0]"
+                  style={{fontFamily: "Inter_500Medium"}}
                 >
-                  Restore
+                  VM
+                </Text>
+                <Select
+                  selectedValue={createVmName}
+                  onValueChange={setCreateVmName}
+                  isDisabled={loadingOptions || vmOptions.length === 0}
+                >
+                  <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
+                    <SelectInput
+                      placeholder={loadingOptions ? "Loading..." : "Choose a VM..."}
+                      value={createVmName}
+                      className="text-typography-900 dark:text-[#E8EBF0]"
+                    />
+                    <SelectIcon className="mr-3 text-typography-500 dark:text-typography-400" as={ChevronDownIcon} />
+                  </SelectTrigger>
+                  <SelectPortal>
+                    <SelectBackdropContent />
+                    <SelectContent>
+                      <SelectDragIndicatorWrapper>
+                        <SelectDragIndicator />
+                      </SelectDragIndicatorWrapper>
+                      {vmOptions.length === 0 ? (
+                        <SelectItem label={loadingOptions ? "Loading..." : "No VMs available"} value="" isDisabled />
+                      ) : (
+                        vmOptions.map((vm) => (
+                          <SelectItem key={vm.name} label={`${vm.name} (${vm.machineName})`} value={vm.name} />
+                        ))
+                      )}
+                    </SelectContent>
+                  </SelectPortal>
+                </Select>
+              </VStack>
+
+              <VStack className="gap-2">
+                <Text 
+                  className="text-sm text-typography-700 dark:text-[#E8EBF0]"
+                  style={{fontFamily: "Inter_500Medium"}}
+                >
+                  NFS share
+                </Text>
+                <Select
+                  selectedValue={createNfsId}
+                  onValueChange={setCreateNfsId}
+                  isDisabled={loadingOptions || Object.keys(nfsShares).length === 0}
+                >
+                  <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
+                    <SelectInput
+                      placeholder={loadingOptions ? "Loading..." : "Choose a NFS share..."}
+                      value={createNfsLabel}
+                      className="text-typography-900 dark:text-[#E8EBF0]"
+                    />
+                    <SelectIcon className="mr-3 text-typography-500 dark:text-typography-400" as={ChevronDownIcon} />
+                  </SelectTrigger>
+                  <SelectPortal>
+                    <SelectBackdropContent />
+                    <SelectContent>
+                      <SelectDragIndicatorWrapper>
+                        <SelectDragIndicator />
+                      </SelectDragIndicatorWrapper>
+                      {Object.keys(nfsShares).length === 0 ? (
+                        <SelectItem label={loadingOptions ? "Loading..." : "No NFS shares"} value="" isDisabled />
+                      ) : (
+                        Object.entries(nfsShares).map(([id, label]) => (
+                          <SelectItem key={id} label={label} value={id} />
+                        ))
+                      )}
+                    </SelectContent>
+                  </SelectPortal>
+                </Select>
+              </VStack>
+            </VStack>
+          </ModalBody>
+          <ModalFooter className="pt-6 border-t border-outline-100 dark:border-[#2A3B52]">
+            <HStack className="justify-end gap-3 w-full">
+              <Button
+                variant="outline"
+                className="rounded-lg px-6 py-2.5 border-outline-200 dark:border-[#2A3B52]"
+                onPress={() => setShowCreateModal(false)}
+                disabled={creatingBackup}
+              >
+                <ButtonText 
+                  className="text-typography-700 dark:text-[#E8EBF0]"
+                  style={{fontFamily: "Inter_500Medium"}}
+                >
+                  Cancel
                 </ButtonText>
+              </Button>
+              <Button
+                className="rounded-lg px-6 py-2.5 bg-typography-900 dark:bg-[#E8EBF0]"
+                disabled={creatingBackup || !createVmName || !createNfsId}
+                onPress={handleCreateBackup}
+              >
+                {creatingBackup ? (
+                  <ButtonSpinner />
+                ) : (
+                  <ButtonText 
+                    className="text-background-0 dark:text-typography-900"
+                    style={{fontFamily: "Inter_600SemiBold"}}
+                  >
+                    Start backup
+                  </ButtonText>
+                )}
               </Button>
             </HStack>
           </ModalFooter>

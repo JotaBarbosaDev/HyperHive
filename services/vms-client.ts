@@ -247,6 +247,16 @@ export async function changeVmNetwork(vmName: string, newNetwork: string) {
   });
 }
 
+export async function changeVncPassword(vmName: string, newPassword: string) {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  return apiFetch<void>(`/virsh/change_vnc_password/${encodedVmName}`, {
+    method: "POST",
+    token: authToken,
+    body: { new_password: newPassword },
+  });
+}
+
 export async function getVmExportUrl(vmName: string) {
   const authToken = await resolveToken();
   const baseUrl = await ensureApiBaseUrl();

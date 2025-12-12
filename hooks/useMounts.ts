@@ -1,6 +1,6 @@
-import {useCallback, useEffect, useRef, useState} from "react";
-import {Mount, MountShare} from "@/types/mount";
-import {listMounts} from "@/services/hyperhive";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Mount, MountShare } from "@/types/mount";
+import { listMounts } from "@/services/hyperhive";
 
 type FetchMode = "initial" | "refresh";
 
@@ -8,7 +8,7 @@ export type UseMountsOptions = {
   token?: string | null;
 };
 
-export function useMounts({token}: UseMountsOptions = {}) {
+export function useMounts({ token }: UseMountsOptions = {}) {
   const [mounts, setMounts] = useState<Mount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -36,7 +36,10 @@ export function useMounts({token}: UseMountsOptions = {}) {
       try {
         const response = await listMounts();
         if (!isMountedRef.current) return;
-        setMounts(response);
+        // Ensure we always store an array so callers can safely call `.map`
+        // Some platforms or unexpected API responses may return an object
+        // or string instead of an array.
+        setMounts(Array.isArray(response) ? response : []);
         setError(null);
       } catch (err) {
         if (!isMountedRef.current) return;
@@ -68,7 +71,7 @@ export function useMounts({token}: UseMountsOptions = {}) {
   const removeMount = useCallback((share: Pick<MountShare, "MachineName" | "FolderPath">) => {
     setMounts((prev) =>
       prev.filter(
-        ({NfsShare}) =>
+        ({ NfsShare }) =>
           !(
             NfsShare.MachineName === share.MachineName &&
             NfsShare.FolderPath === share.FolderPath
