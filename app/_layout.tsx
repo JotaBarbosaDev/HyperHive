@@ -1,4 +1,4 @@
-import {GluestackUIProvider} from "@/components/ui/gluestack-ui-provider";
+import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
 import "@/global.css";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import {
@@ -7,26 +7,26 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from "@expo-google-fonts/inter";
-import {DarkTheme, DefaultTheme, ThemeProvider} from "@react-navigation/native";
-import {useFonts} from "expo-font";
+import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
+import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
-import {useEffect} from "react";
-import {useColorScheme} from "@/components/useColorScheme";
-import {Slot, usePathname, useRouter} from "expo-router";
-import {StatusBar, setStatusBarHidden} from "expo-status-bar";
-import {AppState, Platform} from "react-native";
+import { useEffect } from "react";
+import { useColorScheme } from "@/components/useColorScheme";
+import { Slot, usePathname, useRouter } from "expo-router";
+import { StatusBar, setStatusBarHidden } from "expo-status-bar";
+import { AppState, Platform } from "react-native";
 import * as SystemUI from "expo-system-ui";
 import * as NavigationBar from "expo-navigation-bar";
-import {Button, ButtonIcon, ButtonText} from "@/components/ui/button";
-import {EditIcon} from "@/components/ui/icon";
-import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context";
+import { Button, ButtonIcon, ButtonText } from "@/components/ui/button";
+import { EditIcon } from "@/components/ui/icon";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import React from "react";
-import {CreateMountDrawer} from "@/components/drawers/CreateMountDrawer";
-import {AppSidebar} from "@/components/navigation/AppSidebar";
-import {Box} from "@/components/ui/box";
-import {Text} from "@/components/ui/text";
-import {Menu} from "lucide-react-native";
-import {setApiBaseUrl} from "@/config/apiConfig";
+import { CreateMountDrawer } from "@/components/drawers/CreateMountDrawer";
+import { AppSidebar } from "@/components/navigation/AppSidebar";
+import { Box } from "@/components/ui/box";
+import { Text } from "@/components/ui/text";
+import { Menu } from "lucide-react-native";
+import { setApiBaseUrl } from "@/config/apiConfig";
 import {
   API_BASE_URL_STORAGE_KEY,
   AUTH_TOKEN_STORAGE_KEY,
@@ -35,11 +35,11 @@ import {
   loadApiBaseUrl,
   loadAuthToken,
 } from "@/services/auth-storage";
-import {ApiError, onApiResult, onUnauthorized, setAuthToken} from "@/services/api-client";
-import {listMachines} from "@/services/hyperhive";
-import {ensureHyperHiveWebsocket} from "@/services/websocket-client";
-import {AppThemeProvider} from "@/hooks/useAppTheme";
-import {ThemePreference, loadThemePreference, saveThemePreference} from "@/services/theme-preference";
+import { ApiError, onApiResult, onUnauthorized, setAuthToken } from "@/services/api-client";
+import { listMachines } from "@/services/hyperhive";
+import { ensureHyperHiveWebsocket } from "@/services/websocket-client";
+import { AppThemeProvider } from "@/hooks/useAppTheme";
+import { ThemePreference, loadThemePreference, saveThemePreference } from "@/services/theme-preference";
 import {
   Modal,
   ModalBackdrop,
@@ -152,7 +152,7 @@ const getLiteralApiErrorMessage = (errorText?: string, errorPayload?: unknown) =
   if (typeof errorPayload === "number" || typeof errorPayload === "boolean") {
     return String(errorPayload);
   }
-  return "Ocorreu um erro ao comunicar com a API. Consulte os logs para mais detalhes.";
+  return "An error occurred while communicating with the API. Check the logs for more details.";
 };
 
 export default function RootLayout() {
@@ -200,7 +200,7 @@ export default function RootLayout() {
     });
 
     const visibilitySubscription = NavigationBar.addVisibilityListener(
-      ({visibility}) => {
+      ({ visibility }) => {
         if (visibility !== "hidden") {
           hideSystemUi();
         }
@@ -230,7 +230,7 @@ function RootLayoutNav() {
   const [showDrawer, setShowDrawer] = React.useState(false);
   const [showSidebar, setShowSidebar] = React.useState(false);
   const [apiErrorModal, setApiErrorModal] = React.useState<
-    {status?: number; path?: string; details: string} | null
+    { status?: number; path?: string; details: string } | null
   >(null);
   const isSigningOutRef = React.useRef(false);
 
@@ -282,7 +282,7 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
-    const doc = (globalThis as typeof globalThis & {document?: any}).document;
+    const doc = (globalThis as typeof globalThis & { document?: any }).document;
     if (!doc) return;
     doc.documentElement.dataset.theme = resolvedMode;
     doc.documentElement.style.colorScheme =
@@ -291,7 +291,7 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
-    const doc = (globalThis as typeof globalThis & {document?: {title: string}}).document;
+    const doc = (globalThis as typeof globalThis & { document?: { title: string } }).document;
     if (!doc) return;
     const pageTitle = resolveWebTitle(pathname ?? "/");
     doc.title = `${pageTitle} | ${APP_TITLE}`;
@@ -395,7 +395,7 @@ function RootLayoutNav() {
         if (!isActive) return;
         if (storedBaseUrl && storedToken) {
           try {
-            await ensureHyperHiveWebsocket({token: storedToken, baseUrl: storedBaseUrl});
+            await ensureHyperHiveWebsocket({ token: storedToken, baseUrl: storedBaseUrl });
           } catch (socketErr) {
             console.warn("Failed to initialize HyperHive WebSocket", socketErr);
           }
@@ -428,7 +428,7 @@ function RootLayoutNav() {
     requestAnimationFrame(() => {
       router.replace({
         pathname: pathname as any,
-        params: {refresh: Date.now().toString()},
+        params: { refresh: Date.now().toString() },
       });
     });
   }, [pathname, router]);
@@ -447,7 +447,7 @@ function RootLayoutNav() {
       <GluestackUIProvider mode={resolvedMode}>
         <ThemeProvider value={resolvedMode === "dark" ? DarkTheme : DefaultTheme}>
           <SafeAreaView
-            style={{flex: 1, backgroundColor: statusBarBackground}}
+            style={{ flex: 1, backgroundColor: statusBarBackground }}
             edges={["top", "right", "bottom", "left"]}
           >
             <StatusBar

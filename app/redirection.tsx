@@ -67,6 +67,7 @@ import {
   Power,
   Shield,
   Trash2,
+  X,
 } from "lucide-react-native";
 import { Pressable } from "@/components/ui/pressable";
 import { useCertificatesOptions } from "@/hooks/useCertificatesOptions";
@@ -104,6 +105,8 @@ const isEnabled = (item: RedirectionHost) => item.enabled !== false;
 const formatHttpCode = (code: string) => {
   if (code === "301") return "301 Permanent";
   if (code === "302") return "302 Temporary";
+  if (code === "307") return "307 Temporary (preserve method)";
+  if (code === "308") return "308 Permanent (preserve method)";
   return code;
 };
 
@@ -129,6 +132,8 @@ export default function RedirectionHostsScreen() {
   const [modalOpen, setModalOpen] = React.useState(false);
   const [form, setForm] = React.useState<RedirectionPayload>(DEFAULT_FORM);
   const [domainsInput, setDomainsInput] = React.useState("");
+  const [domainsList, setDomainsList] = React.useState<string[]>([]);
+  const lastAddAtRef = React.useRef<number>(0);
   const [editingHost, setEditingHost] = React.useState<RedirectionHost | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [togglingId, setTogglingId] = React.useState<number | null>(null);
@@ -206,6 +211,7 @@ export default function RedirectionHostsScreen() {
     setEditingHost(null);
     setForm(DEFAULT_FORM);
     setDomainsInput("");
+    setDomainsList([]);
     void refreshCertificates();
     setFormTab("details");
     setModalOpen(true);
@@ -232,6 +238,7 @@ export default function RedirectionHostsScreen() {
       ssl_forced: Boolean(host.ssl_forced),
     });
     setDomainsInput((host.domain_names ?? []).join(", "));
+    setDomainsList(host.domain_names ?? []);
     void refreshCertificates();
     setFormTab("details");
     setModalOpen(true);
@@ -243,6 +250,21 @@ export default function RedirectionHostsScreen() {
     setEditingHost(null);
   };
 
+  const addDomainFromInput = React.useCallback(() => {
+    const now = Date.now();
+    if (now - (lastAddAtRef.current || 0) < 500) return; // prevent double-fire
+    lastAddAtRef.current = now;
+    const val = (domainsInput || "").trim();
+    if (!val) return;
+    const parts = parseDomains(val);
+    setDomainsList((prev) => Array.from(new Set([...prev, ...parts.filter(Boolean)])));
+    setDomainsInput("");
+  }, [domainsInput]);
+
+  const removeDomain = React.useCallback((idx: number) => {
+    setDomainsList((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
+
   const handleSave = async () => {
     const domain_names = parseDomains(domainsInput);
     if (!domain_names.length) {
@@ -253,9 +275,12 @@ export default function RedirectionHostsScreen() {
       showToast("Destination required", "Provide the destination domain.", "error");
       return;
     }
+    // combine live list + any remaining input
+    const combined = [...domainsList, ...parseDomains(domainsInput)];
+    const unique = Array.from(new Set(combined.map((d) => d.trim()).filter(Boolean)));
     const payload: RedirectionPayload = {
       ...form,
-      domain_names,
+      domain_names: unique,
       certificate_id: Number(form.certificate_id) || 0,
       forward_http_code: form.forward_http_code || "302",
     };
@@ -541,10 +566,27 @@ export default function RedirectionHostsScreen() {
                           onChangeText={setDomainsInput}
                           placeholder="e.g.: old.hyperhive.local, www.old.hyperhive.local"
                           autoCapitalize="none"
+                          onSubmitEditing={() => addDomainFromInput()}
+                          onKeyPress={({ nativeEvent }) => {
+                            // web/desktop Enter handling
+                            if ((nativeEvent as any)?.key === "Enter") addDomainFromInput();
+                          }}
                         />
                       </Input>
+                      {domainsList.length > 0 ? (
+                        <HStack className="gap-2 mt-2 flex-wrap">
+                          {domainsList.map((d, idx) => (
+                            <Box key={`${d}-${idx}`} className="px-3 py-1 rounded-full bg-background-50 border border-background-100 items-center flex-row">
+                              <Text className="mr-2 text-typography-900">{d}</Text>
+                              <Pressable onPress={() => removeDomain(idx)} className="px-1">
+                                <X size={14} color="#6b7280" />
+                              </Pressable>
+                            </Box>
+                          ))}
+                        </HStack>
+                      ) : null}
                       <FormControlHelper>
-                        <FormControlHelperText>Separate by comma or line break.</FormControlHelperText>
+                        <FormControlHelperText>Separate by comma or line break. Press Enter to add to the list.</FormControlHelperText>
                       </FormControlHelper>
                     </FormControl>
 
@@ -564,16 +606,69 @@ export default function RedirectionHostsScreen() {
 
                     <FormControl>
                       <FormControlLabel>
-                        <FormControlLabelText>HTTP Code</FormControlLabelText>
+                        <FormControlLabelText>Scheme</FormControlLabelText>
                       </FormControlLabel>
-                      <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
-                        <InputField
-                          value={form.forward_http_code}
-                          onChangeText={(val) => setForm((prev) => ({ ...prev, forward_http_code: val || "302" }))}
-                          autoCapitalize="none"
-                          placeholder="301, 302, 307..."
-                        />
-                      </Input>
+                      <Select
+                        selectedValue={form.forward_scheme}
+                        onValueChange={(val) => setForm((prev) => ({ ...prev, forward_scheme: String(val) }))}
+                      >
+                        <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] h-11 px-4">
+                          <Text className="text-typography-900 dark:text-[#E8EBF0]">{String(form.forward_scheme ?? "https").toUpperCase()}</Text>
+                          <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-typography-400" />
+                        </SelectTrigger>
+                        <SelectPortal>
+                          <SelectBackdropContent />
+                          <SelectContent className="max-h-40 bg-background-0 dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52] rounded-2xl">
+                            <SelectDragIndicatorWrapper>
+                              <SelectDragIndicator />
+                            </SelectDragIndicatorWrapper>
+                            <SelectItem key="https" label="HTTPS" value="https" className="text-base text-typography-900 dark:text-[#E8EBF0]">
+                              HTTPS
+                            </SelectItem>
+                            <SelectItem key="http" label="HTTP" value="http" className="text-base text-typography-900 dark:text-[#E8EBF0]">
+                              HTTP
+                            </SelectItem>
+                          </SelectContent>
+                        </SelectPortal>
+                      </Select>
+                    </FormControl>
+
+                    <FormControl>
+                      <FormControlLabel>
+                        <FormControlLabelText>Redirect Type</FormControlLabelText>
+                      </FormControlLabel>
+                      <Select
+                        selectedValue={String(form.forward_http_code ?? "302")}
+                        onValueChange={(val) => setForm((prev) => ({ ...prev, forward_http_code: String(val) || "302" }))}
+                      >
+                        <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] h-11 px-4">
+                          <Text className="text-typography-900 dark:text-[#E8EBF0]">{formatHttpCode(String(form.forward_http_code ?? "302"))}</Text>
+                          <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-typography-400" />
+                        </SelectTrigger>
+                        <SelectPortal>
+                          <SelectBackdropContent />
+                          <SelectContent className="max-h-72 bg-background-0 dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52] rounded-2xl">
+                            <SelectDragIndicatorWrapper>
+                              <SelectDragIndicator />
+                            </SelectDragIndicatorWrapper>
+                            <SelectItem key="301" label="301 Permanent" value="301" className="text-base text-typography-900 dark:text-[#E8EBF0]">
+                              301 — Permanent (Moved Permanently)
+                            </SelectItem>
+                            <SelectItem key="302" label="302 Temporary" value="302" className="text-base text-typography-900 dark:text-[#E8EBF0]">
+                              302 — Temporary (Found)
+                            </SelectItem>
+                            <SelectItem key="307" label="307 Temporary" value="307" className="text-base text-typography-900 dark:text-[#E8EBF0]">
+                              307 — Temporary (Preserve method)
+                            </SelectItem>
+                            <SelectItem key="308" label="308 Permanent" value="308" className="text-base text-typography-900 dark:text-[#E8EBF0]">
+                              308 — Permanent (Preserve method)
+                            </SelectItem>
+                          </SelectContent>
+                        </SelectPortal>
+                      </Select>
+                      <FormControlHelper>
+                        <FormControlHelperText>Choose a common redirect type. Descriptions explain semantics.</FormControlHelperText>
+                      </FormControlHelper>
                     </FormControl>
 
                     <VStack className="gap-3">

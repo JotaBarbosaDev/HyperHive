@@ -70,6 +70,7 @@ import {
   Power,
   Shield,
   Trash2,
+  X,
 } from "lucide-react-native";
 import { useCertificatesOptions } from "@/hooks/useCertificatesOptions";
 
@@ -132,6 +133,7 @@ export default function ProxyHostsScreen() {
   const [modalOpen, setModalOpen] = React.useState(false);
   const [form, setForm] = React.useState<ProxyPayload>(DEFAULT_FORM);
   const [domainsInput, setDomainsInput] = React.useState("");
+  const [domainsList, setDomainsList] = React.useState<string[]>([]);
   const [locations, setLocations] = React.useState<ProxyLocation[]>([]);
   const [editingHost, setEditingHost] = React.useState<ProxyHost | null>(null);
   const [saving, setSaving] = React.useState(false);
@@ -210,6 +212,7 @@ export default function ProxyHostsScreen() {
     setEditingHost(null);
     setForm(DEFAULT_FORM);
     setDomainsInput("");
+    setDomainsList([]);
     setLocations([]);
     void refreshCertificates();
     setFormTab("details");
@@ -238,6 +241,7 @@ export default function ProxyHostsScreen() {
       enabled: isEnabled(host),
     });
     setDomainsInput((host.domain_names ?? []).join(", "));
+    setDomainsList(host.domain_names ?? []);
     setLocations(host.locations ?? []);
     void refreshCertificates();
     setFormTab("details");
@@ -250,9 +254,27 @@ export default function ProxyHostsScreen() {
     setEditingHost(null);
   };
 
+  const lastAddAtRef = React.useRef<number>(0);
+
+  const addDomainFromInput = React.useCallback(() => {
+    const now = Date.now();
+    if (now - (lastAddAtRef.current || 0) < 500) return;
+    lastAddAtRef.current = now;
+    const val = (domainsInput || "").trim();
+    if (!val) return;
+    const parts = parseDomains(val);
+    setDomainsList((prev) => Array.from(new Set([...prev, ...parts.filter(Boolean)])));
+    setDomainsInput("");
+  }, [domainsInput]);
+
+  const removeDomain = React.useCallback((idx: number) => {
+    setDomainsList((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
+
   const handleSave = async () => {
-    const domain_names = parseDomains(domainsInput);
-    if (!domain_names.length) {
+    const combined = [...domainsList, ...parseDomains(domainsInput)];
+    const unique = Array.from(new Set(combined.map((d) => d.trim()).filter(Boolean)));
+    if (!unique.length) {
       showToast("Domains required", "Provide at least one domain.", "error");
       return;
     }
@@ -262,7 +284,7 @@ export default function ProxyHostsScreen() {
     }
     const payload: ProxyPayload = {
       ...form,
-      domain_names,
+      domain_names: unique,
       locations,
       access_list_id: "0",
       certificate_id: Number(form.certificate_id) || 0,
@@ -565,10 +587,26 @@ export default function ProxyHostsScreen() {
                           onChangeText={setDomainsInput}
                           placeholder="e.g.: app.hyperhive.local, www.app.hyperhive.local"
                           autoCapitalize="none"
+                          onSubmitEditing={() => addDomainFromInput()}
+                          onKeyPress={({ nativeEvent }) => {
+                            if ((nativeEvent as any)?.key === "Enter") addDomainFromInput();
+                          }}
                         />
                       </Input>
+                      {domainsList.length > 0 ? (
+                        <HStack className="gap-2 mt-2 flex-wrap">
+                          {domainsList.map((d, idx) => (
+                            <Box key={`${d}-${idx}`} className="px-3 py-1 rounded-full bg-background-50 border border-background-100 items-center flex-row">
+                              <Text className="mr-2 text-typography-900">{d}</Text>
+                              <Pressable onPress={() => removeDomain(idx)} className="px-1">
+                                <X size={14} color="#6b7280" />
+                              </Pressable>
+                            </Box>
+                          ))}
+                        </HStack>
+                      ) : null}
                       <FormControlHelper>
-                        <FormControlHelperText>Separate by comma or line break.</FormControlHelperText>
+                        <FormControlHelperText>Separate by comma or line break. Press Enter to add to the list.</FormControlHelperText>
                       </FormControlHelper>
                     </FormControl>
 

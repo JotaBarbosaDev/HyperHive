@@ -47,7 +47,7 @@ export async function createStream(payload: StreamPayload): Promise<StreamHost> 
 export async function editStream(id: number, payload: StreamPayload): Promise<StreamHost> {
   const authToken = await resolveToken();
   return apiFetch<StreamHost>("/stream/edit", {
-    method: "POST",
+    method: "PUT",
     token: authToken,
     body: {
       ...payload,

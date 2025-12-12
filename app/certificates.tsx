@@ -35,6 +35,7 @@ import {
   FormControlHelper,
   FormControlHelperText,
 } from "@/components/ui/form-control";
+import { Pressable } from "@/components/ui/pressable";
 import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
 import { Certificate, CreateLetsEncryptPayload } from "@/types/certificate";
 import {
@@ -54,6 +55,7 @@ import {
   RefreshCcw,
   Shield,
   Trash2,
+  X,
 } from "lucide-react-native";
 import {
   Select,
@@ -163,6 +165,18 @@ export default function CertificatesScreen() {
   const [modalOpen, setModalOpen] = React.useState(false);
   const [form, setForm] = React.useState<CreateLetsEncryptPayload>(DEFAULT_FORM);
   const [domainsInput, setDomainsInput] = React.useState("");
+  const [domainsList, setDomainsList] = React.useState<string[]>([]);
+  const lastAddAtRef = React.useRef<number>(0);
+  const addDomainFromInput = React.useCallback(() => {
+    const now = Date.now();
+    if (now - (lastAddAtRef.current || 0) < 500) return;
+    lastAddAtRef.current = now;
+    const val = (domainsInput || "").trim();
+    if (!val) return;
+    const parts = parseDomains(val);
+    setDomainsList((prev) => Array.from(new Set([...prev, ...parts.filter(Boolean)])));
+    setDomainsInput("");
+  }, [domainsInput]);
   const [saving, setSaving] = React.useState(false);
   const [dnsProviders, setDnsProviders] = React.useState<DnsProvider[]>([]);
   const [dnsLoading, setDnsLoading] = React.useState(false);
@@ -217,6 +231,7 @@ export default function CertificatesScreen() {
   const openCreateModal = () => {
     setForm(DEFAULT_FORM);
     setDomainsInput("");
+    setDomainsList([]);
     setModalOpen(true);
   };
 
@@ -247,8 +262,9 @@ export default function CertificatesScreen() {
   }, [modalOpen, form.meta.dns_challenge, form.meta.dns_provider, loadDnsProviders]);
 
   const handleCreate = async () => {
-    const domain_names = parseDomains(domainsInput);
-    if (!domain_names.length) {
+    const combined = [...domainsList, ...parseDomains(domainsInput)];
+    const unique = Array.from(new Set(combined.map((d) => d.trim()).filter(Boolean)));
+    if (!unique.length) {
       showToast("Domains required", "Provide at least one domain.", "error");
       return;
     }
@@ -263,7 +279,7 @@ export default function CertificatesScreen() {
 
     const payload: CreateLetsEncryptPayload = {
       ...form,
-      domain_names,
+      domain_names: unique,
       meta: (() => {
         const { letsencrypt_email, letsencrypt_agree, ...rest } = form.meta ?? {};
         return {
@@ -301,7 +317,7 @@ export default function CertificatesScreen() {
     }
   };
 
-  
+
 
   const handleDelete = async () => {
     if (!deleteTarget?.id) return;
@@ -505,10 +521,26 @@ export default function CertificatesScreen() {
                       onChangeText={setDomainsInput}
                       placeholder="e.g.: *.marques.com, marques.com"
                       autoCapitalize="none"
+                      onSubmitEditing={() => addDomainFromInput()}
+                      onKeyPress={({ nativeEvent }) => {
+                        if ((nativeEvent as any)?.key === "Enter") addDomainFromInput();
+                      }}
                     />
                   </Input>
+                  {domainsList.length > 0 ? (
+                    <HStack className="gap-2 mt-2 flex-wrap">
+                      {domainsList.map((d, idx) => (
+                        <Box key={`${d}-${idx}`} className="px-3 py-1 rounded-full bg-background-50 border border-background-100 items-center flex-row">
+                          <Text className="mr-2 text-typography-900">{d}</Text>
+                          <Pressable onPress={() => setDomainsList((prev) => prev.filter((_, i) => i !== idx))} className="px-1">
+                            <X size={14} color="#6b7280" />
+                          </Pressable>
+                        </Box>
+                      ))}
+                    </HStack>
+                  ) : null}
                   <FormControlHelper>
-                    <FormControlHelperText>Separate by comma or line break.</FormControlHelperText>
+                    <FormControlHelperText>Separate by comma or line break. Press Enter to add to the list.</FormControlHelperText>
                   </FormControlHelper>
                 </FormControl>
 
@@ -521,7 +553,6 @@ export default function CertificatesScreen() {
                       value={form.meta.letsencrypt_email}
                       onChangeText={(val) => setForm((prev) => ({ ...prev, meta: { ...prev.meta, letsencrypt_email: val } }))}
                       autoCapitalize="none"
-                      keyboardType="email-address"
                       placeholder="your-email@domain.com"
                     />
                   </Input>
