@@ -40,7 +40,6 @@ import { Certificate, CreateLetsEncryptPayload } from "@/types/certificate";
 import {
   createLetsEncryptCertificate,
   deleteCertificate,
-  downloadCertificate,
   listCertificates,
   renewCertificate,
   listDnsProviders,
@@ -50,7 +49,6 @@ import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
 import {
   AlertTriangle,
   CloudLightning,
-  Download,
   Calendar,
   Plus,
   RefreshCcw,
@@ -170,7 +168,6 @@ export default function CertificatesScreen() {
   const [dnsLoading, setDnsLoading] = React.useState(false);
   const [selectedDnsProviderId, setSelectedDnsProviderId] = React.useState<string | null>(null);
   const [renewingId, setRenewingId] = React.useState<number | null>(null);
-  const [downloadingId, setDownloadingId] = React.useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<Certificate | null>(null);
   const [deletingId, setDeletingId] = React.useState<number | null>(null);
   const { height: screenHeight } = useWindowDimensions();
@@ -304,19 +301,7 @@ export default function CertificatesScreen() {
     }
   };
 
-  const handleDownload = async (cert: Certificate) => {
-    if (!cert.id) return;
-    setDownloadingId(cert.id);
-    try {
-      await downloadCertificate(cert.id);
-      showToast("Download requested", "The certificate download was requested.");
-    } catch (err) {
-      console.error("Failed to download certificate", err);
-      showToast("Error downloading", "Unable to generate the download.", "error");
-    } finally {
-      setDownloadingId(null);
-    }
-  };
+  
 
   const handleDelete = async () => {
     if (!deleteTarget?.id) return;
@@ -468,16 +453,7 @@ export default function CertificatesScreen() {
                           {renewingId === cert.id ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
                           <ButtonText>Renew</ButtonText>
                         </Button>
-                        <Button
-                          action="default"
-                          variant="outline"
-                          size="sm"
-                          onPress={() => handleDownload(cert)}
-                          isDisabled={downloadingId === cert.id}
-                          className="border-background-300 px-3"
-                        >
-                          {downloadingId === cert.id ? <ButtonSpinner /> : <ButtonIcon as={Download} size="sm" />}
-                        </Button>
+                        {/* Download removed per request */}
                         <Button
                           action="negative"
                           variant="solid"
