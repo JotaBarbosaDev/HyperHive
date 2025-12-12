@@ -1,13 +1,13 @@
 import React from "react";
-import {RefreshControl, ScrollView, useWindowDimensions} from "react-native";
-import {Box} from "@/components/ui/box";
-import {Text} from "@/components/ui/text";
-import {Heading} from "@/components/ui/heading";
-import {VStack} from "@/components/ui/vstack";
-import {HStack} from "@/components/ui/hstack";
-import {Button, ButtonIcon, ButtonSpinner, ButtonText} from "@/components/ui/button";
-import {Input, InputField} from "@/components/ui/input";
-import {Switch} from "@/components/ui/switch";
+import { RefreshControl, ScrollView, useWindowDimensions } from "react-native";
+import { Box } from "@/components/ui/box";
+import { Text } from "@/components/ui/text";
+import { Heading } from "@/components/ui/heading";
+import { VStack } from "@/components/ui/vstack";
+import { HStack } from "@/components/ui/hstack";
+import { Button, ButtonIcon, ButtonSpinner, ButtonText } from "@/components/ui/button";
+import { Input, InputField } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectBackdrop as SelectBackdropContent,
@@ -45,12 +45,12 @@ import {
   FormControlHelper,
   FormControlHelperText,
 } from "@/components/ui/form-control";
-import {Toast, ToastDescription, ToastTitle, useToast} from "@/components/ui/toast";
-import {StreamHost, StreamPayload} from "@/types/stream";
-import {createStream, deleteStream, disableStream, editStream, enableStream, listStreams} from "@/services/streams";
-import {Skeleton, SkeletonText} from "@/components/ui/skeleton";
-import {Badge, BadgeText} from "@/components/ui/badge";
-import {Pressable} from "@/components/ui/pressable";
+import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
+import { StreamHost, StreamPayload } from "@/types/stream";
+import { createStream, deleteStream, disableStream, editStream, enableStream, listStreams } from "@/services/streams";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
+import { Badge, BadgeText } from "@/components/ui/badge";
+import { Pressable } from "@/components/ui/pressable";
 import {
   ArrowLeftRight,
   ChevronDown,
@@ -61,7 +61,7 @@ import {
   Shield,
   Trash2,
 } from "lucide-react-native";
-import {useCertificatesOptions} from "@/hooks/useCertificatesOptions";
+import { useCertificatesOptions } from "@/hooks/useCertificatesOptions";
 
 type FilterTab = "all" | "active" | "inactive";
 
@@ -84,7 +84,7 @@ const isEnabled = (host: StreamHost) => host.enabled !== false;
 const TOGGLE_PROPS = {
   size: "sm" as const,
   thumbColor: "#f8fafc",
-  trackColor: {false: "#cbd5e1", true: "#0f172a"},
+  trackColor: { false: "#cbd5e1", true: "#0f172a" },
   ios_backgroundColor: "#cbd5e1",
 };
 
@@ -101,7 +101,7 @@ export default function StreamsScreen() {
   const [togglingId, setTogglingId] = React.useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<StreamHost | null>(null);
   const [deletingId, setDeletingId] = React.useState<number | null>(null);
-  const {height: screenHeight} = useWindowDimensions();
+  const { height: screenHeight } = useWindowDimensions();
   const modalBodyMaxHeight = Math.min(screenHeight * 0.55, 520);
   const [formTab, setFormTab] = React.useState<"details" | "ssl">("details");
 
@@ -109,7 +109,7 @@ export default function StreamsScreen() {
     (title: string, description: string, action: "success" | "error" = "success") => {
       toast.show({
         placement: "top",
-        render: ({id}) => (
+        render: ({ id }) => (
           <Toast
             nativeID={"toast-" + id}
             className="px-5 py-3 gap-3 shadow-soft-1 items-start flex-row"
@@ -131,7 +131,7 @@ export default function StreamsScreen() {
     [showToast]
   );
 
-  const {certificateOptions, loadingCertificates, refreshCertificates} = useCertificatesOptions(handleCertificatesError);
+  const { certificateOptions, loadingCertificates, refreshCertificates } = useCertificatesOptions(handleCertificatesError);
   const selectedCertificateLabel =
     certificateOptions.find((option) => option.value === String(form.certificate_id ?? 0))?.label || "No certificate";
 
@@ -166,7 +166,7 @@ export default function StreamsScreen() {
   const stats = React.useMemo(() => {
     const active = items.filter((i) => isEnabled(i)).length;
     const inactive = items.length - active;
-    return {total: items.length, active, inactive};
+    return { total: items.length, active, inactive };
   }, [items]);
 
   const openCreateModal = () => {
@@ -306,14 +306,14 @@ export default function StreamsScreen() {
     <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{paddingBottom: 32}}
+        contentContainerStyle={{ paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadItems("refresh")} />}
       >
         <Box className="p-4 pt-16 web:p-10 web:max-w-6xl web:mx-auto web:w-full">
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
-            style={{fontFamily: "Inter_700Bold"}}
+            style={{ fontFamily: "Inter_700Bold" }}
           >
             Streams
           </Heading>
@@ -324,22 +324,21 @@ export default function StreamsScreen() {
           <HStack className="mt-6 items-center justify-between flex-wrap gap-3">
             <HStack className="gap-2 flex-wrap">
               {[
-                {key: "all" as FilterTab, label: `All (${stats.total})`},
-                {key: "active" as FilterTab, label: `Active (${stats.active})`},
-                {key: "inactive" as FilterTab, label: `Inactive (${stats.inactive})`},
+                { key: "all" as FilterTab, label: `All (${stats.total})` },
+                { key: "active" as FilterTab, label: `Active (${stats.active})` },
+                { key: "inactive" as FilterTab, label: `Inactive (${stats.inactive})` },
               ].map((tab) => {
                 const active = filter === tab.key;
                 return (
                   <Pressable
                     key={tab.key}
                     onPress={() => setFilter(tab.key)}
-                    className={`px-4 py-2 rounded-full border ${
-                      active ? "bg-typography-900 border-typography-900" : "bg-background-0 border-background-200"
-                    }`}
+                    className={`px-4 py-2 rounded-full border ${active ? "bg-typography-900 border-typography-900" : "bg-background-0 border-background-200"
+                      }`}
                   >
                     <Text
                       className={`text-sm ${active ? "text-background-0" : "text-typography-700"}`}
-                      style={{fontFamily: active ? "Inter_700Bold" : "Inter_500Medium"}}
+                      style={{ fontFamily: active ? "Inter_700Bold" : "Inter_500Medium" }}
                     >
                       {tab.label}
                     </Text>
@@ -380,7 +379,7 @@ export default function StreamsScreen() {
                           <Box className={`h-2.5 w-2.5 rounded-full ${enabled ? "bg-success-500" : "bg-outline-400"}`} />
                           <Text
                             className={`text-base ${enabled ? "text-typography-900" : "text-typography-500"}`}
-                            style={{fontFamily: "Inter_700Bold"}}
+                            style={{ fontFamily: "Inter_700Bold" }}
                           >
                             Port {host.incoming_port}
                           </Text>
@@ -469,27 +468,26 @@ export default function StreamsScreen() {
             <ScrollView
               nestedScrollEnabled
               showsVerticalScrollIndicator
-              style={{maxHeight: modalBodyMaxHeight}}
-              contentContainerStyle={{paddingBottom: 8}}
+              style={{ maxHeight: modalBodyMaxHeight }}
+              contentContainerStyle={{ paddingBottom: 8 }}
             >
               <VStack className="gap-5">
                 <HStack className="gap-2">
                   {[
-                    {key: "details", label: "Details"},
-                    {key: "ssl", label: "SSL"},
+                    { key: "details", label: "Details" },
+                    { key: "ssl", label: "SSL" },
                   ].map((tab) => {
                     const active = formTab === tab.key;
                     return (
                       <Pressable
                         key={tab.key}
                         onPress={() => setFormTab(tab.key as typeof formTab)}
-                        className={`px-4 py-2 rounded-full border ${
-                          active ? "bg-typography-900 border-typography-900" : "bg-background-50 border-outline-200"
-                        }`}
+                        className={`px-4 py-2 rounded-full border ${active ? "bg-typography-900 border-typography-900" : "bg-background-50 border-outline-200"
+                          }`}
                       >
                         <Text
                           className={`text-sm ${active ? "text-background-0" : "text-typography-700"}`}
-                          style={{fontFamily: active ? "Inter_700Bold" : "Inter_500Medium"}}
+                          style={{ fontFamily: active ? "Inter_700Bold" : "Inter_500Medium" }}
                         >
                           {tab.label}
                         </Text>
@@ -507,7 +505,7 @@ export default function StreamsScreen() {
                       <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
                         <InputField
                           value={String(form.incoming_port || "")}
-                          onChangeText={(val) => setForm((prev) => ({...prev, incoming_port: Number(val) || 0}))}
+                          onChangeText={(val) => setForm((prev) => ({ ...prev, incoming_port: Number(val) || 0 }))}
                           keyboardType="number-pad"
                           placeholder="6060"
                         />
@@ -522,7 +520,7 @@ export default function StreamsScreen() {
                         <Input className="flex-1 min-w-[160px] rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
                           <InputField
                             value={form.forwarding_host}
-                            onChangeText={(val) => setForm((prev) => ({...prev, forwarding_host: val}))}
+                            onChangeText={(val) => setForm((prev) => ({ ...prev, forwarding_host: val }))}
                             autoCapitalize="none"
                             placeholder="10.0.0.3"
                           />
@@ -530,7 +528,7 @@ export default function StreamsScreen() {
                         <Input className="w-24 rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
                           <InputField
                             value={String(form.forwarding_port || "")}
-                            onChangeText={(val) => setForm((prev) => ({...prev, forwarding_port: Number(val) || 0}))}
+                            onChangeText={(val) => setForm((prev) => ({ ...prev, forwarding_port: Number(val) || 0 }))}
                             keyboardType="number-pad"
                             placeholder="60"
                           />
@@ -545,7 +543,7 @@ export default function StreamsScreen() {
                           <Switch
                             {...TOGGLE_PROPS}
                             value={form.tcp_forwarding}
-                            onValueChange={(val) => setForm((prev) => ({...prev, tcp_forwarding: val}))}
+                            onValueChange={(val) => setForm((prev) => ({ ...prev, tcp_forwarding: val }))}
                           />
                           <Text className="text-typography-800">TCP</Text>
                         </HStack>
@@ -553,7 +551,7 @@ export default function StreamsScreen() {
                           <Switch
                             {...TOGGLE_PROPS}
                             value={form.udp_forwarding}
-                            onValueChange={(val) => setForm((prev) => ({...prev, udp_forwarding: val}))}
+                            onValueChange={(val) => setForm((prev) => ({ ...prev, udp_forwarding: val }))}
                           />
                           <Text className="text-typography-800">UDP</Text>
                         </HStack>
@@ -582,14 +580,18 @@ export default function StreamsScreen() {
                       </HStack>
                       <Select
                         selectedValue={String(form.certificate_id ?? 0)}
-                        onValueChange={(val) => setForm((prev) => ({...prev, certificate_id: Number(val)}))}
+                        onValueChange={(val) => setForm((prev) => ({ ...prev, certificate_id: Number(val) }))}
                         isDisabled={loadingCertificates && certificateOptions.length === 0}
                       >
                         <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] h-11 px-4">
-                          <SelectInput
-                            placeholder={loadingCertificates ? "Loading certificates..." : selectedCertificateLabel}
-                            className="text-typography-900 dark:text-[#E8EBF0]"
-                          />
+                          {String(form.certificate_id ?? 0) !== "0" ? (
+                            <Text className="text-typography-900 dark:text-[#E8EBF0]">{selectedCertificateLabel}</Text>
+                          ) : (
+                            <SelectInput
+                              placeholder={loadingCertificates ? "Loading certificates..." : selectedCertificateLabel}
+                              className="text-typography-900 dark:text-[#E8EBF0]"
+                            />
+                          )}
                           <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-typography-400" />
                         </SelectTrigger>
                         <SelectPortal>

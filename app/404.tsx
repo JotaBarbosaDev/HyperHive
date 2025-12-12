@@ -1,15 +1,16 @@
 import React from "react";
-import {RefreshControl, ScrollView, useWindowDimensions} from "react-native";
-import {Box} from "@/components/ui/box";
-import {Text} from "@/components/ui/text";
-import {Heading} from "@/components/ui/heading";
-import {VStack} from "@/components/ui/vstack";
-import {HStack} from "@/components/ui/hstack";
-import {Button, ButtonIcon, ButtonSpinner, ButtonText} from "@/components/ui/button";
-import {Badge, BadgeText} from "@/components/ui/badge";
-import {Input, InputField} from "@/components/ui/input";
-import {Textarea, TextareaInput} from "@/components/ui/textarea";
-import {Switch} from "@/components/ui/switch";
+import { RefreshControl, ScrollView, useWindowDimensions } from "react-native";
+import { Box } from "@/components/ui/box";
+import { Text } from "@/components/ui/text";
+import { Heading } from "@/components/ui/heading";
+import { VStack } from "@/components/ui/vstack";
+import { ExternalLink } from "@/components/ExternalLink";
+import { HStack } from "@/components/ui/hstack";
+import { Button, ButtonIcon, ButtonSpinner, ButtonText } from "@/components/ui/button";
+import { Badge, BadgeText } from "@/components/ui/badge";
+import { Input, InputField } from "@/components/ui/input";
+import { Textarea, TextareaInput } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectBackdrop as SelectBackdropContent,
@@ -47,9 +48,9 @@ import {
   FormControlHelper,
   FormControlHelperText,
 } from "@/components/ui/form-control";
-import {Pressable} from "@/components/ui/pressable";
-import {Toast, ToastDescription, ToastTitle, useToast} from "@/components/ui/toast";
-import {NotFoundHost, NotFoundHostPayload} from "@/types/nginx";
+import { Pressable } from "@/components/ui/pressable";
+import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
+import { NotFoundHost, NotFoundHostPayload } from "@/types/nginx";
 import {
   createNotFoundHost,
   deleteNotFoundHost,
@@ -69,8 +70,8 @@ import {
   ShieldOff,
   Trash2,
 } from "lucide-react-native";
-import {Skeleton, SkeletonText} from "@/components/ui/skeleton";
-import {useCertificatesOptions} from "@/hooks/useCertificatesOptions";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
+import { useCertificatesOptions } from "@/hooks/useCertificatesOptions";
 
 type FilterTab = "all" | "active" | "inactive";
 
@@ -120,7 +121,7 @@ const StatusChip = ({
 const TOGGLE_PROPS = {
   size: "sm" as const,
   thumbColor: "#f8fafc",
-  trackColor: {false: "#cbd5e1", true: "#0f172a"},
+  trackColor: { false: "#cbd5e1", true: "#0f172a" },
   ios_backgroundColor: "#cbd5e1",
 };
 
@@ -138,7 +139,7 @@ export default function NotFoundHostsScreen() {
   const [domainsInput, setDomainsInput] = React.useState("");
   const [togglingId, setTogglingId] = React.useState<number | null>(null);
   const [deletingId, setDeletingId] = React.useState<number | null>(null);
-  const {height: screenHeight} = useWindowDimensions();
+  const { height: screenHeight } = useWindowDimensions();
   const modalBodyMaxHeight = Math.min(screenHeight * 0.55, 520);
   const [formTab, setFormTab] = React.useState<"details" | "ssl">("details");
 
@@ -146,7 +147,7 @@ export default function NotFoundHostsScreen() {
     (title: string, description: string, action: "success" | "error" = "success") => {
       toast.show({
         placement: "top",
-        render: ({id}) => (
+        render: ({ id }) => (
           <Toast
             nativeID={"toast-" + id}
             className="px-5 py-3 gap-3 shadow-soft-1 items-start flex-row"
@@ -170,7 +171,7 @@ export default function NotFoundHostsScreen() {
     [showToast]
   );
 
-  const {certificateOptions, loadingCertificates, refreshCertificates} = useCertificatesOptions(handleCertificatesError);
+  const { certificateOptions, loadingCertificates, refreshCertificates } = useCertificatesOptions(handleCertificatesError);
   const selectedCertificateLabel =
     certificateOptions.find((option) => option.value === String(form.certificate_id ?? 0))?.label || "No certificate";
 
@@ -315,7 +316,7 @@ export default function NotFoundHostsScreen() {
   const stats = React.useMemo(() => {
     const active = hosts.filter((h) => isHostEnabled(h)).length;
     const inactive = hosts.length - active;
-    return {total: hosts.length, active, inactive};
+    return { total: hosts.length, active, inactive };
   }, [hosts]);
 
   const renderLoading = () => (
@@ -337,14 +338,14 @@ export default function NotFoundHostsScreen() {
     <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{paddingBottom: 32}}
+        contentContainerStyle={{ paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadHosts("refresh")} />}
       >
         <Box className="p-4 pt-16 web:p-10 web:max-w-6xl web:mx-auto web:w-full">
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
-            style={{fontFamily: "Inter_700Bold"}}
+            style={{ fontFamily: "Inter_700Bold" }}
           >
             404 Hosts
           </Heading>
@@ -355,22 +356,21 @@ export default function NotFoundHostsScreen() {
           <HStack className="mt-6 items-center justify-between flex-wrap gap-3">
             <HStack className="gap-2 flex-wrap">
               {[
-                {key: "all" as FilterTab, label: `All (${stats.total})`},
-                {key: "active" as FilterTab, label: `Active (${stats.active})`},
-                {key: "inactive" as FilterTab, label: `Inactive (${stats.inactive})`},
+                { key: "all" as FilterTab, label: `All (${stats.total})` },
+                { key: "active" as FilterTab, label: `Active (${stats.active})` },
+                { key: "inactive" as FilterTab, label: `Inactive (${stats.inactive})` },
               ].map((tab) => {
                 const active = filter === tab.key;
                 return (
                   <Pressable
                     key={tab.key}
                     onPress={() => setFilter(tab.key)}
-                    className={`px-4 py-2 rounded-full border ${
-                      active ? "bg-typography-900 border-typography-900" : "bg-background-0 border-background-200"
-                    }`}
+                    className={`px-4 py-2 rounded-full border ${active ? "bg-typography-900 border-typography-900" : "bg-background-0 border-background-200"
+                      }`}
                   >
                     <Text
                       className={`text-sm ${active ? "text-background-0" : "text-typography-700"}`}
-                      style={{fontFamily: active ? "Inter_700Bold" : "Inter_500Medium"}}
+                      style={{ fontFamily: active ? "Inter_700Bold" : "Inter_500Medium" }}
                     >
                       {tab.label}
                     </Text>
@@ -407,12 +407,18 @@ export default function NotFoundHostsScreen() {
                         <Box
                           className={`h-2.5 w-2.5 rounded-full ${enabled ? "bg-success-500" : "bg-outline-400"}`}
                         />
-                        <Text
-                          className="text-typography-900 text-base"
-                          style={{fontFamily: "Inter_700Bold"}}
-                        >
-                          {(host.domain_names ?? []).join(", ")}
-                        </Text>
+                        <HStack className="flex-wrap">
+                          {(host.domain_names ?? []).map((d, idx) => (
+                            <React.Fragment key={d}>
+                              <ExternalLink href={(d.includes("//") ? d : `https://${d}`) as any}>
+                                <Text className="text-typography-900 text-base" style={{ fontFamily: "Inter_700Bold" }}>
+                                  {d}
+                                </Text>
+                              </ExternalLink>
+                              {idx < (host.domain_names ?? []).length - 1 ? <Text className="text-typography-900 text-base">{", "}</Text> : null}
+                            </React.Fragment>
+                          ))}
+                        </HStack>
                       </HStack>
                       <HStack className="gap-2">
                         <Button
@@ -493,7 +499,7 @@ export default function NotFoundHostsScreen() {
                 );
               })}
             </VStack>
-      )}
+          )}
         </Box>
       </ScrollView>
 
@@ -515,27 +521,26 @@ export default function NotFoundHostsScreen() {
             <ScrollView
               nestedScrollEnabled
               showsVerticalScrollIndicator
-              style={{maxHeight: modalBodyMaxHeight}}
-              contentContainerStyle={{paddingBottom: 8}}
+              style={{ maxHeight: modalBodyMaxHeight }}
+              contentContainerStyle={{ paddingBottom: 8 }}
             >
               <VStack className="gap-5">
                 <HStack className="gap-2">
                   {[
-                    {key: "details", label: "Details"},
-                    {key: "ssl", label: "SSL"},
+                    { key: "details", label: "Details" },
+                    { key: "ssl", label: "SSL" },
                   ].map((tab) => {
                     const active = formTab === tab.key;
                     return (
                       <Pressable
                         key={tab.key}
                         onPress={() => setFormTab(tab.key as typeof formTab)}
-                        className={`px-4 py-2 rounded-full border ${
-                          active ? "bg-typography-900 border-typography-900" : "bg-background-50 border-outline-200"
-                        }`}
+                        className={`px-4 py-2 rounded-full border ${active ? "bg-typography-900 border-typography-900" : "bg-background-50 border-outline-200"
+                          }`}
                       >
                         <Text
                           className={`text-sm ${active ? "text-background-0" : "text-typography-700"}`}
-                          style={{fontFamily: active ? "Inter_700Bold" : "Inter_500Medium"}}
+                          style={{ fontFamily: active ? "Inter_700Bold" : "Inter_500Medium" }}
                         >
                           {tab.label}
                         </Text>
@@ -570,7 +575,7 @@ export default function NotFoundHostsScreen() {
                       <Textarea className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]" size="md">
                         <TextareaInput
                           value={form.advanced_config}
-                          onChangeText={(text) => setForm((prev) => ({...prev, advanced_config: text}))}
+                          onChangeText={(text) => setForm((prev) => ({ ...prev, advanced_config: text }))}
                           placeholder="Optional Nginx configuration block..."
                         />
                       </Textarea>
@@ -598,14 +603,18 @@ export default function NotFoundHostsScreen() {
                       </HStack>
                       <Select
                         selectedValue={String(form.certificate_id ?? 0)}
-                        onValueChange={(val) => setForm((prev) => ({...prev, certificate_id: Number(val)}))}
+                        onValueChange={(val) => setForm((prev) => ({ ...prev, certificate_id: Number(val) }))}
                         isDisabled={loadingCertificates && certificateOptions.length === 0}
                       >
                         <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] h-11 px-4">
-                          <SelectInput
-                            placeholder={loadingCertificates ? "Loading certificates..." : selectedCertificateLabel}
-                            className="text-typography-900 dark:text-[#E8EBF0]"
-                          />
+                          {String(form.certificate_id ?? 0) !== "0" ? (
+                            <Text className="text-typography-900 dark:text-[#E8EBF0]">{selectedCertificateLabel}</Text>
+                          ) : (
+                            <SelectInput
+                              placeholder={loadingCertificates ? "Loading certificates..." : selectedCertificateLabel}
+                              className="text-typography-900 dark:text-[#E8EBF0]"
+                            />
+                          )}
                           <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-typography-400" />
                         </SelectTrigger>
                         <SelectPortal>
@@ -639,7 +648,7 @@ export default function NotFoundHostsScreen() {
                           <Switch
                             {...TOGGLE_PROPS}
                             value={form.ssl_forced}
-                            onValueChange={(val) => setForm((prev) => ({...prev, ssl_forced: val}))}
+                            onValueChange={(val) => setForm((prev) => ({ ...prev, ssl_forced: val }))}
                           />
                           <Text className="text-typography-800">Force SSL</Text>
                         </HStack>
@@ -647,7 +656,7 @@ export default function NotFoundHostsScreen() {
                           <Switch
                             {...TOGGLE_PROPS}
                             value={form.http2_support}
-                            onValueChange={(val) => setForm((prev) => ({...prev, http2_support: val}))}
+                            onValueChange={(val) => setForm((prev) => ({ ...prev, http2_support: val }))}
                           />
                           <Text className="text-typography-800">HTTP/2</Text>
                         </HStack>
@@ -655,7 +664,7 @@ export default function NotFoundHostsScreen() {
                           <Switch
                             {...TOGGLE_PROPS}
                             value={form.hsts_enabled}
-                            onValueChange={(val) => setForm((prev) => ({...prev, hsts_enabled: val}))}
+                            onValueChange={(val) => setForm((prev) => ({ ...prev, hsts_enabled: val }))}
                           />
                           <Text className="text-typography-800">HSTS</Text>
                         </HStack>
@@ -663,7 +672,7 @@ export default function NotFoundHostsScreen() {
                           <Switch
                             {...TOGGLE_PROPS}
                             value={form.hsts_subdomains}
-                            onValueChange={(val) => setForm((prev) => ({...prev, hsts_subdomains: val}))}
+                            onValueChange={(val) => setForm((prev) => ({ ...prev, hsts_subdomains: val }))}
                             isDisabled={!form.hsts_enabled}
                           />
                           <Text className={`text-typography-800 ${!form.hsts_enabled ? "text-typography-500" : ""}`}>

@@ -1,14 +1,15 @@
 import React from "react";
-import {RefreshControl, ScrollView, useWindowDimensions} from "react-native";
-import {Box} from "@/components/ui/box";
-import {Text} from "@/components/ui/text";
-import {Heading} from "@/components/ui/heading";
-import {VStack} from "@/components/ui/vstack";
-import {HStack} from "@/components/ui/hstack";
-import {Button, ButtonIcon, ButtonSpinner, ButtonText} from "@/components/ui/button";
-import {Input, InputField} from "@/components/ui/input";
-import {Switch} from "@/components/ui/switch";
-import {Badge, BadgeText} from "@/components/ui/badge";
+import { RefreshControl, ScrollView, useWindowDimensions } from "react-native";
+import { Box } from "@/components/ui/box";
+import { Text } from "@/components/ui/text";
+import { Heading } from "@/components/ui/heading";
+import { VStack } from "@/components/ui/vstack";
+import { HStack } from "@/components/ui/hstack";
+import { Button, ButtonIcon, ButtonSpinner, ButtonText } from "@/components/ui/button";
+import { Input, InputField } from "@/components/ui/input";
+import { Textarea, TextareaInput } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Badge, BadgeText } from "@/components/ui/badge";
 import {
   Modal,
   ModalBackdrop,
@@ -34,16 +35,18 @@ import {
   FormControlHelper,
   FormControlHelperText,
 } from "@/components/ui/form-control";
-import {Toast, ToastDescription, ToastTitle, useToast} from "@/components/ui/toast";
-import {Certificate, CreateLetsEncryptPayload} from "@/types/certificate";
+import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
+import { Certificate, CreateLetsEncryptPayload } from "@/types/certificate";
 import {
   createLetsEncryptCertificate,
   deleteCertificate,
   downloadCertificate,
   listCertificates,
   renewCertificate,
+  listDnsProviders,
+  DnsProvider,
 } from "@/services/certificates";
-import {Skeleton, SkeletonText} from "@/components/ui/skeleton";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
 import {
   AlertTriangle,
   CloudLightning,
@@ -54,6 +57,19 @@ import {
   Shield,
   Trash2,
 } from "lucide-react-native";
+import {
+  Select,
+  SelectTrigger,
+  SelectInput,
+  SelectItem,
+  SelectIcon,
+  SelectPortal,
+  SelectBackdrop as SelectBackdropContent,
+  SelectContent,
+  SelectDragIndicator,
+  SelectDragIndicatorWrapper,
+} from "@/components/ui/select";
+import { ChevronDown } from "lucide-react-native";
 
 const DEFAULT_FORM: CreateLetsEncryptPayload = {
   provider: "letsencrypt",
@@ -128,7 +144,7 @@ const resolveCreated = (cert: Certificate) => {
   );
 };
 
-const StatusChip = ({label, action = "info"}: {label: string; action?: "info" | "muted" | "success" | "error"}) => (
+const StatusChip = ({ label, action = "info" }: { label: string; action?: "info" | "muted" | "success" | "error" }) => (
   <Badge className="rounded-full px-3 py-1" size="sm" action={action === "muted" ? "muted" : action} variant="solid">
     <BadgeText className={`text-xs ${action === "muted" ? "text-typography-700" : ""}`}>{label}</BadgeText>
   </Badge>
@@ -137,7 +153,7 @@ const StatusChip = ({label, action = "info"}: {label: string; action?: "info" | 
 const TOGGLE_PROPS = {
   size: "sm" as const,
   thumbColor: "#f8fafc",
-  trackColor: {false: "#cbd5e1", true: "#0f172a"},
+  trackColor: { false: "#cbd5e1", true: "#0f172a" },
   ios_backgroundColor: "#cbd5e1",
 };
 
@@ -150,18 +166,21 @@ export default function CertificatesScreen() {
   const [form, setForm] = React.useState<CreateLetsEncryptPayload>(DEFAULT_FORM);
   const [domainsInput, setDomainsInput] = React.useState("");
   const [saving, setSaving] = React.useState(false);
+  const [dnsProviders, setDnsProviders] = React.useState<DnsProvider[]>([]);
+  const [dnsLoading, setDnsLoading] = React.useState(false);
+  const [selectedDnsProviderId, setSelectedDnsProviderId] = React.useState<string | null>(null);
   const [renewingId, setRenewingId] = React.useState<number | null>(null);
   const [downloadingId, setDownloadingId] = React.useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<Certificate | null>(null);
   const [deletingId, setDeletingId] = React.useState<number | null>(null);
-  const {height: screenHeight} = useWindowDimensions();
+  const { height: screenHeight } = useWindowDimensions();
   const modalBodyMaxHeight = Math.min(screenHeight * 0.7, 720);
 
   const showToast = React.useCallback(
     (title: string, description: string, action: "success" | "error" = "success") => {
       toast.show({
         placement: "top",
-        render: ({id}) => (
+        render: ({ id }) => (
           <Toast
             nativeID={"toast-" + id}
             className="px-5 py-3 gap-3 shadow-soft-1 items-start flex-row"
@@ -209,6 +228,27 @@ export default function CertificatesScreen() {
     setModalOpen(false);
   };
 
+  const loadDnsProviders = React.useCallback(async () => {
+    if (dnsProviders.length) return;
+    setDnsLoading(true);
+    try {
+      const data = await listDnsProviders();
+      setDnsProviders(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Failed to load dns providers", err);
+      showToast("Error loading", "Unable to fetch DNS providers.", "error");
+    } finally {
+      setDnsLoading(false);
+    }
+  }, [dnsProviders.length, showToast]);
+
+  React.useEffect(() => {
+    if (modalOpen && form.meta.dns_challenge) {
+      loadDnsProviders();
+      if (form.meta.dns_provider) setSelectedDnsProviderId(form.meta.dns_provider || null);
+    }
+  }, [modalOpen, form.meta.dns_challenge, form.meta.dns_provider, loadDnsProviders]);
+
   const handleCreate = async () => {
     const domain_names = parseDomains(domainsInput);
     if (!domain_names.length) {
@@ -227,9 +267,12 @@ export default function CertificatesScreen() {
     const payload: CreateLetsEncryptPayload = {
       ...form,
       domain_names,
-      meta: {
-        ...form.meta,
-      },
+      meta: (() => {
+        const { letsencrypt_email, letsencrypt_agree, ...rest } = form.meta ?? {};
+        return {
+          ...rest,
+        } as typeof form.meta;
+      })(),
     };
 
     setSaving(true);
@@ -310,14 +353,14 @@ export default function CertificatesScreen() {
     <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{paddingBottom: 32}}
+        contentContainerStyle={{ paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadCerts("refresh")} />}
       >
         <Box className="p-4 pt-16 web:p-10 web:max-w-6xl web:mx-auto web:w-full">
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
-            style={{fontFamily: "Inter_700Bold"}}
+            style={{ fontFamily: "Inter_700Bold" }}
           >
             SSL Certificates
           </Heading>
@@ -362,7 +405,7 @@ export default function CertificatesScreen() {
                           <Shield size={18} color={expired ? "#ef4444" : "#16a34a"} />
                           <Text
                             className="text-typography-900 text-base"
-                            style={{fontFamily: "Inter_700Bold"}}
+                            style={{ fontFamily: "Inter_700Bold" }}
                           >
                             {cert.nice_name ?? (cert.domain_names ?? [])[0] ?? "-"}
                           </Text>
@@ -472,8 +515,8 @@ export default function CertificatesScreen() {
             <ScrollView
               nestedScrollEnabled
               showsVerticalScrollIndicator
-              style={{maxHeight: modalBodyMaxHeight}}
-              contentContainerStyle={{paddingBottom: 8}}
+              style={{ maxHeight: modalBodyMaxHeight }}
+              contentContainerStyle={{ paddingBottom: 8 }}
             >
               <VStack className="gap-4">
                 <FormControl isRequired>
@@ -500,7 +543,7 @@ export default function CertificatesScreen() {
                   <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
                     <InputField
                       value={form.meta.letsencrypt_email}
-                      onChangeText={(val) => setForm((prev) => ({...prev, meta: {...prev.meta, letsencrypt_email: val}}))}
+                      onChangeText={(val) => setForm((prev) => ({ ...prev, meta: { ...prev.meta, letsencrypt_email: val } }))}
                       autoCapitalize="none"
                       keyboardType="email-address"
                       placeholder="your-email@domain.com"
@@ -514,7 +557,7 @@ export default function CertificatesScreen() {
                     <Switch
                       {...TOGGLE_PROPS}
                       value={form.meta.letsencrypt_agree ?? false}
-                      onValueChange={(val) => setForm((prev) => ({...prev, meta: {...prev.meta, letsencrypt_agree: val}}))}
+                      onValueChange={(val) => setForm((prev) => ({ ...prev, meta: { ...prev.meta, letsencrypt_agree: val } }))}
                     />
                     <Text className="text-typography-800">I accept the Let's Encrypt terms</Text>
                   </HStack>
@@ -523,7 +566,7 @@ export default function CertificatesScreen() {
                     <Switch
                       {...TOGGLE_PROPS}
                       value={form.meta.dns_challenge ?? false}
-                      onValueChange={(val) => setForm((prev) => ({...prev, meta: {...prev.meta, dns_challenge: val}}))}
+                      onValueChange={(val) => setForm((prev) => ({ ...prev, meta: { ...prev.meta, dns_challenge: val } }))}
                     />
                     <Text className="text-typography-800">Use DNS Challenge</Text>
                   </HStack>
@@ -535,30 +578,66 @@ export default function CertificatesScreen() {
                       <FormControlLabel>
                         <FormControlLabelText>DNS Provider</FormControlLabelText>
                       </FormControlLabel>
-                      <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
-                        <InputField
-                          value={form.meta.dns_provider ?? ""}
-                          onChangeText={(val) => setForm((prev) => ({...prev, meta: {...prev.meta, dns_provider: val}}))}
-                          autoCapitalize="none"
-                          placeholder="dynu, cloudflare, route53..."
-                        />
-                      </Input>
+                      <Select
+                        selectedValue={selectedDnsProviderId ?? ""}
+                        onValueChange={(val) => {
+                          const v = String(val ?? "");
+                          setSelectedDnsProviderId(v || null);
+                          const provider = dnsProviders.find((d) => d.id === v);
+                          setForm((prev) => ({
+                            ...prev,
+                            meta: {
+                              ...prev.meta,
+                              dns_provider: v || "",
+                              dns_provider_credentials: provider?.credentials ?? prev.meta.dns_provider_credentials ?? "",
+                            },
+                          }));
+                        }}
+                        isDisabled={dnsLoading && dnsProviders.length === 0}
+                      >
+                        <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] h-11 px-4">
+                          <SelectInput
+                            placeholder={dnsLoading ? "Loading providers..." : dnsProviders.find((d) => d.id === selectedDnsProviderId)?.name ?? "Select provider"}
+                            className="text-typography-900 dark:text-[#E8EBF0]"
+                          />
+                          <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-typography-400" />
+                        </SelectTrigger>
+                        <SelectPortal>
+                          <SelectBackdropContent />
+                          <SelectContent className="max-h-72 bg-background-0 dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52] rounded-2xl">
+                            <SelectDragIndicatorWrapper>
+                              <SelectDragIndicator />
+                            </SelectDragIndicatorWrapper>
+                            {dnsLoading && dnsProviders.length === 0 ? (
+                              <SelectItem label="Loading..." value="" isDisabled />
+                            ) : dnsProviders.length === 0 ? (
+                              <SelectItem label="No providers available" value="" isDisabled />
+                            ) : (
+                              dnsProviders.map((p) => (
+                                <SelectItem key={p.id} label={p.name} value={p.id} className="text-base text-typography-900 dark:text-[#E8EBF0]">
+                                  {p.name}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </SelectPortal>
+                      </Select>
                     </FormControl>
 
                     <FormControl>
                       <FormControlLabel>
                         <FormControlLabelText>DNS Credentials</FormControlLabelText>
                       </FormControlLabel>
-                      <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
-                        <InputField
+                      <Textarea className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
+                        <TextareaInput
                           value={form.meta.dns_provider_credentials ?? ""}
                           onChangeText={(val) =>
-                            setForm((prev) => ({...prev, meta: {...prev.meta, dns_provider_credentials: val}}))
+                            setForm((prev) => ({ ...prev, meta: { ...prev.meta, dns_provider_credentials: val } }))
                           }
                           autoCapitalize="none"
                           placeholder="dns_dynu_auth_token = YOUR_TOKEN..."
                         />
-                      </Input>
+                      </Textarea>
                       <FormControlHelper>
                         <FormControlHelperText>Use the format expected by the provider's lego/ACME.</FormControlHelperText>
                       </FormControlHelper>

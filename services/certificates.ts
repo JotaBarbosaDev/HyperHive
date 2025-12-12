@@ -1,7 +1,7 @@
-import {getApiBaseUrl, setApiBaseUrl} from "@/config/apiConfig";
-import {Certificate, CreateLetsEncryptPayload} from "@/types/certificate";
-import {apiFetch, setAuthToken, triggerUnauthorized} from "./api-client";
-import {loadApiBaseUrl, loadAuthToken} from "./auth-storage";
+import { getApiBaseUrl, setApiBaseUrl } from "@/config/apiConfig";
+import { Certificate, CreateLetsEncryptPayload } from "@/types/certificate";
+import { apiFetch, setAuthToken, triggerUnauthorized } from "./api-client";
+import { loadApiBaseUrl, loadAuthToken } from "./auth-storage";
 
 const ensureApiBaseUrl = async () => {
   let baseUrl = getApiBaseUrl();
@@ -32,7 +32,7 @@ const resolveToken = async () => {
 
 export async function listCertificates(): Promise<Certificate[]> {
   const authToken = await resolveToken();
-  return apiFetch<Certificate[]>("/certs/list", {token: authToken});
+  return apiFetch<Certificate[]>("/certs/list", { token: authToken });
 }
 
 export async function createLetsEncryptCertificate(payload: CreateLetsEncryptPayload): Promise<Certificate> {
@@ -49,7 +49,7 @@ export async function downloadCertificate(id: number): Promise<unknown> {
   return apiFetch<unknown>("/certs/download", {
     method: "POST",
     token: authToken,
-    body: {id},
+    body: { id },
   });
 }
 
@@ -58,7 +58,7 @@ export async function renewCertificate(id: number): Promise<unknown> {
   return apiFetch<unknown>("/certs/renew", {
     method: "POST",
     token: authToken,
-    body: {id},
+    body: { id },
   });
 }
 
@@ -67,6 +67,17 @@ export async function deleteCertificate(id: number): Promise<void> {
   await apiFetch<void>("/certs/delete", {
     method: "DELETE",
     token: authToken,
-    body: {id},
+    body: { id },
   });
+}
+
+export type DnsProvider = {
+  id: string;
+  name: string;
+  credentials?: string;
+};
+
+export async function listDnsProviders(): Promise<DnsProvider[]> {
+  const authToken = await resolveToken();
+  return apiFetch<DnsProvider[]>("/certs/dns-providers", { token: authToken });
 }

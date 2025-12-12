@@ -1,5 +1,5 @@
-import {getApiBaseUrl} from "@/config/apiConfig";
-import {getAuthToken} from "./api-client";
+import { getApiBaseUrl } from "@/config/apiConfig";
+import { getAuthToken } from "./api-client";
 
 type MessagePayload = string | ArrayBuffer | Blob | ArrayBufferView | null | undefined;
 type WebsocketMessageListener = (payload: MessagePayload) => void;
@@ -116,7 +116,7 @@ export const ensureHyperHiveWebsocket = async (options?: {
     console.info("[WS] Connected");
   };
 
-  socket.onmessage = (event: {data: MessagePayload}) => {
+  socket.onmessage = (event: { data: MessagePayload }) => {
     const payload = event?.data;
     console.log("[WS MESSAGE]", payload);
     notifyListeners(payload);
