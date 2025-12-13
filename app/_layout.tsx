@@ -19,6 +19,7 @@ import * as SystemUI from "expo-system-ui";
 import * as NavigationBar from "expo-navigation-bar";
 import { Button, ButtonIcon, ButtonText } from "@/components/ui/button";
 import { EditIcon } from "@/components/ui/icon";
+import GoAccessStreamButtons from "@/components/GoAccessStreamButtons";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import React from "react";
 import { CreateMountDrawer } from "@/components/drawers/CreateMountDrawer";
@@ -491,6 +492,7 @@ function RootLayoutNav() {
                     </Button>
                   </Box>
                 )}
+                <GoAccessStreamButtons />
                 <Box className="flex-1 pt-2 web:pt-3">
                   <Slot />
                 </Box>
