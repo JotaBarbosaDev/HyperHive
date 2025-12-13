@@ -167,7 +167,7 @@ export default function SpaScreen() {
                 <Heading size="xl">Single Packet Authorization</Heading>
                 <Text size="sm" className="text-typography-500">
                   Manage SPA ports: create password-protected access and remove it when no longer
-                  needed.
+                  needed. IMPORTANT: ports may be open for everyone for some seconds or when hyperhive crashes, do not use this as a unique authorization
                 </Text>
               </VStack>
             </HStack>
