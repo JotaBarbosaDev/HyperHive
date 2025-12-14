@@ -871,13 +871,13 @@ export default function VirtualMachinesScreen() {
               <Button
                 size="md"
                 onPress={handleNewVM}
-                className="rounded-lg bg-typography-900 dark:bg-[#E8EBF0]"
+                className="rounded-lg bg-typography-900 dark:bg-[#2DD4BF]"
               >
                 <ButtonIcon
                   as={Plus}
-                  className="text-background-0 dark:text-typography-900"
+                  className="text-background-0 dark:text-[#0A1628]"
                 />
-                <ButtonText className="web:inline hidden text-background-0 dark:text-typography-900">
+                <ButtonText className="web:inline hidden text-background-0 dark:text-[#0A1628]">
                   Nova VM
                 </ButtonText>
               </Button>
@@ -1101,13 +1101,13 @@ export default function VirtualMachinesScreen() {
                 </Text>
                 <Button
                   onPress={handleNewVM}
-                  className="rounded-lg bg-typography-900 dark:bg-[#E8EBF0]"
+                  className="rounded-lg bg-typography-900 dark:bg-[#2DD4BF]"
                 >
                   <ButtonIcon
                     as={Plus}
-                    className="text-background-0 dark:text-typography-900"
+                    className="text-background-0 dark:text-[#0A1628]"
                   />
-                  <ButtonText className="text-background-0 dark:text-typography-900">
+                  <ButtonText className="text-background-0 dark:text-[#0A1628]">
                     Create First VM
                   </ButtonText>
                 </Button>
@@ -1414,11 +1414,11 @@ export default function VirtualMachinesScreen() {
                               </Box>
 
                               {/* Botões de Ação */}
-                              <HStack className="gap-12 flex-wrap justify-center pt-8">
+                              <HStack className="gap-3 items-center justify-evenly pt-8">
                                 {isStopped && (
                                   <Button
                                     size="sm"
-                                    className="flex-1 rounded-lg bg-typography-900 dark:bg-[#E8EBF0] web:hover:brightness-95 web:transition-all web:duration-150"
+                                    className="flex-1 rounded-lg bg-typography-900 dark:bg-[#2DD4BF] web:hover:brightness-95 web:transition-all web:duration-150"
                                     onPress={() =>
                                       handleVmAction(vm.name, "start")
                                     }
@@ -1430,10 +1430,10 @@ export default function VirtualMachinesScreen() {
                                       <>
                                         <ButtonIcon
                                           as={Play}
-                                          className="text-background-0 dark:text-typography-900"
+                                          className="text-background-0 dark:text-[#0A1628]"
                                         />
                                         <ButtonText
-                                          className="text-background-0 dark:text-typography-900"
+                                          className="text-background-0 dark:text-[#0A1628]"
                                           style={{
                                             fontFamily: "Inter_500Medium",
                                           }}
@@ -1472,7 +1472,7 @@ export default function VirtualMachinesScreen() {
                                 {isPaused && (
                                   <Button
                                     size="sm"
-                                    className="flex-1 rounded-lg bg-typography-900 dark:bg-[#E8EBF0] web:hover:brightness-95 web:transition-all web:duration-150"
+                                    className="flex-1 rounded-lg bg-typography-900 dark:bg-[#2DD4BF] web:hover:brightness-95 web:transition-all web:duration-150"
                                     onPress={() =>
                                       handleVmAction(vm.name, "resume")
                                     }
@@ -1484,10 +1484,10 @@ export default function VirtualMachinesScreen() {
                                       <>
                                         <ButtonIcon
                                           as={Play}
-                                          className="text-background-0 dark:text-typography-900"
+                                          className="text-background-0 dark:text-[#0A1628]"
                                         />
                                         <ButtonText
-                                          className="text-background-0 dark:text-typography-900"
+                                          className="text-background-0 dark:text-[#0A1628]"
                                           style={{
                                             fontFamily: "Inter_500Medium",
                                           }}
@@ -1521,20 +1521,20 @@ export default function VirtualMachinesScreen() {
             <ModalBackdrop />
             <ModalContent className="rounded-lg shadow-lg max-w-[720px] w-full">
               <ModalHeader className="flex justify-between">
-                <Heading size="md" className="text-gray-900">
+                <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
                   VM Details
                 </Heading>
                 <VStack className="gap-2">
                   <HStack className="">
                     <Button
-                      className="rounded-md px-4 py-2"
+                      className="rounded-md px-4 py-2 bg-typography-900 dark:bg-[#2DD4BF]"
                       onPress={() => {
                         if (!detailsVm) return;
                         setConsoleOptionsVm(detailsVm);
                         setShowConsoleOptions(true);
                       }}
                     >
-                      <ButtonText>Open</ButtonText>
+                      <ButtonText className="text-background-0 dark:text-[#0A1628]">Open</ButtonText>
                     </Button>
                   </HStack>
                 </VStack>
@@ -1550,7 +1550,7 @@ export default function VirtualMachinesScreen() {
                       <Divider className="my-2" />
                       <VStack className="gap-3 web:grid web:grid-cols-2 web:gap-4">
                         <HStack className="justify-between">
-                          <Text className="text-sm text-gray-600">State</Text>
+                          <Text className="text-sm text-typography-600 dark:text-typography-400">State</Text>
                           <Badge
                             variant={VM_STATES[detailsVm.state].badgeVariant}
                             className="rounded-full"
@@ -1561,62 +1561,62 @@ export default function VirtualMachinesScreen() {
                           </Badge>
                         </HStack>
                         <HStack className="justify-between">
-                          <Text className="text-sm text-gray-600">vCPU</Text>
-                          <Text className="text-sm text-gray-900">
+                          <Text className="text-sm text-typography-600 dark:text-typography-400">vCPU</Text>
+                          <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
                             {detailsVm.DefinedCPUS} cores
                           </Text>
                         </HStack>
                         <HStack className="justify-between">
-                          <Text className="text-sm text-gray-600">RAM</Text>
-                          <Text className="text-sm text-gray-900">
+                          <Text className="text-sm text-typography-600 dark:text-typography-400">RAM</Text>
+                          <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
                             {formatMemory(detailsVm.DefinedRam)}
                           </Text>
                         </HStack>
                         <HStack className="justify-between">
-                          <Text className="text-sm text-gray-600">Disk</Text>
-                          <Text className="text-sm text-gray-900">
+                          <Text className="text-sm text-typography-600 dark:text-typography-400">Disk</Text>
+                          <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
                             {detailsVm.diskSizeGB} GB (Allocated: {detailsVm.AllocatedGb} GB)
                           </Text>
                         </HStack>
                         <HStack className="justify-between">
-                          <Text className="text-sm text-gray-600">Network</Text>
-                          <Text className="text-sm text-gray-900">
+                          <Text className="text-sm text-typography-600 dark:text-typography-400">Network</Text>
+                          <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
                             {detailsVm.network}
                           </Text>
                         </HStack>
                         <HStack className="justify-between">
-                          <Text className="text-sm text-gray-600">Disk Path</Text>
-                          <Text className="text-sm text-gray-900 truncate max-w-[200px]">
+                          <Text className="text-sm text-typography-600 dark:text-typography-400">Disk Path</Text>
+                          <Text className="text-sm text-typography-900 dark:text-[#E8EBF0] truncate max-w-[200px]">
                             {detailsVm.diskPath}
                           </Text>
                         </HStack>
                         {detailsVmNfsName ? (
                           <HStack className="justify-between">
-                            <Text className="text-sm text-gray-600">NFS</Text>
-                            <Text className="text-sm text-gray-900">
+                            <Text className="text-sm text-typography-600 dark:text-typography-400">NFS</Text>
+                            <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
                               {detailsVmNfsName}
                             </Text>
                           </HStack>
                         ) : null}
                         {detailsVm.ip.length > 0 && (
                           <HStack className="justify-between col-span-2">
-                            <Text className="text-sm text-gray-600">IP</Text>
-                            <Text className="text-sm text-gray-900">
+                            <Text className="text-sm text-typography-600 dark:text-typography-400">IP</Text>
+                            <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
                               {detailsVm.ip.join(", ")}
                             </Text>
                           </HStack>
                         )}
                         <HStack className="justify-between col-span-2">
-                          <Text className="text-sm text-gray-600">
+                          <Text className="text-sm text-typography-600 dark:text-typography-400">
                             Auto-start
                           </Text>
-                          <Text className="text-sm text-gray-900">
+                          <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
                             {detailsVm.autoStart ? "Yes" : "No"}
                           </Text>
                         </HStack>
                         <HStack className="justify-between col-span-2">
-                          <Text className="text-sm text-gray-600">Live VM</Text>
-                          <Text className="text-sm text-typography-900">
+                          <Text className="text-sm text-typography-600 dark:text-typography-400">Live VM</Text>
+                          <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
                             {detailsVm.isLive ? "Yes" : "No"}
                           </Text>
                         </HStack>
@@ -1625,27 +1625,27 @@ export default function VirtualMachinesScreen() {
                       <HStack className="gap-2 flex-wrap web:justify-start">
                         <Button
                           variant="outline"
-                          className="rounded-md px-4 py-2"
+                          className="rounded-md px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
                           onPress={() => setEditVm(detailsVm)}
                         >
-                          <ButtonIcon as={Settings} />
-                          <ButtonText>Edit Resources</ButtonText>
+                          <ButtonIcon as={Settings} className="text-typography-900 dark:text-[#E8EBF0]" />
+                          <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Edit Resources</ButtonText>
                         </Button>
                         <Button
                           variant="outline"
-                          className="rounded-md px-4 py-2"
+                          className="rounded-md px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
                           onPress={() => setCloneVm(detailsVm)}
                         >
-                          <ButtonIcon as={Copy} />
-                          <ButtonText>Clone VM</ButtonText>
+                          <ButtonIcon as={Copy} className="text-typography-900 dark:text-[#E8EBF0]" />
+                          <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Clone VM</ButtonText>
                         </Button>
                         <Button
                           variant="outline"
-                          className="rounded-md px-4 py-2"
+                          className="rounded-md px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
                           onPress={() => setMigrateVm(detailsVm)}
                         >
-                          <ButtonIcon as={GitBranch} />
-                          <ButtonText>Migrate VM</ButtonText>
+                          <ButtonIcon as={GitBranch} className="text-typography-900 dark:text-[#E8EBF0]" />
+                          <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Migrate VM</ButtonText>
                         </Button>
                       </HStack>
                     </VStack>
@@ -1656,10 +1656,10 @@ export default function VirtualMachinesScreen() {
                 <HStack className="justify-end gap-2">
                   <Button
                     variant="outline"
-                    className="rounded-md px-4 py-2"
+                    className="rounded-md px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
                     onPress={() => setDetailsVm(null)}
                   >
-                    <ButtonText>Close</ButtonText>
+                    <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Close</ButtonText>
                   </Button>
                 </HStack>
               </ModalFooter>
@@ -1673,13 +1673,13 @@ export default function VirtualMachinesScreen() {
             <AlertDialogBackdrop />
             <AlertDialogContent>
               <AlertDialogHeader>
-                <Heading size="md" className="text-gray-900">
+                <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
                   Confirmation
                 </Heading>
                 <AlertDialogCloseButton />
               </AlertDialogHeader>
               <AlertDialogBody>
-                <Text className="text-gray-700">
+                <Text className="text-typography-700 dark:text-typography-300">
                   {confirmAction?.type === "delete"
                     ? `Are you sure you want to delete VM ${confirmAction?.vm.name}?`
                     : `Force shutdown of ${confirmAction?.vm.name}?`}
@@ -1689,9 +1689,9 @@ export default function VirtualMachinesScreen() {
                 <Button
                   variant="outline"
                   onPress={() => setConfirmAction(null)}
-                  className="rounded-md px-4 py-2"
+                  className="rounded-md px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
                 >
-                  <ButtonText>Cancel</ButtonText>
+                  <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
                 </Button>
                 <Button
                   onPress={async () => {
@@ -1740,11 +1740,11 @@ export default function VirtualMachinesScreen() {
                       setConfirmAction(null);
                     }
                   }}
-                  className="rounded-md px-4 py-2"
+                  className="rounded-md px-4 py-2 bg-typography-900 dark:bg-[#E8EBF0]"
                   disabled={Boolean(deletingVm)}
                 >
                   {deletingVm ? <ButtonSpinner className="mr-2" /> : null}
-                  <ButtonText>Confirmar</ButtonText>
+                  <ButtonText className="text-background-0 dark:text-typography-900">Confirmar</ButtonText>
                 </Button>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -1861,7 +1861,7 @@ export default function VirtualMachinesScreen() {
             <ModalBackdrop />
             <ModalContent className="rounded-lg shadow-lg">
               <ModalHeader>
-                <Heading size="md" className="text-gray-900">
+                <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
                   Clone VM
                 </Heading>
                 <ModalCloseButton />
@@ -1928,10 +1928,10 @@ export default function VirtualMachinesScreen() {
                 <HStack className="justify-end gap-2">
                   <Button
                     variant="outline"
-                    className="rounded-md px-4 py-2"
+                    className="rounded-md px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
                     onPress={() => setCloneVm(null)}
                   >
-                    <ButtonText>Close</ButtonText>
+                    <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Close</ButtonText>
                   </Button>
                 </HStack>
               </ModalFooter>
@@ -1943,7 +1943,7 @@ export default function VirtualMachinesScreen() {
             <ModalBackdrop />
             <ModalContent className="rounded-lg shadow-lg">
               <ModalHeader>
-                <Heading size="md" className="text-gray-900">
+                <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
                   Migrate VM
                 </Heading>
                 <ModalCloseButton />
@@ -2025,10 +2025,10 @@ export default function VirtualMachinesScreen() {
                 <HStack className="justify-end gap-2">
                   <Button
                     variant="outline"
-                    className="rounded-md px-4 py-2"
+                    className="rounded-md px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
                     onPress={() => setMigrateVm(null)}
                   >
-                    <ButtonText>Close</ButtonText>
+                    <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Close</ButtonText>
                   </Button>
                 </HStack>
               </ModalFooter>
@@ -2040,7 +2040,7 @@ export default function VirtualMachinesScreen() {
             <ModalBackdrop />
             <ModalContent className="rounded-lg shadow-lg">
               <ModalHeader>
-                <Heading size="md" className="text-gray-900">
+                <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
                   Move Disk
                 </Heading>
                 <ModalCloseButton />
@@ -2094,10 +2094,10 @@ export default function VirtualMachinesScreen() {
                 <HStack className="justify-end gap-2">
                   <Button
                     variant="outline"
-                    className="rounded-md px-4 py-2"
+                    className="rounded-md px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
                     onPress={() => setMoveDiskVm(null)}
                   >
-                    <ButtonText>Close</ButtonText>
+                    <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Close</ButtonText>
                   </Button>
                 </HStack>
               </ModalFooter>
@@ -2109,7 +2109,7 @@ export default function VirtualMachinesScreen() {
             <ModalBackdrop />
             <ModalContent className="rounded-lg shadow-lg">
               <ModalHeader>
-                <Heading size="md" className="text-gray-900">
+                <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
                   Change VNC Password
                 </Heading>
                 <ModalCloseButton />
@@ -2172,7 +2172,7 @@ export default function VirtualMachinesScreen() {
             <ModalBackdrop />
             <ModalContent className="rounded-lg shadow-lg">
               <ModalHeader>
-                <Heading size="md" className="text-gray-900">
+                <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
                   Update CPU XML
                 </Heading>
                 <ModalCloseButton />
@@ -2239,7 +2239,7 @@ export default function VirtualMachinesScreen() {
             <ModalBackdrop />
             <ModalContent className="rounded-lg shadow-lg">
               <ModalHeader>
-                <Heading size="md" className="text-gray-900">
+                <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
                   Restore Backup
                 </Heading>
                 <ModalCloseButton />
@@ -2247,19 +2247,19 @@ export default function VirtualMachinesScreen() {
               <ModalBody>
                 {restoreVm && (
                   <VStack className="gap-3">
-                    <Text className="text-gray-700">
+                    <Text className="text-typography-700 dark:text-typography-300">
                       Confirm backup restore for {restoreVm.name}?
                     </Text>
                     <HStack className="justify-end gap-2">
                       <Button
                         variant="outline"
-                        className="rounded-md px-4 py-2"
+                        className="rounded-md px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
                         onPress={() => setRestoreVm(null)}
                       >
-                        <ButtonText>Cancel</ButtonText>
+                        <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
                       </Button>
                       <Button
-                        className="rounded-md px-4 py-2"
+                        className="rounded-md px-4 py-2 bg-typography-900 dark:bg-[#2DD4BF]"
                         onPress={() => {
                           Haptics.notificationAsync(
                             Haptics.NotificationFeedbackType.Success
@@ -2281,7 +2281,7 @@ export default function VirtualMachinesScreen() {
                           setRestoreVm(null);
                         }}
                       >
-                        <ButtonText>Restore</ButtonText>
+                        <ButtonText className="text-background-0 dark:text-[#0A1628]">Restore</ButtonText>
                       </Button>
                     </HStack>
                   </VStack>
@@ -2299,7 +2299,7 @@ export default function VirtualMachinesScreen() {
             <ModalBackdrop />
             <ModalContent className="rounded-lg shadow-lg max-h-[90vh]">
               <ModalHeader className="flex justify-between">
-                <Heading size="md" className="text-gray-900">
+                <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
                   Console · {consoleOptionsVm?.name ?? ""}
                 </Heading>
                 <ModalCloseButton />
@@ -2307,12 +2307,12 @@ export default function VirtualMachinesScreen() {
               <ModalBody>
                 <VStack className="gap-3">
                   <Button
-                    className="w-full rounded-md px-4 py-3 bg-typography-900 dark:bg-[#E8EBF0]"
+                    className="w-full rounded-md px-4 py-3 bg-typography-900 dark:bg-[#2DD4BF]"
                     onPress={() => {
                       void handleConsoleAction("browser");
                     }}
                   >
-                    <ButtonText className="text-background-0 dark:text-typography-900">
+                    <ButtonText className="text-background-0 dark:text-[#0A1628]">
                       Abrir no Browser
                     </ButtonText>
                   </Button>
@@ -2343,13 +2343,13 @@ export default function VirtualMachinesScreen() {
               <ModalFooter>
                 <Button
                   variant="outline"
-                  className="rounded-md px-4 py-2"
+                  className="rounded-md px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
                   onPress={() => {
                     setShowConsoleOptions(false);
                     setConsoleOptionsVm(null);
                   }}
                 >
-                  <ButtonText>Cancel</ButtonText>
+                  <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
                 </Button>
               </ModalFooter>
             </ModalContent>
@@ -2377,7 +2377,7 @@ export default function VirtualMachinesScreen() {
             <ModalBody className="overflow-y-auto max-h-[calc(85vh-140px)] web:max-h-[calc(90vh-140px)]">
               <VStack className="gap-1">
                 {/* Configurações */}
-                <Text className="text-xs text-typography-500 px-3 py-2 font-semibold">
+                <Text className="text-xs text-typography-500 dark:text-typography-400 px-3 py-2 font-semibold">
                   SETTINGS
                 </Text>
                 <Pressable
@@ -2386,13 +2386,13 @@ export default function VirtualMachinesScreen() {
                     handleToggleAutostart(selectedVm, !selectedVm.autoStart);
                     setShowActionsheet(false);
                   }}
-                  className="px-3 py-3 hover:bg-background-50 rounded-md"
+                  className="px-3 py-3 hover:bg-background-50 dark:hover:bg-[#1E2F47] rounded-md"
                 >
                   <HStack className="items-center gap-2">
                     {selectedVm?.autoStart && (
-                      <Check size={16} className="text-typography-900" />
+                      <Check size={16} className="text-typography-900 dark:text-[#E8EBF0]" />
                     )}
-                    <Text className="text-typography-900">
+                    <Text className="text-typography-900 dark:text-[#E8EBF0]">
                       Auto-start on boot
                     </Text>
                   </HStack>
@@ -2401,7 +2401,7 @@ export default function VirtualMachinesScreen() {
                 <Divider className="my-2" />
 
                 {/* Operações */}
-                <Text className="text-xs text-typography-500 px-3 py-2 font-semibold">
+                <Text className="text-xs text-typography-500 dark:text-typography-400 px-3 py-2 font-semibold">
                   OPERATIONS
                 </Text>
                 <Pressable
@@ -2410,11 +2410,11 @@ export default function VirtualMachinesScreen() {
                     setEditVm(selectedVm);
                     setShowActionsheet(false);
                   }}
-                  className="px-3 py-3 hover:bg-background-50 rounded-md"
+                  className="px-3 py-3 hover:bg-background-50 dark:hover:bg-[#1E2F47] rounded-md"
                 >
                   <HStack className="items-center gap-3">
-                    <Settings size={18} className="text-typography-700" />
-                    <Text className="text-typography-900">Edit Resources</Text>
+                    <Settings size={18} className="text-typography-700 dark:text-[#E8EBF0]" />
+                    <Text className="text-typography-900 dark:text-[#E8EBF0]">Edit Resources</Text>
                   </HStack>
                 </Pressable>
                 <Pressable
@@ -2423,11 +2423,11 @@ export default function VirtualMachinesScreen() {
                     setUpdateCpuVm(selectedVm);
                     setShowActionsheet(false);
                   }}
-                  className="px-3 py-3 hover:bg-background-50 rounded-md"
+                  className="px-3 py-3 hover:bg-background-50 dark:hover:bg-[#1E2F47] rounded-md"
                 >
                   <HStack className="items-center gap-3">
-                    <Cpu size={18} className="text-typography-700" />
-                    <Text className="text-typography-900">Update CPU XML</Text>
+                    <Cpu size={18} className="text-typography-700 dark:text-[#E8EBF0]" />
+                    <Text className="text-typography-900 dark:text-[#E8EBF0]">Update CPU XML</Text>
                   </HStack>
                 </Pressable>
                 <Pressable
@@ -2436,11 +2436,11 @@ export default function VirtualMachinesScreen() {
                     setChangeVncVm(selectedVm);
                     setShowActionsheet(false);
                   }}
-                  className="px-3 py-3 hover:bg-background-50 rounded-md"
+                  className="px-3 py-3 hover:bg-background-50 dark:hover:bg-[#1E2F47] rounded-md"
                 >
                   <HStack className="items-center gap-3">
-                    <Lock size={18} className="text-typography-700" />
-                    <Text className="text-typography-900">Change VNC Password</Text>
+                    <Lock size={18} className="text-typography-700 dark:text-[#E8EBF0]" />
+                    <Text className="text-typography-900 dark:text-[#E8EBF0]">Change VNC Password</Text>
                   </HStack>
                 </Pressable>
                 <Pressable
@@ -2449,18 +2449,18 @@ export default function VirtualMachinesScreen() {
                     setCloneVm(selectedVm);
                     setShowActionsheet(false);
                   }}
-                  className="px-3 py-3 hover:bg-background-50 rounded-md"
+                  className="px-3 py-3 hover:bg-background-50 dark:hover:bg-[#1E2F47] rounded-md"
                 >
                   <HStack className="items-center gap-3">
-                    <Copy size={18} className="text-typography-700" />
-                    <Text className="text-typography-900">Clone VM</Text>
+                    <Copy size={18} className="text-typography-700 dark:text-[#E8EBF0]" />
+                    <Text className="text-typography-900 dark:text-[#E8EBF0]">Clone VM</Text>
                   </HStack>
                 </Pressable>
 
                 <Divider className="my-2" />
 
                 {/* Migração & Disco */}
-                <Text className="text-xs text-typography-500 px-3 py-2 font-semibold">
+                <Text className="text-xs text-typography-500 dark:text-typography-400 px-3 py-2 font-semibold">
                   MIGRATION & DISK
                 </Text>
                 <Pressable
@@ -2469,11 +2469,11 @@ export default function VirtualMachinesScreen() {
                     setMigrateVm(selectedVm);
                     setShowActionsheet(false);
                   }}
-                  className="px-3 py-3 hover:bg-background-50 rounded-md"
+                  className="px-3 py-3 hover:bg-background-50 dark:hover:bg-[#1E2F47] rounded-md"
                 >
                   <HStack className="items-center gap-3">
-                    <GitBranch size={18} className="text-typography-700" />
-                    <Text className="text-typography-900">Migrate VM</Text>
+                    <GitBranch size={18} className="text-typography-700 dark:text-[#E8EBF0]" />
+                    <Text className="text-typography-900 dark:text-[#E8EBF0]">Migrate VM</Text>
                   </HStack>
                 </Pressable>
                 <Pressable
@@ -2482,11 +2482,11 @@ export default function VirtualMachinesScreen() {
                     setMoveDiskVm(selectedVm);
                     setShowActionsheet(false);
                   }}
-                  className="px-3 py-3 hover:bg-background-50 rounded-md"
+                  className="px-3 py-3 hover:bg-background-50 dark:hover:bg-[#1E2F47] rounded-md"
                 >
                   <HStack className="items-center gap-3">
-                    <HardDrive size={18} className="text-typography-700" />
-                    <Text className="text-typography-900">Move Disk</Text>
+                    <HardDrive size={18} className="text-typography-700 dark:text-[#E8EBF0]" />
+                    <Text className="text-typography-900 dark:text-[#E8EBF0]">Move Disk</Text>
                   </HStack>
                 </Pressable>
                 <Pressable
@@ -2495,11 +2495,11 @@ export default function VirtualMachinesScreen() {
                     void handleExportVm(selectedVm);
                     setShowActionsheet(false);
                   }}
-                  className={`px-3 py-3 rounded-md ${isExportingSelectedVm ? "opacity-60" : "hover:bg-background-50"}`}
+                  className={`px-3 py-3 rounded-md ${isExportingSelectedVm ? "opacity-60" : "hover:bg-background-50 dark:hover:bg-[#1E2F47]"}`}
                 >
                   <HStack className="items-center gap-3">
-                    <Download size={18} className="text-typography-700" />
-                    <Text className="text-typography-900">
+                    <Download size={18} className="text-typography-700 dark:text-[#E8EBF0]" />
+                    <Text className="text-typography-900 dark:text-[#E8EBF0]">
                       {isExportingSelectedVm ? "Exporting..." : "Export VM"}
                     </Text>
                   </HStack>
@@ -2540,11 +2540,11 @@ export default function VirtualMachinesScreen() {
                     }
                     setShowActionsheet(false);
                   }}
-                  className="px-3 py-3 hover:bg-background-50 rounded-md"
+                  className="px-3 py-3 hover:bg-background-50 dark:hover:bg-[#1E2F47] rounded-md"
                 >
                   <HStack className="items-center gap-3">
                     <Disc3 size={18} className="text-typography-700 dark:text-[#E8EBF0]" />
-                    <Text className="text-typography-700 dark:text-[#E8EBF0]">Remove All ISOs</Text>
+                    <Text className="text-typography-900 dark:text-[#E8EBF0]">Remove All ISOs</Text>
                   </HStack>
                 </Pressable>
 
@@ -2556,11 +2556,11 @@ export default function VirtualMachinesScreen() {
                       handleVmAction(selectedVm.name, "force-shutdown");
                       setShowActionsheet(false);
                     }}
-                    className="px-3 py-3 hover:bg-orange-50 rounded-md"
+                    className="px-3 py-3 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-md"
                   >
                     <HStack className="items-center gap-3">
-                      <Zap size={18} className="text-orange-600" />
-                      <Text className="text-orange-600">Force Shutdown</Text>
+                      <Zap size={18} className="text-orange-600 dark:text-orange-400" />
+                      <Text className="text-orange-600 dark:text-orange-400">Force Shutdown</Text>
                     </HStack>
                   </Pressable>
                 )}
@@ -2572,11 +2572,11 @@ export default function VirtualMachinesScreen() {
                     setConfirmAction({ type: "delete", vm: selectedVm });
                     setShowActionsheet(false);
                   }}
-                  className="px-3 py-3 hover:bg-red-50 rounded-md"
+                  className="px-3 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md"
                 >
                   <HStack className="items-center gap-3">
-                    <Trash2 size={18} className="text-red-600" />
-                    <Text className="text-red-600">Delete VM</Text>
+                    <Trash2 size={18} className="text-red-600 dark:text-red-400" />
+                    <Text className="text-red-600 dark:text-red-400">Delete VM</Text>
                   </HStack>
                 </Pressable>
               </VStack>
@@ -2584,10 +2584,10 @@ export default function VirtualMachinesScreen() {
             <ModalFooter>
               <Button
                 variant="outline"
-                className="rounded-md px-4 py-2"
+                className="rounded-md px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
                 onPress={() => setShowActionsheet(false)}
               >
-                <ButtonText>Cancel</ButtonText>
+                <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
               </Button>
             </ModalFooter>
           </ModalContent>
