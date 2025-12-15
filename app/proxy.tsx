@@ -55,6 +55,7 @@ import {
   disableProxyHost,
   editProxyHost,
   enableProxyHost,
+  setupFrontEnd,
   listProxyHosts,
 } from "@/services/proxy";
 import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
@@ -140,6 +141,10 @@ export default function ProxyHostsScreen() {
   const [togglingId, setTogglingId] = React.useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<ProxyHost | null>(null);
   const [deletingId, setDeletingId] = React.useState<number | null>(null);
+  const [setupModalOpen, setSetupModalOpen] = React.useState(false);
+  const [setupDomain, setSetupDomain] = React.useState("");
+  const [setupCertificateId, setSetupCertificateId] = React.useState<number>(0);
+  const [setupSaving, setSetupSaving] = React.useState(false);
   const { height: screenHeight } = useWindowDimensions();
   const modalBodyMaxHeight = Math.min(screenHeight * 0.55, 520);
   const [formTab, setFormTab] = React.useState<"details" | "locations" | "ssl">("details");
@@ -217,6 +222,13 @@ export default function ProxyHostsScreen() {
     void refreshCertificates();
     setFormTab("details");
     setModalOpen(true);
+  };
+
+  const openSetupModal = () => {
+    setSetupDomain("");
+    setSetupCertificateId(0);
+    void refreshCertificates();
+    setSetupModalOpen(true);
   };
 
   const openEditModal = (host: ProxyHost) => {
@@ -362,6 +374,25 @@ export default function ProxyHostsScreen() {
     setLocations((prev) => prev.filter((_, idx) => idx !== index));
   };
 
+  const handleSetupSave = async () => {
+    const domain = setupDomain.trim();
+    if (!domain) {
+      showToast("Domain required", "Provide the domain to configure the front-end page.", "error");
+      return;
+    }
+    setSetupSaving(true);
+    try {
+      await setupFrontEnd({ domain, certificate_id: Number(setupCertificateId) || 0 });
+      showToast("Front-end ready", "Setup completed for the provided domain.");
+      setSetupModalOpen(false);
+    } catch (err) {
+      console.error("Failed to setup front-end", err);
+      showToast("Setup failed", "Unable to configure the front-end page.", "error");
+    } finally {
+      setSetupSaving(false);
+    }
+  };
+
   const renderLoading = () => (
     <VStack className="gap-3 mt-6">
       {[1, 2].map((idx) => (
@@ -421,10 +452,27 @@ export default function ProxyHostsScreen() {
                 );
               })}
             </HStack>
-            <Button action="primary" variant="solid" size="md" onPress={openCreateModal} className="rounded-full px-5">
-              <ButtonIcon as={Plus} size="sm" />
-              <ButtonText>Add Proxy Host</ButtonText>
-            </Button>
+            <HStack className="gap-3 items-center flex-wrap justify-end">
+              <HStack className="items-center gap-2 flex-wrap">
+                <Button
+                  action="primary"
+                  variant="solid"
+                  size="md"
+                  onPress={openSetupModal}
+                  className="rounded-full px-5"
+                >
+                  <ButtonIcon as={Shield} size="sm" />
+                  <ButtonText>Setup FrontEnd Page</ButtonText>
+                </Button>
+                <Text className="text-typography-600 text-xs max-w-xs">
+                  Configure this to ensure the application front-end is fully available.
+                </Text>
+              </HStack>
+              <Button action="primary" variant="solid" size="md" onPress={openCreateModal} className="rounded-full px-5">
+                <ButtonIcon as={Plus} size="sm" />
+                <ButtonText>Add Proxy Host</ButtonText>
+              </Button>
+            </HStack>
           </HStack>
 
           {loading ? (
@@ -527,6 +575,120 @@ export default function ProxyHostsScreen() {
           )}
         </Box>
       </ScrollView>
+
+      <Modal isOpen={setupModalOpen} onClose={() => setSetupModalOpen(false)} size="md">
+        <ModalBackdrop className="bg-black/60" />
+        <ModalContent className="max-w-xl w-full rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628] shadow-2xl">
+          <ModalHeader className="flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
+            <VStack className="flex-1">
+              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+                Setup FrontEnd Page
+              </Heading>
+              <Text className="text-typography-600 dark:text-typography-400 mt-1">
+                Provide the public domain and optional certificate to finish the front-end setup.
+              </Text>
+            </VStack>
+            <ModalCloseButton className="text-typography-500" />
+          </ModalHeader>
+          <ModalBody className="px-6 pt-4 pb-2">
+            <VStack className="gap-4">
+              <FormControl isRequired>
+                <FormControlLabel>
+                  <FormControlLabelText>Domain</FormControlLabelText>
+                </FormControlLabel>
+                <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
+                  <InputField
+                    value={setupDomain}
+                    onChangeText={setSetupDomain}
+                    placeholder="app.seudominio.com"
+                    autoCapitalize="none"
+                  />
+                </Input>
+                <FormControlHelper>
+                  <FormControlHelperText>Domain that will serve the application front-end.</FormControlHelperText>
+                </FormControlHelper>
+              </FormControl>
+
+              <FormControl>
+                <HStack className="items-center justify-between">
+                  <FormControlLabel>
+                    <FormControlLabelText>SSL Certificate</FormControlLabelText>
+                  </FormControlLabel>
+                  <Button
+                    variant="link"
+                    action="primary"
+                    className="px-0"
+                    size="sm"
+                    onPress={() => void refreshCertificates()}
+                    isDisabled={loadingCertificates}
+                  >
+                    {loadingCertificates ? <ButtonSpinner /> : <ButtonText>Refresh</ButtonText>}
+                  </Button>
+                </HStack>
+                <Select
+                  selectedValue={String(setupCertificateId ?? 0)}
+                  onValueChange={(val) => setSetupCertificateId(Number(val))}
+                  isDisabled={loadingCertificates && certificateOptions.length === 0}
+                >
+                  <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] h-11 px-4">
+                    {String(setupCertificateId ?? 0) !== "0" ? (
+                      <Text className="text-typography-900 dark:text-[#E8EBF0]">
+                        {certificateOptions.find((option) => option.value === String(setupCertificateId))?.label || "Select certificate"}
+                      </Text>
+                    ) : (
+                      <SelectInput
+                        placeholder={loadingCertificates ? "Loading certificates..." : "No certificate"}
+                        className="text-typography-900 dark:text-[#E8EBF0]"
+                      />
+                    )}
+                    <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-typography-400" />
+                  </SelectTrigger>
+                  <SelectPortal>
+                    <SelectBackdropContent />
+                    <SelectContent className="max-h-72 bg-background-0 dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52] rounded-2xl">
+                      <SelectDragIndicatorWrapper>
+                        <SelectDragIndicator />
+                      </SelectDragIndicatorWrapper>
+                      <SelectItem
+                        key="0"
+                        label="No certificate"
+                        value="0"
+                        className="text-base text-typography-900 dark:text-[#E8EBF0]"
+                      >
+                        No certificate
+                      </SelectItem>
+                      {certificateOptions.map((option) => (
+                        <SelectItem
+                          key={option.value}
+                          label={option.label}
+                          value={option.value}
+                          className="text-base text-typography-900 dark:text-[#E8EBF0]"
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </SelectPortal>
+                </Select>
+                <FormControlHelper>
+                  <FormControlHelperText>Leave as "No certificate" to use HTTP only.</FormControlHelperText>
+                </FormControlHelper>
+              </FormControl>
+            </VStack>
+          </ModalBody>
+          <ModalFooter className="px-6 pb-6 pt-2 border-t border-outline-100 dark:border-[#2A3B52]">
+            <HStack className="gap-3 justify-end w-full">
+              <Button variant="outline" action="default" onPress={() => setSetupModalOpen(false)} isDisabled={setupSaving}>
+                <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
+              </Button>
+              <Button action="primary" onPress={handleSetupSave} isDisabled={setupSaving}>
+                {setupSaving ? <ButtonSpinner /> : <ButtonIcon as={Shield} size="sm" />}
+                <ButtonText>Confirm Setup</ButtonText>
+              </Button>
+            </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
       <Modal isOpen={modalOpen} onClose={closeModal} size="lg">
         <ModalBackdrop className="bg-black/60" />
@@ -856,7 +1018,7 @@ export default function ProxyHostsScreen() {
           <ModalFooter className="px-6 pb-6 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
             <HStack className="gap-3 justify-end w-full">
               <Button variant="outline" action="default" onPress={closeModal} isDisabled={saving}>
-                <ButtonText>Cancel</ButtonText>
+                <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
               </Button>
               <Button action="primary" onPress={handleSave} isDisabled={saving}>
                 {saving ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
@@ -886,7 +1048,7 @@ export default function ProxyHostsScreen() {
           </AlertDialogBody>
           <AlertDialogFooter className="gap-3">
             <Button variant="outline" action="default" onPress={() => setDeleteTarget(null)} isDisabled={Boolean(deletingId)}>
-              <ButtonText>Cancel</ButtonText>
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
             </Button>
             <Button action="negative" onPress={handleDelete} isDisabled={Boolean(deletingId)}>
               {deletingId ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
