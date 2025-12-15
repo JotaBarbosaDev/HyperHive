@@ -43,12 +43,11 @@ export function useAuthGuard(
 
     const signOutAndRedirect = async () => {
       try {
-        await Promise.all([clearAuthToken(), clearApiBaseUrl()]);
+        await Promise.all([clearAuthToken()]);
       } catch (err) {
         console.warn("Failed to clear stored session credentials", err);
       } finally {
         setAuthToken(null);
-        setApiBaseUrl(null);
         if (isActive) {
           setState({token: null, isChecking: false});
           redirectIfNeeded();

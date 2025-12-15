@@ -260,12 +260,11 @@ function RootLayoutNav() {
     }
     isSigningOutRef.current = true;
     try {
-      await Promise.all([clearAuthToken(), clearApiBaseUrl()]);
+      await Promise.all([clearAuthToken()]);
     } catch (storageErr) {
       console.warn("Failed to clear stored session", storageErr);
     } finally {
       setAuthToken(null);
-      setApiBaseUrl(null);
       setShowDrawer(false);
       setShowSidebar(false);
       if (pathname !== "/") {
@@ -340,11 +339,17 @@ function RootLayoutNav() {
         return;
       }
       console.error("[API ERROR]", result.method, result.path, result.status, result.error);
-      setApiErrorModal({
+      if(result.status === 401){
+        console.warn("Unauthorized!");
+        return;
+      }else{
+        setApiErrorModal({
         status: result.status,
         path: result.path,
         details: getLiteralApiErrorMessage(result.errorText, result.error),
       });
+      }
+      
     });
     return unsubscribe;
   }, []);
