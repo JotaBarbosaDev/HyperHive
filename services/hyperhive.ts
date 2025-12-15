@@ -2,6 +2,14 @@ import { DirectoryListing } from "@/types/directory";
 import { Machine } from "@/types/machine";
 import { Mount, MountShare } from "@/types/mount";
 import { LoginPayload, LoginResponse } from "@/types/auth";
+import {
+  CpuInfo,
+  DiskInfo,
+  HistoryEntry,
+  MemInfo,
+  NetworkInfo,
+  UptimeInfo,
+} from "@/types/metrics";
 import { getApiBaseUrl, setApiBaseUrl } from "@/config/apiConfig";
 import { apiFetch, setAuthToken, triggerUnauthorized } from "./api-client";
 import { loadAuthToken, loadApiBaseUrl } from "./auth-storage";
@@ -29,6 +37,14 @@ export type DownloadIsoInput = {
   url: string;
   isoName: string;
   nfsShareId: number;
+};
+
+export type HistoryQueryParams = {
+  months?: number;
+  weeks?: number;
+  days?: number;
+  hours?: number;
+  numberOfRows?: number;
 };
 
 const ensureApiBaseUrl = async () => {
@@ -150,6 +166,88 @@ export async function deleteIso(id: string): Promise<void> {
   });
 }
 
+const encodeMachine = (machineName: string) => encodeURIComponent(machineName);
+
+const buildHistoryQuery = (resource: string, machineName: string, params: HistoryQueryParams = {}) => {
+  const search = new URLSearchParams();
+  search.set("months", String(params.months ?? 0));
+  search.set("weeks", String(params.weeks ?? 0));
+  search.set("days", String(params.days ?? 0));
+  search.set("hours", String(params.hours ?? 1));
+  if (params.numberOfRows != null) {
+    search.set("number_of_rows", String(params.numberOfRows));
+  }
+  const encodedMachine = encodeMachine(machineName);
+  const qs = search.toString();
+  return `/info/history/${resource}/${encodedMachine}?${qs}`;
+};
+
+export async function getMachineUptime(machineName: string): Promise<UptimeInfo> {
+  const authToken = await resolveToken();
+  const encodedMachine = encodeMachine(machineName);
+  return apiFetch<UptimeInfo>(`/info/time-since/${encodedMachine}`, { token: authToken });
+}
+
+export async function getCpuInfo(machineName: string): Promise<CpuInfo> {
+  const authToken = await resolveToken();
+  const encodedMachine = encodeMachine(machineName);
+  return apiFetch<CpuInfo>(`/info/cpu/${encodedMachine}`, { token: authToken });
+}
+
+export async function getMemInfo(machineName: string): Promise<MemInfo> {
+  const authToken = await resolveToken();
+  const encodedMachine = encodeMachine(machineName);
+  return apiFetch<MemInfo>(`/info/mem/${encodedMachine}`, { token: authToken });
+}
+
+export async function getDiskInfo(machineName: string): Promise<DiskInfo> {
+  const authToken = await resolveToken();
+  const encodedMachine = encodeMachine(machineName);
+  return apiFetch<DiskInfo>(`/info/disk/${encodedMachine}`, { token: authToken });
+}
+
+export async function getNetworkInfo(machineName: string): Promise<NetworkInfo> {
+  const authToken = await resolveToken();
+  const encodedMachine = encodeMachine(machineName);
+  return apiFetch<NetworkInfo>(`/info/network/${encodedMachine}`, { token: authToken });
+}
+
+export async function getCpuHistory(
+  machineName: string,
+  params: HistoryQueryParams = {}
+): Promise<HistoryEntry<CpuInfo>[]> {
+  const authToken = await resolveToken();
+  const path = buildHistoryQuery("cpu", machineName, params);
+  return apiFetch<HistoryEntry<CpuInfo>[]>(path, { token: authToken });
+}
+
+export async function getMemHistory(
+  machineName: string,
+  params: HistoryQueryParams = {}
+): Promise<HistoryEntry<MemInfo>[]> {
+  const authToken = await resolveToken();
+  const path = buildHistoryQuery("mem", machineName, params);
+  return apiFetch<HistoryEntry<MemInfo>[]>(path, { token: authToken });
+}
+
+export async function getDiskHistory(
+  machineName: string,
+  params: HistoryQueryParams = {}
+): Promise<HistoryEntry<DiskInfo>[]> {
+  const authToken = await resolveToken();
+  const path = buildHistoryQuery("disk", machineName, params);
+  return apiFetch<HistoryEntry<DiskInfo>[]>(path, { token: authToken });
+}
+
+export async function getNetworkHistory(
+  machineName: string,
+  params: HistoryQueryParams = {}
+): Promise<HistoryEntry<NetworkInfo>[]> {
+  const authToken = await resolveToken();
+  const path = buildHistoryQuery("network", machineName, params);
+  return apiFetch<HistoryEntry<NetworkInfo>[]>(path, { token: authToken });
+}
+
 export async function listLogs(options: { limit?: number; level?: number } = {}): Promise<any[]> {
   const authToken = await resolveToken();
   const params = new URLSearchParams();
@@ -189,7 +287,7 @@ export async function getMachineUpdates(machineName: string): Promise<unknown> {
 
 export async function performMachineUpdate(
   machineName: string,
-  {pkgName = "", reboot = true}: PerformUpdateInput = {}
+  { pkgName = "", reboot = true }: PerformUpdateInput = {}
 ): Promise<unknown> {
   const authToken = await resolveToken();
   const encodedMachine = encodeURIComponent(machineName);
