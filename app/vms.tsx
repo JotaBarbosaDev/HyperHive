@@ -865,7 +865,7 @@ export default function VirtualMachinesScreen() {
                   className="text-typography-700 dark:text-[#E8EBF0]"
                 />
                 <ButtonText className="web:inline hidden text-typography-900 dark:text-[#E8EBF0]">
-                  Importar VM
+                  Import VM
                 </ButtonText>
               </Button>
               <Button
@@ -878,7 +878,7 @@ export default function VirtualMachinesScreen() {
                   className="text-background-0 dark:text-[#0A1628]"
                 />
                 <ButtonText className="web:inline hidden text-background-0 dark:text-[#0A1628]">
-                  Nova VM
+                  New VM
                 </ButtonText>
               </Button>
             </HStack>
