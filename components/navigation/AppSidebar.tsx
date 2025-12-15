@@ -237,45 +237,49 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
       return (
         <React.Fragment key={itemKey}>
           <Pressable
-            className={`gap-3 flex-row items-center rounded-xl px-4 py-3 transition-all ${isActive
-              ? "bg-background-100 dark:bg-[#1A2637]"
-              : "hover:bg-background-50 dark:hover:bg-[#1A2637]/50 active:bg-background-100 dark:active:bg-[#1A2637]"
-              }`}
-            style={{ marginLeft: paddingLeft }}
+            className={`gap-3 flex-row items-center rounded-xl px-4 py-3 transition-all ${
+              isActive
+                ? "bg-background-100 dark:bg-[#1A2637]"
+                : "hover:bg-background-50 dark:hover:bg-[#1A2637]/50 active:bg-background-100 dark:active:bg-[#1A2637]"
+            }`}
+            style={{marginLeft: paddingLeft}}
             onPress={handlePress}
           >
             <Box
               className="w-6 h-6 shrink-0 !items-center !justify-center"
-              style={{ alignItems: "center", justifyContent: "center" }}
+              style={{alignItems: "center", justifyContent: "center"}}
             >
               {item.icon ? (
                 <Icon
                   as={item.icon}
                   size="md"
-                  className={`shrink-0 ${isActive
-                    ? "text-typography-900 dark:text-[#E8EBF0]"
-                    : "text-typography-600 dark:text-typography-400"
-                    }`}
+                  className={`shrink-0 ${
+                    isActive
+                      ? "text-typography-900 dark:text-[#E8EBF0]"
+                      : "text-typography-600 dark:text-typography-400"
+                  }`}
                 />
               ) : null}
             </Box>
             <Text
-              className={`flex-1 text-base ${isActive
-                ? "text-typography-900 dark:text-[#E8EBF0] font-semibold"
-                : "text-typography-900 dark:text-typography-200 font-medium"
-                }`}
+              className={`flex-1 text-base ${
+                isActive
+                  ? "text-typography-900 dark:text-[#E8EBF0] font-semibold"
+                  : "text-typography-900 dark:text-typography-200 font-medium"
+              }`}
               style={{
                 fontFamily: isActive ? "Inter_600SemiBold" : "Inter_500Medium",
               }}
             >
-              {item.label}
+              {level === 0 ? item.label : "- " + item.label}
             </Text>
             {hasChildren ? (
               <Icon
                 as={ChevronRight}
                 size="sm"
-                className={`ml-auto text-typography-500 dark:text-typography-400 transition-transform origin-center ${isExpanded ? "rotate-45" : ""
-                  }`}
+                className={`ml-auto text-typography-500 dark:text-typography-400 transition-transform origin-center ${
+                  isExpanded ? "rotate-45" : ""
+                }`}
               />
             ) : null}
           </Pressable>
