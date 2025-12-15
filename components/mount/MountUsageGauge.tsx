@@ -1,8 +1,8 @@
 import React from "react";
-import Svg, {G, Path} from "react-native-svg";
-import {Box} from "@/components/ui/box";
-import {Text} from "@/components/ui/text";
-import {useColorScheme} from "@/components/useColorScheme";
+import Svg, { G, Path } from "react-native-svg";
+import { Box } from "@/components/ui/box";
+import { Text } from "@/components/ui/text";
+import { useColorScheme } from "@/components/useColorScheme";
 
 export type MountUsageGaugeProps = {
   usagePercent: number;
@@ -27,9 +27,15 @@ export function MountUsageGauge({
   const progressColor =
     safePercent >= 90 ? "#EF4444" : safePercent >= 50 ? "#FBBF24" : "#2DD4BF";
 
+  const formatCapacity = (gb: number) => {
+    if (!Number.isFinite(gb)) return "0.00 GB";
+    if (gb >= 1000) return `${(gb / 1024).toFixed(2)} TB`;
+    return `${gb.toFixed(2)} GB`;
+  };
+
   return (
-    <Box className="relative flex flex-col items-center" style={{height: 150}}>
-      <Text className="text-[#9AA4B8] dark:text-[#8A94A8] text-[8px] web:text-[9px] font-medium uppercase tracking-wide mb-2" style={{fontFamily: "Inter_500Medium"}}>
+    <Box className="relative flex flex-col items-center" style={{ height: 150 }}>
+      <Text className="text-[#9AA4B8] dark:text-[#8A94A8] text-[8px] web:text-[9px] font-medium uppercase tracking-wide mb-2" style={{ fontFamily: "Inter_500Medium" }}>
         Storage Usage
       </Text>
 
@@ -84,35 +90,35 @@ export function MountUsageGauge({
       </Box>
 
       <Box className="absolute top-[60px] web:top-[68px] left-1/2 -translate-x-1/2 flex flex-col items-center z-10">
-        <Text className="text-typography-900 dark:text-[#E8EBF0] text-xl web:text-2xl font-bold leading-none" style={{fontFamily: "Inter_700Bold"}}>
+        <Text className="text-typography-900 dark:text-[#E8EBF0] text-xl web:text-2xl font-bold leading-none" style={{ fontFamily: "Inter_700Bold" }}>
           {safePercent}%
         </Text>
       </Box>
 
       <Box className="absolute bottom-[18px] web:bottom-[0px] left-[8px] web:left-[10px] flex flex-col items-start">
-        <Text className="text-[#9AA4B8] dark:text-[#8A94A8] text-[8px] web:text-[9px] font-medium uppercase" style={{fontFamily: "Inter_500Medium"}}>
+        <Text className="text-[#9AA4B8] dark:text-[#8A94A8] text-[8px] web:text-[9px] font-medium uppercase" style={{ fontFamily: "Inter_500Medium" }}>
           Used
         </Text>
-        <Text className="text-typography-900 dark:text-[#E8EBF0] text-[11px] web:text-xs font-bold leading-tight" style={{fontFamily: "Inter_700Bold"}}>
-          {Number.isFinite(usedGB) ? usedGB : 0} GB
+        <Text className="text-typography-900 dark:text-[#E8EBF0] text-[11px] web:text-xs font-bold leading-tight" style={{ fontFamily: "Inter_700Bold" }}>
+          {formatCapacity(Number.isFinite(usedGB) ? usedGB : 0)}
         </Text>
       </Box>
 
       <Box className="absolute bottom-[18px] web:bottom-[0px] right-[8px] web:right-[10px] flex flex-col items-end">
-        <Text className="text-[#9AA4B8] dark:text-[#8A94A8] text-[8px] web:text-[9px] font-medium uppercase" style={{fontFamily: "Inter_500Medium"}}>
+        <Text className="text-[#9AA4B8] dark:text-[#8A94A8] text-[8px] web:text-[9px] font-medium uppercase" style={{ fontFamily: "Inter_500Medium" }}>
           Total
         </Text>
-        <Text className="text-typography-900 dark:text-[#E8EBF0] text-[11px] web:text-xs font-bold leading-tight" style={{fontFamily: "Inter_700Bold"}}>
-          {Number.isFinite(totalGB) ? totalGB : 0} GB
+        <Text className="text-typography-900 dark:text-[#E8EBF0] text-[11px] web:text-xs font-bold leading-tight" style={{ fontFamily: "Inter_700Bold" }}>
+          {formatCapacity(Number.isFinite(totalGB) ? totalGB : 0)}
         </Text>
       </Box>
 
       <Box className="absolute bottom-[2px] web:bottom-[4px] left-1/2 -translate-x-1/2 flex items-center gap-1">
-        <Text className="text-[#9AA4B8] dark:text-[#8A94A8] text-[8px] web:text-[9px] font-medium" style={{fontFamily: "Inter_500Medium"}}>
+        <Text className="text-[#9AA4B8] dark:text-[#8A94A8] text-[8px] web:text-[9px] font-medium" style={{ fontFamily: "Inter_500Medium" }}>
           Free:
         </Text>
-        <Text className="text-typography-900 dark:text-[#E8EBF0] text-[11px] web:text-xs font-semibold" style={{fontFamily: "Inter_600SemiBold"}}>
-          {Number.isFinite(freeGB) ? freeGB.toFixed(2) : "0.00"} GB
+        <Text className="text-typography-900 dark:text-[#E8EBF0] text-[11px] web:text-xs font-semibold" style={{ fontFamily: "Inter_600SemiBold" }}>
+          {formatCapacity(Number.isFinite(freeGB) ? freeGB : 0)}
         </Text>
       </Box>
     </Box>
