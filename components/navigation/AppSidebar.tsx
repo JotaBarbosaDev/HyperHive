@@ -6,12 +6,12 @@ import {
   DrawerContent,
   DrawerFooter,
 } from "@/components/ui/drawer";
-import {Button, ButtonIcon, ButtonText} from "@/components/ui/button";
-import {Text} from "@/components/ui/text";
-import {Box} from "@/components/ui/box";
-import {Pressable} from "@/components/ui/pressable";
-import {Divider} from "@/components/ui/divider";
-import {Icon} from "@/components/ui/icon";
+import { Button, ButtonIcon, ButtonText } from "@/components/ui/button";
+import { Text } from "@/components/ui/text";
+import { Box } from "@/components/ui/box";
+import { Pressable } from "@/components/ui/pressable";
+import { Divider } from "@/components/ui/divider";
+import { Icon } from "@/components/ui/icon";
 import {
   Modal,
   ModalBackdrop,
@@ -21,16 +21,18 @@ import {
   ModalHeader,
   ModalCloseButton,
 } from "@/components/ui/modal";
-import {Radio, RadioGroup, RadioIndicator, RadioLabel, RadioIcon} from "@/components/ui/radio";
-import {Heading} from "@/components/ui/heading";
+import { Radio, RadioGroup, RadioIndicator, RadioLabel, RadioIcon } from "@/components/ui/radio";
+import { Heading } from "@/components/ui/heading";
 import {
   HardDrive,
   Disc,
   Server,
+  Boxes,
   LogOut,
   LayoutDashboard,
   Share2,
   Shield,
+  CloudCog,
   RefreshCw,
   FileText,
   ChevronRight,
@@ -42,10 +44,9 @@ import {
   SunMedium,
   KeyRound,
 } from "lucide-react-native";
-import {usePathname, useRouter} from "expo-router";
-import { clearAuthToken} from "@/services/auth-storage";
-import {setAuthToken} from "@/services/api-client";
-
+import { usePathname, useRouter } from "expo-router";
+import { clearAuthToken } from "@/services/auth-storage";
+import { setAuthToken } from "@/services/api-client";
 export type AppSidebarProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -70,8 +71,8 @@ const MENU_ITEMS: MenuItem[] = [
     label: "Storage",
     icon: HardDrive,
     children: [
-      {label: "BTRFS / RAIDs", route: "/btrfs-raids"},
-      {label: "SmartDisk", route: "/smartdisk"},
+      { label: "BTRFS / RAIDs", route: "/btrfs-raids" },
+      { label: "SmartDisk", route: "/smartdisk" },
     ],
   },
   {
@@ -88,15 +89,20 @@ const MENU_ITEMS: MenuItem[] = [
     label: "VMs",
     icon: Server,
     children: [
-      {label: "Virtual Machines", route: "/vms"},
-      {label: "Backups", route: "/backups"},
-      {label: "Auto-Backups", route: "/autobackups"},
+      { label: "Virtual Machines", route: "/vms" },
+      { label: "Backups", route: "/backups" },
+      { label: "Auto-Backups", route: "/autobackups" },
     ],
   },
   {
     label: "WireGuard VPN",
     icon: Shield,
     route: "/wireguard",
+  },
+  {
+    label: "K8 Cluster",
+    icon: CloudCog,
+    route: "/k8s-cluster",
   },
   {
     label: "SPA",
@@ -117,11 +123,22 @@ const MENU_ITEMS: MenuItem[] = [
     label: "Nginx",
     icon: Network,
     children: [
-      {label: "404", route: "/404"},
-      {label: "Certificates", route: "/certificates"},
-      {label: "Proxy", route: "/proxy"},
-      {label: "Redirection", route: "/redirection"},
-      {label: "Streams", route: "/streams"},
+      { label: "404", route: "/404" },
+      { label: "Certificates", route: "/certificates" },
+      { label: "Proxy", route: "/proxy" },
+      { label: "Redirection", route: "/redirection" },
+      { label: "Streams", route: "/streams" },
+    ],
+  },
+  {
+    label: "Docker",
+    icon: Boxes,
+    children: [
+      { label: "Images", route: "/docker/images" },
+      { label: "Containers", route: "/docker/containers" },
+      { label: "Volumes", route: "/docker/volumes" },
+      { label: "Networks", route: "/docker/networks" },
+      { label: "Git", route: "/docker/git" },
     ],
   },
 ];
@@ -147,7 +164,7 @@ const THEME_OPTIONS = [
   },
 ];
 
-export function AppSidebar({isOpen, onClose, themePreference, onChangeThemePreference}: AppSidebarProps) {
+export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePreference }: AppSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [expandedParents, setExpandedParents] = React.useState<Record<string, boolean>>({});
@@ -220,36 +237,33 @@ export function AppSidebar({isOpen, onClose, themePreference, onChangeThemePrefe
       return (
         <React.Fragment key={itemKey}>
           <Pressable
-            className={`gap-3 flex-row items-center rounded-xl px-4 py-3 transition-all ${
-              isActive
-                ? "bg-background-100 dark:bg-[#1A2637]"
-                : "hover:bg-background-50 dark:hover:bg-[#1A2637]/50 active:bg-background-100 dark:active:bg-[#1A2637]"
-            }`}
-            style={{marginLeft: paddingLeft}}
+            className={`gap-3 flex-row items-center rounded-xl px-4 py-3 transition-all ${isActive
+              ? "bg-background-100 dark:bg-[#1A2637]"
+              : "hover:bg-background-50 dark:hover:bg-[#1A2637]/50 active:bg-background-100 dark:active:bg-[#1A2637]"
+              }`}
+            style={{ marginLeft: paddingLeft }}
             onPress={handlePress}
           >
             <Box
               className="w-6 h-6 shrink-0 !items-center !justify-center"
-              style={{alignItems: "center", justifyContent: "center"}}
+              style={{ alignItems: "center", justifyContent: "center" }}
             >
               {item.icon ? (
                 <Icon
                   as={item.icon}
                   size="md"
-                  className={`shrink-0 ${
-                    isActive
-                      ? "text-typography-900 dark:text-[#E8EBF0]"
-                      : "text-typography-600 dark:text-typography-400"
-                  }`}
+                  className={`shrink-0 ${isActive
+                    ? "text-typography-900 dark:text-[#E8EBF0]"
+                    : "text-typography-600 dark:text-typography-400"
+                    }`}
                 />
               ) : null}
             </Box>
             <Text
-              className={`flex-1 text-base ${
-                isActive
-                  ? "text-typography-900 dark:text-[#E8EBF0] font-semibold"
-                  : "text-typography-900 dark:text-typography-200 font-medium"
-              }`}
+              className={`flex-1 text-base ${isActive
+                ? "text-typography-900 dark:text-[#E8EBF0] font-semibold"
+                : "text-typography-900 dark:text-typography-200 font-medium"
+                }`}
               style={{
                 fontFamily: isActive ? "Inter_600SemiBold" : "Inter_500Medium",
               }}
@@ -260,9 +274,8 @@ export function AppSidebar({isOpen, onClose, themePreference, onChangeThemePrefe
               <Icon
                 as={ChevronRight}
                 size="sm"
-                className={`ml-auto text-typography-500 dark:text-typography-400 transition-transform origin-center ${
-                  isExpanded ? "rotate-45" : ""
-                }`}
+                className={`ml-auto text-typography-500 dark:text-typography-400 transition-transform origin-center ${isExpanded ? "rotate-45" : ""
+                  }`}
               />
             ) : null}
           </Pressable>
@@ -332,7 +345,7 @@ export function AppSidebar({isOpen, onClose, themePreference, onChangeThemePrefe
             <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50/70 dark:bg-[#0F1A2E] p-4 gap-3">
               <Text
                 className="text-xs font-semibold uppercase text-typography-500 dark:text-typography-300 tracking-[0.08em]"
-                style={{fontFamily: "Inter_600SemiBold"}}
+                style={{ fontFamily: "Inter_600SemiBold" }}
               >
                 Theme
               </Text>
@@ -351,18 +364,16 @@ export function AppSidebar({isOpen, onClose, themePreference, onChangeThemePrefe
                       key={option.value}
                       value={option.value}
                       aria-label={option.label}
-                      className={`flex-row items-center gap-3 rounded-xl border px-3 py-3 transition-all ${
-                        isActive
-                          ? "border-primary-500 bg-primary-50/60 dark:border-[#4A7DFF] dark:bg-[#121C2D]"
-                          : "border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524]"
-                      }`}
+                      className={`flex-row items-center gap-3 rounded-xl border px-3 py-3 transition-all ${isActive
+                        ? "border-primary-500 bg-primary-50/60 dark:border-[#4A7DFF] dark:bg-[#121C2D]"
+                        : "border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524]"
+                        }`}
                     >
                       <RadioIndicator
-                        className={`self-center ${
-                          isActive
-                            ? "border-primary-600 bg-primary-50/70 dark:bg-[#1B2F4B] dark:border-[#4A7DFF]"
-                            : ""
-                        }`}
+                        className={`self-center ${isActive
+                          ? "border-primary-600 bg-primary-50/70 dark:bg-[#1B2F4B] dark:border-[#4A7DFF]"
+                          : ""
+                          }`}
                       >
                         {isActive ? (
                           <RadioIcon as={Dot} size="sm" className="text-primary-700 dark:text-[#8AB9FF]" />
@@ -370,11 +381,10 @@ export function AppSidebar({isOpen, onClose, themePreference, onChangeThemePrefe
                       </RadioIndicator>
                       <Box className="flex-row items-start gap-3 flex-1">
                         <Box
-                          className={`w-10 h-10 rounded-lg items-center justify-center ${
-                            isActive
-                              ? "bg-primary-500/10 dark:bg-[#1B2F4B]"
-                              : "bg-background-100 dark:bg-[#1A2637]"
-                          }`}
+                          className={`w-10 h-10 rounded-lg items-center justify-center ${isActive
+                            ? "bg-primary-500/10 dark:bg-[#1B2F4B]"
+                            : "bg-background-100 dark:bg-[#1A2637]"
+                            }`}
                         >
                           <Icon
                             as={option.icon}
@@ -389,7 +399,7 @@ export function AppSidebar({isOpen, onClose, themePreference, onChangeThemePrefe
                         <Box className="flex-1">
                           <RadioLabel
                             className="text-base text-typography-900 dark:text-[#E8EBF0]"
-                            style={{fontFamily: "Inter_600SemiBold"}}
+                            style={{ fontFamily: "Inter_600SemiBold" }}
                           >
                             {option.label}
                           </RadioLabel>

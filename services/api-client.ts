@@ -1,10 +1,11 @@
-import {getApiBaseUrl} from "@/config/apiConfig";
+import { getApiBaseUrl } from "@/config/apiConfig";
 
 export type ApiRequestOptions = {
   method?: string;
   token?: string | null;
   headers?: Record<string, string>;
   body?: unknown;
+  signal?: AbortSignal;
 };
 
 let currentAuthToken: string | null = null;
@@ -117,7 +118,7 @@ const serializeBody = (body: unknown, headers: Record<string, string>) => {
 
 export async function apiFetch<T = unknown>(
   path: string,
-  {method = "GET", token, headers = {}, body}: ApiRequestOptions = {}
+  { method = "GET", token, headers = {}, body, signal }: ApiRequestOptions = {}
 ): Promise<T> {
   const effectiveToken =
     token === undefined ? currentAuthToken : token ?? null;
@@ -142,24 +143,28 @@ export async function apiFetch<T = unknown>(
       method,
       headers: finalHeaders,
       body: serializedBody,
+      signal,
     });
   } catch (networkErr) {
-    console.error("[API ERROR]", method, requestPath, networkErr);
-    const networkMessage = networkErr instanceof Error ? networkErr.message : undefined;
-    apiResultListeners.forEach((listener) => {
-      try {
-        listener({
-          ok: false,
-          method,
-          path: requestPath,
-          status: undefined,
-          error: networkErr,
-          errorText: networkMessage,
-        });
-      } catch (err) {
-        console.error("API result listener threw an error", err);
-      }
-    });
+    const isAbort = networkErr instanceof DOMException && networkErr.name === "AbortError";
+    if (!isAbort) {
+      console.error("[API ERROR]", method, requestPath, networkErr);
+      const networkMessage = networkErr instanceof Error ? networkErr.message : undefined;
+      apiResultListeners.forEach((listener) => {
+        try {
+          listener({
+            ok: false,
+            method,
+            path: requestPath,
+            status: undefined,
+            error: networkErr,
+            errorText: networkMessage,
+          });
+        } catch (err) {
+          console.error("API result listener threw an error", err);
+        }
+      });
+    }
     throw networkErr;
   }
 
@@ -210,7 +215,7 @@ export async function apiFetch<T = unknown>(
   console.info("[API]", method, requestPath, "->", response.status);
   apiResultListeners.forEach((listener) => {
     try {
-      listener({ok: true, method, path: requestPath, status: response.status});
+      listener({ ok: true, method, path: requestPath, status: response.status });
     } catch (err) {
       console.error("API result listener threw an error", err);
     }

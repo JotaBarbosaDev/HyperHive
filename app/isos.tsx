@@ -1,9 +1,9 @@
 import React from "react";
-import {RefreshControl, ScrollView, useColorScheme} from "react-native";
-import {Box} from "@/components/ui/box";
-import {Text} from "@/components/ui/text";
-import {Heading} from "@/components/ui/heading";
-import {Input, InputField, InputIcon, InputSlot} from "@/components/ui/input";
+import { RefreshControl, ScrollView, useColorScheme } from "react-native";
+import { Box } from "@/components/ui/box";
+import { Text } from "@/components/ui/text";
+import { Heading } from "@/components/ui/heading";
+import { Input, InputField, InputIcon, InputSlot } from "@/components/ui/input";
 import {
   Button,
   ButtonIcon,
@@ -25,13 +25,13 @@ import {
   FormControlError,
   FormControlErrorText,
 } from "@/components/ui/form-control";
-import {VStack} from "@/components/ui/vstack";
-import {HStack} from "@/components/ui/hstack";
-import {Badge, BadgeText} from "@/components/ui/badge";
-import {Divider} from "@/components/ui/divider";
-import {Spinner} from "@/components/ui/spinner";
-import {Icon} from "@/components/ui/icon";
-import {ChevronDownIcon} from "@/components/ui/icon";
+import { VStack } from "@/components/ui/vstack";
+import { HStack } from "@/components/ui/hstack";
+import { Badge, BadgeText } from "@/components/ui/badge";
+import { Divider } from "@/components/ui/divider";
+import { Spinner } from "@/components/ui/spinner";
+import { Icon } from "@/components/ui/icon";
+import { ChevronDownIcon } from "@/components/ui/icon";
 import {
   AlertCircle,
   CalendarClock,
@@ -45,7 +45,7 @@ import {
   Search,
   Server,
 } from "lucide-react-native";
-import {useAuthGuard} from "@/hooks/useAuthGuard";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
 import {
   IsoApiResponse,
   IsoRaw,
@@ -54,9 +54,9 @@ import {
   downloadIso,
   deleteIso as deleteIsoApi,
 } from "@/services/hyperhive";
-import {ApiError} from "@/services/api-client";
-import {getApiBaseUrl} from "@/config/apiConfig";
-import {ensureHyperHiveWebsocket, subscribeToHyperHiveWebsocket} from "@/services/websocket-client";
+import { ApiError } from "@/services/api-client";
+import { getApiBaseUrl } from "@/config/apiConfig";
+import { ensureHyperHiveWebsocket, subscribeToHyperHiveWebsocket } from "@/services/websocket-client";
 import {
   Select,
   SelectBackdrop,
@@ -69,7 +69,7 @@ import {
   SelectPortal,
   SelectTrigger,
 } from "@/components/ui/select";
-import {Progress, ProgressFilledTrack} from "@/components/ui/progress";
+import { Progress, ProgressFilledTrack } from "@/components/ui/progress";
 
 type IsoItem = {
   id: string;
@@ -98,7 +98,7 @@ type ShareInfo = {
   machineName: string;
 };
 
-type FetchMode = "initial" | "refresh";
+type FetchMode = "initial" | "refresh" | "silent";
 type IsoLookup = Map<string, unknown>;
 
 const normalizeKey = (key: string) => key.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -273,8 +273,8 @@ const normalizeIsoEntry = (entry: IsoRaw, index: number): IsoItem | null => {
     (downloadUrl
       ? `${downloadUrl}-${index}`
       : machineName
-      ? `${machineName}-${index}`
-      : `iso-${index}`);
+        ? `${machineName}-${index}`
+        : `iso-${index}`);
 
   const fallbackNameSource = preliminaryTarget ?? downloadUrl ?? nameFromFilePath(filePath);
   const name =
@@ -453,8 +453,8 @@ const normalizeTags = (value: unknown): string[] => {
         typeof entry === "string"
           ? entry.trim()
           : typeof entry === "number"
-          ? entry.toString()
-          : ""
+            ? entry.toString()
+            : ""
       )
       .filter(Boolean)
       .slice(0, 6);
@@ -670,7 +670,7 @@ const normalizeAvailability = (value: unknown): string[] => {
           return entry.trim();
         }
         if (entry && typeof entry === "object" && "name" in entry) {
-          const candidate = (entry as {name?: unknown}).name;
+          const candidate = (entry as { name?: unknown }).name;
           return typeof candidate === "string" ? candidate.trim() : "";
         }
         return "";
@@ -721,8 +721,8 @@ const isLikelyIsoArray = (value: unknown[]): value is IsoRaw[] => {
     const lookup = createLookup(entry as Record<string, unknown>);
     return Boolean(
       getString(lookup, ["downloadurl", "download_url", "url", "link", "href", "directlink"]) ??
-        getString(lookup, ["path", "file", "source"]) ??
-        getString(lookup, ["name", "title", "label", "filename"])
+      getString(lookup, ["path", "file", "source"]) ??
+      getString(lookup, ["name", "title", "label", "filename"])
     );
   });
 };
@@ -739,8 +739,8 @@ const extractIsoCollection = (payload: IsoApiResponse | null | undefined): IsoRa
   }
 
   const visited = new Set<Record<string, unknown>>();
-  const queue: Array<{value: Record<string, unknown>; depth: number}> = [
-    {value: payload as Record<string, unknown>, depth: 0},
+  const queue: Array<{ value: Record<string, unknown>; depth: number }> = [
+    { value: payload as Record<string, unknown>, depth: 0 },
   ];
 
   while (queue.length > 0) {
@@ -748,7 +748,7 @@ const extractIsoCollection = (payload: IsoApiResponse | null | undefined): IsoRa
     if (!current) {
       break;
     }
-    const {value, depth} = current;
+    const { value, depth } = current;
     if (!value || visited.has(value) || depth > MAX_COLLECTION_DEPTH) {
       continue;
     }
@@ -766,10 +766,10 @@ const extractIsoCollection = (payload: IsoApiResponse | null | undefined): IsoRa
             return parsed as IsoRaw[];
           }
           if (parsed && typeof parsed === "object") {
-            queue.push({value: parsed as Record<string, unknown>, depth: depth + 1});
+            queue.push({ value: parsed as Record<string, unknown>, depth: depth + 1 });
           }
         } else if (child && typeof child === "object") {
-          queue.push({value: child as Record<string, unknown>, depth: depth + 1});
+          queue.push({ value: child as Record<string, unknown>, depth: depth + 1 });
         }
         continue;
       }
@@ -782,7 +782,7 @@ const extractIsoCollection = (payload: IsoApiResponse | null | undefined): IsoRa
       }
 
       if (child && typeof child === "object") {
-        queue.push({value: child as Record<string, unknown>, depth: depth + 1});
+        queue.push({ value: child as Record<string, unknown>, depth: depth + 1 });
       } else if (typeof child === "string") {
         const parsed = tryParseJson(child);
         if (Array.isArray(parsed)) {
@@ -790,7 +790,7 @@ const extractIsoCollection = (payload: IsoApiResponse | null | undefined): IsoRa
             return parsed as IsoRaw[];
           }
         } else if (parsed && typeof parsed === "object") {
-          queue.push({value: parsed as Record<string, unknown>, depth: depth + 1});
+          queue.push({ value: parsed as Record<string, unknown>, depth: depth + 1 });
         }
       }
     }
@@ -800,7 +800,7 @@ const extractIsoCollection = (payload: IsoApiResponse | null | undefined): IsoRa
 };
 
 export default function ProfileScreen() {
-  const {token, isChecking} = useAuthGuard();
+  const { token, isChecking } = useAuthGuard();
   const [isos, setIsos] = React.useState<IsoItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
@@ -817,23 +817,28 @@ export default function ProfileScreen() {
 
   const fetchIsos = React.useCallback(
     async (mode: FetchMode = "initial") => {
+      const isSilent = mode === "silent";
       if (!token) {
-        if (mode === "initial") {
-          setIsLoading(false);
-        } else {
-          setIsRefreshing(false);
+        if (!isSilent) {
+          if (mode === "initial") {
+            setIsLoading(false);
+          } else if (mode === "refresh") {
+            setIsRefreshing(false);
+          }
         }
         return;
       }
 
-      if (mode === "initial") {
-        setIsLoading(true);
-      } else {
-        setIsRefreshing(true);
+      if (!isSilent) {
+        if (mode === "initial") {
+          setIsLoading(true);
+        } else if (mode === "refresh") {
+          setIsRefreshing(true);
+        }
       }
 
       try {
-        const payload = await listIsos({token});
+        const payload = await listIsos({ token });
         const normalized = normalizeIsoResponse(payload);
         setIsos(normalized);
         setError(null);
@@ -846,9 +851,9 @@ export default function ProfileScreen() {
             typeof err.data === "object" &&
             err.data !== null &&
             "message" in err.data &&
-            typeof (err.data as {message?: unknown}).message === "string"
+            typeof (err.data as { message?: unknown }).message === "string"
           ) {
-            message = (err.data as {message: string}).message;
+            message = (err.data as { message: string }).message;
           } else if (err.message) {
             message = err.message;
           }
@@ -857,10 +862,12 @@ export default function ProfileScreen() {
         }
         setError(message);
       } finally {
-        if (mode === "initial") {
-          setIsLoading(false);
-        } else {
-          setIsRefreshing(false);
+        if (!isSilent) {
+          if (mode === "initial") {
+            setIsLoading(false);
+          } else if (mode === "refresh") {
+            setIsRefreshing(false);
+          }
         }
       }
     },
@@ -876,6 +883,16 @@ export default function ProfileScreen() {
 
   React.useEffect(() => {
     if (!token) {
+      return undefined;
+    }
+    const id = setInterval(() => {
+      fetchIsos("silent");
+    }, 5000);
+    return () => clearInterval(id);
+  }, [fetchIsos, token]);
+
+  React.useEffect(() => {
+    if (!token) {
       return;
     }
     let isActive = true;
@@ -884,7 +901,7 @@ export default function ProfileScreen() {
         const mounts = await listMounts();
         if (!isActive) return;
         const shares: ShareInfo[] = mounts
-          .map(({NfsShare}) => {
+          .map(({ NfsShare }) => {
             if (!NfsShare) return null;
             return {
               id: NfsShare.Id,
@@ -922,7 +939,7 @@ export default function ProfileScreen() {
     return isos.map((iso) => {
       const resolvedName = iso.mountName ?? resolveShareName(iso, shareInfos);
       if (resolvedName && resolvedName !== iso.mountName) {
-        return {...iso, mountName: resolvedName};
+        return { ...iso, mountName: resolvedName };
       }
       return iso;
     });
@@ -977,9 +994,9 @@ export default function ProfileScreen() {
             typeof err.data === "object" &&
             err.data !== null &&
             "message" in err.data &&
-            typeof (err.data as {message?: unknown}).message === "string"
+            typeof (err.data as { message?: unknown }).message === "string"
           ) {
-            message = (err.data as {message: string}).message;
+            message = (err.data as { message: string }).message;
           } else if (err.message) {
             message = err.message;
           }
@@ -1016,7 +1033,7 @@ export default function ProfileScreen() {
     <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{paddingBottom: 32}}
+        contentContainerStyle={{ paddingBottom: 32 }}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -1031,7 +1048,7 @@ export default function ProfileScreen() {
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
-            style={{fontFamily: "Inter_700Bold"}}
+            style={{ fontFamily: "Inter_700Bold" }}
           >
             ISO Downloads
           </Heading>
@@ -1043,7 +1060,7 @@ export default function ProfileScreen() {
             <Box className="flex-1">
               <Text
                 className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400 mb-2"
-                style={{fontFamily: "Inter_600SemiBold"}}
+                style={{ fontFamily: "Inter_600SemiBold" }}
               >
                 Filter ISOs
               </Text>
@@ -1060,7 +1077,7 @@ export default function ProfileScreen() {
                   placeholder="Name, operating system, version..."
                   placeholderTextColor={colorScheme === "dark" ? "#8A94A8" : "#94A3B8"}
                   className="text-base text-typography-900 dark:text-[#E8EBF0]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 />
               </Input>
             </Box>
@@ -1069,7 +1086,7 @@ export default function ProfileScreen() {
                 {isButtonTrackingDownload && activeDownloadProgress != null ? (
                   <Box
                     className="absolute left-0 top-0 h-full bg-primary-500/30 dark:bg-[#5EEAD4]/30"
-                    style={{width: `${activeDownloadProgress}%`}}
+                    style={{ width: `${activeDownloadProgress}%` }}
                     pointerEvents="none"
                   />
                 ) : null}
@@ -1080,11 +1097,11 @@ export default function ProfileScreen() {
                 >
                   <ButtonIcon as={Plus} className="text-typography-0 dark:text-[#0D1420]" />
                   <VStack className="flex-1 items-start">
-                    <ButtonText className="text-base font-semibold text-typography-0 dark:text-[#0D1420]" style={{fontFamily: "Inter_600SemiBold"}}>
+                    <ButtonText className="text-base font-semibold text-typography-0 dark:text-[#0D1420]" style={{ fontFamily: "Inter_600SemiBold" }}>
                       {downloadProgressLabel}
                     </ButtonText>
                     {downloadProgressDetail ? (
-                      <Text className="text-xs text-typography-0 dark:text-[#0D1420] opacity-80" style={{fontFamily: "Inter_500Medium"}}>
+                      <Text className="text-xs text-typography-0 dark:text-[#0D1420] opacity-80" style={{ fontFamily: "Inter_500Medium" }}>
                         {downloadProgressDetail}
                       </Text>
                     ) : null}
@@ -1107,7 +1124,7 @@ export default function ProfileScreen() {
                 )}
                 <ButtonText
                   className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]"
-                  style={{fontFamily: "Inter_600SemiBold"}}
+                  style={{ fontFamily: "Inter_600SemiBold" }}
                 >
                   Refresh
                 </ButtonText>
@@ -1124,11 +1141,11 @@ export default function ProfileScreen() {
                 <VStack className="flex-1 gap-2">
                   <Text
                     className="text-base font-semibold text-error-600 dark:text-error-400"
-                    style={{fontFamily: "Inter_600SemiBold"}}
+                    style={{ fontFamily: "Inter_600SemiBold" }}
                   >
                     Something went wrong
                   </Text>
-                  <Text className="text-sm text-error-600 dark:text-error-400" style={{fontFamily: "Inter_400Regular"}}>
+                  <Text className="text-sm text-error-600 dark:text-error-400" style={{ fontFamily: "Inter_400Regular" }}>
                     {error}
                   </Text>
                   <Button
@@ -1157,7 +1174,7 @@ export default function ProfileScreen() {
             <Box className="mt-8 rounded-2xl border border-outline-100 bg-background-0 p-8 text-center shadow-soft-2 dark:border-[#2A3B52] dark:bg-[#0E1524]">
               <Text
                 className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]"
-                style={{fontFamily: "Inter_600SemiBold"}}
+                style={{ fontFamily: "Inter_600SemiBold" }}
               >
                 {query.trim() ? "No ISOs found for this filter." : "No ISOs available yet."}
               </Text>
@@ -1198,21 +1215,21 @@ type IsoCardProps = {
   isDeleting?: boolean;
 };
 
-function IsoCard({iso, onDelete, isDeleting}: IsoCardProps) {
+function IsoCard({ iso, onDelete, isDeleting }: IsoCardProps) {
   return (
     <Box className="rounded-3xl border border-outline-100 bg-background-0 p-5 shadow-soft-3 dark:border-[#2A3B52] dark:bg-[#0E1524]">
       <VStack className="gap-5">
         <VStack className="gap-3">
           <Text
             className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400"
-            style={{fontFamily: "Inter_600SemiBold"}}
+            style={{ fontFamily: "Inter_600SemiBold" }}
           >
             ISO image
           </Text>
           <Heading
             size="md"
             className="text-typography-900 dark:text-[#E8EBF0]"
-            style={{fontFamily: "Inter_600SemiBold"}}
+            style={{ fontFamily: "Inter_600SemiBold" }}
           >
             {iso.name}
           </Heading>
@@ -1220,7 +1237,7 @@ function IsoCard({iso, onDelete, isDeleting}: IsoCardProps) {
             <Text
               className="text-sm text-typography-600 dark:text-typography-400"
               numberOfLines={3}
-              style={{fontFamily: "Inter_400Regular"}}
+              style={{ fontFamily: "Inter_400Regular" }}
             >
               {iso.description}
             </Text>
@@ -1258,7 +1275,7 @@ function IsoCard({iso, onDelete, isDeleting}: IsoCardProps) {
             <VStack className="gap-2">
               <Text
                 className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400"
-                style={{fontFamily: "Inter_500Medium"}}
+                style={{ fontFamily: "Inter_500Medium" }}
               >
                 Available on
               </Text>
@@ -1309,7 +1326,7 @@ function IsoCard({iso, onDelete, isDeleting}: IsoCardProps) {
               {isDeleting ? (
                 <ButtonSpinner />
               ) : (
-                <ButtonText className="text-error-600 dark:text-error-400 font-semibold" style={{fontFamily: "Inter_600SemiBold"}}>
+                <ButtonText className="text-error-600 dark:text-error-400 font-semibold" style={{ fontFamily: "Inter_600SemiBold" }}>
                   Delete
                 </ButtonText>
               )}
@@ -1328,7 +1345,7 @@ type IsoInfoRowProps = {
   mono?: boolean;
 };
 
-function IsoInfoRow({icon, label, value, mono = false}: IsoInfoRowProps) {
+function IsoInfoRow({ icon, label, value, mono = false }: IsoInfoRowProps) {
   return (
     <HStack className="items-start gap-3">
       <Box className="h-10 w-10 rounded-2xl bg-background-50 dark:bg-[#1A2637] items-center justify-center">
@@ -1337,14 +1354,14 @@ function IsoInfoRow({icon, label, value, mono = false}: IsoInfoRowProps) {
       <VStack className="flex-1 min-w-0">
         <Text
           className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400"
-          style={{fontFamily: "Inter_500Medium"}}
+          style={{ fontFamily: "Inter_500Medium" }}
         >
           {label}
         </Text>
         <Text
           className={`text-sm text-typography-900 dark:text-[#E8EBF0] ${mono ? 'break-all' : ''}`}
           numberOfLines={mono ? 2 : undefined}
-          style={{fontFamily: mono ? "SpaceMono" : "Inter_600SemiBold"}}
+          style={{ fontFamily: mono ? "SpaceMono" : "Inter_600SemiBold" }}
         >
           {value}
         </Text>
@@ -1380,7 +1397,7 @@ const isDownloadActive = (monitor: DownloadMonitor | null) =>
 
 const COMPLETION_THRESHOLD = 99.5;
 
-function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: AddIsoModalProps) {
+function AddIsoModal({ isOpen, onClose, onSuccess, authToken, onDownloadChange }: AddIsoModalProps) {
   const colorScheme = useColorScheme();
   const [isoUrl, setIsoUrl] = React.useState("");
   const [isoName, setIsoName] = React.useState("");
@@ -1416,17 +1433,17 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
     downloadMonitor?.stage === "completed"
       ? "Close"
       : downloadMonitor?.stage === "error"
-      ? "Retry download"
-      : "Download ISO";
+        ? "Retry download"
+        : "Download ISO";
   const isFooterDisabled =
     downloadMonitor?.stage === "completed"
       ? false
       : downloadMonitor?.stage === "error"
-      ? isBusy || isLoadingShares || shareOptions.length === 0
-      : isBusy || isLoadingShares || shareOptions.length === 0 || !!downloadMonitor;
+        ? isBusy || isLoadingShares || shareOptions.length === 0
+        : isBusy || isLoadingShares || shareOptions.length === 0 || !!downloadMonitor;
 
   const resetForm = React.useCallback(
-    (options?: {preserveDownload?: boolean}) => {
+    (options?: { preserveDownload?: boolean }) => {
       setIsoUrl("");
       setIsoName("");
       setSelectedShareId(null);
@@ -1472,7 +1489,7 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
     const isOpening = isOpen && !wasOpenRef.current;
     wasOpenRef.current = isOpen;
     if (!isOpening) return;
-    resetForm({preserveDownload: !!downloadMonitor});
+    resetForm({ preserveDownload: !!downloadMonitor });
   }, [downloadMonitor, isOpen, resetForm]);
 
   React.useEffect(() => {
@@ -1491,7 +1508,7 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
       try {
         const mounts = await listMounts();
         if (!isActive) return;
-        const mapped = mounts.map(({NfsShare}) => ({
+        const mapped = mounts.map(({ NfsShare }) => ({
           id: NfsShare.Id,
           name:
             NfsShare.Name && NfsShare.Name.trim().length > 0
@@ -1539,8 +1556,8 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
         typeof payload.data === "string"
           ? payload.data
           : typeof payload.data === "number"
-          ? String(payload.data)
-          : "";
+            ? String(payload.data)
+            : "";
 
       const payloadProgress =
         toNumber(payload.progress) ??
@@ -1570,8 +1587,8 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
 
       const errorMessage =
         (typeof payload.error === "string" && payload.error) ||
-        (typeof (payload as {error_message?: unknown}).error_message === "string"
-          ? (payload as {error_message: string}).error_message
+        (typeof (payload as { error_message?: unknown }).error_message === "string"
+          ? (payload as { error_message: string }).error_message
           : undefined);
 
       const extraIsoName =
@@ -1589,8 +1606,8 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
       const stage: DownloadMonitor["stage"] = errorMessage
         ? "error"
         : completed
-        ? "completed"
-        : "downloading";
+          ? "completed"
+          : "downloading";
 
       const targetIsoName =
         extraIsoName ??
@@ -1772,9 +1789,9 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
           typeof err.data === "object" &&
           err.data !== null &&
           "message" in err.data &&
-          typeof (err.data as {message?: unknown}).message === "string"
+          typeof (err.data as { message?: unknown }).message === "string"
         ) {
-          message = (err.data as {message: string}).message;
+          message = (err.data as { message: string }).message;
         } else if (err.message) {
           message = err.message;
         }
@@ -1805,7 +1822,7 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
           <Heading
             size="lg"
             className="text-typography-900 dark:text-[#E8EBF0] web:text-2xl"
-            style={{fontFamily: "Inter_700Bold"}}
+            style={{ fontFamily: "Inter_700Bold" }}
           >
             Add new ISO
           </Heading>
@@ -1819,7 +1836,7 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
               <VStack className="gap-1 items-center text-center">
                 <Text
                   className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]"
-                  style={{fontFamily: "Inter_600SemiBold"}}
+                  style={{ fontFamily: "Inter_600SemiBold" }}
                 >
                   Downloading ISO
                 </Text>
@@ -1829,11 +1846,10 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
                 </Text>
               </VStack>
               <Box
-                className={`w-full rounded-2xl border px-4 py-4 ${
-                  downloadMonitor.stage === "error"
+                className={`w-full rounded-2xl border px-4 py-4 ${downloadMonitor.stage === "error"
                     ? "border-error-300 dark:border-error-700 bg-error-500/5 dark:bg-error-900/10"
                     : "border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]"
-                }`}
+                  }`}
               >
                 <VStack className="gap-3">
                   <HStack className="items-center gap-3">
@@ -1857,7 +1873,7 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
                     <VStack className="flex-1 gap-1">
                       <Text
                         className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]"
-                        style={{fontFamily: "Inter_600SemiBold"}}
+                        style={{ fontFamily: "Inter_600SemiBold" }}
                       >
                         {downloadMonitor.isoName}
                       </Text>
@@ -1877,19 +1893,19 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
                     </VStack>
                   </HStack>
                   {progressValue != null &&
-                  downloadMonitor.stage === "downloading" ? (
+                    downloadMonitor.stage === "downloading" ? (
                     <VStack className="gap-3">
                       <HStack className="items-center justify-between">
                         <Text
                           className="text-2xl font-bold text-primary-500 dark:text-[#2DD4BF]"
-                          style={{fontFamily: "Inter_700Bold"}}
+                          style={{ fontFamily: "Inter_700Bold" }}
                         >
                           {Math.round(progressValue)}%
                         </Text>
                         {downloadMonitor.detail ? (
                           <Text
                             className="text-sm text-typography-600 dark:text-typography-400 font-medium"
-                            style={{fontFamily: "Inter_500Medium"}}
+                            style={{ fontFamily: "Inter_500Medium" }}
                           >
                             {downloadMonitor.detail}
                             {"adwedqaefweq"}
@@ -1911,7 +1927,7 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
                 <Box className="w-full rounded-2xl border border-error-300 dark:border-error-700 bg-error-500/5 dark:bg-error-900/20 px-4 py-3">
                   <Text
                     className="text-sm text-error-600 dark:text-error-400 font-medium"
-                    style={{fontFamily: "Inter_500Medium"}}
+                    style={{ fontFamily: "Inter_500Medium" }}
                   >
                     {submitError}
                   </Text>
@@ -2059,7 +2075,7 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
                 <Box className="rounded-2xl border border-error-300 dark:border-error-700 bg-error-500/5 dark:bg-error-900/20 px-4 py-3">
                   <Text
                     className="text-sm text-error-600 dark:text-error-400 font-medium"
-                    style={{fontFamily: "Inter_500Medium"}}
+                    style={{ fontFamily: "Inter_500Medium" }}
                   >
                     {submitError}
                   </Text>
@@ -2083,14 +2099,14 @@ function AddIsoModal({isOpen, onClose, onSuccess, authToken, onDownloadChange}: 
               {isBusy ? (
                 <ButtonText
                   className="text-base font-semibold text-typography-0 dark:text-[#0D1420]"
-                  style={{fontFamily: "Inter_600SemiBold"}}
+                  style={{ fontFamily: "Inter_600SemiBold" }}
                 >
                   Saving ISO
                 </ButtonText>
               ) : (
                 <ButtonText
                   className="text-base font-semibold text-typography-0 dark:text-[#0D1420]"
-                  style={{fontFamily: "Inter_600SemiBold"}}
+                  style={{ fontFamily: "Inter_600SemiBold" }}
                 >
                   {footerLabel}
                 </ButtonText>

@@ -1,16 +1,16 @@
 import React from "react";
-import {RefreshControl, ScrollView, Text, useColorScheme} from "react-native";
-import {Box} from "@/components/ui/box";
-import MountCard, {MountSkeletonGrid} from "@/components/mount";
-import {useMounts} from "@/hooks/useMounts";
-import {MountShare} from "@/types/mount";
-import {useAuthGuard} from "@/hooks/useAuthGuard";
-import {Heading} from "@/components/ui/heading";
-import {VStack} from "@/components/ui/vstack";
+import { RefreshControl, ScrollView, Text, useColorScheme } from "react-native";
+import { Box } from "@/components/ui/box";
+import MountCard, { MountSkeletonGrid } from "@/components/mount";
+import { useMounts } from "@/hooks/useMounts";
+import { MountShare } from "@/types/mount";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { Heading } from "@/components/ui/heading";
+import { VStack } from "@/components/ui/vstack";
 
 export default function MountsScreen() {
-  const {token, isChecking} = useAuthGuard();
-  const {mounts, error, isLoading, isRefreshing, refresh, removeMount} = useMounts({
+  const { token, isChecking } = useAuthGuard();
+  const { mounts, error, isLoading, isRefreshing, refresh, removeMount } = useMounts({
     token,
   });
 
@@ -35,13 +35,13 @@ export default function MountsScreen() {
         <Heading
           size="2xl"
           className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
-          style={{fontFamily: "Inter_700Bold"}}
+          style={{ fontFamily: "Inter_700Bold" }}
         >
           NFS
         </Heading>
         <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
-          Browse all ISOs available for your VMs and add new images by
-          downloading them straight to the cluster.
+          Manage your NFS shares across the cluster and create new mounts for
+          your VMs.
         </Text>
 
         <VStack className="mt-6 gap-4 web:flex-row web:items-end">
@@ -74,7 +74,7 @@ export default function MountsScreen() {
                   <Box className="p-3 web:rounded-2xl web:bg-background-0/80">
                     <Text
                       className="text-[#EF4444]"
-                      style={{fontFamily: "Inter_400Regular"}}
+                      style={{ fontFamily: "Inter_400Regular" }}
                     >
                       Error loading mounts: {error}
                     </Text>
@@ -83,7 +83,7 @@ export default function MountsScreen() {
                   <Box className="p-3 web:rounded-2xl web:bg-background-0/80">
                     <Text
                       className="color-[#9AA4B8] web:text-base"
-                      style={{fontFamily: "Inter_400Regular"}}
+                      style={{ fontFamily: "Inter_400Regular" }}
                     >
                       No mounts found.
                     </Text>

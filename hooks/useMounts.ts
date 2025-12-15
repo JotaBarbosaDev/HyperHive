@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Mount, MountShare } from "@/types/mount";
 import { listMounts } from "@/services/hyperhive";
 
-type FetchMode = "initial" | "refresh";
+type FetchMode = "initial" | "refresh" | "silent";
 
 export type UseMountsOptions = {
   token?: string | null;
@@ -19,18 +19,22 @@ export function useMounts({ token }: UseMountsOptions = {}) {
     async (mode: FetchMode = "refresh") => {
       if (!token) {
         if (!isMountedRef.current) return;
-        if (mode === "initial") {
-          setIsLoading(false);
-        } else {
-          setIsRefreshing(false);
+        if (mode !== "silent") {
+          if (mode === "initial") {
+            setIsLoading(false);
+          } else if (mode === "refresh") {
+            setIsRefreshing(false);
+          }
         }
         return;
       }
 
-      if (mode === "initial") {
-        setIsLoading(true);
-      } else {
-        setIsRefreshing(true);
+      if (mode !== "silent") {
+        if (mode === "initial") {
+          setIsLoading(true);
+        } else if (mode === "refresh") {
+          setIsRefreshing(true);
+        }
       }
 
       try {
@@ -48,10 +52,12 @@ export function useMounts({ token }: UseMountsOptions = {}) {
         setError(message);
       } finally {
         if (!isMountedRef.current) return;
-        if (mode === "initial") {
-          setIsLoading(false);
-        } else {
-          setIsRefreshing(false);
+        if (mode !== "silent") {
+          if (mode === "initial") {
+            setIsLoading(false);
+          } else if (mode === "refresh") {
+            setIsRefreshing(false);
+          }
         }
       }
     },
@@ -65,6 +71,14 @@ export function useMounts({ token }: UseMountsOptions = {}) {
       isMountedRef.current = false;
     };
   }, [fetchMounts]);
+
+  useEffect(() => {
+    if (!token) return;
+    const id = setInterval(() => {
+      fetchMounts("silent");
+    }, 5000);
+    return () => clearInterval(id);
+  }, [token, fetchMounts]);
 
   const refresh = useCallback(() => fetchMounts("refresh"), [fetchMounts]);
 

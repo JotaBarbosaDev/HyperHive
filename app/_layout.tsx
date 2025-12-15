@@ -40,6 +40,7 @@ import { ApiError, onApiResult, onUnauthorized, setAuthToken } from "@/services/
 import { listMachines } from "@/services/hyperhive";
 import { ensureHyperHiveWebsocket } from "@/services/websocket-client";
 import { AppThemeProvider } from "@/hooks/useAppTheme";
+import { SelectedMachineProvider } from "@/hooks/useSelectedMachine";
 import { ThemePreference, loadThemePreference, saveThemePreference } from "@/services/theme-preference";
 import {
   Modal,
@@ -83,6 +84,11 @@ const ROUTE_TITLE_MAP: Record<string, string> = {
   "/modal": "Modal",
   "/tabs": "Tabs",
   "/spa": "SPA",
+  "/docker/images": "Docker Images",
+  "/docker/containers": "Docker Containers",
+  "/docker/volumes": "Docker Volumes",
+  "/docker/networks": "Docker Networks",
+  "/docker/git": "Docker Git",
 };
 
 const normalizePathname = (path: string) => {
@@ -234,6 +240,7 @@ function RootLayoutNav() {
     { status?: number; path?: string; details: string } | null
   >(null);
   const isSigningOutRef = React.useRef(false);
+  const isWeb = Platform.OS === "web";
 
   const handleCloseApiErrorModal = React.useCallback(() => {
     setApiErrorModal(null);
@@ -467,38 +474,40 @@ function RootLayoutNav() {
                 );
               }}
             >
-              <Box className="flex-1">
-                {pathname !== "/" && (
-                  <Box
-                    className="absolute top-3 left-3 web:top-5 web:left-5 z-20"
-                    pointerEvents="box-none"
-                  >
-                    <Button
-                      size="md"
-                      variant="outline"
-                      action="secondary"
-                      className="gap-2 rounded-xl px-4 h-11 border-outline-100 dark:border-[#2A3B52] bg-background-0/95 dark:bg-[#1A2332]/95 shadow-soft-1 web:hover:bg-background-50 dark:web:hover:bg-[#1F2D42]"
-                      onPress={() => setShowSidebar(true)}
-                      pointerEvents="auto"
+              <SelectedMachineProvider>
+                <Box className="flex-1">
+                  {pathname !== "/" && (
+                    <Box
+                      className="absolute top-3 left-3 web:top-5 web:left-5 z-20"
+                      pointerEvents="box-none"
                     >
-                      <ButtonIcon
-                        as={Menu}
+                      <Button
                         size="md"
-                        className="text-typography-900 dark:text-[#E8EBF0]"
-                      />
-                      <ButtonText className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
-                        Menu
-                      </ButtonText>
-                    </Button>
+                        variant="outline"
+                        action="secondary"
+                        className="gap-2 rounded-xl px-4 h-11 border-outline-100 dark:border-[#2A3B52] bg-background-0/95 dark:bg-[#1A2332]/95 shadow-soft-1 web:hover:bg-background-50 dark:web:hover:bg-[#1F2D42]"
+                        onPress={() => setShowSidebar(true)}
+                        pointerEvents="auto"
+                      >
+                        <ButtonIcon
+                          as={Menu}
+                          size="md"
+                          className="text-typography-900 dark:text-[#E8EBF0]"
+                        />
+                        <ButtonText className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                          Menu
+                        </ButtonText>
+                      </Button>
+                    </Box>
+                  )}
+                  <GoAccessStreamButtons />
+                  <Box className="flex-1 pt-2 web:pt-3">
+                    <Slot />
                   </Box>
-                )}
-                <GoAccessStreamButtons />
-                <Box className="flex-1 pt-2 web:pt-3">
-                  <Slot />
                 </Box>
-              </Box>
+              </SelectedMachineProvider>
             </AppThemeProvider>
-            {pathname === "/mounts" && (
+            {pathname === "/mounts" && !isWeb && (
               <Button
                 size="lg"
                 className="absolute bottom-6 right-6 rounded-full p-4 shadow-hard-3 web:bottom-10 web:right-10 web:p-5 web:shadow-soft-4 hover:web:scale-105 active:scale-95 transition-transform dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:shadow-[0_8px_24px_rgba(45,212,191,0.25)]"
@@ -511,6 +520,22 @@ function RootLayoutNav() {
                   size="lg"
                 />
               </Button>
+            )}
+            {pathname === "/mounts" && isWeb && (
+              <Box
+                className="hidden web:flex absolute top-6 right-6 z-20 web:top-10 web:right-10"
+                pointerEvents="box-none"
+              >
+                <Button
+                  size="md"
+                  action="primary"
+                  className="h-11 rounded-xl px-4 gap-2 shadow-soft-3"
+                  onPress={handleOpenDrawer}
+                >
+                  <ButtonIcon as={EditIcon} size="sm" className="dark:text-[#0D1420]" />
+                  <ButtonText className="text-sm font-semibold">Create new NFS</ButtonText>
+                </Button>
+              </Box>
             )}
             {pathname !== "/" && (
               <AppSidebar
@@ -539,8 +564,8 @@ function RootLayoutNav() {
                   <Box className="flex-1 pr-4">
                     <Text className="text-lg font-semibold text-typography-900 dark:text-[#E2E8F0]">
                       {apiErrorModal?.status
-                        ? `Erro na API (${apiErrorModal.status})`
-                        : "Erro na API"}
+                        ? `Error on API (${apiErrorModal.status})`
+                        : "Error on API"}
                     </Text>
                     {apiErrorModal?.path ? (
                       <Text
@@ -562,7 +587,7 @@ function RootLayoutNav() {
                 </ModalBody>
                 <ModalFooter>
                   <Button onPress={handleCloseApiErrorModal} size="sm">
-                    <ButtonText>Fechar</ButtonText>
+                    <ButtonText>Close</ButtonText>
                   </Button>
                 </ModalFooter>
               </ModalContent>

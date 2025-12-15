@@ -1,13 +1,13 @@
 import React from "react";
-import {RefreshControl, ScrollView} from "react-native";
+import { RefreshControl, ScrollView } from "react-native";
 import * as Clipboard from "expo-clipboard";
-import {Box} from "@/components/ui/box";
-import {Text} from "@/components/ui/text";
-import {Heading} from "@/components/ui/heading";
-import {VStack} from "@/components/ui/vstack";
-import {HStack} from "@/components/ui/hstack";
-import {Input, InputField} from "@/components/ui/input";
-import {Button, ButtonIcon, ButtonSpinner, ButtonText} from "@/components/ui/button";
+import { Box } from "@/components/ui/box";
+import { Text } from "@/components/ui/text";
+import { Heading } from "@/components/ui/heading";
+import { VStack } from "@/components/ui/vstack";
+import { HStack } from "@/components/ui/hstack";
+import { Input, InputField } from "@/components/ui/input";
+import { Button, ButtonIcon, ButtonSpinner, ButtonText } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogBackdrop,
@@ -17,13 +17,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
 } from "@/components/ui/alert-dialog";
-import {Toast, ToastDescription, ToastTitle, useToast} from "@/components/ui/toast";
-import {Divider} from "@/components/ui/divider";
-import {useAuthGuard} from "@/hooks/useAuthGuard";
-import {SpaPort} from "@/types/spa";
-import {createSpaPort, deleteSpaPort, listSpaPorts} from "@/services/spa";
-import {Plus, ShieldCheck, Trash2, Copy} from "lucide-react-native";
-import {getApiBaseUrl} from "@/config/apiConfig";
+import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { SpaPort } from "@/types/spa";
+import { createSpaPort, deleteSpaPort, listSpaPorts } from "@/services/spa";
+import { Copy, Plus, ShieldCheck, Trash2 } from "lucide-react-native";
+import { getApiBaseUrl } from "@/config/apiConfig";
 
 const formatDate = (value: string) => {
   const d = new Date(value);
@@ -38,7 +37,7 @@ const formatDate = (value: string) => {
 };
 
 export default function SpaScreen() {
-  const {isChecking} = useAuthGuard("/");
+  const { isChecking } = useAuthGuard("/");
   const toast = useToast();
   const [ports, setPorts] = React.useState<SpaPort[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -53,7 +52,7 @@ export default function SpaScreen() {
     (title: string, description: string, action: "success" | "error" = "success") => {
       toast.show({
         placement: "top",
-        render: ({id}) => (
+        render: ({ id }) => (
           <Toast
             nativeID={"toast-" + id}
             className="px-5 py-3 gap-2 shadow-soft-1 items-start flex-row"
@@ -104,7 +103,7 @@ export default function SpaScreen() {
     }
     setSaving(true);
     try {
-      await createSpaPort({port: parsedPort, password});
+      await createSpaPort({ port: parsedPort, password });
       showToast("SPA created", `Port ${parsedPort} authorized successfully.`);
       setPortInput("");
       setPassword("");
@@ -150,177 +149,169 @@ export default function SpaScreen() {
   };
 
   return (
-    <ScrollView
-      className="flex-1 bg-background-0"
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={() => loadPorts("refresh")} />
-      }
-    >
-      <Box className="w-full max-w-5xl self-center px-4 md:px-6 py-8 gap-6">
-        <VStack space="md">
-          <HStack className="items-center justify-between">
-            <HStack className="items-center gap-3">
-              <Box className="bg-primary-500/10 rounded-2xl p-3">
-                <ShieldCheck size={22} color="#0f172a" />
-              </Box>
-              <VStack space="xs">
-                <Heading size="xl">Single Packet Authorization</Heading>
-                <Text size="sm" className="text-typography-500">
-                  Manage SPA ports: create password-protected access and remove it when no longer
-                  needed. IMPORTANT: ports may be open for everyone for some seconds or when hyperhive crashes, do not use this as a unique authorization
-                </Text>
-              </VStack>
-            </HStack>
-          </HStack>
-
-          <Box className="bg-background-50 border border-outline-200 rounded-2xl p-4 md:p-5 gap-4">
-            <Heading size="md">New SPA port</Heading>
-            <VStack space="md">
-              <HStack className="gap-3 flex-wrap">
-                <Box className="flex-1 min-w-[180px]">
-                  <Text size="xs" className="mb-2 text-typography-500">
-                    Port
-                  </Text>
-                  <Input size="md" variant="rounded" isDisabled={saving}>
-                    <InputField
-                      keyboardType="numeric"
-                      placeholder="25565"
-                      value={portInput}
-                      onChangeText={setPortInput}
-                    />
-                  </Input>
+    <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 32 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadPorts("refresh")} />}
+      >
+        <Box className="p-4 pt-16 web:p-10 web:max-w-6xl web:mx-auto web:w-full">
+          <VStack space="lg">
+            <VStack space="xs">
+              <HStack className="items-center gap-3">
+                <Box className="rounded-2xl bg-background-0 border border-background-100 shadow-soft-1 p-3">
+                  <ShieldCheck size={24} color="#0f172a" />
                 </Box>
-                <Box className="flex-1 min-w-[200px]">
-                  <Text size="xs" className="mb-2 text-typography-500">
-                    Password
+                <VStack space="xs">
+                  <Heading size="2xl" className="text-typography-900">Single Packet Authorization</Heading>
+                  <Text size="sm" className="text-typography-600 max-w-3xl">
+                    Crie portas protegidas por palavra-passe para acessos temporários. Não use o SPA como única linha de defesa.
                   </Text>
-                  <Input size="md" variant="rounded" isDisabled={saving}>
-                    <InputField
-                      secureTextEntry
-                      placeholder="SPA password"
-                      value={password}
-                      onChangeText={setPassword}
-                    />
-                  </Input>
-                </Box>
+                </VStack>
               </HStack>
-              <Button
-                action="primary"
-                className="self-start rounded-full"
-                onPress={handleCreate}
-                isDisabled={saving}
-              >
-                {saving ? (
-                  <ButtonSpinner />
-                ) : (
-                  <ButtonIcon as={Plus} className="mr-1" />
-                )}
-                <ButtonText>{saving ? "Saving..." : "Create SPA access"}</ButtonText>
-              </Button>
             </VStack>
-          </Box>
 
-          <Divider />
-
-          <VStack space="sm">
-            <HStack className="items-center justify-between">
-              <Heading size="md">Configured ports</Heading>
-              {loading ? <Text size="sm">Loading...</Text> : null}
-            </HStack>
-            {loading ? (
-              <VStack space="md" className="mt-2">
-                {[1, 2, 3].map((item) => (
-                  <Box
-                    key={item}
-                    className="h-16 rounded-2xl bg-background-100 border border-outline-200"
-                  />
-                ))}
-              </VStack>
-            ) : ports.length === 0 ? (
-              <Box className="border border-dashed border-outline-200 rounded-2xl p-6 items-start gap-2 bg-background-50">
-                <Heading size="sm">No SPA ports</Heading>
+            <Box className="rounded-2xl bg-background-0 border border-background-100 shadow-soft-1 p-4 md:p-5 gap-5">
+              <VStack space="sm">
+                <Heading size="lg" className="text-typography-900">Nova porta</Heading>
                 <Text size="sm" className="text-typography-500">
-                  Add a port to generate protected access.
+                  Escolha a porta e defina uma password para abrir o acesso enquanto o token estiver válido.
                 </Text>
-              </Box>
-            ) : (
-              <VStack space="md" className="mt-1">
-                {ports.map((item) => (
-                  <HStack
-                    key={item.port}
-                    className="items-center justify-between bg-background-50 border border-outline-200 rounded-2xl px-4 py-3"
-                  >
-                    <VStack space="xs">
-                      <Heading size="sm">Porta {item.port}</Heading>
-                      <Text size="xs" className="text-typography-500">
-                        Criada em {formatDate(item.created_at)}
-                      </Text>
-                    </VStack>
-                    <HStack space="sm" className="items-center">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="rounded-full"
-                        onPress={() => copyAccessLink(item.port)}
-                      >
-                        <ButtonIcon as={Copy} />
-                        <ButtonText>Copy link</ButtonText>
-                      </Button>
-                      <Button
-                        action="negative"
-                        variant="outline"
-                        size="sm"
-                        className="rounded-full"
-                        onPress={() => setDeleteTarget(item)}
-                      >
-                        {deletingPort === item.port ? (
-                          <ButtonSpinner />
-                        ) : (
-                          <ButtonIcon as={Trash2} />
-                        )}
-                        <ButtonText>Remover</ButtonText>
-                      </Button>
-                    </HStack>
-                  </HStack>
-                ))}
               </VStack>
-            )}
-          </VStack>
-        </VStack>
-      </Box>
 
-      <AlertDialog isOpen={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)}>
-        <AlertDialogBackdrop />
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <Text className="font-semibold text-lg">Remove SPA port</Text>
-            <AlertDialogCloseButton />
-          </AlertDialogHeader>
-          <AlertDialogBody className="gap-2">
-            <Text size="sm">
-              Are you sure you want to remove port {deleteTarget?.port}? SPA access will be revoked.
-            </Text>
-          </AlertDialogBody>
-          <AlertDialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              className="flex-1 rounded-full"
-              onPress={() => setDeleteTarget(null)}
-            >
-              <ButtonText>Cancel</ButtonText>
-            </Button>
-            <Button
-              action="negative"
-              className="flex-1 rounded-full"
-              onPress={confirmDelete}
-              isDisabled={deletingPort !== null}
-            >
-              {deletingPort ? <ButtonSpinner /> : <ButtonIcon as={Trash2} />}
-              <ButtonText>Remove</ButtonText>
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </ScrollView>
+              <VStack space="md">
+                <HStack className="gap-3 flex-wrap">
+                  <Box className="flex-1 min-w-[180px]">
+                    <Text size="xs" className="mb-2 text-typography-500">Porta</Text>
+                    <Input size="md" variant="rounded" isDisabled={saving}>
+                      <InputField
+                        keyboardType="numeric"
+                        placeholder="25565"
+                        value={portInput}
+                        onChangeText={setPortInput}
+                      />
+                    </Input>
+                  </Box>
+                  <Box className="flex-1 min-w-[200px]">
+                    <Text size="xs" className="mb-2 text-typography-500">Password</Text>
+                    <Input size="md" variant="rounded" isDisabled={saving}>
+                      <InputField
+                        secureTextEntry
+                        placeholder="Password do SPA"
+                        value={password}
+                        onChangeText={setPassword}
+                      />
+                    </Input>
+                  </Box>
+                </HStack>
+                <HStack className="items-center gap-3 flex-wrap">
+                  <Button
+                    action="primary"
+                    className="rounded-full"
+                    onPress={handleCreate}
+                    isDisabled={saving}
+                  >
+                    {saving ? <ButtonSpinner /> : <ButtonIcon as={Plus} className="mr-1" />}
+                    <ButtonText>{saving ? "A guardar..." : "Criar porta"}</ButtonText>
+                  </Button>
+                  <Text size="xs" className="text-typography-500">
+                    Depois de criada pode copiar o link para partilhar o acesso.
+                  </Text>
+                </HStack>
+              </VStack>
+            </Box>
+
+            <Box className="rounded-2xl bg-background-0 border border-background-100 shadow-soft-1 p-4 md:p-5 gap-4">
+              <HStack className="items-center justify-between flex-wrap gap-3">
+                <Heading size="lg" className="text-typography-900">Portas configuradas</Heading>
+                {loading ? <Text size="sm" className="text-typography-500">A carregar...</Text> : null}
+              </HStack>
+
+              {loading ? (
+                <VStack space="md" className="mt-2">
+                  {[1, 2, 3].map((item) => (
+                    <Box
+                      key={item}
+                      className="h-16 rounded-2xl bg-background-50 border border-background-100"
+                    />
+                  ))}
+                </VStack>
+              ) : ports.length === 0 ? (
+                <Box className="border border-dashed border-background-100 rounded-2xl p-6 bg-background-50 gap-2">
+                  <Heading size="sm" className="text-typography-900">Sem portas SPA</Heading>
+                  <Text size="sm" className="text-typography-600">Crie uma porta para gerar um link de acesso.</Text>
+                </Box>
+              ) : (
+                <VStack space="md" className="mt-1">
+                  {ports.map((item) => (
+                    <HStack
+                      key={item.port}
+                      className="items-center justify-between bg-background-50 border border-background-100 rounded-2xl px-4 py-3"
+                    >
+                      <VStack space="xs">
+                        <Heading size="sm" className="text-typography-900">Porta {item.port}</Heading>
+                        <Text size="xs" className="text-typography-600">Criada em {formatDate(item.created_at)}</Text>
+                      </VStack>
+                      <HStack space="sm" className="items-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full"
+                          onPress={() => copyAccessLink(item.port)}
+                        >
+                          <ButtonIcon as={Copy} />
+                          <ButtonText>Copiar link</ButtonText>
+                        </Button>
+                        <Button
+                          action="negative"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full"
+                          onPress={() => setDeleteTarget(item)}
+                        >
+                          {deletingPort === item.port ? <ButtonSpinner /> : <ButtonIcon as={Trash2} />}
+                          <ButtonText>Remover</ButtonText>
+                        </Button>
+                      </HStack>
+                    </HStack>
+                  ))}
+                </VStack>
+              )}
+            </Box>
+          </VStack>
+        </Box>
+
+        <AlertDialog isOpen={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)}>
+          <AlertDialogBackdrop />
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <Text className="font-semibold text-lg">Remover porta</Text>
+              <AlertDialogCloseButton />
+            </AlertDialogHeader>
+            <AlertDialogBody className="gap-2">
+              <Text size="sm">Confirma remover a porta {deleteTarget?.port}? O acesso será revogado.</Text>
+            </AlertDialogBody>
+            <AlertDialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                className="flex-1 rounded-full"
+                onPress={() => setDeleteTarget(null)}
+              >
+                <ButtonText>Cancelar</ButtonText>
+              </Button>
+              <Button
+                action="negative"
+                className="flex-1 rounded-full"
+                onPress={confirmDelete}
+                isDisabled={deletingPort !== null}
+              >
+                {deletingPort ? <ButtonSpinner /> : <ButtonIcon as={Trash2} />}
+                <ButtonText>Remover</ButtonText>
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </ScrollView>
+    </Box>
   );
 }
