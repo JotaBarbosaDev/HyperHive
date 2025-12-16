@@ -48,7 +48,7 @@ export type VirtualMachine = {
   state: VmState;
 };
 
-const ensureApiBaseUrl = async () => {
+export const ensureApiBaseUrl = async () => {
   let baseUrl = getApiBaseUrl();
   if (baseUrl) {
     return baseUrl;

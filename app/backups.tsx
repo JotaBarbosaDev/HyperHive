@@ -1,23 +1,23 @@
 import React from "react";
-import {ScrollView, RefreshControl, useColorScheme, Alert} from "react-native";
-import {Box} from "@/components/ui/box";
-import {Text} from "@/components/ui/text";
-import {Heading} from "@/components/ui/heading";
-import {VStack} from "@/components/ui/vstack";
-import {HStack} from "@/components/ui/hstack";
-import {Button, ButtonText, ButtonIcon, ButtonSpinner} from "@/components/ui/button";
-import {Badge, BadgeText} from "@/components/ui/badge";
-import {Input, InputField, InputSlot, InputIcon} from "@/components/ui/input";
-import {Modal, ModalBackdrop, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton} from "@/components/ui/modal";
-import {Select, SelectTrigger, SelectInput, SelectItem, SelectIcon, SelectPortal, SelectBackdrop as SelectBackdropContent, SelectContent, SelectDragIndicator, SelectDragIndicatorWrapper} from "@/components/ui/select";
-import {Toast, ToastTitle, useToast} from "@/components/ui/toast";
-import {Switch} from "@/components/ui/switch";
-import {ChevronDownIcon} from "@/components/ui/icon";
-import {Search, HardDrive, Calendar, Database, RefreshCw, Trash2, RotateCcw, Plus} from "lucide-react-native";
-import {listBackups, deleteBackup as deleteBackupApi, createBackup as createBackupApi, useBackup as useBackupApi} from "@/services/backups";
-import {getAllVMs, listSlaves, VirtualMachine, Slave} from "@/services/vms-client";
-import {listMounts} from "@/services/hyperhive";
-import {Mount} from "@/types/mount";
+import { ScrollView, RefreshControl, useColorScheme, Alert } from "react-native";
+import { Box } from "@/components/ui/box";
+import { Text } from "@/components/ui/text";
+import { Heading } from "@/components/ui/heading";
+import { VStack } from "@/components/ui/vstack";
+import { HStack } from "@/components/ui/hstack";
+import { Button, ButtonText, ButtonIcon, ButtonSpinner } from "@/components/ui/button";
+import { Badge, BadgeText } from "@/components/ui/badge";
+import { Input, InputField, InputSlot, InputIcon } from "@/components/ui/input";
+import { Modal, ModalBackdrop, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton } from "@/components/ui/modal";
+import { Select, SelectTrigger, SelectInput, SelectItem, SelectIcon, SelectPortal, SelectBackdrop as SelectBackdropContent, SelectContent, SelectDragIndicator, SelectDragIndicatorWrapper } from "@/components/ui/select";
+import { Toast, ToastTitle, useToast } from "@/components/ui/toast";
+import { Switch } from "@/components/ui/switch";
+import { ChevronDownIcon } from "@/components/ui/icon";
+import { Search, HardDrive, Calendar, Database, RefreshCw, Trash2, RotateCcw, Plus, Download } from "lucide-react-native";
+import { listBackups, deleteBackup as deleteBackupApi, createBackup as createBackupApi, useBackup as useBackupApi, getBackupDownloadUrl } from "@/services/backups";
+import { getAllVMs, listSlaves, VirtualMachine, Slave } from "@/services/vms-client";
+import { listMounts } from "@/services/hyperhive";
+import { Mount } from "@/types/mount";
 
 // Interfaces TypeScript
 type BackupStatus = "complete" | "partial" | "failed" | string;
@@ -75,7 +75,7 @@ export default function BackupsScreen() {
     (title: string, action: "success" | "error" = "success") => {
       toast.show({
         placement: "top",
-        render: ({id}) => (
+        render: ({ id }) => (
           <Toast
             nativeID={"toast-" + id}
             className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
@@ -163,8 +163,8 @@ export default function BackupsScreen() {
       typeof sizeRaw === "number"
         ? sizeRaw
         : typeof sizeRaw === "string"
-        ? Number(sizeRaw)
-        : null;
+          ? Number(sizeRaw)
+          : null;
     const nfsRaw =
       source?.NfsId ??
       item?.nfs_share_id ??
@@ -339,7 +339,7 @@ export default function BackupsScreen() {
       .map((b) => b.backupDate?.getTime?.())
       .filter((value): value is number => typeof value === "number" && !Number.isNaN(value));
     const lastBackup = timestamps.length ? new Date(Math.max(...timestamps)) : null;
-    return {total, complete, totalSize, lastBackup};
+    return { total, complete, totalSize, lastBackup };
   }, [backups]);
 
   const formatDate = (date: Date): string => {
@@ -366,12 +366,31 @@ export default function BackupsScreen() {
     refreshBackups(true);
   };
 
+  const handleDownload = async (backup: Backup) => {
+    try {
+      const url = await getBackupDownloadUrl(backup.id);
+
+      // Para web, abre em nova aba para não interromper a aplicação
+      if (typeof window !== "undefined") {
+        window.open(url, "_blank");
+        showToastMessage("Download started");
+      } else {
+        // Para mobile, você pode usar Linking ou outra solução
+        showToastMessage(`Download URL: ${url}`, "success");
+      }
+    } catch (err) {
+      console.error("Error getting download URL", err);
+      const message = err instanceof Error ? err.message : "Failed to get download URL.";
+      showToastMessage(message, "error");
+    }
+  };
+
   const handleDelete = (backup: Backup) => {
     Alert.alert(
       "Confirm deletion",
       `Are you sure you want to delete the backup for ${backup.vmName} (${formatDate(backup.backupDate)})?`,
       [
-        {text: "Cancel", style: "cancel"},
+        { text: "Cancel", style: "cancel" },
         {
           text: "Delete",
           style: "destructive",
@@ -468,7 +487,7 @@ export default function BackupsScreen() {
     <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{paddingBottom: 64}}
+        contentContainerStyle={{ paddingBottom: 64 }}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -483,7 +502,7 @@ export default function BackupsScreen() {
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
-            style={{fontFamily: "Inter_700Bold"}}
+            style={{ fontFamily: "Inter_700Bold" }}
           >
             Backups
           </Heading>
@@ -498,14 +517,14 @@ export default function BackupsScreen() {
                 <HardDrive size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Total Backups
                 </Text>
               </HStack>
               <Text
                 className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{fontFamily: "Inter_700Bold"}}
+                style={{ fontFamily: "Inter_700Bold" }}
               >
                 {stats.total}
               </Text>
@@ -516,14 +535,14 @@ export default function BackupsScreen() {
                 <Database size={16} className="text-[#2DD4BF] dark:text-[#5EEAD4]" />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Completed
                 </Text>
               </HStack>
               <Text
                 className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{fontFamily: "Inter_700Bold"}}
+                style={{ fontFamily: "Inter_700Bold" }}
               >
                 {stats.complete}
               </Text>
@@ -534,14 +553,14 @@ export default function BackupsScreen() {
                 <HardDrive size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Total Space
                 </Text>
               </HStack>
               <Text
                 className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{fontFamily: "Inter_700Bold"}}
+                style={{ fontFamily: "Inter_700Bold" }}
               >
                 {stats.totalSize.toFixed(1)} GB
               </Text>
@@ -552,14 +571,14 @@ export default function BackupsScreen() {
                 <Calendar size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Last Backup
                 </Text>
               </HStack>
               <Text
                 className="text-sm text-typography-900 dark:text-[#E8EBF0]"
-                style={{fontFamily: "Inter_600SemiBold"}}
+                style={{ fontFamily: "Inter_600SemiBold" }}
               >
                 {stats.lastBackup
                   ? formatDate(stats.lastBackup).split(",")[0]
@@ -607,7 +626,7 @@ export default function BackupsScreen() {
               ) : (
                 <>
                   <ButtonIcon as={Plus} className="text-background-0 mr-1.5" />
-                  <ButtonText className="text-background-0" style={{fontFamily: "Inter_600SemiBold"}}>
+                  <ButtonText className="text-background-0" style={{ fontFamily: "Inter_600SemiBold" }}>
                     New backup
                   </ButtonText>
                 </>
@@ -622,13 +641,13 @@ export default function BackupsScreen() {
                 <HardDrive size={48} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
                 <Text
                   className="text-typography-900 dark:text-[#E8EBF0] text-lg text-center"
-                  style={{fontFamily: "Inter_600SemiBold"}}
+                  style={{ fontFamily: "Inter_600SemiBold" }}
                 >
                   No backups found
                 </Text>
                 <Text
                   className="text-[#9AA4B8] dark:text-[#8A94A8] text-center"
-                  style={{fontFamily: "Inter_400Regular"}}
+                  style={{ fontFamily: "Inter_400Regular" }}
                 >
                   {searchQuery
                     ? "Try refining your search"
@@ -650,13 +669,13 @@ export default function BackupsScreen() {
                       <Heading
                         size="lg"
                         className="text-typography-900 dark:text-[#E8EBF0] mb-1"
-                        style={{fontFamily: "Inter_700Bold"}}
+                        style={{ fontFamily: "Inter_700Bold" }}
                       >
                         {vmName}
                       </Heading>
                       <Text
                         className="text-sm text-[#9AA4B8] dark:text-[#8A94A8]"
-                        style={{fontFamily: "Inter_400Regular"}}
+                        style={{ fontFamily: "Inter_400Regular" }}
                       >
                         {getNfsName(firstBackup?.nfsShareId ?? null)} • {vmBackups.length} backup
                         {vmBackups.length > 1 ? "s" : ""}
@@ -670,31 +689,31 @@ export default function BackupsScreen() {
                         <HStack className="bg-background-50 dark:bg-[#0A1628] px-4 py-3 border-b border-outline-100 dark:border-[#1E2F47]">
                           <Text
                             className="flex-[2] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                            style={{fontFamily: "Inter_600SemiBold"}}
+                            style={{ fontFamily: "Inter_600SemiBold" }}
                           >
                             DATE
                           </Text>
                           <Text
                             className="flex-[2] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                            style={{fontFamily: "Inter_600SemiBold"}}
+                            style={{ fontFamily: "Inter_600SemiBold" }}
                           >
                             NFS SHARE
                           </Text>
                           <Text
                             className="flex-1 text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                            style={{fontFamily: "Inter_600SemiBold"}}
+                            style={{ fontFamily: "Inter_600SemiBold" }}
                           >
                             AUTOMATIC
                           </Text>
                           <Text
                             className="flex-1 text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                            style={{fontFamily: "Inter_600SemiBold"}}
+                            style={{ fontFamily: "Inter_600SemiBold" }}
                           >
                             LIVE
                           </Text>
                           <Text
                             className="flex-1 text-xs text-[#9AA4B8] dark:text-[#8A94A8] text-right"
-                            style={{fontFamily: "Inter_600SemiBold"}}
+                            style={{ fontFamily: "Inter_600SemiBold" }}
                           >
                             ACTIONS
                           </Text>
@@ -708,21 +727,20 @@ export default function BackupsScreen() {
                           return (
                             <HStack
                               key={backup.id}
-                              className={`px-4 py-3 items-center ${
-                                index !== vmBackups.length - 1
-                                  ? "border-b border-outline-100 dark:border-[#1E2F47]"
-                                  : ""
-                              }`}
+                              className={`px-4 py-3 items-center ${index !== vmBackups.length - 1
+                                ? "border-b border-outline-100 dark:border-[#1E2F47]"
+                                : ""
+                                }`}
                             >
                               <Text
                                 className="flex-[2] text-sm text-typography-900 dark:text-[#E8EBF0]"
-                                style={{fontFamily: "Inter_400Regular"}}
+                                style={{ fontFamily: "Inter_400Regular" }}
                               >
                                 {formatDate(backup.backupDate)}
                               </Text>
                               <Text
                                 className="flex-[2] text-sm text-typography-600 dark:text-typography-400"
-                                style={{fontFamily: "Inter_400Regular"}}
+                                style={{ fontFamily: "Inter_400Regular" }}
                               >
                                 {getNfsName(backup.nfsShareId)}
                               </Text>
@@ -730,19 +748,17 @@ export default function BackupsScreen() {
                                 <Badge
                                   size="sm"
                                   variant="outline"
-                                  className={`rounded-full w-fit ${
-                                    automatic
-                                      ? "bg-[#3b82f619] border-[#3b82f6] dark:bg-[#3b82f625] dark:border-[#60a5fa]"
-                                      : "bg-[#ef444419] border-[#ef4444] dark:bg-[#ef444425] dark:border-[#f87171]"
-                                  }`}
+                                  className={`rounded-full w-fit ${automatic
+                                    ? "bg-[#3b82f619] border-[#3b82f6] dark:bg-[#3b82f625] dark:border-[#60a5fa]"
+                                    : "bg-[#ef444419] border-[#ef4444] dark:bg-[#ef444425] dark:border-[#f87171]"
+                                    }`}
                                 >
                                   <BadgeText
-                                    className={`text-xs ${
-                                      automatic
-                                        ? "text-[#3b82f6] dark:text-[#60a5fa]"
-                                        : "text-[#ef4444] dark:text-[#f87171]"
-                                    }`}
-                                    style={{fontFamily: "Inter_500Medium"}}
+                                    className={`text-xs ${automatic
+                                      ? "text-[#3b82f6] dark:text-[#60a5fa]"
+                                      : "text-[#ef4444] dark:text-[#f87171]"
+                                      }`}
+                                    style={{ fontFamily: "Inter_500Medium" }}
                                   >
                                     {automatic ? "Automatic" : "Manual"}
                                   </BadgeText>
@@ -752,25 +768,35 @@ export default function BackupsScreen() {
                                 <Badge
                                   size="sm"
                                   variant="outline"
-                                  className={`rounded-full w-fit ${
-                                    live
-                                      ? "bg-[#22c55e19] border-[#22c55e] dark:bg-[#22c55e25] dark:border-[#4ade80]"
-                                      : "bg-[#9AA4B819] border-[#9AA4B8] dark:bg-[#9AA4B825] dark:border-[#94a3b8]"
-                                  }`}
+                                  className={`rounded-full w-fit ${live
+                                    ? "bg-[#22c55e19] border-[#22c55e] dark:bg-[#22c55e25] dark:border-[#4ade80]"
+                                    : "bg-[#9AA4B819] border-[#9AA4B8] dark:bg-[#9AA4B825] dark:border-[#94a3b8]"
+                                    }`}
                                 >
                                   <BadgeText
-                                    className={`text-xs ${
-                                      live
-                                        ? "text-[#22c55e] dark:text-[#4ade80]"
-                                        : "text-[#475569] dark:text-[#cbd5e1]"
-                                    }`}
-                                    style={{fontFamily: "Inter_500Medium"}}
+                                    className={`text-xs ${live
+                                      ? "text-[#22c55e] dark:text-[#4ade80]"
+                                      : "text-[#475569] dark:text-[#cbd5e1]"
+                                      }`}
+                                    style={{ fontFamily: "Inter_500Medium" }}
                                   >
                                     {live ? "Live" : "Cold"}
                                   </BadgeText>
                                 </Badge>
                               </Box>
                               <HStack className="flex-1 gap-2 justify-end">
+                                <Button
+                                  size="xs"
+                                  variant="outline"
+                                  className="rounded-md"
+                                  onPress={() => handleDownload(backup)}
+                                >
+                                  <ButtonIcon
+                                    as={Download}
+                                    size="xs"
+                                    className="text-typography-700 dark:text-[#E8EBF0]"
+                                  />
+                                </Button>
                                 <Button
                                   size="xs"
                                   variant="outline"
@@ -826,10 +852,10 @@ export default function BackupsScreen() {
         <ModalBackdrop className="bg-black/60" />
         <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] shadow-2xl max-w-lg p-6">
           <ModalHeader className="pb-4">
-            <Heading 
-              size="lg" 
+            <Heading
+              size="lg"
               className="text-typography-900 dark:text-[#E8EBF0]"
-              style={{fontFamily: "Inter_700Bold"}}
+              style={{ fontFamily: "Inter_700Bold" }}
             >
               Restore Backup
             </Heading>
@@ -840,23 +866,23 @@ export default function BackupsScreen() {
               <VStack className="gap-5">
                 <HStack className="gap-4">
                   <VStack className="flex-1 gap-2">
-                    <Text 
+                    <Text
                       className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                      style={{fontFamily: "Inter_500Medium"}}
+                      style={{ fontFamily: "Inter_500Medium" }}
                     >
                       VM
                     </Text>
                     <Text
                       className="text-base text-typography-900 dark:text-[#E8EBF0]"
-                      style={{fontFamily: "Inter_600SemiBold"}}
+                      style={{ fontFamily: "Inter_600SemiBold" }}
                     >
                       {restoreBackup.vmName}
                     </Text>
                   </VStack>
                   <VStack className="flex-1 gap-2">
-                    <Text 
+                    <Text
                       className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                      style={{fontFamily: "Inter_500Medium"}}
+                      style={{ fontFamily: "Inter_500Medium" }}
                     >
                       Backup Date
                     </Text>
@@ -866,9 +892,9 @@ export default function BackupsScreen() {
                   </VStack>
                 </HStack>
                 <VStack className="gap-2">
-                  <Text 
+                  <Text
                     className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                    style={{fontFamily: "Inter_500Medium"}}
+                    style={{ fontFamily: "Inter_500Medium" }}
                   >
                     Size
                   </Text>
@@ -880,9 +906,9 @@ export default function BackupsScreen() {
                 </VStack>
 
                 <VStack className="gap-2">
-                  <Text 
+                  <Text
                     className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                    style={{fontFamily: "Inter_500Medium"}}
+                    style={{ fontFamily: "Inter_500Medium" }}
                   >
                     VM name
                   </Text>
@@ -892,9 +918,9 @@ export default function BackupsScreen() {
                 </VStack>
 
                 <VStack className="gap-2">
-                  <Text 
+                  <Text
                     className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                    style={{fontFamily: "Inter_500Medium"}}
+                    style={{ fontFamily: "Inter_500Medium" }}
                   >
                     Target machine
                   </Text>
@@ -935,9 +961,9 @@ export default function BackupsScreen() {
 
                 <HStack className="gap-3">
                   <VStack className="flex-1 gap-2">
-                    <Text 
+                    <Text
                       className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                      style={{fontFamily: "Inter_500Medium"}}
+                      style={{ fontFamily: "Inter_500Medium" }}
                     >
                       Memory (MB)
                     </Text>
@@ -950,9 +976,9 @@ export default function BackupsScreen() {
                     </Input>
                   </VStack>
                   <VStack className="flex-1 gap-2">
-                    <Text 
+                    <Text
                       className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                      style={{fontFamily: "Inter_500Medium"}}
+                      style={{ fontFamily: "Inter_500Medium" }}
                     >
                       vCPU
                     </Text>
@@ -967,9 +993,9 @@ export default function BackupsScreen() {
                 </HStack>
 
                 <VStack className="gap-2">
-                  <Text 
+                  <Text
                     className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                    style={{fontFamily: "Inter_500Medium"}}
+                    style={{ fontFamily: "Inter_500Medium" }}
                   >
                     Network
                   </Text>
@@ -979,9 +1005,9 @@ export default function BackupsScreen() {
                 </VStack>
 
                 <VStack className="gap-2">
-                  <Text 
+                  <Text
                     className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                    style={{fontFamily: "Inter_500Medium"}}
+                    style={{ fontFamily: "Inter_500Medium" }}
                   >
                     VNC password
                   </Text>
@@ -995,9 +1021,9 @@ export default function BackupsScreen() {
                 </VStack>
 
                 <VStack className="gap-2">
-                  <Text 
+                  <Text
                     className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                    style={{fontFamily: "Inter_500Medium"}}
+                    style={{ fontFamily: "Inter_500Medium" }}
                   >
                     NFS share
                   </Text>
@@ -1033,9 +1059,9 @@ export default function BackupsScreen() {
                 </VStack>
 
                 <VStack className="gap-2">
-                  <Text 
+                  <Text
                     className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                    style={{fontFamily: "Inter_500Medium"}}
+                    style={{ fontFamily: "Inter_500Medium" }}
                   >
                     CPU XML
                   </Text>
@@ -1049,9 +1075,9 @@ export default function BackupsScreen() {
                 </VStack>
 
                 <HStack className="items-center justify-between">
-                  <Text 
+                  <Text
                     className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                    style={{fontFamily: "Inter_500Medium"}}
+                    style={{ fontFamily: "Inter_500Medium" }}
                   >
                     Live restore
                   </Text>
@@ -1070,9 +1096,9 @@ export default function BackupsScreen() {
                   resetRestoreForm();
                 }}
               >
-                <ButtonText 
+                <ButtonText
                   className="text-typography-700 dark:text-[#E8EBF0]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Cancel
                 </ButtonText>
@@ -1090,9 +1116,9 @@ export default function BackupsScreen() {
                 {restoring ? (
                   <ButtonSpinner />
                 ) : (
-                  <ButtonText 
+                  <ButtonText
                     className="text-background-0 dark:text-typography-900"
-                    style={{fontFamily: "Inter_600SemiBold"}}
+                    style={{ fontFamily: "Inter_600SemiBold" }}
                   >
                     Restore
                   </ButtonText>
@@ -1108,10 +1134,10 @@ export default function BackupsScreen() {
         <ModalBackdrop className="bg-black/60" />
         <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] shadow-2xl max-w-lg p-6">
           <ModalHeader className="pb-4">
-            <Heading 
-              size="lg" 
+            <Heading
+              size="lg"
               className="text-typography-900 dark:text-[#E8EBF0]"
-              style={{fontFamily: "Inter_700Bold"}}
+              style={{ fontFamily: "Inter_700Bold" }}
             >
               Create Backup
             </Heading>
@@ -1120,9 +1146,9 @@ export default function BackupsScreen() {
           <ModalBody className="py-4">
             <VStack className="gap-5">
               <VStack className="gap-2">
-                <Text 
+                <Text
                   className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   VM
                 </Text>
@@ -1158,9 +1184,9 @@ export default function BackupsScreen() {
               </VStack>
 
               <VStack className="gap-2">
-                <Text 
+                <Text
                   className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   NFS share
                 </Text>
@@ -1204,9 +1230,9 @@ export default function BackupsScreen() {
                 onPress={() => setShowCreateModal(false)}
                 disabled={creatingBackup}
               >
-                <ButtonText 
+                <ButtonText
                   className="text-typography-700 dark:text-[#E8EBF0]"
-                  style={{fontFamily: "Inter_500Medium"}}
+                  style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Cancel
                 </ButtonText>
@@ -1219,9 +1245,9 @@ export default function BackupsScreen() {
                 {creatingBackup ? (
                   <ButtonSpinner />
                 ) : (
-                  <ButtonText 
+                  <ButtonText
                     className="text-background-0 dark:text-typography-900"
-                    style={{fontFamily: "Inter_600SemiBold"}}
+                    style={{ fontFamily: "Inter_600SemiBold" }}
                   >
                     Start backup
                   </ButtonText>

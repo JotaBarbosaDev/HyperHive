@@ -1,5 +1,5 @@
-import {apiFetch} from "./api-client";
-import {resolveToken} from "./vms-client";
+import { apiFetch } from "./api-client";
+import { resolveToken, ensureApiBaseUrl } from "./vms-client";
 
 export type BackupApiItem = Record<string, unknown>;
 
@@ -17,7 +17,7 @@ export type UseBackupPayload = {
 
 export async function listBackups(): Promise<BackupApiItem[]> {
   const token = await resolveToken();
-  return apiFetch<BackupApiItem[]>("/virsh/backups", {token});
+  return apiFetch<BackupApiItem[]>("/virsh/backups", { token });
 }
 
 export async function deleteBackup(backupId: string | number): Promise<void> {
@@ -53,4 +53,11 @@ export async function useBackup(
       live: Boolean(payload.live),
     },
   });
+}
+
+export async function getBackupDownloadUrl(backupId: string | number) {
+  const baseUrl = await ensureApiBaseUrl();
+  const normalizedBase = baseUrl.replace(/\/+$/, "");
+  const encodedId = encodeURIComponent(String(backupId));
+  return `${normalizedBase}/virsh/downloadbackup/${encodedId}`;
 }
