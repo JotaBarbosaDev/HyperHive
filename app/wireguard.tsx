@@ -147,26 +147,26 @@ export default function WireGuardScreen() {
         toast.show({
           placement: "top",
           render: ({ id }) => (
-        <Toast
-          nativeID={"toast-" + id}
-          className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-          action="success"
-        >
-          <ToastTitle size="sm">Peer removed</ToastTitle>
-        </Toast>
-      ),
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unable to remove the peer.";
+            <Toast
+              nativeID={"toast-" + id}
+              className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+              action="success"
+            >
+              <ToastTitle size="sm">Peer removed</ToastTitle>
+            </Toast>
+          ),
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unable to remove the peer.";
         toast.show({
           placement: "top",
           render: ({ id }) => (
-        <Toast
-          nativeID={"toast-" + id}
-          className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-          action="error"
-        >
-          <ToastTitle size="sm">{message}</ToastTitle>
+            <Toast
+              nativeID={"toast-" + id}
+              className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+              action="error"
+            >
+              <ToastTitle size="sm">{message}</ToastTitle>
             </Toast>
           ),
         });
@@ -186,17 +186,17 @@ export default function WireGuardScreen() {
       toast.show({
         placement: "top",
         render: ({ id }) => (
-      <Toast
-        nativeID={"toast-" + id}
-        className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-        action="success"
-      >
-        <ToastTitle size="sm">VPN created successfully!</ToastTitle>
-      </Toast>
-    ),
-  });
-} catch (err) {
-  const message = err instanceof Error ? err.message : "Unable to create the VPN.";
+          <Toast
+            nativeID={"toast-" + id}
+            className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+            action="success"
+          >
+            <ToastTitle size="sm">VPN created successfully!</ToastTitle>
+          </Toast>
+        ),
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to create the VPN.";
       toast.show({
         placement: "top",
         render: ({ id }) => (
@@ -254,17 +254,17 @@ export default function WireGuardScreen() {
       toast.show({
         placement: "top",
         render: ({ id }) => (
-        <Toast
-          nativeID={"toast-" + id}
-          className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-          action="success"
-        >
-          <ToastTitle size="sm">Peer added and wg0.conf generated!</ToastTitle>
-        </Toast>
-      ),
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unable to add the peer.";
+          <Toast
+            nativeID={"toast-" + id}
+            className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+            action="success"
+          >
+            <ToastTitle size="sm">Peer added and wg0.conf generated!</ToastTitle>
+          </Toast>
+        ),
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to add the peer.";
       toast.show({
         placement: "top",
         render: ({ id }) => (
@@ -481,8 +481,8 @@ export default function WireGuardScreen() {
                         <HStack
                           key={peer.id}
                           className={`px-6 py-4 items-center ${index !== peers.length - 1
-                              ? "border-b border-outline-100 dark:border-[#1E2F47]"
-                              : ""
+                            ? "border-b border-outline-100 dark:border-[#1E2F47]"
+                            : ""
                             }`}
                         >
                           <Text
@@ -695,7 +695,7 @@ export default function WireGuardScreen() {
                   className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]"
                 >
                   <InputField
-                    placeholder="e.g.: vpn.yourdomain.com:51820"
+                    placeholder="e.g.: yourdomain.com:51512"
                     value={formPeerEndpoint}
                     onChangeText={setFormPeerEndpoint}
                     className="text-typography-900 dark:text-[#E8EBF0]"
