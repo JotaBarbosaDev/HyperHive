@@ -1744,7 +1744,7 @@ export default function VirtualMachinesScreen() {
                   disabled={Boolean(deletingVm)}
                 >
                   {deletingVm ? <ButtonSpinner className="mr-2" /> : null}
-                  <ButtonText className="text-background-0 dark:text-typography-900">Confirmar</ButtonText>
+                  <ButtonText className="text-background-0 dark:text-typography-900">Confirm</ButtonText>
                 </Button>
               </AlertDialogFooter>
             </AlertDialogContent>
