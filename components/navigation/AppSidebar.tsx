@@ -139,7 +139,6 @@ const MENU_ITEMS: MenuItem[] = [
   {
     label: "Nginx",
     icon: Network,
-    iconProps: { strokeWidth: 1.2 },
     children: [
       { label: "404", route: "/404", icon: TriangleAlert },
       { label: "Certificates", route: "/certificates", icon: ShieldCheck },
