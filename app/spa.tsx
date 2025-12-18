@@ -27,7 +27,7 @@ import { getApiBaseUrl } from "@/config/apiConfig";
 const formatDate = (value: string) => {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleString("pt-PT", {
+  return d.toLocaleString("en-GB", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -165,7 +165,7 @@ export default function SpaScreen() {
                 <VStack space="xs">
                   <Heading size="2xl" className="text-typography-900">Single Packet Authorization</Heading>
                   <Text size="sm" className="text-typography-600 max-w-3xl">
-                    Crie portas protegidas por palavra-passe para acessos temporários. Não use o SPA como única linha de defesa.
+                    Create password-protected ports for temporary access. Don't rely on SPA as your only line of defense.
                   </Text>
                 </VStack>
               </HStack>
@@ -173,16 +173,16 @@ export default function SpaScreen() {
 
             <Box className="rounded-2xl bg-background-0 border border-background-100 shadow-soft-1 p-4 md:p-5 gap-5">
               <VStack space="sm">
-                <Heading size="lg" className="text-typography-900">Nova porta</Heading>
+                <Heading size="lg" className="text-typography-900">New port</Heading>
                 <Text size="sm" className="text-typography-500">
-                  Escolha a porta e defina uma password para abrir o acesso enquanto o token estiver válido.
+                  Choose a port and set a password to open access while the token remains valid.
                 </Text>
               </VStack>
 
               <VStack space="md">
                 <HStack className="gap-3 flex-wrap">
                   <Box className="flex-1 min-w-[180px]">
-                    <Text size="xs" className="mb-2 text-typography-500">Porta</Text>
+                    <Text size="xs" className="mb-2 text-typography-500">Port</Text>
                     <Input size="md" variant="rounded" isDisabled={saving}>
                       <InputField
                         keyboardType="numeric"
@@ -197,7 +197,7 @@ export default function SpaScreen() {
                     <Input size="md" variant="rounded" isDisabled={saving}>
                       <InputField
                         secureTextEntry
-                        placeholder="Password do SPA"
+                        placeholder="SPA password"
                         value={password}
                         onChangeText={setPassword}
                       />
@@ -212,10 +212,10 @@ export default function SpaScreen() {
                     isDisabled={saving}
                   >
                     {saving ? <ButtonSpinner /> : <ButtonIcon as={Plus} className="mr-1" />}
-                    <ButtonText>{saving ? "A guardar..." : "Criar porta"}</ButtonText>
+                    <ButtonText>{saving ? "Saving..." : "Create port"}</ButtonText>
                   </Button>
                   <Text size="xs" className="text-typography-500">
-                    Depois de criada pode copiar o link para partilhar o acesso.
+                    Once created, you can copy the link to share access.
                   </Text>
                 </HStack>
               </VStack>
@@ -223,8 +223,8 @@ export default function SpaScreen() {
 
             <Box className="rounded-2xl bg-background-0 border border-background-100 shadow-soft-1 p-4 md:p-5 gap-4">
               <HStack className="items-center justify-between flex-wrap gap-3">
-                <Heading size="lg" className="text-typography-900">Portas configuradas</Heading>
-                {loading ? <Text size="sm" className="text-typography-500">A carregar...</Text> : null}
+                <Heading size="lg" className="text-typography-900">Configured ports</Heading>
+                {loading ? <Text size="sm" className="text-typography-500">Loading...</Text> : null}
               </HStack>
 
               {loading ? (
@@ -238,8 +238,8 @@ export default function SpaScreen() {
                 </VStack>
               ) : ports.length === 0 ? (
                 <Box className="border border-dashed border-background-100 rounded-2xl p-6 bg-background-50 gap-2">
-                  <Heading size="sm" className="text-typography-900">Sem portas SPA</Heading>
-                  <Text size="sm" className="text-typography-600">Crie uma porta para gerar um link de acesso.</Text>
+                  <Heading size="sm" className="text-typography-900">No SPA ports</Heading>
+                  <Text size="sm" className="text-typography-600">Create a port to generate an access link.</Text>
                 </Box>
               ) : (
                 <VStack space="md" className="mt-1">
@@ -249,8 +249,8 @@ export default function SpaScreen() {
                       className="items-center justify-between bg-background-50 border border-background-100 rounded-2xl px-4 py-3"
                     >
                       <VStack space="xs">
-                        <Heading size="sm" className="text-typography-900">Porta {item.port}</Heading>
-                        <Text size="xs" className="text-typography-600">Criada em {formatDate(item.created_at)}</Text>
+                        <Heading size="sm" className="text-typography-900">Port {item.port}</Heading>
+                        <Text size="xs" className="text-typography-600">Created at {formatDate(item.created_at)}</Text>
                       </VStack>
                       <HStack space="sm" className="items-center">
                         <Button
@@ -260,7 +260,7 @@ export default function SpaScreen() {
                           onPress={() => copyAccessLink(item.port)}
                         >
                           <ButtonIcon as={Copy} />
-                          <ButtonText>Copiar link</ButtonText>
+                          <ButtonText>Copy link</ButtonText>
                         </Button>
                         <Button
                           action="negative"
@@ -270,7 +270,7 @@ export default function SpaScreen() {
                           onPress={() => setDeleteTarget(item)}
                         >
                           {deletingPort === item.port ? <ButtonSpinner /> : <ButtonIcon as={Trash2} />}
-                          <ButtonText>Remover</ButtonText>
+                          <ButtonText>Remove</ButtonText>
                         </Button>
                       </HStack>
                     </HStack>
@@ -285,11 +285,11 @@ export default function SpaScreen() {
           <AlertDialogBackdrop />
           <AlertDialogContent>
             <AlertDialogHeader>
-              <Text className="font-semibold text-lg">Remover porta</Text>
+              <Text className="font-semibold text-lg">Remove port</Text>
               <AlertDialogCloseButton />
             </AlertDialogHeader>
             <AlertDialogBody className="gap-2">
-              <Text size="sm">Confirma remover a porta {deleteTarget?.port}? O acesso será revogado.</Text>
+              <Text size="sm">Confirm removing port {deleteTarget?.port}? Access will be revoked.</Text>
             </AlertDialogBody>
             <AlertDialogFooter className="gap-2">
               <Button
@@ -297,7 +297,7 @@ export default function SpaScreen() {
                 className="flex-1 rounded-full"
                 onPress={() => setDeleteTarget(null)}
               >
-                <ButtonText>Cancelar</ButtonText>
+                <ButtonText>Cancel</ButtonText>
               </Button>
               <Button
                 action="negative"
@@ -306,7 +306,7 @@ export default function SpaScreen() {
                 isDisabled={deletingPort !== null}
               >
                 {deletingPort ? <ButtonSpinner /> : <ButtonIcon as={Trash2} />}
-                <ButtonText>Remover</ButtonText>
+                <ButtonText>Remove</ButtonText>
               </Button>
             </AlertDialogFooter>
           </AlertDialogContent>

@@ -5,12 +5,15 @@ export type BtrfsDisk = {
   vendor?: string;
   serial?: string;
   size?: string | number;
+  sizeGb?: number;
   type?: string;
   transport?: string;
   status?: string;
   byId?: string;
   pciPath?: string;
   free?: boolean;
+  mounted?: boolean;
+  rotational?: boolean;
 };
 
 export type BtrfsRaidDevice = {
@@ -63,10 +66,54 @@ export type BalancePayload = {
 export type AutomaticMount = {
   id: number;
   uuid: string;
+  raid_uuid?: string;
   mount_point: string;
   compression?: string;
   machine_name?: string;
 };
 
-export type ScrubStats = Record<string, unknown>;
-export type RaidStatus = Record<string, unknown>;
+export type ScrubStats = {
+  uuid?: string;
+  path?: string;
+  status?: string;
+  startedAt?: string;
+  duration?: string;
+  timeLeft?: string;
+  totalToScrub?: string | number;
+  bytesScrubbed?: string | number;
+  rate?: string;
+  errorSummary?: string;
+  percentDone?: number;
+  [key: string]: unknown;
+};
+
+export type RaidDeviceStatus = {
+  device?: string;
+  devId?: number;
+  writeIoErrs?: number;
+  readIoErrs?: number;
+  flushIoErrs?: number;
+  corruptionErrs?: number;
+  generationErrs?: number;
+  balanceStatus?: string;
+  deviceSizeBytes?: string | number;
+  deviceUsedBytes?: string | number;
+  deviceMissing?: boolean;
+  fsUuid?: string;
+  fsLabel?: string;
+};
+
+export type RaidStatus = {
+  version?: string;
+  fsUuid?: string;
+  fsLabel?: string;
+  totalDevices?: number;
+  deviceStats?: RaidDeviceStatus[];
+  [key: string]: unknown;
+};
+
+export type CompressionOption = {
+  value: string;
+  label: string;
+  description?: string;
+};

@@ -1,7 +1,16 @@
 import {getApiBaseUrl, setApiBaseUrl} from "@/config/apiConfig";
 import {apiFetch, setAuthToken, triggerUnauthorized} from "./api-client";
 import {loadApiBaseUrl, loadAuthToken} from "./auth-storage";
-import {AutomaticMount, BalancePayload, BtrfsDisk, BtrfsRaid, BtrfsRaidDevice, ScrubStats, RaidStatus} from "@/types/btrfs";
+import {
+  AutomaticMount,
+  BalancePayload,
+  BtrfsDisk,
+  BtrfsRaid,
+  BtrfsRaidDevice,
+  ScrubStats,
+  RaidStatus,
+  RaidDeviceStatus,
+} from "@/types/btrfs";
 
 const ensureApiBaseUrl = async () => {
   let baseUrl = getApiBaseUrl();
@@ -56,7 +65,12 @@ const toNumber = (val: unknown): number | undefined => {
 };
 
 const normalizeDisk = (disk: any): BtrfsDisk => {
-  const size = disk?.size ?? disk?.sizeBytes ?? disk?.SizeBytes;
+  const sizeGb = toNumber(disk?.sizeGb ?? disk?.size_gb);
+  const size =
+    disk?.size ??
+    disk?.sizeBytes ??
+    disk?.SizeBytes ??
+    (sizeGb !== undefined ? sizeGb * 1024 * 1024 * 1024 : undefined);
   return {
     device: disk?.device ?? disk?.path ?? disk?.name ?? disk ?? "",
     name: disk?.name ?? disk?.device ?? disk?.path,
@@ -64,12 +78,15 @@ const normalizeDisk = (disk: any): BtrfsDisk => {
     vendor: disk?.vendor,
     serial: disk?.serial,
     size,
+    sizeGb,
     type: disk?.type,
     transport: disk?.transport,
     status: disk?.status,
     byId: disk?.byId,
     pciPath: disk?.pciPath,
     free: disk?.free,
+    mounted: disk?.mounted,
+    rotational: disk?.rotational,
   };
 };
 
@@ -84,6 +101,15 @@ const normalizeDevice = (dev: any): BtrfsRaidDevice => {
     mounted: dev?.mounted,
     status: dev?.mounted === true ? "mounted" : dev?.status,
   };
+};
+
+const parseCompression = (raid: any): string | undefined => {
+  if (raid?.compression) return raid.compression;
+  if (typeof raid?.options === "string") {
+    const match = raid.options.match(/compress=([^,]+)/);
+    if (match?.[1]) return match[1];
+  }
+  return undefined;
 };
 
 const normalizeRaid = (raid: any): BtrfsRaid => {
@@ -108,7 +134,7 @@ const normalizeRaid = (raid: any): BtrfsRaid => {
     options: raid?.options,
     raid_level: raid?.raid_level ?? raid?.raidType,
     raidType: raid?.raidType,
-    compression: raid?.compression,
+    compression: parseCompression(raid),
     fs_type: raid?.fs_type ?? raid?.fsType,
     fsType: raid?.fsType,
     status: raid?.status,
@@ -124,6 +150,67 @@ const normalizeRaid = (raid: any): BtrfsRaid => {
     children: raid?.children,
   };
 };
+
+const normalizeScrubStats = (stats: any): ScrubStats => {
+  const base = (typeof stats === "object" && stats !== null ? stats : {}) as Record<string, unknown>;
+  const percent = toNumber((stats as any)?.percentDone ?? (stats as any)?.percent_done);
+  return {
+    ...base,
+    uuid: (stats as any)?.uuid ?? (stats as any)?.UUID,
+    path: (stats as any)?.path,
+    status: (stats as any)?.status,
+    startedAt: (stats as any)?.startedAt ?? (stats as any)?.started_at,
+    duration: (stats as any)?.duration,
+    timeLeft: (stats as any)?.timeLeft ?? (stats as any)?.time_left,
+    totalToScrub: (stats as any)?.totalToScrub ?? (stats as any)?.total_to_scrub,
+    bytesScrubbed: (stats as any)?.bytesScrubbed ?? (stats as any)?.bytes_scrubbed,
+    rate: (stats as any)?.rate,
+    errorSummary: (stats as any)?.errorSummary ?? (stats as any)?.error_summary,
+    percentDone: percent,
+  };
+};
+
+const normalizeRaidDeviceStatus = (stat: any): RaidDeviceStatus => ({
+  device: stat?.device ?? stat?.Device ?? stat?.path,
+  devId: toNumber(stat?.devId ?? stat?.DevId),
+  writeIoErrs: toNumber(stat?.writeIoErrs ?? stat?.WriteIoErrs),
+  readIoErrs: toNumber(stat?.readIoErrs ?? stat?.ReadIoErrs),
+  flushIoErrs: toNumber(stat?.flushIoErrs ?? stat?.FlushIoErrs),
+  corruptionErrs: toNumber(stat?.corruptionErrs ?? stat?.CorruptionErrs),
+  generationErrs: toNumber(stat?.generationErrs ?? stat?.GenerationErrs),
+  balanceStatus: stat?.balanceStatus ?? stat?.BalanceStatus,
+  deviceSizeBytes: stat?.deviceSizeBytes ?? stat?.DeviceSizeBytes,
+  deviceUsedBytes: stat?.deviceUsedBytes ?? stat?.DeviceUsedBytes,
+  deviceMissing: stat?.deviceMissing ?? stat?.DeviceMissing,
+  fsUuid: stat?.fsUuid ?? stat?.FsUuid,
+  fsLabel: stat?.fsLabel ?? stat?.FsLabel,
+});
+
+const normalizeRaidStatus = (status: any): RaidStatus => {
+  const base = (typeof status === "object" && status !== null ? status : {}) as Record<string, unknown>;
+  const rawStats = Array.isArray((status as any)?.deviceStats)
+    ? (status as any).deviceStats
+    : Array.isArray((status as any)?.DeviceStats)
+      ? (status as any).DeviceStats
+      : [];
+  return {
+    ...base,
+    version: (status as any)?.version ?? (status as any)?.Version,
+    fsUuid: (status as any)?.fsUuid ?? (status as any)?.fs_uuid ?? (status as any)?.FsUuid,
+    fsLabel: (status as any)?.fsLabel ?? (status as any)?.fs_label ?? (status as any)?.FsLabel,
+    totalDevices: toNumber((status as any)?.totalDevices ?? (status as any)?.TotalDevices),
+    deviceStats: rawStats.map(normalizeRaidDeviceStatus),
+  };
+};
+
+const normalizeAutomaticMount = (entry: any): AutomaticMount => ({
+  id: entry?.id ?? entry?.Id ?? 0,
+  uuid: entry?.uuid ?? entry?.raid_uuid ?? entry?.raidUuid ?? "",
+  raid_uuid: entry?.raid_uuid ?? entry?.raidUuid,
+  mount_point: entry?.mount_point ?? entry?.mountPoint ?? "",
+  compression: entry?.compression,
+  machine_name: entry?.machine_name ?? entry?.machineName,
+});
 
 export async function listRaids(machineName: string): Promise<BtrfsRaid[]> {
   const authToken = await resolveToken();
@@ -267,14 +354,16 @@ export async function getScrubStats(machineName: string, uuid: string): Promise<
   const authToken = await resolveToken();
   const encodedMachine = encodeURIComponent(machineName);
   const encodedUuid = encodeURIComponent(uuid);
-  return apiFetch<ScrubStats>(`/btrfs/scrub_stats/${encodedMachine}?uuid=${encodedUuid}`, {token: authToken});
+  const resp = await apiFetch<any>(`/btrfs/scrub_stats/${encodedMachine}?uuid=${encodedUuid}`, {token: authToken});
+  return normalizeScrubStats(resp);
 }
 
 export async function getRaidStatus(machineName: string, uuid: string): Promise<RaidStatus> {
   const authToken = await resolveToken();
   const encodedMachine = encodeURIComponent(machineName);
   const encodedUuid = encodeURIComponent(uuid);
-  return apiFetch<RaidStatus>(`/btrfs/raid_status/${encodedMachine}?uuid=${encodedUuid}`, {token: authToken});
+  const resp = await apiFetch<any>(`/btrfs/raid_status/${encodedMachine}?uuid=${encodedUuid}`, {token: authToken});
+  return normalizeRaidStatus(resp);
 }
 
 export async function createAutomaticMount(machine_name: string, body: {uuid: string; mount_point: string; compression?: string}): Promise<unknown> {
@@ -288,7 +377,7 @@ export async function createAutomaticMount(machine_name: string, body: {uuid: st
 
 export async function deleteAutomaticMount(id: number): Promise<void> {
   const authToken = await resolveToken();
-  await apiFetch<void>("/btrfs/automatic_moun", {
+  await apiFetch<void>("/btrfs/automatic_mount", {
     method: "DELETE",
     token: authToken,
     body: {id},
@@ -298,7 +387,9 @@ export async function deleteAutomaticMount(id: number): Promise<void> {
 export async function listAutomaticMounts(machineName: string): Promise<AutomaticMount[]> {
   const authToken = await resolveToken();
   const encodedMachine = encodeURIComponent(machineName);
-  return apiFetch<AutomaticMount[]>(`/btrfs/automatic_mount/${encodedMachine}`, {
+  const resp = await apiFetch<any>(`/btrfs/automatic_mount/${encodedMachine}`, {
     token: authToken,
   });
+  const list = Array.isArray(resp) ? resp : Array.isArray(resp?.data) ? resp.data : [];
+  return list.map(normalizeAutomaticMount);
 }

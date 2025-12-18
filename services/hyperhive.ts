@@ -112,6 +112,14 @@ export async function createMount(
   });
 }
 
+export async function remountNfs(id: number): Promise<void> {
+  const authToken = await resolveToken();
+  await apiFetch<void>(`/nfs/remount/${id}`, {
+    method: "POST",
+    token: authToken,
+  });
+}
+
 export async function login(input: LoginPayload): Promise<LoginResponse> {
   return apiFetch<LoginResponse>("/login", {
     method: "POST",

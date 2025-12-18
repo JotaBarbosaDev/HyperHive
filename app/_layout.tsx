@@ -65,6 +65,7 @@ const ROUTE_TITLE_MAP: Record<string, string> = {
   "/": "Login",
   "/dashboard": "Dashboard",
   "/btrfs-raids": "BTRFS / RAIDs",
+  "/btrfs-automatic-mounts": "BTRFS Auto-Mounts",
   "/smartdisk": "SmartDisk",
   "/mounts": "NFS",
   "/isos": "ISOs",

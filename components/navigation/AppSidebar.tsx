@@ -72,6 +72,7 @@ const MENU_ITEMS: MenuItem[] = [
     icon: HardDrive,
     children: [
       { label: "BTRFS / RAIDs", route: "/btrfs-raids" },
+      { label: "Auto-Mounts", route: "/btrfs-automatic-mounts" },
       { label: "SmartDisk", route: "/smartdisk" },
     ],
   },

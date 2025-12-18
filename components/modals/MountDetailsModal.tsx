@@ -9,12 +9,15 @@ import {
 } from "@/components/ui/modal";
 import {Badge, BadgeText} from "@/components/ui/badge";
 import {Box} from "@/components/ui/box";
-import {Button, ButtonText} from "@/components/ui/button";
+import {Button, ButtonSpinner, ButtonText} from "@/components/ui/button";
 import {Heading} from "@/components/ui/heading";
 import {Icon} from "@/components/ui/icon";
 import {Text} from "@/components/ui/text";
+import {Toast, ToastTitle, useToast} from "@/components/ui/toast";
+import {Divider} from "@/components/ui/divider";
 import {Mount} from "@/types/mount";
-import {Laptop, Download, HardDrive} from "lucide-react-native";
+import {Laptop, Download, HardDrive, RotateCw, Check, AlertCircle} from "lucide-react-native";
+import {remountNfs} from "@/services/hyperhive";
 
 export type MountDetailsModalProps = {
   isOpen: boolean;
@@ -24,13 +27,66 @@ export type MountDetailsModalProps = {
 
 export function MountDetailsModal({isOpen, mount, onClose}: MountDetailsModalProps) {
   const {
-    NfsShare: {MachineName, FolderPath, Source, Target, Name, HostNormalMount},
+    NfsShare: {MachineName, FolderPath, Source, Target, Name, HostNormalMount, Id},
     Status,
   } = mount;
 
   const usageUsedGB = Status.spaceOccupiedGB;
   const usageTotalGB = Status.spaceTotalGB;
   const status = Status.working ? "success" : "error";
+  
+  const toast = useToast();
+  const [isRemounting, setIsRemounting] = React.useState(false);
+  const [remountError, setRemountError] = React.useState<string | null>(null);
+
+  const handleRemount = React.useCallback(async () => {
+    try {
+      setRemountError(null);
+      setIsRemounting(true);
+      await remountNfs(Id);
+      
+      toast.show({
+        placement: "top",
+        render: ({id}) => {
+          const toastId = "toast-" + id;
+          return (
+            <Toast
+              nativeID={toastId}
+              className="px-5 py-3 gap-4 shadow-soft-1 items-center flex-row"
+              action="success"
+            >
+              <Icon as={Check} size="xl" className="stroke-none text-green-500" />
+              <Divider orientation="vertical" className="h-[30px] bg-outline-200" />
+              <ToastTitle size="sm">Mount remounted successfully!</ToastTitle>
+            </Toast>
+          );
+        },
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Error remounting NFS share.";
+      setRemountError(message);
+      
+      toast.show({
+        placement: "top",
+        render: ({id}) => {
+          const toastId = "toast-" + id;
+          return (
+            <Toast
+              nativeID={toastId}
+              className="px-5 py-3 gap-4 shadow-soft-1 items-center flex-row"
+              action="error"
+            >
+              <Icon as={AlertCircle} size="xl" className="stroke-none text-red-500" />
+              <Divider orientation="vertical" className="h-[30px] bg-outline-200" />
+              <ToastTitle size="sm">{message}</ToastTitle>
+            </Toast>
+          );
+        },
+      });
+    } finally {
+      setIsRemounting(false);
+    }
+  }, [Id, toast]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
@@ -228,11 +284,31 @@ export function MountDetailsModal({isOpen, mount, onClose}: MountDetailsModalPro
             </Text>
           </Box>
         </ModalBody>
-        <ModalFooter className="w-full pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
+        <ModalFooter className="w-full pt-4 border-t border-outline-100 dark:border-[#2A3B52] flex flex-col gap-3 web:flex-row web:gap-2">
+          <Button
+            variant="solid"
+            action="primary"
+            disabled={isRemounting}
+            className="flex-1 h-12 rounded-xl web:flex-1 dark:bg-blue-600 dark:hover:bg-blue-700 dark:active:bg-blue-800"
+            onPress={handleRemount}
+          >
+            {isRemounting ? (
+              <ButtonSpinner size="small" className="mr-2" />
+            ) : (
+              <Icon as={RotateCw} size="sm" className="mr-2" />
+            )}
+            <ButtonText
+              className="font-semibold web:text-base"
+              style={{fontFamily: "Inter_600SemiBold"}}
+            >
+              Remount
+            </ButtonText>
+          </Button>
           <Button
             variant="solid"
             action="secondary"
-            className="w-full h-12 rounded-xl"
+            disabled={isRemounting}
+            className="flex-1 h-12 rounded-xl web:flex-1"
             onPress={onClose}
           >
             <ButtonText

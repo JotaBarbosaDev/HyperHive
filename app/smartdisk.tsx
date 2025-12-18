@@ -6,64 +6,73 @@ import { Heading } from "@/components/ui/heading";
 import { VStack } from "@/components/ui/vstack";
 import { HStack } from "@/components/ui/hstack";
 import { Button, ButtonIcon, ButtonSpinner, ButtonText } from "@/components/ui/button";
-import {
-  Select,
-  SelectTrigger,
-  SelectInput,
-  SelectItem,
-  SelectIcon,
-  SelectPortal,
-  SelectContent,
-  SelectDragIndicator,
-  SelectBackdrop,
-  SelectDragIndicatorWrapper,
-} from "@/components/ui/select";
-import { ChevronDownIcon } from "@/components/ui/icon";
-import { Divider } from "@/components/ui/divider";
+import { Badge, BadgeText } from "@/components/ui/badge";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
 import { Pressable } from "@/components/ui/pressable";
+import { Divider } from "@/components/ui/divider";
 import {
   Modal,
   ModalBackdrop,
-  ModalContent,
-  ModalHeader,
   ModalBody,
-  ModalFooter,
   ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
 } from "@/components/ui/modal";
 import {
   AlertDialog,
   AlertDialogBackdrop,
-  AlertDialogContent,
-  AlertDialogHeader,
   AlertDialogBody,
+  AlertDialogContent,
   AlertDialogFooter,
+  AlertDialogHeader,
   AlertDialogCloseButton,
 } from "@/components/ui/alert-dialog";
-import { FormControl, FormControlHelper, FormControlHelperText, FormControlLabel, FormControlLabelText } from "@/components/ui/form-control";
-import { Input, InputField } from "@/components/ui/input";
+import {
+  Select,
+  SelectBackdrop,
+  SelectContent,
+  SelectDragIndicator,
+  SelectDragIndicatorWrapper,
+  SelectIcon,
+  SelectInput,
+  SelectItem,
+  SelectPortal,
+  SelectTrigger,
+} from "@/components/ui/select";
+import {
+  FormControl,
+  FormControlHelper,
+  FormControlHelperText,
+  FormControlLabel,
+  FormControlLabelText,
+} from "@/components/ui/form-control";
 import { Switch } from "@/components/ui/switch";
 import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
-import { Badge, BadgeText } from "@/components/ui/badge";
-import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
+import { Progress, ProgressFilledTrack } from "@/components/ui/progress";
 import { Machine } from "@/types/machine";
-import { SmartDiskDevice, SmartDiskSchedule } from "@/types/smartdisk";
+import { SmartDiskDevice, SmartDiskReallocStatus, SmartDiskSchedule, SmartDiskSelfTestProgress } from "@/types/smartdisk";
 import { listMachines } from "@/services/hyperhive";
+import { listAllDisks } from "@/services/btrfs";
 import {
-  listAllDisks,
-} from "@/services/btrfs";
-import {
+  cancelSelfTest,
   createSchedule,
   deleteSchedule,
   enableSchedule,
+  getRealloc,
+  getReallocStatus,
+  getSelfTestProgress,
   listSchedules,
   listSmartDisks,
-  startSelfTest,
+  reallocCancel,
   reallocFullWipe,
   reallocNonDestructive,
-  reallocCancel,
+  startSelfTest,
+  updateSchedule,
 } from "@/services/smartdisk";
-import { AlertTriangle, Activity, CalendarClock, Plus, RefreshCcw, Trash2, Play, Info, ThermometerSun, ThermometerSnowflake } from "lucide-react-native";
-import { BtrfsDisk } from "@/types/btrfs";
+import { Activity, CalendarClock, ChevronDown, HardDrive, Info, Play, RefreshCcw, ShieldCheck, Trash2, XCircle } from "lucide-react-native";
+
+type DetailTab = "info" | "selftest" | "realloc";
 
 const TEST_TYPES = [
   { value: "short", label: "Short Self-Test (~2 min)" },
@@ -71,9 +80,7 @@ const TEST_TYPES = [
 ];
 
 const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
 const HOURS = Array.from({ length: 24 }).map((_, i) => ({ value: i, label: `${String(i).padStart(2, "0")}:00` }));
-
 const STATUS_COLOR: Record<string, string> = {
   ok: "bg-success-100 text-success-700",
   healthy: "bg-success-100 text-success-700",
@@ -82,25 +89,19 @@ const STATUS_COLOR: Record<string, string> = {
   warning: "bg-warning-100 text-warning-700",
   critical: "bg-error-100 text-error-700",
 };
+const POLL_INTERVAL = 60_000;
 
-const formatTemp = (temp?: string | number) => {
-  if (temp === null || temp === undefined || temp === "") return "—";
-  const num = typeof temp === "number" ? temp : Number(temp);
-  if (isNaN(num)) return String(temp);
-  return `${num}°C`;
+const normalizeDevicePath = (dev?: string | null): string | null => {
+  if (!dev) return null;
+  if (dev.startsWith("/dev/")) return dev;
+  if (/^(sd|nvme|vd|hd|xvd|loop)/.test(dev)) return `/dev/${dev}`;
+  return null;
 };
 
-const formatDeviceDisplay = (device: SmartDiskDevice | BtrfsDisk | string): string => {
-  if (typeof device === "string") return device;
-  const dev = device.device || "";
-  const model = (device as any).model || "";
-  if (model) return `${dev} - ${model}`;
-  return dev;
-};
-
-const findDeviceLabel = (dev: string, disks: SmartDiskDevice[]) => {
-  const found = disks.find((d) => d.device === dev);
-  return found ? formatDeviceDisplay(found) : dev;
+const isAllowedDevice = (dev?: string | null) => {
+  const normalized = normalizeDevicePath(dev);
+  if (!normalized) return false;
+  return /^\/dev\/(sd|nvme|vd|hd|xvd|loop)/.test(normalized);
 };
 
 const buildDeviceMeta = (rawDevices: any[]): Record<string, string> => {
@@ -114,24 +115,44 @@ const buildDeviceMeta = (rawDevices: any[]): Record<string, string> => {
   return meta;
 };
 
+const formatTemp = (temp?: string | number) => {
+  if (temp === null || temp === undefined || temp === "") return "—";
+  const num = typeof temp === "number" ? temp : Number(temp);
+  if (Number.isNaN(num)) return String(temp);
+  return `${num}°C`;
+};
+
+const formatCapacity = (value?: string | number) => {
+  if (value === null || value === undefined || value === "") return "—";
+  const num = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(num)) return String(value);
+  const tb = 1024 ** 4;
+  const gb = 1024 ** 3;
+  if (num >= tb) return `${(num / tb).toFixed(2)} TB`;
+  if (num >= gb) return `${(num / gb).toFixed(2)} GB`;
+  return `${num}`;
+};
+
 const getDeviceLabel = (dev: string, disks: SmartDiskDevice[], meta: Record<string, string>) => {
   const found = disks.find((d) => d.device === dev);
-  if (found) return formatDeviceDisplay(found);
+  if (found) {
+    const model = found.model || meta[dev];
+    return model ? `${dev} - ${model}` : dev;
+  }
   if (meta[dev]) return `${dev} - ${meta[dev]}`;
   return dev;
 };
 
-const normalizeDevicePath = (dev?: string | null): string | null => {
-  if (!dev) return null;
-  if (dev.startsWith("/dev/")) return dev;
-  if (/^(sd|nvme|vd|hd|xvd)/.test(dev)) return `/dev/${dev}`;
-  return null;
-};
-
-const isAllowedDevice = (dev?: string | null) => {
-  const normalized = normalizeDevicePath(dev);
-  if (!normalized) return false;
-  return /^\/dev\/(sd|nvme|vd|hd|xvd)/.test(normalized);
+const badgeStatus = (status?: string) => {
+  if (!status) return null;
+  const key = status.toLowerCase();
+  const normalizedKey = key.normalize("NFD").replace(/\p{Diacritic}/gu, "");
+  const cls = STATUS_COLOR[normalizedKey] ?? STATUS_COLOR[key] ?? "bg-background-100 text-typography-800";
+  return (
+    <Badge className={`rounded-full px-3 py-1 ${cls}`} size="sm" action="muted" variant="solid">
+      <BadgeText className="text-xs text-typography-800">{status}</BadgeText>
+    </Badge>
+  );
 };
 
 export default function SmartDiskScreen() {
@@ -140,13 +161,29 @@ export default function SmartDiskScreen() {
   const [selectedMachine, setSelectedMachine] = React.useState<string>("");
   const [disks, setDisks] = React.useState<SmartDiskDevice[]>([]);
   const [deviceOptions, setDeviceOptions] = React.useState<string[]>([]);
+  const deviceListRef = React.useRef<string[]>([]);
   const [deviceMeta, setDeviceMeta] = React.useState<Record<string, string>>({});
   const [schedules, setSchedules] = React.useState<SmartDiskSchedule[]>([]);
+  const [selfProgress, setSelfProgress] = React.useState<Record<string, SmartDiskSelfTestProgress>>({});
+  const [reallocStatuses, setReallocStatuses] = React.useState<Record<string, SmartDiskReallocStatus>>({});
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
-  const [diskDetail, setDiskDetail] = React.useState<SmartDiskDevice | null>(null);
-  const [selfTestTarget, setSelfTestTarget] = React.useState<SmartDiskDevice | null>(null);
+  const [savingAction, setSavingAction] = React.useState<string | null>(null);
+
+  const [detailDevice, setDetailDevice] = React.useState<string | null>(null);
+  const [detailTab, setDetailTab] = React.useState<DetailTab>("info");
+  const [detailLoading, setDetailLoading] = React.useState(false);
+  const [selfTestType, setSelfTestType] = React.useState<string>("short");
+  const [rawDetailsOpen, setRawDetailsOpen] = React.useState(false);
+  const [confirmState, setConfirmState] = React.useState<{
+    id: string;
+    message: string;
+    remaining: number;
+    run: () => Promise<void> | void;
+  } | null>(null);
+
   const [scheduleModal, setScheduleModal] = React.useState(false);
+  const [editingSchedule, setEditingSchedule] = React.useState<SmartDiskSchedule | null>(null);
   const defaultSchedule = React.useMemo(
     () => ({ device: "", type: "short", week_day: 0, hour: 0, active: true }),
     []
@@ -154,19 +191,15 @@ export default function SmartDiskScreen() {
   const [scheduleForm, setScheduleForm] = React.useState<{ device: string; type: string; week_day: number; hour: number; active: boolean }>(
     defaultSchedule
   );
-  const [progress, setProgress] = React.useState<string>("");
-  const [savingAction, setSavingAction] = React.useState<string | null>(null);
+
+  const pollRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
   const showToast = React.useCallback(
     (title: string, description: string, action: "success" | "error" = "success") => {
       toast.show({
         placement: "top",
         render: ({ id }) => (
-          <Toast
-            nativeID={"toast-" + id}
-            className="px-5 py-3 gap-3 shadow-soft-1 items-start flex-row"
-            action={action}
-          >
+          <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1 items-start flex-row" action={action}>
             <ToastTitle size="sm">{title}</ToastTitle>
             {description ? <ToastDescription size="sm">{description}</ToastDescription> : null}
           </Toast>
@@ -174,6 +207,51 @@ export default function SmartDiskScreen() {
       });
     },
     [toast]
+  );
+
+  const refreshStatuses = React.useCallback(
+    async (devices?: string[]) => {
+      if (!selectedMachine) return;
+      const list = devices && devices.length > 0 ? devices : deviceListRef.current;
+      if (!list.length) {
+        setSelfProgress({});
+        setReallocStatuses({});
+        return;
+      }
+      try {
+        const progressResults = await Promise.all(
+          list.map(async (dev) => {
+            try {
+              const resp = await getSelfTestProgress(selectedMachine, dev);
+              return resp;
+            } catch (err) {
+              console.warn("self-test progress failed for", dev, err);
+              return null;
+            }
+          })
+        );
+        const progressMap: Record<string, SmartDiskSelfTestProgress> = {};
+        progressResults.forEach((item, idx) => {
+          if (!item) return;
+          const key = item.device || list[idx];
+          progressMap[key] = item;
+        });
+        setSelfProgress((prev) => ({ ...prev, ...progressMap }));
+      } catch (err) {
+        console.warn("self-test polling error", err);
+      }
+      try {
+        const reallocList = await getRealloc(selectedMachine);
+        const reallocMap: Record<string, SmartDiskReallocStatus> = {};
+        (Array.isArray(reallocList) ? reallocList : []).forEach((r) => {
+          if (r?.device) reallocMap[r.device] = r;
+        });
+        setReallocStatuses((prev) => ({ ...prev, ...reallocMap }));
+      } catch (err) {
+        console.warn("realloc polling error", err);
+      }
+    },
+    [selectedMachine]
   );
 
   const loadMachines = React.useCallback(async () => {
@@ -186,21 +264,19 @@ export default function SmartDiskScreen() {
       }
     } catch (err) {
       console.error("Failed to load machines", err);
-      showToast("Error loading machines", "Try again.", "error");
+      showToast("Failed to load machines", "Try again.", "error");
     }
-  }, [selectedMachine, showToast]);
+  }, [showToast]);
 
   const loadData = React.useCallback(
-    async (mode: "full" | "refresh" | "silent" = "full") => {
+    async (mode: "full" | "refresh" = "full") => {
       if (!selectedMachine) return;
       if (mode === "full") setLoading(true);
       if (mode === "refresh") setRefreshing(true);
       try {
-        const [rawDevices, schedResp] = await Promise.all([
-          listAllDisks(selectedMachine).catch(() => []),
-          listSchedules(selectedMachine),
-        ]);
-        setDeviceMeta(buildDeviceMeta(Array.isArray(rawDevices) ? rawDevices : []));
+        const [rawDevices, schedResp] = await Promise.all([listAllDisks(selectedMachine).catch(() => []), listSchedules(selectedMachine)]);
+        const meta = buildDeviceMeta(Array.isArray(rawDevices) ? rawDevices : []);
+        setDeviceMeta(meta);
         const deviceList = Array.from(
           new Set(
             (Array.isArray(rawDevices) ? rawDevices : [])
@@ -209,36 +285,40 @@ export default function SmartDiskScreen() {
               .filter(Boolean) as string[]
           )
         ).filter(isAllowedDevice);
+        deviceListRef.current = deviceList;
         setDeviceOptions(deviceList);
 
-        let allDisks: SmartDiskDevice[] = [];
-        for (const dev of deviceList) {
-          try {
+        const smartResults = await Promise.allSettled(
+          deviceList.map(async (dev) => {
             const result = await listSmartDisks(selectedMachine, dev);
-            if (Array.isArray(result)) {
-              allDisks = allDisks.concat(result);
-            }
-          } catch (err) {
-            console.warn("Falha ao carregar smartdisk para", dev, err);
+            if (Array.isArray(result) && result.length > 0) return result[0];
+            return { device: dev } as SmartDiskDevice;
+          })
+        );
+        const parsedDisks = deviceList.map((dev, idx) => {
+          const item = smartResults[idx];
+          const base = { device: dev, model: meta[dev] } as SmartDiskDevice;
+          if (item.status === "fulfilled" && item.value) {
+            return { ...base, ...item.value };
           }
-        }
-        setDisks(allDisks);
+          return base;
+        });
+        setDisks(parsedDisks);
         setSchedules(Array.isArray(schedResp) ? schedResp : []);
-
-        if (!scheduleForm.device && deviceList[0]) {
-          setScheduleForm((prev) => ({ ...prev, device: deviceList[0] }));
-        }
+        setScheduleForm((prev) => {
+          if (prev.device || !deviceList[0]) return prev;
+          return { ...prev, device: deviceList[0] };
+        });
+        await refreshStatuses(deviceList);
       } catch (err) {
-        console.error("Failed to load smartdisk data", err);
-        if (mode === "full") {
-          showToast("Error loading", "Unable to fetch SmartDisk data.", "error");
-        }
+        console.error("Failed to load smart tests data", err);
+        showToast("Error loading", "Unable to fetch disks.", "error");
       } finally {
         if (mode === "full") setLoading(false);
         if (mode === "refresh") setRefreshing(false);
       }
     },
-    [selectedMachine, showToast, scheduleForm.device]
+    [selectedMachine, showToast, refreshStatuses]
   );
 
   React.useEffect(() => {
@@ -251,62 +331,186 @@ export default function SmartDiskScreen() {
     }
   }, [selectedMachine, loadData]);
 
-  const handleOpenDetail = async (device: SmartDiskDevice) => {
-    if (!isAllowedDevice(device.device)) {
-      setDiskDetail(device);
-      return;
+  React.useEffect(() => {
+    if (!selectedMachine) return;
+    refreshStatuses();
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
     }
+    pollRef.current = setInterval(() => {
+      refreshStatuses();
+    }, POLL_INTERVAL);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [selectedMachine, refreshStatuses]);
+
+  React.useEffect(() => {
+    if (!detailDevice) return;
+    if (detailTab === "selftest" || detailTab === "realloc") {
+      refreshStatuses([detailDevice]);
+    }
+    if (detailTab === "realloc") {
+      getReallocStatus(selectedMachine, detailDevice)
+        .then((status) => {
+          setReallocStatuses((prev) => ({ ...prev, [detailDevice]: status as SmartDiskReallocStatus }));
+        })
+        .catch((err) => console.warn("Failed to fetch realloc status", err));
+    }
+  }, [detailDevice, detailTab, refreshStatuses, selectedMachine]);
+
+  const openDetail = async (device: string, tab: DetailTab = "info") => {
+    if (!device) return;
+    setDetailTab(tab);
+    setDetailDevice(device);
+    setDetailLoading(true);
     try {
-      const detail = await listSmartDisks(selectedMachine, device.device);
-      setDiskDetail(Array.isArray(detail) && detail.length > 0 ? detail[0] : device);
-    } catch {
-      setDiskDetail(device);
+      const resp = await listSmartDisks(selectedMachine, device);
+      if (Array.isArray(resp) && resp.length > 0) {
+        const detail = resp[0];
+        setDisks((prev) => {
+          const exists = prev.some((d) => d.device === device);
+          if (!exists) return prev.concat(detail);
+          return prev.map((d) => (d.device === device ? { ...d, ...detail } : d));
+        });
+      }
+    } catch (err) {
+      console.warn("Failed to refresh disk detail", err);
+    } finally {
+      setDetailLoading(false);
     }
   };
 
   const handleStartSelfTest = async () => {
-    if (!selfTestTarget) return;
-    setSavingAction("selftest");
+    if (!detailDevice) return;
+    setSavingAction("selftest-start");
     try {
-      await startSelfTest(selectedMachine, { device: selfTestTarget.device, type: scheduleForm.type });
-      showToast("Self-test started", `${selfTestTarget.device} running.`);
-      setSelfTestTarget(null);
+      await startSelfTest(selectedMachine, { device: detailDevice, type: selfTestType });
+      showToast("Self-test started", `${detailDevice} running ${selfTestType}.`);
+      await refreshStatuses();
     } catch (err) {
       console.error("Failed to start self-test", err);
-      showToast("Error starting test", "Try again.", "error");
+      showToast("Error starting", "Try again.", "error");
     } finally {
       setSavingAction(null);
     }
   };
 
-  const handleScheduleSave = async () => {
+  const requestStartSelfTest = () => {
+    if (!detailDevice) return;
+    const confirmations = selfTestType === "extended" ? 2 : 1;
+    const message =
+      selfTestType === "extended"
+        ? `Run EXTENDED self-test on ${detailDevice}? This may take longer.`
+        : `Run short self-test on ${detailDevice}?`;
+    confirmAndRun(`selftest-${detailDevice}-${selfTestType}`, message, confirmations, handleStartSelfTest);
+  };
+
+  const handleCancelSelfTest = async () => {
+    if (!detailDevice) return;
+    setSavingAction("selftest-cancel");
+    try {
+      await cancelSelfTest(selectedMachine, detailDevice);
+      showToast("Self-test cancelled", `${detailDevice} stopped.`);
+      await refreshStatuses();
+    } catch (err) {
+      console.error("Failed to cancel self-test", err);
+      showToast("Error cancelling", "Try again.", "error");
+    } finally {
+      setSavingAction(null);
+    }
+  };
+
+  const handleReallocAction = async (action: "full" | "non" | "cancel") => {
+    if (!detailDevice) return;
+    const actionKey = `realloc-${action}`;
+    setSavingAction(actionKey);
+    try {
+      if (action === "full") await reallocFullWipe(selectedMachine, detailDevice);
+      if (action === "non") await reallocNonDestructive(selectedMachine, detailDevice);
+      if (action === "cancel") await reallocCancel(selectedMachine, detailDevice);
+      showToast("Realloc sent", `${detailDevice} ${action === "cancel" ? "cancelled" : "updated"}.`);
+      await refreshStatuses();
+    } catch (err) {
+      console.error("Failed realloc action", err);
+      showToast("Realloc error", "Check the endpoint.", "error");
+    } finally {
+      setSavingAction(null);
+    }
+  };
+
+  const requestReallocAction = (action: "full" | "non" | "cancel") => {
+    if (!detailDevice) return;
+    const confirmations = action === "full" ? 2 : action === "non" ? 1 : 0;
+    const message =
+      action === "full"
+        ? `Run FULL WIPE realloc on ${detailDevice}? This is destructive.`
+        : action === "non"
+        ? `Run non-destructive realloc on ${detailDevice}?`
+        : `Cancel realloc on ${detailDevice}?`;
+    if (confirmations > 0) {
+      confirmAndRun(`realloc-${action}-${detailDevice}`, message, confirmations, () => handleReallocAction(action));
+    } else {
+      void handleReallocAction(action);
+    }
+  };
+
+  const openSchedule = (sched?: SmartDiskSchedule) => {
+    if (sched) {
+      setEditingSchedule(sched);
+      setScheduleForm({
+        device: sched.device,
+        type: sched.type,
+        week_day: sched.week_day,
+        hour: sched.hour,
+        active: sched.active,
+      });
+    } else {
+      setEditingSchedule(null);
+      setScheduleForm((prev) => ({
+        ...defaultSchedule,
+        device: deviceOptions[0] ?? prev.device,
+        type: prev.type,
+      }));
+    }
+    setScheduleModal(true);
+  };
+
+  const handleSaveSchedule = async () => {
     if (!scheduleForm.device) {
-      showToast("Device required", "Select a disk.", "error");
+      showToast("Select a disk", "Device is required.", "error");
       return;
     }
-    setSavingAction("schedule");
+    const payload = { ...scheduleForm };
+    const actionKey = editingSchedule ? "schedule-update" : "schedule-create";
+    setSavingAction(actionKey);
     try {
-      await createSchedule(selectedMachine, scheduleForm);
-      showToast("Schedule created", "Test will run automatically.");
+      if (editingSchedule) {
+        await updateSchedule(selectedMachine, editingSchedule.id, payload as any);
+        showToast("Schedule updated", "Schedule changed.");
+      } else {
+        await createSchedule(selectedMachine, payload as any);
+        showToast("Schedule created", "Test scheduled.");
+      }
       setScheduleModal(false);
-      await loadData("silent");
+      await loadData("refresh");
     } catch (err) {
-      console.error("Failed to create schedule", err);
-      showToast("Error scheduling", "Try again.", "error");
+      console.error("Failed to save schedule", err);
+      showToast("Schedule error", "Try again.", "error");
     } finally {
       setSavingAction(null);
     }
   };
 
   const toggleSchedule = async (sched: SmartDiskSchedule) => {
-    setSavingAction(`sched-${sched.id}`);
+    setSavingAction(`sched-toggle-${sched.id}`);
     try {
       await enableSchedule(selectedMachine, sched.id, !sched.active);
-      showToast("Schedule updated", sched.active ? "Schedule disabled." : "Schedule enabled.");
-      await loadData("silent");
+      showToast("Schedule updated", !sched.active ? "Enabled" : "Disabled");
+      await loadData("refresh");
     } catch (err) {
-      console.error("Failed to toggle schedule", err);
-      showToast("Error updating schedule", "Try again.", "error");
+      console.error("toggle schedule failed", err);
+      showToast("Error updating", "Unable to toggle.", "error");
     } finally {
       setSavingAction(null);
     }
@@ -317,39 +521,92 @@ export default function SmartDiskScreen() {
     try {
       await deleteSchedule(selectedMachine, sched.id);
       showToast("Schedule removed", "Schedule deleted.");
-      await loadData("silent");
+      setScheduleModal(false);
+      setEditingSchedule(null);
+      await loadData("refresh");
     } catch (err) {
       console.error("Failed to delete schedule", err);
-      showToast("Error removing schedule", "Try again.", "error");
+      showToast("Error removing", "Try again.", "error");
     } finally {
       setSavingAction(null);
     }
   };
 
-  const badgeStatus = (status?: string) => {
-    if (!status) return null;
-    const key = status.toLowerCase();
-    const normalizedKey = key.normalize("NFD").replace(/\p{Diacritic}/gu, "");
-    const cls = STATUS_COLOR[normalizedKey] ?? STATUS_COLOR[key] ?? "bg-background-100 text-typography-800";
+  const renderSelfTestBar = (device: string) => {
+    const progress = selfProgress[device];
+    const status = progress?.status?.toLowerCase?.();
+    if (!progress || status === "idle") return null;
+    const value = progress.progressPercent ?? 0;
     return (
-      <Badge className={`rounded-full px-3 py-1 ${cls}`} size="sm" action="muted" variant="solid">
-        <BadgeText className="text-xs text-typography-800">{status}</BadgeText>
-      </Badge>
+      <Box className="mt-2 p-2 rounded-xl border border-background-200 bg-background-50">
+        <HStack className="justify-between items-center mb-1">
+          <HStack className="items-center gap-2">
+            <Activity size={14} color="#0f172a" />
+            <Text className="text-typography-800 text-sm">Self-test {progress.type || ""}</Text>
+          </HStack>
+          <Text className="text-typography-700 text-sm">{value}%</Text>
+        </HStack>
+        <Progress value={value}>
+          <ProgressFilledTrack />
+        </Progress>
+        <Text className="text-typography-600 text-xs mt-1">{progress.status || "Running"}</Text>
+      </Box>
     );
   };
 
-  const performReallocAction = async (action: string, fn: () => Promise<unknown>) => {
-    setSavingAction(action);
-    try {
-      await fn();
-      showToast("Action sent", "Reallocate triggered.");
-    } catch (err) {
-      console.error("Failed realloc action", err);
-      showToast("Error performing action", "Try again.", "error");
-    } finally {
-      setSavingAction(null);
-    }
+  const renderReallocBar = (device: string) => {
+    const realloc = reallocStatuses[device];
+    if (!realloc || realloc.completed) return null;
+    const value = realloc.percent ?? 0;
+    return (
+      <Box className="mt-2 p-2 rounded-xl border border-background-200 bg-background-50">
+        <HStack className="justify-between items-center mb-1">
+          <HStack className="items-center gap-2">
+            <RefreshCcw size={14} color="#0f172a" />
+            <Text className="text-typography-800 text-sm">{realloc.mode || "Realloc"}</Text>
+          </HStack>
+          <Text className="text-typography-700 text-sm">{value}%</Text>
+        </HStack>
+        <Progress value={value}>
+          <ProgressFilledTrack />
+        </Progress>
+        {realloc.lastLine ? <Text className="text-typography-600 text-xs mt-1">{realloc.lastLine}</Text> : null}
+      </Box>
+    );
   };
+
+  const detailDisk = disks.find((d) => d.device === detailDevice);
+  const detailProgress = detailDevice ? selfProgress[detailDevice] : undefined;
+  const detailRealloc = detailDevice ? reallocStatuses[detailDevice] : undefined;
+  const rawEntries = React.useMemo(() => {
+    if (!detailDisk) return [];
+    const source = (detailDisk as any).raw ?? (detailDisk as any);
+    const { testsHistory, selfTests, smartTests, ...rest } = source;
+    const flat: Record<string, any> = { ...rest };
+    if (rest?.metrics && typeof rest.metrics === "object") {
+      Object.entries(rest.metrics).forEach(([k, v]) => {
+        flat[`metrics.${k}`] = v;
+      });
+      delete flat.metrics;
+    }
+    return Object.entries(flat).filter(([, v]) => v !== undefined && v !== null && v !== "");
+  }, [detailDisk]);
+
+  const confirmAndRun = React.useCallback(
+    (id: string, message: string, confirmations: number, run: () => Promise<void> | void) => {
+      const count = confirmations <= 0 ? 0 : confirmations;
+      if (count === 0) {
+        void Promise.resolve(run());
+        return;
+      }
+      if (count === 1) {
+        setConfirmState({ id, message, remaining: 1, run });
+        return;
+      }
+      setConfirmState({ id, message, remaining: count, run });
+    },
+    []
+  );
 
   return (
     <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
@@ -359,23 +616,19 @@ export default function SmartDiskScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadData("refresh")} />}
       >
         <Box className="p-4 pt-16 web:p-10 web:max-w-6xl web:mx-auto web:w-full">
-          <Heading
-            size="2xl"
-            className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
-            style={{ fontFamily: "Inter_700Bold" }}
-          >
-            SmartDisk Health
+          <Heading size="2xl" className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl" style={{ fontFamily: "Inter_700Bold" }}>
+            SMART Tests
           </Heading>
           <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
-            SMART monitoring and disk testing.
+            Monitor disks, run self-tests, and track reallocation in real time.
           </Text>
 
           <HStack className="mt-6 items-center justify-between flex-wrap gap-3">
             <HStack className="gap-3 items-center flex-wrap">
               <Select selectedValue={selectedMachine} onValueChange={(val) => setSelectedMachine(val)}>
-                <SelectTrigger className="min-w-[180px]">
+                <SelectTrigger className="min-w-[200px]">
                   <SelectInput placeholder="Machine" value={selectedMachine} />
-                  <SelectIcon as={ChevronDownIcon} />
+                  <SelectIcon as={ChevronDown} />
                 </SelectTrigger>
                 <SelectPortal>
                   <SelectBackdrop />
@@ -394,20 +647,8 @@ export default function SmartDiskScreen() {
                 <ButtonText>Refresh</ButtonText>
               </Button>
             </HStack>
-            <Button
-              action="primary"
-              variant="solid"
-              size="md"
-              onPress={() => {
-                setScheduleForm((prev) => ({
-                  ...defaultSchedule,
-                  device: deviceOptions[0] ?? "",
-                  type: prev.type,
-                }));
-                setScheduleModal(true);
-              }}
-            >
-              <ButtonIcon as={Plus} size="sm" />
+            <Button action="primary" variant="solid" size="md" onPress={() => openSchedule()}>
+              <ButtonIcon as={CalendarClock} size="sm" />
               <ButtonText>New Schedule</ButtonText>
             </Button>
           </HStack>
@@ -417,88 +658,117 @@ export default function SmartDiskScreen() {
               {[1, 2, 3].map((idx) => (
                 <Box key={idx} className="p-4 rounded-2xl bg-background-0 border border-background-100 shadow-soft-1">
                   <Skeleton className="h-5 w-1/3 mb-2" />
-                  <SkeletonText className="w-1/2" />
+                  <SkeletonText className="w-3/4" />
                 </Box>
               ))}
             </VStack>
           ) : (
             <>
-              <Box className="mt-6 rounded-2xl bg-background-0 border border-background-200 shadow-soft-1">
-                <HStack className="px-4 py-3 items-center justify-between">
-                  <Text className="text-typography-900 font-semibold text-base">Disks</Text>
-                  <Text className="text-typography-600 text-sm">{disks.length} items</Text>
-                </HStack>
-                <Divider />
-                <Box className="px-4 py-2">
-                  {(Array.isArray(disks) ? disks : []).length === 0 ? (
-                    <Text className="text-typography-600 text-sm py-3">No eligible disks found for this machine.</Text>
-                  ) : (
-                    <>
-                      <HStack className="py-2">
-                        <Text className="flex-1 text-typography-700 font-semibold">Device</Text>
-                        <Text className="flex-1 text-typography-700 font-semibold">Model</Text>
-                        <Text className="w-16 text-typography-700 font-semibold">Temp</Text>
-                        <Text className="w-24 text-typography-700 font-semibold text-center">Reallocated</Text>
-                        <Text className="w-24 text-typography-700 font-semibold text-center">Pending</Text>
-                        <Text className="w-20 text-typography-700 font-semibold text-center">Status</Text>
-                        <Text className="w-20 text-typography-700 font-semibold text-center">Actions</Text>
-                      </HStack>
-                      <Divider />
-                      {(Array.isArray(disks) ? disks : []).map((disk) => (
-                        <HStack key={disk.device} className="py-3 items-center">
-                          <Text className="flex-1 text-typography-900 font-semibold">{formatDeviceDisplay(disk)}</Text>
-                          <Text className="flex-1 text-typography-700">{disk.model || "—"}</Text>
-                          <Text className="w-16 text-typography-700">{formatTemp(disk.temp)}</Text>
-                          <Text className="w-24 text-center text-typography-700">{disk.reallocated ?? 0}</Text>
-                          <Text className="w-24 text-center text-typography-700">{disk.pending ?? 0}</Text>
-                          <Box className="w-20 items-center">{badgeStatus(disk.status) || badgeStatus(disk.healthStatus)}</Box>
-                          <HStack className="w-20 justify-end gap-2">
-                            <Button action="default" variant="outline" size="sm" onPress={() => setSelfTestTarget(disk)}>
-                              <ButtonIcon as={Activity} size="sm" />
-                            </Button>
-                            <Button action="default" variant="outline" size="sm" onPress={() => handleOpenDetail(disk)}>
-                              <ButtonIcon as={ChevronDownIcon} size="sm" />
-                            </Button>
-                          </HStack>
+              <VStack className="mt-6 gap-3">
+                {(disks ?? []).length === 0 ? (
+                  <Box className="p-4 rounded-2xl bg-background-0 border border-background-200 shadow-soft-1">
+                    <Text className="text-typography-600 text-sm">No eligible disks found.</Text>
+                  </Box>
+                ) : (
+                  (disks ?? []).map((disk) => (
+                    <Pressable
+                      key={disk.device}
+                      onPress={() => openDetail(disk.device)}
+                      className="p-4 rounded-2xl bg-background-0 border border-background-200 shadow-soft-1"
+                    >
+                      <HStack className="items-center justify-between flex-wrap gap-2">
+                        <HStack className="items-center gap-2 flex-1">
+                          <HardDrive size={18} color="#0f172a" />
+                          <VStack>
+                            <Text className="text-typography-900 font-semibold">{getDeviceLabel(disk.device, disks, deviceMeta)}</Text>
+                            <Text className="text-typography-600 text-xs">
+                              {disk.serial ? `Serial ${disk.serial}` : ""}
+                            </Text>
+                          </VStack>
                         </HStack>
-                      ))}
-                    </>
-                  )}
-                </Box>
-              </Box>
+                        <HStack className="items-center gap-2">
+                          {badgeStatus(disk.healthStatus || disk.status)}
+                          <Badge className="rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
+                            <BadgeText className="text-xs text-typography-800">Temp {formatTemp(disk.temp)}</BadgeText>
+                          </Badge>
+                        </HStack>
+                      </HStack>
 
-              <Box className="mt-6 rounded-2xl bg-background-0 border border-background-200 shadow-soft-1">
+                      <HStack className="mt-3 items-center flex-wrap gap-3">
+                        <Text className="text-typography-700 text-sm">Model: {disk.model || deviceMeta[disk.device] || "—"}</Text>
+                        <Text className="text-typography-700 text-sm">Capacity: {formatCapacity(disk.capacity)}</Text>
+                        <Text className="text-typography-700 text-sm">Reallocated: {disk.reallocated ?? 0}</Text>
+                        <Text className="text-typography-700 text-sm">Pending: {disk.pending ?? 0}</Text>
+                      </HStack>
+
+                      {renderSelfTestBar(disk.device)}
+                      {renderReallocBar(disk.device)}
+
+                      <HStack className="mt-3 gap-2">
+                        <Button action="default" variant="outline" size="sm" onPress={() => openDetail(disk.device, "selftest")}>
+                          <ButtonIcon as={Activity} size="sm" />
+                          <ButtonText>Self-test</ButtonText>
+                        </Button>
+                        <Button action="default" variant="outline" size="sm" onPress={() => openDetail(disk.device, "realloc")}>
+                          <ButtonIcon as={RefreshCcw} size="sm" />
+                          <ButtonText>Realloc</ButtonText>
+                        </Button>
+                        <Button action="primary" variant="solid" size="sm" onPress={() => openDetail(disk.device, "info")}>
+                          <ButtonIcon as={Info} size="sm" />
+                          <ButtonText>Details</ButtonText>
+                        </Button>
+                      </HStack>
+                    </Pressable>
+                  ))
+                )}
+              </VStack>
+
+              <Box className="mt-8 rounded-2xl bg-background-0 border border-background-200 shadow-soft-1">
                 <HStack className="px-4 py-3 items-center justify-between">
-                  <Text className="text-typography-900 font-semibold text-base">Scheduled Tests</Text>
+                  <Text className="text-typography-900 font-semibold text-base">Schedules</Text>
                   <Text className="text-typography-600 text-sm">{schedules.length} items</Text>
                 </HStack>
                 <Divider />
                 {schedules.length === 0 ? (
                   <Box className="p-4">
-                    <Text className="text-typography-600 text-sm">No schedules.</Text>
+                    <Text className="text-typography-600 text-sm">No schedules configured.</Text>
                   </Box>
                 ) : (
                   <VStack className="divide-y divide-background-200">
                     {schedules.map((sched) => (
-                      <HStack key={sched.id} className="px-4 py-3 items-center flex-wrap gap-2">
-                        <Text className="flex-1 text-typography-900 font-semibold">{getDeviceLabel(sched.device, disks, deviceMeta)}</Text>
-                        <Badge className="rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
-                          <BadgeText className="text-xs text-typography-800">{sched.type}</BadgeText>
-                        </Badge>
-                        <Text className="w-28 text-typography-700">{WEEK_DAYS[sched.week_day] ?? sched.week_day}</Text>
-                        <Text className="w-16 text-typography-700">{`${String(sched.hour).padStart(2, "0")}:00`}</Text>
-                        <Badge className="rounded-full px-3 py-1" size="sm" action={sched.active ? "success" : "muted"} variant="solid">
-                          <BadgeText className="text-xs text-typography-800">{sched.active ? "Active" : "Inactive"}</BadgeText>
-                        </Badge>
-                        <HStack className="gap-2 ml-auto">
+                      <Box key={sched.id} className="px-4 py-3">
+                        <HStack className="items-center gap-2 flex-wrap">
+                          <CalendarClock size={16} color="#0f172a" />
+                          <Text className="text-typography-900 font-semibold flex-1">
+                            {getDeviceLabel(sched.device, disks, deviceMeta)}
+                          </Text>
+                          <Badge className="rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
+                            <BadgeText className="text-xs text-typography-800">{sched.type}</BadgeText>
+                          </Badge>
+                          <Text className="text-typography-700 text-sm">{WEEK_DAYS[sched.week_day] ?? sched.week_day}</Text>
+                          <Text className="text-typography-700 text-sm">{`${String(sched.hour).padStart(2, "0")}:00`}</Text>
+                          <Badge className="rounded-full px-3 py-1" size="sm" action={sched.active ? "success" : "muted"} variant="solid">
+                            <BadgeText className="text-xs text-typography-800">{sched.active ? "Active" : "Inactive"}</BadgeText>
+                          </Badge>
+                        </HStack>
+                        <HStack className="mt-2 gap-2">
+                          <Button
+                            action="default"
+                            variant="outline"
+                            size="sm"
+                            onPress={() => openSchedule(sched)}
+                          >
+                            <ButtonIcon as={Info} size="sm" />
+                            <ButtonText>Edit</ButtonText>
+                          </Button>
                           <Button
                             action="default"
                             variant="outline"
                             size="sm"
                             onPress={() => toggleSchedule(sched)}
-                            isDisabled={savingAction === `sched-${sched.id}`}
+                            isDisabled={savingAction === `sched-toggle-${sched.id}`}
                           >
-                            {savingAction === `sched-${sched.id}` ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
+                            {savingAction === `sched-toggle-${sched.id}` ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
                           </Button>
                           <Button
                             action="negative"
@@ -510,7 +780,7 @@ export default function SmartDiskScreen() {
                             {savingAction === `sched-del-${sched.id}` ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
                           </Button>
                         </HStack>
-                      </HStack>
+                      </Box>
                     ))}
                   </VStack>
                 )}
@@ -520,53 +790,209 @@ export default function SmartDiskScreen() {
         </Box>
       </ScrollView>
 
-      <Modal isOpen={selfTestTarget !== null} onClose={() => setSelfTestTarget(null)} size="md">
+      <Modal isOpen={detailDevice !== null} onClose={() => setDetailDevice(null)} size="lg">
         <ModalBackdrop />
-        <ModalContent className="max-w-xl">
+        <ModalContent className="max-w-3xl max-h-[90vh]">
           <ModalHeader className="flex-row items-start justify-between">
-            <Heading size="md" className="text-typography-900">
-              Run Self-Test
-            </Heading>
+            <VStack className="flex-1">
+              <Heading size="md" className="text-typography-900">
+                {detailDevice}
+              </Heading>
+              <HStack className="gap-2 items-center flex-wrap">
+                {badgeStatus(detailDisk?.healthStatus || detailDisk?.status)}
+                <Badge className="rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
+                  <BadgeText className="text-xs text-typography-800">Temp {formatTemp(detailDisk?.temp)}</BadgeText>
+                </Badge>
+              </HStack>
+            </VStack>
             <ModalCloseButton />
           </ModalHeader>
-          <ModalBody className="gap-4">
-            <Text className="text-typography-700">{selfTestTarget ? formatDeviceDisplay(selfTestTarget) : ""}</Text>
-            <FormControl>
-              <FormControlLabel>
-                <FormControlLabelText>Test Type</FormControlLabelText>
-              </FormControlLabel>
-              <Select
-                selectedValue={scheduleForm.type}
-                onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, type: val }))}
-              >
-                <SelectTrigger>
-                  <SelectInput placeholder="Select" value={scheduleForm.type} />
-                  <SelectIcon as={ChevronDownIcon} />
-                </SelectTrigger>
-                <SelectPortal>
-                  <SelectBackdrop />
-                  <SelectContent>
-                    <SelectDragIndicatorWrapper>
-                      <SelectDragIndicator />
-                    </SelectDragIndicatorWrapper>
-                    {TEST_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value} label={t.label} />
-                    ))}
-                  </SelectContent>
-                </SelectPortal>
-              </Select>
-              <FormControlHelper>
-                <FormControlHelperText>Quick or extended test.</FormControlHelperText>
-              </FormControlHelper>
-            </FormControl>
+          <ModalBody className="gap-4 max-h-[70vh]">
+            <HStack className="gap-2">
+              {(["info", "selftest", "realloc"] as DetailTab[]).map((tab) => (
+                <Pressable
+                  key={tab}
+                  onPress={() => setDetailTab(tab)}
+                  className={`px-4 py-2 rounded-xl border ${
+                    detailTab === tab ? "border-primary-500 bg-primary-50" : "border-background-200 bg-background-0"
+                  }`}
+                >
+                  <Text className={`font-semibold ${detailTab === tab ? "text-primary-700" : "text-typography-700"}`}>
+                    {tab === "info" ? "Information" : tab === "selftest" ? "Self-test" : "Realloc"}
+                  </Text>
+                </Pressable>
+              ))}
+            </HStack>
+
+            {detailLoading ? (
+              <VStack className="gap-3">
+                <Skeleton className="h-5 w-1/2" />
+                <SkeletonText className="w-full" />
+              </VStack>
+            ) : detailTab === "info" ? (
+              <VStack className="gap-4">
+                <Box className="p-3 rounded-xl border border-background-200 bg-background-50">
+                  <Text className="text-typography-800 font-semibold mb-2">General</Text>
+                  <VStack className="gap-1">
+                    <Text className="text-typography-700">Model: {detailDisk?.model || "—"}</Text>
+                    <Text className="text-typography-700">Serial: {detailDisk?.serial || "—"}</Text>
+                    <Text className="text-typography-700">Firmware: {detailDisk?.firmware || "—"}</Text>
+                    <Text className="text-typography-700">Capacity: {formatCapacity(detailDisk?.capacity)}</Text>
+                    <Text className="text-typography-700">Power On Hours: {detailDisk?.powerOnHours ?? "—"}</Text>
+                    <Text className="text-typography-700">Power Cycles: {detailDisk?.powerCycles ?? detailDisk?.powerCycleCount ?? "—"}</Text>
+                  </VStack>
+                  <Button className="mt-3 self-start" variant="outline" action="default" size="sm" onPress={() => setRawDetailsOpen(true)}>
+                    <ButtonIcon as={Info} size="sm" />
+                    <ButtonText>See full details</ButtonText>
+                  </Button>
+                </Box>
+                <Box className="p-3 rounded-xl border border-background-200">
+                  <Text className="text-typography-800 font-semibold mb-2">SMART</Text>
+                  <HStack className="gap-3 flex-wrap">
+                    <Text className="text-typography-700">Reallocated Sectors: {detailDisk?.metrics?.reallocatedSectors ?? "—"}</Text>
+                    <Text className="text-typography-700">Pending Sectors: {detailDisk?.metrics?.pendingSectors ?? "—"}</Text>
+                    <Text className="text-typography-700">Offline Uncorrectable: {detailDisk?.metrics?.offlineUncorrectable ?? "—"}</Text>
+                  </HStack>
+                  {detailDisk?.recommendedAction ? (
+                    <Badge className="mt-2 rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
+                      <BadgeText className="text-xs text-typography-800">{detailDisk.recommendedAction}</BadgeText>
+                    </Badge>
+                  ) : null}
+                </Box>
+                <Box className="p-3 rounded-xl border border-background-200">
+                  <Text className="text-typography-800 font-semibold mb-2">Self-test History</Text>
+                  {detailDisk?.testsHistory && detailDisk.testsHistory.length > 0 ? (
+                    <VStack className="gap-2">
+                      {detailDisk.testsHistory.map((t, idx) => (
+                        <Box key={idx} className="p-2 rounded-lg border border-background-200 bg-background-50">
+                          <Text className="text-typography-900 font-semibold">{t.type || "Test"}</Text>
+                          <Text className="text-typography-700 text-sm">Status: {t.status || "—"}</Text>
+                          <Text className="text-typography-700 text-sm">Lifetime Hours: {t.lifetimeHours ?? "—"}</Text>
+                        </Box>
+                      ))}
+                    </VStack>
+                  ) : (
+                    <Text className="text-typography-600 text-sm">No history.</Text>
+                  )}
+                </Box>
+              </VStack>
+            ) : detailTab === "selftest" ? (
+              <VStack className="gap-4">
+                <Box className="p-3 rounded-xl border border-background-200 bg-background-50">
+                  <Text className="text-typography-800 font-semibold mb-2">Progress</Text>
+                  {detailProgress && detailProgress.status?.toLowerCase?.() !== "idle" ? (
+                    <>
+                      <HStack className="justify-between items-center mb-1">
+                        <Text className="text-typography-700 text-sm">{detailProgress.status}</Text>
+                        <Text className="text-typography-700 text-sm">{detailProgress.progressPercent ?? 0}%</Text>
+                      </HStack>
+                      <Progress value={detailProgress.progressPercent ?? 0}>
+                        <ProgressFilledTrack />
+                      </Progress>
+                    </>
+                  ) : (
+                    <Text className="text-typography-600 text-sm">No self-test running.</Text>
+                  )}
+                </Box>
+                <FormControl>
+                  <FormControlLabel>
+                    <FormControlLabelText>Test type</FormControlLabelText>
+                  </FormControlLabel>
+                  <Select selectedValue={selfTestType} onValueChange={(val) => setSelfTestType(val)}>
+                    <SelectTrigger>
+                      <SelectInput placeholder="Type" value={selfTestType} />
+                      <SelectIcon as={ChevronDown} />
+                    </SelectTrigger>
+                    <SelectPortal>
+                      <SelectBackdrop />
+                      <SelectContent>
+                        <SelectDragIndicatorWrapper>
+                          <SelectDragIndicator />
+                        </SelectDragIndicatorWrapper>
+                        {TEST_TYPES.map((t) => (
+                          <SelectItem key={t.value} value={t.value} label={t.label} />
+                        ))}
+                      </SelectContent>
+                    </SelectPortal>
+                  </Select>
+                  <FormControlHelper>
+                    <FormControlHelperText>Self-test runs in background; we refresh progress every minute.</FormControlHelperText>
+                  </FormControlHelper>
+                </FormControl>
+                <HStack className="gap-3">
+                  <Button action="primary" onPress={requestStartSelfTest} isDisabled={savingAction === "selftest-start"}>
+                    {savingAction === "selftest-start" ? <ButtonSpinner /> : <ButtonIcon as={Play} size="sm" />}
+                    <ButtonText>Start</ButtonText>
+                  </Button>
+                  <Button
+                    action="negative"
+                    variant="outline"
+                    onPress={handleCancelSelfTest}
+                    isDisabled={savingAction === "selftest-cancel"}
+                  >
+                    {savingAction === "selftest-cancel" ? <ButtonSpinner /> : <ButtonIcon as={XCircle} size="sm" />}
+                    <ButtonText>Cancel</ButtonText>
+                  </Button>
+                </HStack>
+              </VStack>
+            ) : (
+              <VStack className="gap-4">
+                <Box className="p-3 rounded-xl border border-background-200 bg-background-50">
+                  <Text className="text-typography-800 font-semibold mb-2">Realloc Status</Text>
+                  {detailRealloc && !detailRealloc.completed ? (
+                    <>
+                      <HStack className="justify-between items-center mb-1">
+                        <Text className="text-typography-700 text-sm">{detailRealloc.mode || "Running"}</Text>
+                        <Text className="text-typography-700 text-sm">{detailRealloc.percent ?? 0}%</Text>
+                      </HStack>
+                      <Progress value={detailRealloc.percent ?? 0}>
+                        <ProgressFilledTrack />
+                      </Progress>
+                      {detailRealloc.lastLine ? <Text className="text-typography-600 text-xs mt-1">{detailRealloc.lastLine}</Text> : null}
+                    </>
+                  ) : (
+                    <Text className="text-typography-600 text-sm">No operation in progress.</Text>
+                  )}
+                </Box>
+                <Text className="text-typography-700 text-sm">Choose a realloc mode for this disk:</Text>
+                <HStack className="gap-2 flex-wrap">
+                  <Button
+                    action="primary"
+                    variant="outline"
+                    onPress={() => requestReallocAction("full")}
+                    isDisabled={savingAction === "realloc-full"}
+                  >
+                    {savingAction === "realloc-full" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
+                    <ButtonText>Full wipe</ButtonText>
+                  </Button>
+                  <Button
+                    action="default"
+                    variant="outline"
+                    onPress={() => requestReallocAction("non")}
+                    isDisabled={savingAction === "realloc-non"}
+                  >
+                    {savingAction === "realloc-non" ? <ButtonSpinner /> : <ButtonIcon as={ShieldCheck} size="sm" />}
+                    <ButtonText>Non-destructive</ButtonText>
+                  </Button>
+                  <Button
+                    action="negative"
+                    variant="outline"
+                    onPress={() => requestReallocAction("cancel")}
+                    isDisabled={savingAction === "realloc-cancel"}
+                  >
+                    {savingAction === "realloc-cancel" ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
+                    <ButtonText>Cancel</ButtonText>
+                  </Button>
+                </HStack>
+                {detailRealloc?.error ? (
+                  <Text className="text-error-600 text-sm">Error: {detailRealloc.error}</Text>
+                ) : null}
+              </VStack>
+            )}
           </ModalBody>
           <ModalFooter className="gap-3">
-            <Button variant="outline" action="default" onPress={() => setSelfTestTarget(null)} isDisabled={savingAction === "selftest"}>
-              <ButtonText>Cancel</ButtonText>
-            </Button>
-            <Button action="primary" onPress={handleStartSelfTest} isDisabled={savingAction === "selftest"}>
-              {savingAction === "selftest" ? <ButtonSpinner /> : <ButtonIcon as={Play} size="sm" />}
-              <ButtonText>Start Test</ButtonText>
+            <Button action="default" variant="outline" onPress={() => setDetailDevice(null)}>
+              <ButtonText>Close</ButtonText>
             </Button>
           </ModalFooter>
         </ModalContent>
@@ -578,9 +1004,9 @@ export default function SmartDiskScreen() {
           <ModalHeader className="flex-row items-start justify-between">
             <VStack>
               <Heading size="md" className="text-typography-900">
-                New Schedule
+                {editingSchedule ? "Edit schedule" : "New schedule"}
               </Heading>
-              <Text className="text-typography-600 text-sm">Schedule automatic SMART tests</Text>
+              <Text className="text-typography-600 text-sm">Configure recurring tests</Text>
             </VStack>
             <ModalCloseButton />
           </ModalHeader>
@@ -589,13 +1015,10 @@ export default function SmartDiskScreen() {
               <FormControlLabel>
                 <FormControlLabelText>Device</FormControlLabelText>
               </FormControlLabel>
-              <Select
-                selectedValue={scheduleForm.device}
-                onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, device: val }))}
-              >
+              <Select selectedValue={scheduleForm.device} onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, device: val }))}>
                 <SelectTrigger>
                   <SelectInput placeholder="Select disk" value={getDeviceLabel(scheduleForm.device, disks, deviceMeta)} />
-                  <SelectIcon as={ChevronDownIcon} />
+                  <SelectIcon as={ChevronDown} />
                 </SelectTrigger>
                 <SelectPortal>
                   <SelectBackdrop />
@@ -614,15 +1037,12 @@ export default function SmartDiskScreen() {
 
             <FormControl>
               <FormControlLabel>
-                <FormControlLabelText>Test Type</FormControlLabelText>
+                <FormControlLabelText>Type</FormControlLabelText>
               </FormControlLabel>
-              <Select
-                selectedValue={scheduleForm.type}
-                onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, type: val }))}
-              >
+              <Select selectedValue={scheduleForm.type} onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, type: val }))}>
                 <SelectTrigger>
-                  <SelectInput placeholder="Select" value={scheduleForm.type} />
-                  <SelectIcon as={ChevronDownIcon} />
+                  <SelectInput placeholder="Type" value={scheduleForm.type} />
+                  <SelectIcon as={ChevronDown} />
                 </SelectTrigger>
                 <SelectPortal>
                   <SelectBackdrop />
@@ -640,7 +1060,7 @@ export default function SmartDiskScreen() {
 
             <FormControl>
               <FormControlLabel>
-                <FormControlLabelText>Day of the Week</FormControlLabelText>
+                <FormControlLabelText>Day of week</FormControlLabelText>
               </FormControlLabel>
               <Select
                 selectedValue={String(scheduleForm.week_day)}
@@ -648,7 +1068,7 @@ export default function SmartDiskScreen() {
               >
                 <SelectTrigger>
                   <SelectInput placeholder="Day" value={String(scheduleForm.week_day)} />
-                  <SelectIcon as={ChevronDownIcon} />
+                  <SelectIcon as={ChevronDown} />
                 </SelectTrigger>
                 <SelectPortal>
                   <SelectBackdrop />
@@ -668,13 +1088,10 @@ export default function SmartDiskScreen() {
               <FormControlLabel>
                 <FormControlLabelText>Hour</FormControlLabelText>
               </FormControlLabel>
-              <Select
-                selectedValue={String(scheduleForm.hour)}
-                onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, hour: Number(val) }))}
-              >
+              <Select selectedValue={String(scheduleForm.hour)} onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, hour: Number(val) }))}>
                 <SelectTrigger>
                   <SelectInput placeholder="Hour" value={String(scheduleForm.hour)} />
-                  <SelectIcon as={ChevronDownIcon} />
+                  <SelectIcon as={ChevronDown} />
                 </SelectTrigger>
                 <SelectPortal>
                   <SelectBackdrop />
@@ -691,135 +1108,107 @@ export default function SmartDiskScreen() {
             </FormControl>
 
             <HStack className="items-center gap-2">
-              <Switch
-                value={scheduleForm.active}
-                onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, active: val }))}
-              />
-              <Text className="text-typography-800">Active schedule</Text>
+              <Switch value={scheduleForm.active} onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, active: val }))} />
+              <Text className="text-typography-800">Active</Text>
             </HStack>
+
+            {editingSchedule?.last_run ? (
+              <Text className="text-typography-600 text-xs">Last run: {editingSchedule.last_run}</Text>
+            ) : null}
           </ModalBody>
           <ModalFooter className="gap-3">
-            <Button variant="outline" action="default" onPress={() => setScheduleModal(false)} isDisabled={savingAction === "schedule"}>
+            {editingSchedule ? (
+              <Button
+                action="negative"
+                variant="outline"
+                onPress={() => editingSchedule && handleDeleteSchedule(editingSchedule)}
+                isDisabled={savingAction?.startsWith("sched-del-")}
+              >
+                {savingAction?.startsWith("sched-del-") ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
+                <ButtonText>Delete</ButtonText>
+              </Button>
+            ) : null}
+            <Button variant="outline" action="default" onPress={() => setScheduleModal(false)} isDisabled={savingAction?.startsWith("schedule")}>
               <ButtonText>Cancel</ButtonText>
             </Button>
-            <Button action="primary" onPress={handleScheduleSave} isDisabled={savingAction === "schedule"}>
-              {savingAction === "schedule" ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
-              <ButtonText>Create</ButtonText>
+            <Button action="primary" onPress={handleSaveSchedule} isDisabled={savingAction?.startsWith("schedule")}>
+              {savingAction?.startsWith("schedule") ? <ButtonSpinner /> : <ButtonIcon as={CalendarClock} size="sm" />}
+              <ButtonText>Save</ButtonText>
             </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
 
-      <Modal isOpen={diskDetail !== null} onClose={() => setDiskDetail(null)} size="lg">
+      <AlertDialog isOpen={confirmState !== null} onClose={() => setConfirmState(null)}>
+        <AlertDialogBackdrop />
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <Heading size="md" className="text-typography-900">
+              Confirm action
+            </Heading>
+            <AlertDialogCloseButton />
+          </AlertDialogHeader>
+          <AlertDialogBody className="gap-2">
+            <Text className="text-typography-800">{confirmState?.message}</Text>
+            {confirmState && confirmState.remaining > 1 ? (
+              <Text className="text-typography-600 text-sm">
+                This action needs multiple confirmations. Confirm {confirmState.remaining} time(s) to proceed.
+              </Text>
+            ) : null}
+          </AlertDialogBody>
+          <AlertDialogFooter className="gap-2">
+            <Button variant="outline" action="default" onPress={() => setConfirmState(null)}>
+              <ButtonText>Cancel</ButtonText>
+            </Button>
+            <Button
+              action="primary"
+              onPress={async () => {
+                if (!confirmState) return;
+                if (confirmState.remaining > 1) {
+                  setConfirmState((prev) => (prev ? { ...prev, remaining: prev.remaining - 1 } : prev));
+                  return;
+                }
+                const run = confirmState.run;
+                setConfirmState(null);
+                await Promise.resolve(run());
+              }}
+            >
+              <ButtonText>Confirm</ButtonText>
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Modal isOpen={rawDetailsOpen} onClose={() => setRawDetailsOpen(false)} size="lg">
         <ModalBackdrop />
         <ModalContent className="max-w-3xl max-h-[90vh]">
           <ModalHeader className="flex-row items-start justify-between">
             <VStack>
               <Heading size="md" className="text-typography-900">
-                Disk Details
+                Full Disk Details
               </Heading>
-              <Text className="text-typography-600">{diskDetail ? formatDeviceDisplay(diskDetail) : ""}</Text>
+              <Text className="text-typography-600 text-sm">{detailDevice}</Text>
             </VStack>
             <ModalCloseButton />
           </ModalHeader>
-          <ModalBody className="gap-4 max-h-[70vh]">
-            <Box className="p-3 rounded-xl border border-background-200 bg-background-50">
-              <Text className="text-typography-800 font-semibold mb-2">General Information</Text>
+          <ModalBody className="gap-3 max-h-[70vh]">
+            {rawEntries.length === 0 ? (
+              <Text className="text-typography-600 text-sm">No details available.</Text>
+            ) : (
               <VStack className="gap-2">
-                <Text className="text-typography-700">Modelo: {diskDetail?.model || "—"}</Text>
-                <Text className="text-typography-700">Serial: {diskDetail?.serial || "—"}</Text>
-                <Text className="text-typography-700">Firmware: {diskDetail?.firmware || "—"}</Text>
-                <Text className="text-typography-700">Capacidade: {diskDetail?.capacity || "—"}</Text>
-                <Text className="text-typography-700">Power On Hours: {diskDetail?.powerOnHours ?? "—"}</Text>
+                {rawEntries.map(([key, value]) => (
+                  <HStack key={key} className="justify-between gap-3">
+                    <Text className="text-typography-700 flex-1">{key}</Text>
+                    <Text className="text-typography-900 flex-1 text-right">
+                      {Array.isArray(value) ? JSON.stringify(value) : String(value)}
+                    </Text>
+                  </HStack>
+                ))}
               </VStack>
-            </Box>
-
-            <Box className="p-3 rounded-xl border border-background-200">
-              <Text className="text-typography-800 font-semibold mb-2">Health Status</Text>
-              <HStack className="gap-3 items-center flex-wrap">
-                <Text className="text-typography-700">Health Status: {diskDetail?.healthStatus || diskDetail?.status || "—"}</Text>
-                <Text className="text-typography-700">SMART Passed: {diskDetail?.smartPassed ? "Yes" : "No"}</Text>
-                {diskDetail?.recommendedAction ? (
-                  <Badge className="rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
-                    <BadgeText className="text-xs text-typography-800">{diskDetail.recommendedAction}</BadgeText>
-                  </Badge>
-                ) : null}
-              </HStack>
-              <HStack className="gap-4 mt-3 flex-wrap">
-                <HStack className="items-center gap-2">
-                  <ThermometerSun size={16} color="#0f172a" />
-                  <Text className="text-typography-700">Max Temp: {diskDetail?.maxTemp ?? "—"}</Text>
-                </HStack>
-                <HStack className="items-center gap-2">
-                  <ThermometerSnowflake size={16} color="#0f172a" />
-                  <Text className="text-typography-700">Min Temp: {diskDetail?.minTemp ?? "—"}</Text>
-                </HStack>
-                <Text className="text-typography-700">Power Cycles: {diskDetail?.powerCycles ?? "—"}</Text>
-              </HStack>
-            </Box>
-
-            <Box className="p-3 rounded-xl border border-background-200">
-              <Text className="text-typography-800 font-semibold mb-2">SMART Metrics</Text>
-              <VStack className="gap-1">
-                <Text className="text-typography-700">Reallocated Sectors: {diskDetail?.metrics?.reallocatedSectors ?? "—"}</Text>
-                <Text className="text-typography-700">Reallocated Event Count: {diskDetail?.metrics?.reallocatedEventCount ?? "—"}</Text>
-                <Text className="text-typography-700">Pending Sectors: {diskDetail?.metrics?.pendingSectors ?? "—"}</Text>
-                <Text className="text-typography-700">Offline Uncorrectable: {diskDetail?.metrics?.offlineUncorrectable ?? "—"}</Text>
-              </VStack>
-            </Box>
-
-            <Box className="p-3 rounded-xl border border-background-200">
-              <Text className="text-typography-800 font-semibold mb-2">Self-Tests History</Text>
-              {diskDetail?.testsHistory && diskDetail.testsHistory.length > 0 ? (
-                <VStack className="gap-2">
-                  {diskDetail.testsHistory.map((t, idx) => (
-                    <Box key={idx} className="p-2 rounded-lg border border-background-200 bg-background-50">
-                      <Text className="text-typography-900 font-semibold">{t.type || "Test"}</Text>
-                      <Text className="text-typography-700 text-sm">Status: {t.status || "—"}</Text>
-                      <Text className="text-typography-700 text-sm">Lifetime Hours: {t.lifetimeHours ?? "—"}</Text>
-                    </Box>
-                  ))}
-                </VStack>
-              ) : (
-                <Text className="text-typography-600 text-sm">No history available.</Text>
-              )}
-            </Box>
-
-            <Box className="p-3 rounded-xl border border-background-200">
-              <Text className="text-typography-800 font-semibold mb-2">Reallocate</Text>
-              <HStack className="gap-2 flex-wrap">
-                <Button
-                  action="primary"
-                  variant="outline"
-                  onPress={() => diskDetail?.device && performReallocAction("realloc-full", () => reallocFullWipe(selectedMachine, diskDetail.device))}
-                  isDisabled={savingAction === "realloc-full"}
-                >
-                  {savingAction === "realloc-full" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
-                  <ButtonText>Full Wipe</ButtonText>
-                </Button>
-                <Button
-                  action="default"
-                  variant="outline"
-                  onPress={() => diskDetail?.device && performReallocAction("realloc-non", () => reallocNonDestructive(selectedMachine, diskDetail.device))}
-                  isDisabled={savingAction === "realloc-non"}
-                >
-                  {savingAction === "realloc-non" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
-                  <ButtonText>Non-Destructive</ButtonText>
-                </Button>
-                <Button
-                  action="negative"
-                  variant="outline"
-                  onPress={() => diskDetail?.device && performReallocAction("realloc-cancel", () => reallocCancel(selectedMachine, diskDetail.device))}
-                  isDisabled={savingAction === "realloc-cancel"}
-                >
-                  {savingAction === "realloc-cancel" ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
-                  <ButtonText>Cancel</ButtonText>
-                </Button>
-              </HStack>
-            </Box>
+            )}
           </ModalBody>
-          <ModalFooter className="gap-3">
-            <Button action="primary" onPress={() => setDiskDetail(null)}>
+          <ModalFooter>
+            <Button action="primary" onPress={() => setRawDetailsOpen(false)}>
               <ButtonText>Close</ButtonText>
             </Button>
           </ModalFooter>
