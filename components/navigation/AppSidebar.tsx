@@ -21,7 +21,7 @@ import {
   ModalHeader,
   ModalCloseButton,
 } from "@/components/ui/modal";
-import { Radio, RadioGroup, RadioIndicator, RadioLabel, RadioIcon } from "@/components/ui/radio";
+import { RadioGroup, RadioIndicator, RadioLabel, RadioIcon } from "@/components/ui/radio";
 import { Heading } from "@/components/ui/heading";
 import {
   HardDrive,
@@ -43,6 +43,21 @@ import {
   MonitorSmartphone,
   SunMedium,
   KeyRound,
+  Layers,
+  PlugZap,
+  Gauge,
+  ServerCog,
+  DatabaseBackup,
+  History,
+  TriangleAlert,
+  ShieldCheck,
+  GitFork,
+  ArrowLeftRight,
+  Radio,
+  Image as ImageIcon,
+  Box as BoxIcon,
+  Database,
+  GitBranch,
 } from "lucide-react-native";
 import { usePathname, useRouter } from "expo-router";
 import { clearAuthToken } from "@/services/auth-storage";
@@ -58,6 +73,7 @@ type MenuItem = {
   label: string;
   route?: string;
   icon?: React.ComponentType<any>;
+  iconProps?: Omit<Partial<React.ComponentProps<typeof Icon>>, "as">;
   children?: MenuItem[];
 };
 
@@ -71,9 +87,9 @@ const MENU_ITEMS: MenuItem[] = [
     label: "Storage",
     icon: HardDrive,
     children: [
-      { label: "BTRFS / RAIDs", route: "/btrfs-raids" },
-      { label: "Auto-Mounts", route: "/btrfs-automatic-mounts" },
-      { label: "SmartDisk", route: "/smartdisk" },
+      { label: "BTRFS / RAIDs", route: "/btrfs-raids", icon: Layers },
+      { label: "Auto-Mounts", route: "/btrfs-automatic-mounts", icon: PlugZap },
+      { label: "SmartDisk", route: "/smartdisk", icon: Gauge },
     ],
   },
   {
@@ -90,9 +106,9 @@ const MENU_ITEMS: MenuItem[] = [
     label: "VMs",
     icon: Server,
     children: [
-      { label: "Virtual Machines", route: "/vms" },
-      { label: "Backups", route: "/backups" },
-      { label: "Auto-Backups", route: "/autobackups" },
+      { label: "Virtual Machines", route: "/vms", icon: ServerCog },
+      { label: "Backups", route: "/backups", icon: DatabaseBackup },
+      { label: "Auto-Backups", route: "/autobackups", icon: History },
     ],
   },
   {
@@ -123,23 +139,24 @@ const MENU_ITEMS: MenuItem[] = [
   {
     label: "Nginx",
     icon: Network,
+    iconProps: { strokeWidth: 1.2 },
     children: [
-      { label: "404", route: "/404" },
-      { label: "Certificates", route: "/certificates" },
-      { label: "Proxy", route: "/proxy" },
-      { label: "Redirection", route: "/redirection" },
-      { label: "Streams", route: "/streams" },
+      { label: "404", route: "/404", icon: TriangleAlert },
+      { label: "Certificates", route: "/certificates", icon: ShieldCheck },
+      { label: "Proxy", route: "/proxy", icon: GitFork },
+      { label: "Redirection", route: "/redirection", icon: ArrowLeftRight },
+      { label: "Streams", route: "/streams", icon: Radio },
     ],
   },
   {
     label: "Docker",
     icon: Boxes,
     children: [
-      { label: "Images", route: "/docker/images" },
-      { label: "Containers", route: "/docker/containers" },
-      { label: "Volumes", route: "/docker/volumes" },
-      { label: "Networks", route: "/docker/networks" },
-      { label: "Git", route: "/docker/git" },
+      { label: "Images", route: "/docker/images", icon: ImageIcon },
+      { label: "Containers", route: "/docker/containers", icon: BoxIcon },
+      { label: "Volumes", route: "/docker/volumes", icon: Database },
+      { label: "Networks", route: "/docker/networks", icon: Network },
+      { label: "Git", route: "/docker/git", icon: GitBranch },
     ],
   },
 ];
@@ -224,6 +241,13 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
       const isExpanded = hasChildren ? Boolean(expandedParents[itemKey]) : false;
       const isActive = isItemActive(item);
       const paddingLeft = level * 12;
+      const showBullet = level > 0 && !item.icon;
+      const displayLabel = showBullet ? `- ${item.label}` : item.label;
+      const {
+        className: iconClassOverride,
+        size: iconSizeOverride,
+        ...restIconProps
+      } = item.iconProps ?? {};
 
       const handlePress = () => {
         if (hasChildren) {
@@ -238,49 +262,46 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
       return (
         <React.Fragment key={itemKey}>
           <Pressable
-            className={`gap-3 flex-row items-center rounded-xl px-4 py-3 transition-all ${
-              isActive
-                ? "bg-background-100 dark:bg-[#1A2637]"
-                : "hover:bg-background-50 dark:hover:bg-[#1A2637]/50 active:bg-background-100 dark:active:bg-[#1A2637]"
-            }`}
-            style={{marginLeft: paddingLeft}}
+            className={`gap-3 flex-row items-center rounded-xl px-4 py-3 transition-all ${isActive
+              ? "bg-background-100 dark:bg-[#1A2637]"
+              : "hover:bg-background-50 dark:hover:bg-[#1A2637]/50 active:bg-background-100 dark:active:bg-[#1A2637]"
+              }`}
+            style={{ marginLeft: paddingLeft }}
             onPress={handlePress}
           >
             <Box
               className="w-6 h-6 shrink-0 !items-center !justify-center"
-              style={{alignItems: "center", justifyContent: "center"}}
+              style={{ alignItems: "center", justifyContent: "center" }}
             >
               {item.icon ? (
                 <Icon
                   as={item.icon}
-                  size="md"
-                  className={`shrink-0 ${
-                    isActive
-                      ? "text-typography-900 dark:text-[#E8EBF0]"
-                      : "text-typography-600 dark:text-typography-400"
-                  }`}
+                  size={iconSizeOverride ?? "md"}
+                  className={`shrink-0 ${isActive
+                    ? "text-typography-900 dark:text-[#E8EBF0]"
+                    : "text-typography-600 dark:text-typography-400"
+                    } ${iconClassOverride ?? ""}`}
+                  {...restIconProps}
                 />
               ) : null}
             </Box>
             <Text
-              className={`flex-1 text-base ${
-                isActive
-                  ? "text-typography-900 dark:text-[#E8EBF0] font-semibold"
-                  : "text-typography-900 dark:text-typography-200 font-medium"
-              }`}
+              className={`flex-1 text-base ${isActive
+                ? "text-typography-900 dark:text-[#E8EBF0] font-semibold"
+                : "text-typography-900 dark:text-typography-200 font-medium"
+                }`}
               style={{
                 fontFamily: isActive ? "Inter_600SemiBold" : "Inter_500Medium",
               }}
             >
-              {level === 0 ? item.label : "- " + item.label}
+              {displayLabel}
             </Text>
             {hasChildren ? (
               <Icon
                 as={ChevronRight}
                 size="sm"
-                className={`ml-auto text-typography-500 dark:text-typography-400 transition-transform origin-center ${
-                  isExpanded ? "rotate-45" : ""
-                }`}
+                className={`ml-auto text-typography-500 dark:text-typography-400 transition-transform origin-center ${isExpanded ? "rotate-45" : ""
+                  }`}
               />
             ) : null}
           </Pressable>
@@ -367,8 +388,6 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
                   return (
                     <Radio
                       key={option.value}
-                      value={option.value}
-                      aria-label={option.label}
                       className={`flex-row items-center gap-3 rounded-xl border px-3 py-3 transition-all ${isActive
                         ? "border-primary-500 bg-primary-50/60 dark:border-[#4A7DFF] dark:bg-[#121C2D]"
                         : "border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524]"

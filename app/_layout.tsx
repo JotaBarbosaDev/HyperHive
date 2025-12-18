@@ -51,6 +51,8 @@ import {
   ModalFooter,
   ModalHeader,
 } from "@/components/ui/modal";
+import { VmProgressToastListener } from "@/components/VmProgressToastListener";
+import { SocketErrorModalListener } from "@/components/SocketErrorModalListener";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -481,6 +483,8 @@ function RootLayoutNav() {
               }}
             >
               <SelectedMachineProvider>
+                <VmProgressToastListener />
+                <SocketErrorModalListener />
                 <Box className="flex-1">
                   {pathname !== "/" && (
                     <Box

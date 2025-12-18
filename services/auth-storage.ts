@@ -5,6 +5,113 @@ export const AUTH_TOKEN_STORAGE_KEY = "hyperhive.authToken";
 export const API_BASE_URL_STORAGE_KEY = "hyperhive.apiBaseUrl";
 
 const AUTH_COOKIE_NAME = "Authorization";
+const isWebPlatform = Platform.OS === "web";
+
+type JwtPayload = {
+  exp?: number | string;
+  [key: string]: unknown;
+};
+
+const isDocumentAccessible = () =>
+  isWebPlatform && typeof document !== "undefined" && typeof document.cookie === "string";
+
+const base64UrlDecode = (value: string): string | null => {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padding = "=".repeat((4 - (normalized.length % 4)) % 4);
+  const safeValue = `${normalized}${padding}`;
+
+  if (typeof globalThis !== "undefined" && typeof globalThis.atob === "function") {
+    try {
+      return globalThis.atob(safeValue);
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+};
+
+const parseJwtPayload = (token: string): JwtPayload | null => {
+  const segments = token.split(".");
+  if (segments.length < 2) {
+    return null;
+  }
+  const decoded = base64UrlDecode(segments[1]);
+  if (!decoded) {
+    return null;
+  }
+  try {
+    return JSON.parse(decoded) as JwtPayload;
+  } catch {
+    return null;
+  }
+};
+
+const getTokenExpiryMs = (token: string): number | null => {
+  const payload = parseJwtPayload(token);
+  if (!payload) {
+    return null;
+  }
+  const expValue = payload.exp;
+  if (typeof expValue === "number") {
+    return expValue * 1000;
+  }
+  if (typeof expValue === "string") {
+    const parsed = Number(expValue);
+    if (!Number.isNaN(parsed)) {
+      return parsed * 1000;
+    }
+  }
+  return null;
+};
+
+const isTokenExpired = (token: string): boolean => {
+  const expiryMs = getTokenExpiryMs(token);
+  if (expiryMs === null) {
+    return false;
+  }
+  return Date.now() >= expiryMs;
+};
+
+const getCookieValue = (name: string): string | null => {
+  if (!isDocumentAccessible()) {
+    return null;
+  }
+  const cookiePairs = document.cookie.split(";");
+  for (const pair of cookiePairs) {
+    const [rawName, ...rest] = pair.split("=");
+    if (!rawName) continue;
+    if (rawName.trim() === name) {
+      return decodeURIComponent(rest.join("=").trim());
+    }
+  }
+  return null;
+};
+
+const getCookieExpiresAttribute = (token: string): string | null => {
+  const expiryMs = getTokenExpiryMs(token);
+  if (expiryMs === null) {
+    return null;
+  }
+  const expiryDate = new Date(expiryMs);
+  if (Number.isNaN(expiryDate.getTime())) {
+    return null;
+  }
+  return `Expires=${expiryDate.toUTCString()}`;
+};
+
+const isWebSessionExpired = (token: string): boolean => {
+  if (!isWebPlatform) {
+    return false;
+  }
+  if (isTokenExpired(token)) {
+    return true;
+  }
+  if (isDocumentAccessible() && getCookieValue(AUTH_COOKIE_NAME) === null) {
+    return true;
+  }
+  return false;
+};
 
 const setAuthCookie = (token: string | null) => {
   if (Platform.OS !== "web" || typeof document === "undefined") {
@@ -15,6 +122,10 @@ const setAuthCookie = (token: string | null) => {
     const attributes = ["path=/", "SameSite=Lax"];
     if (typeof window !== "undefined" && window.location.protocol === "https:") {
       attributes.push("Secure");
+    }
+    const expiresAttribute = getCookieExpiresAttribute(token);
+    if (expiresAttribute) {
+      attributes.push(expiresAttribute);
     }
     document.cookie = `${AUTH_COOKIE_NAME}=${encodeURIComponent(token)}; ${attributes.join(
       "; "
@@ -77,7 +188,17 @@ export const saveApiBaseUrl = async (baseUrl: string) => {
 export const loadAuthToken = async (): Promise<string | null> => {
   if (Platform.OS === "web") {
     const storage = getWebStorage();
-    return storage?.getItem(AUTH_TOKEN_STORAGE_KEY) ?? null;
+    const storedToken = storage?.getItem(AUTH_TOKEN_STORAGE_KEY) ?? null;
+    if (storedToken && isWebSessionExpired(storedToken)) {
+      console.warn("Clearing stored auth token because the web session is stale or expired.");
+      try {
+        await clearAuthToken();
+      } catch (err) {
+        console.warn("Failed to clear expired auth token", err);
+      }
+      return null;
+    }
+    return storedToken;
   }
 
   try {

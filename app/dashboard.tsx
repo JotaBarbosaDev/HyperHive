@@ -344,7 +344,7 @@ export default function DashboardScreen() {
                 isDisabled={isLoading || isRefreshing}
               >
                 <ButtonIcon as={RefreshCcw} />
-                <ButtonText>Atualizar</ButtonText>
+                <ButtonText>Update</ButtonText>
               </Button>
             </HStack>
             <HStack className="gap-4 items-center flex-wrap">

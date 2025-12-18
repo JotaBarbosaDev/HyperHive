@@ -78,7 +78,7 @@ import {
   updateCpuXml,
   getVmExportUrl,
 } from "@/services/vms-client";
-import { listMounts } from "@/services/hyperhive";
+import { listMounts, getCpuInfo, getMemInfo } from "@/services/hyperhive";
 import { Mount } from "@/types/mount";
 import { ApiError } from "@/services/api-client";
 import { apiFetch } from "@/services/api-client";
@@ -151,6 +151,11 @@ interface VMState {
   badgeVariant: "solid" | "outline";
 }
 
+type MachineResourceSnapshot = {
+  totalRamMb: number | null;
+  totalVcpus: number | null;
+};
+
 // Estados das VMs
 const VM_STATES: Record<VmState, VMState> = {
   [VmState.UNKNOWN]: { label: "Unknown", color: "bg-gray-400", badgeVariant: "outline" },
@@ -219,6 +224,7 @@ export default function VirtualMachinesScreen() {
   const toast = useToast();
   const [showConsoleOptions, setShowConsoleOptions] = React.useState(false);
   const [consoleOptionsVm, setConsoleOptionsVm] = React.useState<VM | null>(null);
+  const [machineResources, setMachineResources] = React.useState<Record<string, MachineResourceSnapshot>>({});
   const mountLookup = React.useMemo(() => {
     return mountOptions.map((mount) => {
       const { NfsShare } = mount;
@@ -614,6 +620,61 @@ export default function VirtualMachinesScreen() {
     fetchCloneOptions();
   }, [toast]);
 
+  const machineNames = React.useMemo(() => {
+    return Array.from(
+      new Set(
+        vms
+          .map((vm) => vm.machineName)
+          .filter((name): name is string => Boolean(name && name.trim().length > 0))
+      )
+    );
+  }, [vms]);
+
+  const machinesMissingResources = React.useMemo(() => {
+    return machineNames.filter((name) => !machineResources[name]);
+  }, [machineNames, machineResources]);
+
+  React.useEffect(() => {
+    if (!machinesMissingResources.length) {
+      return;
+    }
+
+    let isCancelled = false;
+    const loadResources = async () => {
+      const entries = await Promise.all(
+        machinesMissingResources.map(async (machineName) => {
+          try {
+            const [cpu, mem] = await Promise.all([getCpuInfo(machineName), getMemInfo(machineName)]);
+            const totalVcpus = Array.isArray(cpu?.cores) ? cpu.cores.length : null;
+            const totalRamMb =
+              mem && typeof mem.totalMb === "number" && Number.isFinite(mem.totalMb) ? mem.totalMb : null;
+            return { machineName, totalRamMb, totalVcpus };
+          } catch (error) {
+            console.warn("Failed to load resources for machine", machineName, error);
+            return { machineName, totalRamMb: null, totalVcpus: null };
+          }
+        })
+      );
+
+      if (isCancelled) {
+        return;
+      }
+
+      setMachineResources((prev) => {
+        const next = { ...prev };
+        entries.forEach(({ machineName, totalRamMb, totalVcpus }) => {
+          next[machineName] = { totalRamMb, totalVcpus };
+        });
+        return next;
+      });
+    };
+
+    loadResources();
+    return () => {
+      isCancelled = true;
+    };
+  }, [machinesMissingResources]);
+
   // Agrupar VMs por slave
   const vmsBySlave = React.useMemo(() => {
     const grouped: Record<string, VM[]> = {};
@@ -645,6 +706,34 @@ export default function VirtualMachinesScreen() {
     const clamped = Math.min(100, Math.max(0, value));
     return `${Math.round(clamped)}%`;
   };
+
+  const formatHostRamGb = React.useCallback((totalRamMb?: number | null) => {
+    if (typeof totalRamMb !== "number" || !Number.isFinite(totalRamMb)) {
+      return "—";
+    }
+    const binaryGb = totalRamMb / 1024;
+    const decimalGb = totalRamMb / 1000;
+    const binaryRounded = Math.round(binaryGb);
+    const decimalRounded = Math.round(decimalGb);
+    const binaryDiff = Math.abs(binaryGb - binaryRounded);
+    const decimalDiff = Math.abs(decimalGb - decimalRounded);
+    const epsilon = 0.05;
+    let useDecimal = false;
+    if (decimalDiff + epsilon < binaryDiff) {
+      useDecimal = true;
+    } else if (binaryDiff + epsilon < decimalDiff) {
+      useDecimal = false;
+    } else if (decimalRounded % 2 === 0 && binaryRounded % 2 !== 0) {
+      useDecimal = true;
+    } else if (binaryRounded % 2 === 0 && decimalRounded % 2 !== 0) {
+      useDecimal = false;
+    } else {
+      useDecimal = decimalDiff <= binaryDiff;
+    }
+    const chosenGb = useDecimal ? decimalGb : binaryGb;
+    const decimals = chosenGb >= 10 ? 0 : 1;
+    return `${Number(chosenGb.toFixed(decimals)).toFixed(decimals)} GB RAM`;
+  }, []);
 
   const stats = React.useMemo(() => {
     const total = vms.length;
@@ -1131,6 +1220,12 @@ export default function VirtualMachinesScreen() {
                   0
                 );
                 const slaveMemoryGB = (slaveMemoryMB / 1024).toFixed(1);
+                const hostResources = machineResources[slaveName];
+                const hostVcpuDisplay =
+                  typeof hostResources?.totalVcpus === "number" && Number.isFinite(hostResources.totalVcpus)
+                    ? `${hostResources.totalVcpus} vCPU${hostResources.totalVcpus === 1 ? "" : "s"}`
+                    : "—";
+                const hostRamDisplay = formatHostRamGb(hostResources?.totalRamMb ?? null);
 
                 return (
                   <Box
@@ -1152,6 +1247,12 @@ export default function VirtualMachinesScreen() {
                       >
                         {slaveVms.length} VMs • {slaveRunning} running •{" "}
                         {slaveVcpu} vCPU • {slaveMemoryGB} GB RAM
+                      </Text>
+                      <Text
+                        className="text-sm text-[#9AA4B8] dark:text-[#8A94A8] mt-1"
+                        style={{ fontFamily: "Inter_400Regular" }}
+                      >
+                        Host resources: {hostVcpuDisplay} • {hostRamDisplay}
                       </Text>
                     </Box>
 
@@ -1873,7 +1974,6 @@ export default function VirtualMachinesScreen() {
                     mountOptions={mountOptions}
                     slaveOptions={slaveOptions}
                     loadingOptions={cloneOptionsLoading}
-                    onCancel={() => setCloneVm(null)}
                     onClone={async ({ newName, destMachine, destNfs }) => {
                       try {
                         await cloneVmApi(cloneVm.name, destNfs, destMachine, newName);
@@ -1957,7 +2057,6 @@ export default function VirtualMachinesScreen() {
                         ? slaveOptions.map((s) => s.MachineName)
                         : Object.keys(vmsBySlave)
                     }
-                    onCancel={() => setMigrateVm(null)}
                     loading={migratingVm === migrateVm.name}
                     onMigrate={async ({ targetSlave, mode, live, timeout }) => {
                       setMigratingVm(migrateVm.name);
@@ -3156,14 +3255,12 @@ function CloneVmForm({
   mountOptions,
   slaveOptions,
   loadingOptions,
-  onCancel,
   onClone,
 }: {
   vm: VM;
   mountOptions: Mount[];
   slaveOptions: Slave[];
   loadingOptions: boolean;
-  onCancel: () => void;
   onClone: (payload: { newName: string; destNfs: string; destMachine: string }) => Promise<void>;
 }) {
   const [newName, setNewName] = React.useState(vm.name + "-clone");
@@ -3310,9 +3407,6 @@ function CloneVmForm({
       )}
 
       <HStack className="justify-end gap-2 mt-2">
-        <Button variant="outline" className="rounded-md px-4 py-2" onPress={onCancel} disabled={saving}>
-          <ButtonText>Cancel</ButtonText>
-        </Button>
         <Button className="rounded-md px-4 py-2" disabled={!isValid || saving} onPress={handleSubmit}>
           {saving ? <ButtonSpinner className="mr-2" /> : null}
           <ButtonText>Clone</ButtonText>
@@ -3325,13 +3419,11 @@ function CloneVmForm({
 function MigrateVmForm({
   vm,
   slaveChoices,
-  onCancel,
   onMigrate,
   loading,
 }: {
   vm: VM;
   slaveChoices: string[];
-  onCancel: () => void;
   onMigrate: (payload: {
     targetSlave: string;
     mode: "hot" | "cold";
@@ -3415,7 +3507,7 @@ function MigrateVmForm({
                 uniqueChoices.map((s) => (
                   <SelectItem
                     key={s}
-                    label={s === vm.machineName ? `${s} (atual)` : s}
+                    label={s === vm.machineName ? `${s} (current)` : s}
                     value={s}
                   />
                 ))
@@ -3494,14 +3586,6 @@ function MigrateVmForm({
         <Text className="text-sm text-red-600">{error}</Text>
       )}
       <HStack className="justify-end gap-2 mt-2">
-        <Button
-          variant="outline"
-          className="rounded-md px-4 py-2"
-          onPress={onCancel}
-          disabled={loading}
-        >
-          <ButtonText>Cancel</ButtonText>
-        </Button>
         <Button
           className="rounded-md px-4 py-2"
           onPress={handleSubmit}
