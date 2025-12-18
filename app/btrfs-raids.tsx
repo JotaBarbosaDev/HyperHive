@@ -166,6 +166,7 @@ export default function BtrfsRaidsScreen() {
   const [deleteRaidTarget, setDeleteRaidTarget] = React.useState<BtrfsRaid | null>(null);
   const [actionModal, setActionModal] = React.useState<null | RaidTab | "mount" | "unmount" | "addDisk" | "removeDisk" | "replaceDisk" | "changeLevel" | "autoMount">(null);
   const balancePollRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const scrubPollRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
   const showToast = React.useCallback(
     (title: string, description: string, action: "success" | "error" = "success") => {
@@ -284,6 +285,24 @@ export default function BtrfsRaidsScreen() {
     }
   };
 
+  const triggerLongRunningAction = React.useCallback(
+    (label: string, action: () => Promise<unknown>, onAfterSuccess?: () => Promise<void> | void) => {
+      const prettyLabel = label.charAt(0).toUpperCase() + label.slice(1);
+      showToast(`${prettyLabel} requested`, "Monitor progress in the scrub tab.");
+      action()
+        .then(async () => {
+          if (onAfterSuccess) {
+            await onAfterSuccess();
+          }
+        })
+        .catch((err) => {
+          console.error(`Failed to start ${label}`, err);
+          showToast(`Error starting ${label}`, "Try again.", "error");
+        });
+    },
+    [showToast]
+  );
+
   const openRaidModal = (raid: BtrfsRaid) => {
     setRaidModal(raid);
     setMountPoint(raid.mount_point ?? "");
@@ -314,6 +333,20 @@ export default function BtrfsRaidsScreen() {
       console.warn("Failed to load raid extras", err);
     }
   };
+
+  const refreshScrubStats = React.useCallback(
+    async (uuid?: string) => {
+      const targetUuid = uuid ?? raidModal?.uuid;
+      if (!selectedMachine || !targetUuid) return;
+      try {
+        const stats = await getScrubStats(selectedMachine, targetUuid);
+        setScrubStats(stats);
+      } catch (err) {
+        console.warn("Failed to load scrub stats", err);
+      }
+    },
+    [raidModal?.uuid, selectedMachine]
+  );
 
   const getAutoMountForRaid = (uuid?: string) => {
     if (!uuid) return null;
@@ -349,6 +382,12 @@ export default function BtrfsRaidsScreen() {
       balancePollRef.current = null;
     }
   };
+  const stopScrubPolling = () => {
+    if (scrubPollRef.current) {
+      clearInterval(scrubPollRef.current);
+      scrubPollRef.current = null;
+    }
+  };
   const getBalanceStatus = (status?: RaidStatus | null): string => {
     const deviceStatuses = status?.deviceStats?.map((s) => s.balanceStatus).filter(Boolean) ?? [];
     return (deviceStatuses.find(Boolean) ?? status?.balanceStatus ?? "No balance info") as string;
@@ -358,6 +397,17 @@ export default function BtrfsRaidsScreen() {
     return text && !/no balance/i.test(text);
   };
 
+  const scrubCommandPath = React.useMemo(() => scrubStats?.path ?? raidModal?.mount_point ?? "/mnt/raid", [raidModal?.mount_point, scrubStats?.path]);
+  const scrubCliCommand = React.useMemo(() =>
+    `sudo btrfs scrub status "${scrubCommandPath}"`,
+    [scrubCommandPath]
+  );
+
+  // Updated: This checks if the process is running and shows the start time and command
+  const defragCliCommand = React.useMemo(() =>
+    `ps -C "btrfs" -f | grep "filesystem defrag" | grep -v grep || echo "Defrag is NOT running"`,
+    [scrubCommandPath]
+  );
   React.useEffect(() => {
     stopBalancePolling();
     if (raidModal?.uuid && raidTab === "balance" && selectedMachine) {
@@ -375,6 +425,17 @@ export default function BtrfsRaidsScreen() {
     }
     return () => stopBalancePolling();
   }, [raidModal?.uuid, raidTab, selectedMachine]);
+
+  React.useEffect(() => {
+    stopScrubPolling();
+    if (raidModal?.uuid && raidTab === "scrub" && selectedMachine) {
+      const loadStats = () => refreshScrubStats(raidModal.uuid);
+      loadStats();
+      const id = setInterval(loadStats, 20000);
+      scrubPollRef.current = id;
+    }
+    return () => stopScrubPolling();
+  }, [raidModal?.uuid, raidTab, selectedMachine, refreshScrubStats]);
 
   const StatsRow = ({ label, value }: { label: string; value?: React.ReactNode }) => (
     <HStack className="justify-between py-1.5 items-center">
@@ -1337,10 +1398,15 @@ export default function BtrfsRaidsScreen() {
                       action="primary"
                       size="lg"
                       className="flex-1 min-w-[140px] rounded-xl"
-                      onPress={() => raidModal?.uuid && performAction("scrub", () => scrubRaid(selectedMachine, raidModal.uuid))}
+                      onPress={() =>
+                        raidModal?.uuid &&
+                        triggerLongRunningAction("scrub", () => scrubRaid(selectedMachine, raidModal.uuid), () =>
+                          refreshScrubStats(raidModal.uuid)
+                        )
+                      }
                       isDisabled={savingAction !== null}
                     >
-                      {savingAction === "scrub" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
+                      <ButtonIcon as={RefreshCcw} size="sm" />
                       <ButtonText>Start Scrub</ButtonText>
                     </Button>
                     <Button
@@ -1348,14 +1414,21 @@ export default function BtrfsRaidsScreen() {
                       variant="outline"
                       size="lg"
                       className="flex-1 min-w-[140px] rounded-xl"
-                      onPress={() => raidModal?.uuid && performAction("defragmentar", () => defragmentRaid(selectedMachine, raidModal.uuid))}
+                      onPress={() =>
+                        raidModal?.uuid &&
+                        triggerLongRunningAction("defragmentation", () => defragmentRaid(selectedMachine, raidModal.uuid))
+                      }
                       isDisabled={savingAction !== null}
-                  >
-                      {savingAction === "defragmentar" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
+                    >
+                      <ButtonIcon as={RefreshCcw} size="sm" />
                       <ButtonText>Defragment</ButtonText>
                     </Button>
                   </HStack>
                   <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs mt-3">Scrub checks data integrity, while defragmentation optimizes file layout for better performance</Text>
+                  <VStack className="mt-2 gap-1">
+                    <Text className="text-typography-500 dark:text-[#9AA4B8] text-[11px] font-mono">Scrub %: {scrubCliCommand}</Text>
+                    <Text className="text-typography-500 dark:text-[#9AA4B8] text-[11px] font-mono">Defrag %: {defragCliCommand}</Text>
+                  </VStack>
                 </Box>
               </VStack>
             ) : null}

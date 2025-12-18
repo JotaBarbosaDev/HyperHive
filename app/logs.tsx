@@ -1,6 +1,7 @@
 import React from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Platform,
   RefreshControl,
@@ -12,10 +13,12 @@ import {
   ScrollView,
   View,
 } from "react-native";
-import {useAuthGuard} from "@/hooks/useAuthGuard";
-import {useLogs} from "@/hooks/useLogs";
-import {LogEntry, LogLevel} from "@/types/log";
-import {useAppTheme} from "@/hooks/useAppTheme";
+import * as Linking from "expo-linking";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useLogs } from "@/hooks/useLogs";
+import { LogEntry, LogLevel } from "@/types/log";
+import { useAppTheme } from "@/hooks/useAppTheme";
+import { getApiBaseUrl } from "@/config/apiConfig";
 
 const LEVEL_LABEL: Record<LogLevel, string> = {
   error: "ERROR",
@@ -34,7 +37,7 @@ const LEVEL_COLOR: Record<LogLevel, string> = {
 const formatTime = (ts: string) => {
   const d = new Date(ts);
   if (Number.isNaN(d.getTime())) return ts;
-  return d.toLocaleTimeString("pt-PT", {hour: "2-digit", minute: "2-digit", second: "2-digit"});
+  return d.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 };
 
 type Theme = {
@@ -142,6 +145,11 @@ const makeStyles = (theme: Theme) =>
       paddingHorizontal: 14,
       paddingVertical: 10,
       borderRadius: 10,
+    },
+    registerRow: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      marginTop: 10,
     },
     buttonText: {
       color: theme.accentText,
@@ -264,8 +272,8 @@ const makeStyles = (theme: Theme) =>
   });
 
 export default function LogsScreen() {
-  const {token, isChecking} = useAuthGuard();
-  const {resolvedMode} = useAppTheme();
+  const { token, isChecking } = useAuthGuard();
+  const { resolvedMode } = useAppTheme();
   const isDark = resolvedMode === "dark";
   const theme: Theme = React.useMemo(
     () => ({
@@ -294,7 +302,7 @@ export default function LogsScreen() {
 
   const levelNumber = apiLevel === "all" ? undefined : parseInt(apiLevel);
 
-  const {logs, isLoading, isRefreshing, error, refresh} = useLogs({
+  const { logs, isLoading, isRefreshing, error, refresh } = useLogs({
     token,
     limit,
     level: levelNumber,
@@ -334,16 +342,45 @@ export default function LogsScreen() {
     }
   };
 
-  const renderItem = ({item}: {item: LogEntry}) => (
+  const handleRegisterNotifications = React.useCallback(async () => {
+    const baseUrl = getApiBaseUrl();
+    if (!baseUrl) {
+      Alert.alert("API não configurada", "Defina a API base para abrir o registo de notificações.");
+      return;
+    }
+    if (!token) {
+      Alert.alert("Token indisponível", "Inicie sessão novamente para gerar o link de registo.");
+      return;
+    }
+    const normalizedBase = baseUrl.replace(/\/+$/, "");
+    const url = `${normalizedBase}/nots/register?token=${encodeURIComponent(token)}`;
+    try {
+      if (Platform.OS === "web") {
+        if (typeof window !== "undefined" && typeof window.open === "function") {
+          window.open(url, "_blank", "noopener,noreferrer");
+        } else {
+          throw new Error("Navegador indisponível para abrir nova aba");
+        }
+      } else {
+        await Linking.openURL(url);
+      }
+    } catch (err) {
+      console.warn("Failed to open notification registration URL", err);
+      const message = err instanceof Error ? err.message : String(err);
+      Alert.alert("Erro ao abrir link", message);
+    }
+  }, [token]);
+
+  const renderItem = ({ item }: { item: LogEntry }) => (
     <TouchableOpacity onPress={() => setSelected(item)} activeOpacity={0.6}>
       <View style={styles.row}>
-        <View style={[styles.levelDot, {backgroundColor: LEVEL_COLOR[item.level]}]} />
+        <View style={[styles.levelDot, { backgroundColor: LEVEL_COLOR[item.level] }]} />
         <Text style={styles.time}>{formatTime(item.timestamp)}</Text>
         <Text style={styles.machine} numberOfLines={1}>
           {item.machine}
         </Text>
-        <View style={[styles.levelTag, {borderColor: LEVEL_COLOR[item.level]}]}>
-          <Text style={[styles.levelTagText, {color: LEVEL_COLOR[item.level]}]}>{LEVEL_LABEL[item.level]}</Text>
+        <View style={[styles.levelTag, { borderColor: LEVEL_COLOR[item.level] }]}>
+          <Text style={[styles.levelTagText, { color: LEVEL_COLOR[item.level] }]}>{LEVEL_LABEL[item.level]}</Text>
         </View>
         <Text style={styles.message} numberOfLines={1}>
           {item.message}
@@ -364,118 +401,123 @@ export default function LogsScreen() {
           Inline view ordered from newest to oldest. Tap a line to see details.
         </Text>
 
-      <View style={[styles.card, styles.filters]}>
-        <Text style={styles.sectionTitle}>Filters and controls</Text>
+        <View style={[styles.card, styles.filters]}>
+          <Text style={styles.sectionTitle}>Filters and controls</Text>
 
-        <View style={styles.filterItem}>
-          <Text style={styles.label}>Quick search</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Filter by message, machine, or timestamp..."
-            placeholderTextColor={theme.muted}
-            value={search}
-            onChangeText={setSearch}
-          />
-        </View>
-
-        <View style={styles.filterRow}>
-          <View style={[styles.filterItem, styles.flexItem]}>
-            <Text style={styles.label}>Machine</Text>
+          <View style={styles.filterItem}>
+            <Text style={styles.label}>Quick search</Text>
             <TextInput
               style={styles.input}
-              placeholder="all for all"
+              placeholder="Filter by message, machine, or timestamp..."
               placeholderTextColor={theme.muted}
-              value={machineFilter}
-              onChangeText={setMachineFilter}
+              value={search}
+              onChangeText={setSearch}
             />
           </View>
-          <View style={[styles.filterItem, styles.smallColumn]}>
-            <Text style={styles.label}>Level (API)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="all/0/1/2/3"
-              placeholderTextColor={theme.muted}
-              value={apiLevel}
-              onChangeText={setApiLevel}
-            />
-          </View>
-          <View style={[styles.filterItem, styles.smallColumn]}>
-            <Text style={styles.label}>Limit</Text>
-            <TextInput
-              style={styles.input}
-              keyboardType="numeric"
-              value={limitInput}
-              onChangeText={setLimitInput}
-              onBlur={applyLimit}
-              onSubmitEditing={applyLimit}
-            />
-          </View>
-        </View>
 
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleItem}>
-            <Text style={styles.label}>Show INFO</Text>
-            <Switch value={showInfo} onValueChange={setShowInfo} />
-          </View>
-          <View style={styles.toggleItem}>
-            <Text style={styles.label}>Show DEBUG</Text>
-            <Switch value={showDebug} onValueChange={setShowDebug} />
-          </View>
-          <TouchableOpacity style={styles.button} onPress={refresh} activeOpacity={0.7}>
-            <Text style={styles.buttonText}>Reload</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.headerRow}>
-        <Text style={{width: 6}} />
-        <Text style={[styles.headerText, {width: 96}]}>Time</Text>
-        <Text style={[styles.headerText, {width: 112}]}>Machine</Text>
-        <Text style={[styles.headerText, {width: 64}]}>Level</Text>
-        <Text style={[styles.headerText, {flex: 1}]}>Message</Text>
-      </View>
-
-      <View style={styles.listContainer}>
-        <View style={[styles.card, styles.listCard]}>
-          {isLoading ? (
-            <View style={styles.center}>
-              <ActivityIndicator size="large" color={theme.text} />
+          <View style={styles.filterRow}>
+            <View style={[styles.filterItem, styles.flexItem]}>
+              <Text style={styles.label}>Machine</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="all for all"
+                placeholderTextColor={theme.muted}
+                value={machineFilter}
+                onChangeText={setMachineFilter}
+              />
             </View>
-          ) : error ? (
-            <View style={styles.center}>
-              <Text style={styles.errorText}>{error}</Text>
+            <View style={[styles.filterItem, styles.smallColumn]}>
+              <Text style={styles.label}>Level (API)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="all/0/1/2/3"
+                placeholderTextColor={theme.muted}
+                value={apiLevel}
+                onChangeText={setApiLevel}
+              />
             </View>
-          ) : (
-            <FlatList
-              style={styles.list}
-              data={visibleLogs}
-              keyExtractor={(item) => item.id}
-              renderItem={renderItem}
-              ListEmptyComponent={<Text style={styles.empty}>No logs found</Text>}
-              refreshControl={refreshControl}
-              contentContainerStyle={{paddingBottom: 12}}
-            />
-          )}
+            <View style={[styles.filterItem, styles.smallColumn]}>
+              <Text style={styles.label}>Limit</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={limitInput}
+                onChangeText={setLimitInput}
+                onBlur={applyLimit}
+                onSubmitEditing={applyLimit}
+              />
+            </View>
+          </View>
+
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleItem}>
+              <Text style={styles.label}>Show INFO</Text>
+              <Switch value={showInfo} onValueChange={setShowInfo} />
+            </View>
+            <View style={styles.toggleItem}>
+              <Text style={styles.label}>Show DEBUG</Text>
+              <Switch value={showDebug} onValueChange={setShowDebug} />
+            </View>
+            <TouchableOpacity style={styles.button} onPress={refresh} activeOpacity={0.7}>
+              <Text style={styles.buttonText}>Reload</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.registerRow}>
+            <TouchableOpacity style={styles.button} onPress={handleRegisterNotifications} activeOpacity={0.7}>
+              <Text style={styles.buttonText}>Register Notifications</Text>
+            </TouchableOpacity>
+          </View>
         </View>
+
+        <View style={styles.headerRow}>
+          <Text style={{ width: 6 }} />
+          <Text style={[styles.headerText, { width: 96 }]}>Time</Text>
+          <Text style={[styles.headerText, { width: 112 }]}>Machine</Text>
+          <Text style={[styles.headerText, { width: 64 }]}>Level</Text>
+          <Text style={[styles.headerText, { flex: 1 }]}>Message</Text>
+        </View>
+
+        <View style={styles.listContainer}>
+          <View style={[styles.card, styles.listCard]}>
+            {isLoading ? (
+              <View style={styles.center}>
+                <ActivityIndicator size="large" color={theme.text} />
+              </View>
+            ) : error ? (
+              <View style={styles.center}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : (
+              <FlatList
+                style={styles.list}
+                data={visibleLogs}
+                keyExtractor={(item) => item.id}
+                renderItem={renderItem}
+                ListEmptyComponent={<Text style={styles.empty}>No logs found</Text>}
+                refreshControl={refreshControl}
+                contentContainerStyle={{ paddingBottom: 12 }}
+              />
+            )}
+          </View>
         </View>
 
         {selected ? (
           <View style={styles.card}>
             <View style={styles.detailHeader}>
-            <Text style={styles.detailTitle}>Detalhe do log</Text>
-            <TouchableOpacity onPress={() => setSelected(null)}>
-              <Text style={styles.close}>Close</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.detailMeta}>
-            {formatTime(selected.timestamp)} • {selected.machine} • {LEVEL_LABEL[selected.level]}
-          </Text>
-          <ScrollView
-            style={styles.detailBodyScroll}
-            contentContainerStyle={styles.detailBodyContent}
-            showsVerticalScrollIndicator
-          >
-            <Text style={styles.detailBody}>{selected.message}</Text>
+              <Text style={styles.detailTitle}>Detalhe do log</Text>
+              <TouchableOpacity onPress={() => setSelected(null)}>
+                <Text style={styles.close}>Close</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.detailMeta}>
+              {formatTime(selected.timestamp)} • {selected.machine} • {LEVEL_LABEL[selected.level]}
+            </Text>
+            <ScrollView
+              style={styles.detailBodyScroll}
+              contentContainerStyle={styles.detailBodyContent}
+              showsVerticalScrollIndicator
+            >
+              <Text style={styles.detailBody}>{selected.message}</Text>
             </ScrollView>
           </View>
         ) : null}
