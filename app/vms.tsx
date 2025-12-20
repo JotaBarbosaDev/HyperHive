@@ -1268,8 +1268,13 @@ export default function VirtualMachinesScreen() {
                           const vmNfsName = getNfsNameByDiskPath(vm.diskPath);
 
                           return (
-                            <Box
+                            
+                            <Pressable
                               key={vm.name}
+                              onPress={() => {
+                                setSelectedVm(vm);
+                                setShowActionsheet(true);
+                              }}
                               className={`rounded-xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E] p-4 web:hover:shadow-lg transition-all duration-200 ${isRunning
                                 ? "hover:border-[#2DD4BF] dark:border-[#5EEAD4] border"
                                 : isPaused
@@ -1289,7 +1294,10 @@ export default function VirtualMachinesScreen() {
                                       } ${isRunning ? "animate-pulse" : ""}`}
                                   />
                                   <Pressable
-                                    onPress={() => setDetailsVm(vm)}
+                                    onPress={() => {
+                                      setSelectedVm(vm);
+                                      setShowActionsheet(true);
+                                    }}
                                     className="flex-1 min-w-0"
                                   >
                                     <Text
@@ -1606,7 +1614,7 @@ export default function VirtualMachinesScreen() {
                                   <Monitor className="text-typography-900 dark:text-[#E8EBF0]" />
                                 </Pressable>
                               </HStack>
-                            </Box>
+                            </Pressable>
                           );
                         })}
                       </VStack>

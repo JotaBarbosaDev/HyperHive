@@ -308,18 +308,14 @@ export default function CreateVmModal({
   };
 
   return (
-    <Modal
-      isOpen={showModal}
-      onClose={() => setShowModal(false)}
-      size="full"
-    >
+    <Modal isOpen={showModal} onClose={() => setShowModal(false)} size="full">
       <ModalBackdrop />
       <ModalContent className="max-w-[90%] max-h-[90%] web:max-w-4xl">
         <ModalHeader className="border-b border-outline-100 dark:border-[#2A3B52]">
           <Heading
             size="lg"
             className="text-typography-900 dark:text-[#E8EBF0]"
-            style={{ fontFamily: "Inter_700Bold" }}
+            style={{fontFamily: "Inter_700Bold"}}
           >
             Create Virtual Machine
           </Heading>
@@ -335,12 +331,12 @@ export default function CreateVmModal({
               <VStack className="gap-4 web:grid web:grid-cols-2 web:gap-4">
                 {/* Nome da VM */}
                 <VStack className="gap-2">
-                <Text
-                  className="text-sm text-typography-700 dark:text-typography-300"
-                  style={{ fontFamily: "Inter_600SemiBold" }}
-                >
-                  VM Name
-                </Text>
+                  <Text
+                    className="text-sm text-typography-700 dark:text-typography-300"
+                    style={{fontFamily: "Inter_600SemiBold"}}
+                  >
+                    VM Name
+                  </Text>
                   <Input
                     variant="outline"
                     className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
@@ -358,7 +354,7 @@ export default function CreateVmModal({
                 <VStack className="gap-2">
                   <Text
                     className="text-sm text-typography-700 dark:text-typography-300"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
+                    style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     Slave
                   </Text>
@@ -369,7 +365,9 @@ export default function CreateVmModal({
                   >
                     <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
                       <SelectInput
-                        placeholder={loadingOptions ? "Loading..." : "Select..."}
+                        placeholder={
+                          loadingOptions ? "Loading..." : "Select..."
+                        }
                         className="text-typography-900 dark:text-[#E8EBF0]"
                       />
                       <SelectIcon as={ChevronDown} className="mr-3" />
@@ -382,7 +380,9 @@ export default function CreateVmModal({
                         </SelectDragIndicatorWrapper>
                         {slaveOptions.length === 0 ? (
                           <SelectItem
-                            label={loadingOptions ? "Loading..." : "No slaves found"}
+                            label={
+                              loadingOptions ? "Loading..." : "No slaves found"
+                            }
                             value=""
                             isDisabled
                           />
@@ -405,7 +405,7 @@ export default function CreateVmModal({
                 <VStack className="gap-2">
                   <Text
                     className="text-sm text-typography-700 dark:text-typography-300"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
+                    style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     vCPU
                   </Text>
@@ -427,7 +427,7 @@ export default function CreateVmModal({
                 <VStack className="gap-2">
                   <Text
                     className="text-sm text-typography-700 dark:text-typography-300"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
+                    style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     Memory (MB)
                   </Text>
@@ -448,10 +448,11 @@ export default function CreateVmModal({
                       <Pressable
                         key={`mem-${gb}`}
                         onPress={() => setMemory(String(gb * 1024))}
-                        className={`px-3 py-2 rounded-full border ${Number(memory) === gb * 1024
-                          ? "border-primary-500 bg-primary-50"
-                          : "border-outline-200 bg-background-0"
-                          }`}
+                        className={`px-3 py-2 rounded-full border ${
+                          Number(memory) === gb * 1024
+                            ? "border-primary-500 bg-primary-50/20"
+                            : "border-outline-200 bg-background-0"
+                        }`}
                       >
                         <Text className="text-xs font-medium text-typography-700">
                           {gb} GB
@@ -465,7 +466,7 @@ export default function CreateVmModal({
                 <VStack className="gap-2">
                   <Text
                     className="text-sm text-typography-700 dark:text-typography-300"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
+                    style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     Disk (GB)
                   </Text>
@@ -486,10 +487,11 @@ export default function CreateVmModal({
                       <Pressable
                         key={`disk-${gb}`}
                         onPress={() => setDisk(String(gb))}
-                        className={`px-3 py-2 rounded-full border ${Number(disk) === gb
-                          ? "border-primary-500 bg-primary-50"
-                          : "border-outline-200 bg-background-0"
-                          }`}
+                        className={`px-3 py-2 rounded-full border ${
+                          Number(disk) === gb
+                            ? "border-primary-500 bg-primary-50/20"
+                            : "border-outline-200 bg-background-0"
+                        }`}
                       >
                         <Text className="text-xs font-medium text-typography-700">
                           {gb} GB
@@ -503,12 +505,16 @@ export default function CreateVmModal({
                 <VStack className="gap-2">
                   <Text
                     className="text-sm text-typography-700 dark:text-typography-300"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
+                    style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     Network
                   </Text>
                   <Select
-                    selectedValue={network === "default" || network === "512rede" ? network : "outro"}
+                    selectedValue={
+                      network === "default" || network === "512rede"
+                        ? network
+                        : "outro"
+                    }
                     onValueChange={(value) => {
                       if (value === "outro") {
                         setNetwork("");
@@ -548,7 +554,7 @@ export default function CreateVmModal({
                       </SelectContent>
                     </SelectPortal>
                   </Select>
-                  {(network !== "default" && network !== "512rede") && (
+                  {network !== "default" && network !== "512rede" && (
                     <Input
                       variant="outline"
                       className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] mt-2"
@@ -567,24 +573,34 @@ export default function CreateVmModal({
                 <VStack className="gap-2">
                   <Text
                     className="text-sm text-typography-700 dark:text-typography-300"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
+                    style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     NFS Share ID
                   </Text>
-                <Select selectedValue={nfsShare} onValueChange={setNfsShare} isDisabled={loadingOptions || mountOptions.length === 0}>
-                  <SelectTrigger variant="outline" size="md">
-                    <SelectInput placeholder={loadingOptions ? "Loading..." : "Select NFS"} />
-                    <SelectIcon className="mr-3" as={ChevronDownIcon} />
-                  </SelectTrigger>
-                  <SelectPortal>
-                    <SelectBackdrop />
-                    <SelectContent>
-                      {mountOptions.length === 0 ? (
-                        <SelectItem
-                          label={loadingOptions ? "Loading..." : "No NFS found"}
-                          value=""
-                          isDisabled
-                        />
+                  <Select
+                    selectedValue={nfsShare}
+                    onValueChange={setNfsShare}
+                    isDisabled={loadingOptions || mountOptions.length === 0}
+                  >
+                    <SelectTrigger variant="outline" size="md">
+                      <SelectInput
+                        placeholder={
+                          loadingOptions ? "Loading..." : "Select NFS"
+                        }
+                      />
+                      <SelectIcon className="mr-3" as={ChevronDownIcon} />
+                    </SelectTrigger>
+                    <SelectPortal>
+                      <SelectBackdrop />
+                      <SelectContent>
+                        {mountOptions.length === 0 ? (
+                          <SelectItem
+                            label={
+                              loadingOptions ? "Loading..." : "No NFS found"
+                            }
+                            value=""
+                            isDisabled
+                          />
                         ) : (
                           mountOptions.map((s) => (
                             <SelectItem
@@ -604,13 +620,21 @@ export default function CreateVmModal({
                 <VStack className="gap-2">
                   <Text
                     className="text-sm text-typography-700 dark:text-typography-300"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
+                    style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     ISO ID (Optional)
                   </Text>
-                  <Select selectedValue={iso} onValueChange={setIso} isDisabled={loadingOptions || isoOptions.length === 0}>
+                  <Select
+                    selectedValue={iso}
+                    onValueChange={setIso}
+                    isDisabled={loadingOptions || isoOptions.length === 0}
+                  >
                     <SelectTrigger variant="outline" size="md">
-                      <SelectInput placeholder={loadingOptions ? "Loading..." : "Select ISO"} />
+                      <SelectInput
+                        placeholder={
+                          loadingOptions ? "Loading..." : "Select ISO"
+                        }
+                      />
                       <SelectIcon className="mr-3" as={ChevronDownIcon} />
                     </SelectTrigger>
                     <SelectPortal>
@@ -618,7 +642,9 @@ export default function CreateVmModal({
                       <SelectContent>
                         {isoOptions.length === 0 ? (
                           <SelectItem
-                            label={loadingOptions ? "Loading..." : "No ISO found"}
+                            label={
+                              loadingOptions ? "Loading..." : "No ISO found"
+                            }
                             value=""
                             isDisabled
                           />
@@ -687,7 +713,7 @@ export default function CreateVmModal({
               <VStack className="gap-2 mt-6">
                 <Text
                   className="text-sm text-typography-700 dark:text-typography-300"
-                  style={{ fontFamily: "Inter_600SemiBold" }}
+                  style={{fontFamily: "Inter_600SemiBold"}}
                 >
                   VNC Password
                 </Text>
@@ -710,25 +736,29 @@ export default function CreateVmModal({
                 <Box className="mt-6 p-4 bg-background-0 dark:bg-[#0F1A2E] border border-outline-200 dark:border-[#2A3B52] rounded-xl">
                   {/* Header */}
                   <HStack className="gap-2 items-center mb-3">
-                    <Cpu size={20} className="text-typography-700 dark:text-[#E8EBF0]" />
+                    <Cpu
+                      size={20}
+                      className="text-typography-700 dark:text-[#E8EBF0]"
+                    />
                     <Heading
                       size="sm"
                       className="text-typography-900 dark:text-[#E8EBF0]"
-                      style={{ fontFamily: "Inter_700Bold" }}
+                      style={{fontFamily: "Inter_700Bold"}}
                     >
                       Advanced CPU Configuration
                     </Heading>
                   </HStack>
 
                   <Text className="text-sm text-typography-600 dark:text-typography-400 mb-4">
-                    Select slaves to compare and get a CPU configuration compatible between them.
+                    Select slaves to compare and get a CPU configuration
+                    compatible between them.
                   </Text>
 
                   {/* Lista de Slaves Selecionados */}
                   <VStack className="gap-2 mb-4">
                     <Text
                       className="text-sm text-typography-700 dark:text-typography-300"
-                      style={{ fontFamily: "Inter_600SemiBold" }}
+                      style={{fontFamily: "Inter_600SemiBold"}}
                     >
                       Selected slaves ({selectedSlaves.length})
                     </Text>
@@ -755,7 +785,9 @@ export default function CreateVmModal({
                                   variant="link"
                                   onPress={() => {
                                     setSelectedSlaves(
-                                      selectedSlaves.filter((s) => s !== slaveName)
+                                      selectedSlaves.filter(
+                                        (s) => s !== slaveName
+                                      )
                                     );
                                   }}
                                   className="p-0 min-w-0 h-4"
@@ -778,7 +810,7 @@ export default function CreateVmModal({
                   <VStack className="gap-2 mb-4">
                     <Text
                       className="text-sm text-typography-700 dark:text-typography-300"
-                      style={{ fontFamily: "Inter_600SemiBold" }}
+                      style={{fontFamily: "Inter_600SemiBold"}}
                     >
                       Add slave to comparison
                     </Text>
@@ -786,16 +818,24 @@ export default function CreateVmModal({
                     <Select
                       selectedValue={currentSlaveSelect}
                       onValueChange={(value) => {
-                        if (value && slaveOptions.find((s) => s.MachineName === value) && !selectedSlaves.includes(value)) {
+                        if (
+                          value &&
+                          slaveOptions.find((s) => s.MachineName === value) &&
+                          !selectedSlaves.includes(value)
+                        ) {
                           setSelectedSlaves([...selectedSlaves, value]);
                           setCurrentSlaveSelect("");
                         }
                       }}
-                      isDisabled={loadingOptions || availableSlaves.length === 0}
+                      isDisabled={
+                        loadingOptions || availableSlaves.length === 0
+                      }
                     >
                       <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
                         <SelectInput
-                          placeholder={loadingOptions ? "Loading..." : "Select a slave..."}
+                          placeholder={
+                            loadingOptions ? "Loading..." : "Select a slave..."
+                          }
                           className="text-typography-900 dark:text-[#E8EBF0]"
                         />
                         <SelectIcon as={ChevronDown} className="mr-3" />
@@ -860,7 +900,7 @@ export default function CreateVmModal({
                     <HStack className="justify-between items-center">
                       <Text
                         className="text-sm text-typography-700 dark:text-typography-300"
-                        style={{ fontFamily: "Inter_600SemiBold" }}
+                        style={{fontFamily: "Inter_600SemiBold"}}
                       >
                         CPU Configuration XML
                       </Text>
@@ -897,13 +937,18 @@ export default function CreateVmModal({
                     </HStack>
 
                     <Text className="text-xs text-typography-500 dark:text-typography-400">
-                      This XML configures the VM CPU. You can edit it manually if needed.
+                      This XML configures the VM CPU. You can edit it manually
+                      if needed.
                     </Text>
 
                     <Box className="bg-[#0F172A] border border-[#1E2F47] rounded-lg overflow-hidden">
                       <Box className="bg-[#0A0E1A] px-3 py-2 border-b border-[#1E2F47] flex-row justify-between items-center">
-                        <Text className="text-xs text-[#64748B] font-mono">XML Editor</Text>
-                        <Text className="text-xs text-[#475569]">{cpuXml.length} chars</Text>
+                        <Text className="text-xs text-[#64748B] font-mono">
+                          XML Editor
+                        </Text>
+                        <Text className="text-xs text-[#475569]">
+                          {cpuXml.length} chars
+                        </Text>
                       </Box>
                       <TextInput
                         defaultValue={cpuXml}
@@ -915,7 +960,10 @@ export default function CreateVmModal({
                         spellCheck={false}
                         textAlignVertical="top"
                         style={{
-                          fontFamily: Platform.select({ ios: "Menlo", android: "monospace" }),
+                          fontFamily: Platform.select({
+                            ios: "Menlo",
+                            android: "monospace",
+                          }),
                           color: cpuXml ? "#22C55E" : "#64748B",
                           backgroundColor: "#0F172A",
                           fontSize: 12,

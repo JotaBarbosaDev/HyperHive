@@ -286,7 +286,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
     <Modal isOpen={showModal} onClose={() => setShowModal(false)} size="full">
       <ModalBackdrop />
       <ModalContent className="max-w-[90%] max-h-[90%] web:max-w-4xl">
-        <ModalHeader className="border-b border-outline-100 dark:border-[#2A3B52]">
+        <ModalHeader className="pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
           <Heading
             size="lg"
             className="text-typography-900 dark:text-[#E8EBF0]"
@@ -299,7 +299,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
           </ModalCloseButton>
         </ModalHeader>
 
-        <ModalBody className="bg-background-50 dark:bg-[#0A1628]">
+        <ModalBody className="dark:bg-[#0A1628]">
           <ScrollView showsVerticalScrollIndicator>
             <Box className="p-4 web:p-6">
               <VStack className="gap-4 web:grid web:grid-cols-2 web:gap-4">
@@ -395,7 +395,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                         key={`mem-${gb}`}
                         onPress={() => setMemory(String(gb * 1024))}
                         className={`px-3 py-2 rounded-full border ${
-                          Number(memory) === gb * 1024 ? "border-primary-500 bg-primary-50" : "border-outline-200 bg-background-0"
+                          Number(memory) === gb * 1024 ? "border-primary-500 bg-primary-50/20" : "border-outline-200 bg-background-0"
                         }`}
                       >
                         <Text className="text-xs font-medium text-typography-700">{gb} GB</Text>
@@ -524,7 +524,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                       className="border border-dashed border-outline-300 dark:border-[#2A3B52] rounded-lg p-4 bg-background-0 dark:bg-[#0F1A2E]"
                     >
                       <HStack className="items-center gap-3">
-                        <Box className="w-10 h-10 rounded-full bg-primary-50 dark:bg-[#1E2F47] items-center justify-center">
+                        <Box className="w-10 h-10 rounded-full bg-primary-50/20 dark:bg-[#1E2F47] items-center justify-center">
                           <Upload className="text-primary-500" />
                         </Box>
                         <VStack className="flex-1">
@@ -754,7 +754,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
           </ScrollView>
         </ModalBody>
 
-        <ModalFooter className="border-t border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E]">
+        <ModalFooter className="bg-background-0 dark:bg-[#0F1A2E]">
           <HStack className="gap-3 w-full">
             <Button
               variant="outline"
