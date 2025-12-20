@@ -2474,7 +2474,7 @@ export default function VirtualMachinesScreen() {
           size="lg"
         >
           <ModalBackdrop />
-          <ModalContent className="rounded-lg shadow-lg max-h-[85vh] web:max-h-[90vh]">
+          <ModalContent className="rounded-lg shadow-lg max-h-[85vh] web:max-h-[90vh] dark:bg-[#0F1A2E]">
             <ModalHeader>
               <Heading size="md" className="text-gray-900 dark:text-[#E8EBF0]">
                 {selectedVm?.name}

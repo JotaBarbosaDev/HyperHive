@@ -281,7 +281,7 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
                   className={`shrink-0 ${
                     isActive
                       ? "text-typography-900 dark:text-[#E8EBF0]"
-                      : "text-typography-600 dark:text-typography-400"
+                      : "text-typography-600 dark:text-[#E8EBF0]"
                   } ${iconClassOverride ?? ""}`}
                   {...restIconProps}
                 />
@@ -291,7 +291,7 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
               className={`flex-1 text-base ${
                 isActive
                   ? "text-typography-900 dark:text-[#E8EBF0] font-semibold"
-                  : "text-typography-900 dark:text-typography-200 font-medium"
+                  : "text-typography-900 dark:text-[#E8EBF0] dark:font-medium"
               }`}
               style={{
                 fontFamily: isActive ? "Inter_600SemiBold" : "Inter_500Medium",
@@ -303,7 +303,7 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
               <Icon
                 as={ChevronRight}
                 size="sm"
-                className={`ml-auto text-typography-500 dark:text-typography-400 transition-transform origin-center ${
+                className={`ml-auto text-typography-500 dark:text-[#E8EBF0] transition-transform origin-center ${
                   isExpanded ? "rotate-45" : ""
                 }`}
               />
@@ -321,7 +321,6 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
 
   return (
     <Drawer isOpen={isOpen} onClose={onClose} anchor="left" size="full">
-      
       <DrawerBackdrop className="bg-background-950/50 dark:bg-black/70" />
       <DrawerContent className="w-[280px] max-w-[90%] md:w-[340px] bg-background-0 dark:bg-[#0E1524]">
         <DrawerBody contentContainerClassName="gap-1 px-3 py-2">
@@ -334,7 +333,10 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
             action="secondary"
             onPress={() => setShowSettings(true)}
           >
-            <ButtonIcon as={Settings} className="text-typography-700 dark:text-typography-300" />
+            <ButtonIcon
+              as={Settings}
+              className="text-typography-700 dark:text-[#E8EBF0]"
+            />
             <ButtonText className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
               Settings
             </ButtonText>
@@ -345,7 +347,10 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
             action="secondary"
             onPress={handleLogout}
           >
-            <ButtonIcon as={LogOut} className="text-typography-700 dark:text-typography-300" />
+            <ButtonIcon
+              as={LogOut}
+              className="text-typography-700 dark:text-[#E8EBF0]"
+            />
             <ButtonText className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
               Logout
             </ButtonText>
@@ -353,16 +358,27 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
         </DrawerFooter>
       </DrawerContent>
 
-      <Modal isOpen={showSettings} onClose={() => setShowSettings(false)} size="md">
+      <Modal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        size="md"
+      >
         <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
         <ModalContent className="bg-background-0 dark:bg-[#0E1524] rounded-2xl border border-outline-100 dark:border-[#2A3B52] shadow-soft-2 web:max-w-xl">
           <ModalHeader className="flex-row items-start justify-between gap-3 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
             <Box className="flex-row items-center gap-3 flex-1">
               <Box className="w-11 h-11 rounded-xl items-center justify-center from-primary-50 to-background-0 dark:from-[#16263D] dark:to-[#0F1A2E] border border-outline-100 dark:border-[#2A3B52]">
-                <Icon as={Settings} size="lg" className="text-primary-700 dark:text-[#8AB9FF]" />
+                <Icon
+                  as={Settings}
+                  size="lg"
+                  className="text-primary-700 dark:text-[#8AB9FF]"
+                />
               </Box>
               <Box className="flex-1">
-                <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
+                <Heading
+                  size="md"
+                  className="text-typography-900 dark:text-[#E8EBF0]"
+                >
                   Settings
                 </Heading>
                 <Text className="text-sm text-typography-600 dark:text-typography-300">
@@ -376,7 +392,7 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
             <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50/70 dark:bg-[#0F1A2E] p-4 gap-3">
               <Text
                 className="text-xs font-semibold uppercase text-typography-500 dark:text-typography-300 tracking-[0.08em]"
-                style={{ fontFamily: "Inter_600SemiBold" }}
+                style={{fontFamily: "Inter_600SemiBold"}}
               >
                 Theme
               </Text>
@@ -394,27 +410,34 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
                     <Radio
                       key={option.value}
                       value={option.value}
-                      className={`flex-row items-center gap-3 rounded-xl border px-3 py-3 transition-all ${isActive
-                        ? "border-primary-500 bg-primary-50/60 dark:border-[#4A7DFF] dark:bg-[#121C2D]"
-                        : "border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524]"
-                        }`}
+                      className={`flex-row items-center gap-3 rounded-xl border px-3 py-3 transition-all ${
+                        isActive
+                          ? "border-primary-500 bg-primary-50/60 dark:border-[#4A7DFF] dark:bg-[#121C2D]"
+                          : "border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524]"
+                      }`}
                     >
                       <RadioIndicator
-                        className={`self-center ${isActive
-                          ? "border-primary-600 bg-primary-50/70 dark:bg-[#1B2F4B] dark:border-[#4A7DFF]"
-                          : ""
-                          }`}
+                        className={`self-center ${
+                          isActive
+                            ? "border-primary-600 bg-primary-50/70 dark:bg-[#1B2F4B] dark:border-[#4A7DFF]"
+                            : ""
+                        }`}
                       >
                         {isActive ? (
-                          <RadioIcon as={Dot} size="sm" className="text-primary-700 dark:text-[#8AB9FF]" />
+                          <RadioIcon
+                            as={Dot}
+                            size="sm"
+                            className="text-primary-700 dark:text-[#8AB9FF]"
+                          />
                         ) : null}
                       </RadioIndicator>
                       <Box className="flex-row items-start gap-3 flex-1">
                         <Box
-                          className={`w-10 h-10 rounded-lg items-center justify-center ${isActive
-                            ? "bg-primary-500/10 dark:bg-[#1B2F4B]"
-                            : "bg-background-100 dark:bg-[#1A2637]"
-                            }`}
+                          className={`w-10 h-10 rounded-lg items-center justify-center ${
+                            isActive
+                              ? "bg-primary-500/10 dark:bg-[#1B2F4B]"
+                              : "bg-background-100 dark:bg-[#1A2637]"
+                          }`}
                         >
                           <Icon
                             as={option.icon}
@@ -429,7 +452,7 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
                         <Box className="flex-1">
                           <RadioLabel
                             className="text-base text-typography-900 dark:text-[#E8EBF0]"
-                            style={{ fontFamily: "Inter_600SemiBold" }}
+                            style={{fontFamily: "Inter_600SemiBold"}}
                           >
                             {option.label}
                           </RadioLabel>

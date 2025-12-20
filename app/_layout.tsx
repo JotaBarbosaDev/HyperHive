@@ -626,7 +626,7 @@ function RootLayoutNav() {
                   zIndex: 2147483647,
                   pointerEvents: "none",
                 }}
-                snowflakeCount={200}
+                snowflakeCount={30}
                 speed={[0.5, 2.0]}
                 wind={[-0.5, 2.0]}
                 radius={[0.5, 3.0]}
