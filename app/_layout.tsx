@@ -53,6 +53,7 @@ import {
 } from "@/components/ui/modal";
 import { VmProgressToastListener } from "@/components/VmProgressToastListener";
 import { SocketErrorModalListener } from "@/components/SocketErrorModalListener";
+import Snowfall from "react-snowfall";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -461,9 +462,11 @@ function RootLayoutNav() {
   return (
     <SafeAreaProvider>
       <GluestackUIProvider mode={resolvedMode}>
-        <ThemeProvider value={resolvedMode === "dark" ? DarkTheme : DefaultTheme}>
+        <ThemeProvider
+          value={resolvedMode === "dark" ? DarkTheme : DefaultTheme}
+        >
           <SafeAreaView
-            style={{ flex: 1, backgroundColor: statusBarBackground }}
+            style={{flex: 1, backgroundColor: statusBarBackground}}
             edges={["top", "right", "bottom", "left"]}
           >
             <StatusBar
@@ -542,8 +545,14 @@ function RootLayoutNav() {
                   className="h-11 rounded-xl px-4 gap-2 shadow-soft-3"
                   onPress={handleOpenDrawer}
                 >
-                  <ButtonIcon as={EditIcon} size="sm" className="dark:text-[#0D1420]" />
-                  <ButtonText className="text-sm font-semibold">Create new NFS</ButtonText>
+                  <ButtonIcon
+                    as={EditIcon}
+                    size="sm"
+                    className="dark:text-[#0D1420]"
+                  />
+                  <ButtonText className="text-sm font-semibold">
+                    Create new NFS
+                  </ButtonText>
                 </Button>
               </Box>
             )}
@@ -567,7 +576,11 @@ function RootLayoutNav() {
                 onSuccess={handleMountCreated}
               />
             )}
-            <Modal isOpen={Boolean(apiErrorModal)} onClose={handleCloseApiErrorModal} size="md">
+            <Modal
+              isOpen={Boolean(apiErrorModal)}
+              onClose={handleCloseApiErrorModal}
+              size="md"
+            >
               <ModalBackdrop />
               <ModalContent>
                 <ModalHeader>
@@ -602,6 +615,23 @@ function RootLayoutNav() {
                 </ModalFooter>
               </ModalContent>
             </Modal>
+            {Platform.OS === "web" && (
+              <Snowfall
+                style={{
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  width: "100vw",
+                  height: "100vh",
+                  zIndex: 2147483647,
+                  pointerEvents: "none",
+                }}
+                snowflakeCount={200}
+                speed={[0.5, 2.0]}
+                wind={[-0.5, 2.0]}
+                radius={[0.5, 3.0]}
+              />
+            )}
           </SafeAreaView>
         </ThemeProvider>
       </GluestackUIProvider>

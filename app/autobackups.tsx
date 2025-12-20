@@ -15,6 +15,7 @@ import { ChevronDownIcon } from "@/components/ui/icon";
 import { Toast, ToastTitle, useToast } from "@/components/ui/toast";
 import { Fab, FabIcon, FabLabel } from "@/components/ui/fab";
 import { Calendar, Database, TrendingUp, RefreshCw, Trash2, Edit, Power, PowerOff, Plus, Clock, Check, Info } from "lucide-react-native";
+
 import {
   listAutoBackups,
   createAutoBackup,
@@ -345,7 +346,7 @@ export default function AutoBackupsScreen() {
     <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{paddingBottom: 100}}
         refreshControl={
           <RefreshControl
             refreshing={loading}
@@ -362,18 +363,25 @@ export default function AutoBackupsScreen() {
               <Heading
                 size="2xl"
                 className="text-typography-900 dark:text-[#E8EBF0] web:text-4xl"
-                style={{ fontFamily: "Inter_700Bold" }}
+                style={{fontFamily: "Inter_700Bold"}}
               >
                 Auto-Backups
               </Heading>
               <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl mt-2">
-                Configure automatic backup schedules for your VMs with frequency and retention control.
+                Configure automatic backup schedules for your VMs with frequency
+                and retention control.
               </Text>
             </VStack>
             <Box className="hidden web:flex">
-              <Button className="rounded-lg px-4" onPress={() => setShowCreateModal(true)}>
+              <Button
+                className="rounded-lg px-4"
+                onPress={() => setShowCreateModal(true)}
+              >
                 <ButtonIcon as={Plus} className="text-background-0 mr-1.5" />
-                <ButtonText className="text-background-0" style={{ fontFamily: "Inter_600SemiBold" }}>
+                <ButtonText
+                  className="text-background-0"
+                  style={{fontFamily: "Inter_600SemiBold"}}
+                >
                   New schedule
                 </ButtonText>
               </Button>
@@ -384,60 +392,84 @@ export default function AutoBackupsScreen() {
           <HStack className="mb-6 gap-4 flex-wrap web:grid web:grid-cols-4">
             <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
               <HStack className="items-center gap-2 mb-2">
-                <Calendar size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
+                <Calendar
+                  size={16}
+                  className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{ fontFamily: "Inter_500Medium" }}
+                  style={{fontFamily: "Inter_500Medium"}}
                 >
                   Total Schedules
                 </Text>
               </HStack>
-              <Text className="text-2xl text-typography-900 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_700Bold" }}>
+              <Text
+                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
+                style={{fontFamily: "Inter_700Bold"}}
+              >
                 {stats.total}
               </Text>
             </Box>
 
             <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
               <HStack className="items-center gap-2 mb-2">
-                <Database size={16} className="text-[#2DD4BF] dark:text-[#5EEAD4]" />
+                <Database
+                  size={16}
+                  className="text-[#2DD4BF] dark:text-[#5EEAD4]"
+                />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{ fontFamily: "Inter_500Medium" }}
+                  style={{fontFamily: "Inter_500Medium"}}
                 >
                   Active
                 </Text>
               </HStack>
-              <Text className="text-2xl text-typography-900 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_700Bold" }}>
+              <Text
+                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
+                style={{fontFamily: "Inter_700Bold"}}
+              >
                 {stats.active}
               </Text>
             </Box>
 
             <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
               <HStack className="items-center gap-2 mb-2">
-                <TrendingUp size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
+                <TrendingUp
+                  size={16}
+                  className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{ fontFamily: "Inter_500Medium" }}
+                  style={{fontFamily: "Inter_500Medium"}}
                 >
                   Avg Frequency
                 </Text>
               </HStack>
-              <Text className="text-2xl text-typography-900 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_700Bold" }}>
+              <Text
+                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
+                style={{fontFamily: "Inter_700Bold"}}
+              >
                 {stats.avgFrequency} d
               </Text>
             </Box>
 
             <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
               <HStack className="items-center gap-2 mb-2">
-                <Clock size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
+                <Clock
+                  size={16}
+                  className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{ fontFamily: "Inter_500Medium" }}
+                  style={{fontFamily: "Inter_500Medium"}}
                 >
                   VMs Covered
                 </Text>
               </HStack>
-              <Text className="text-2xl text-typography-900 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_700Bold" }}>
+              <Text
+                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
+                style={{fontFamily: "Inter_700Bold"}}
+              >
                 {stats.totalVms}
               </Text>
             </Box>
@@ -467,16 +499,19 @@ export default function AutoBackupsScreen() {
           {schedules.length === 0 ? (
             <Box className="p-8 web:rounded-2xl web:bg-background-0/80 dark:web:bg-[#151F30]/80">
               <VStack className="items-center gap-4">
-                <Calendar size={48} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
+                <Calendar
+                  size={48}
+                  className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                />
                 <Text
                   className="text-typography-900 dark:text-[#E8EBF0] text-lg text-center"
-                  style={{ fontFamily: "Inter_600SemiBold" }}
+                  style={{fontFamily: "Inter_600SemiBold"}}
                 >
                   No auto-backups yet
                 </Text>
                 <Text
                   className="text-[#9AA4B8] dark:text-[#8A94A8] text-center"
-                  style={{ fontFamily: "Inter_400Regular" }}
+                  style={{fontFamily: "Inter_400Regular"}}
                 >
                   Create a schedule to start automatic backups.
                 </Text>
@@ -491,16 +526,31 @@ export default function AutoBackupsScreen() {
                 >
                   <HStack className="justify-between items-start">
                     <VStack className="gap-1">
-                      <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_700Bold" }}>
+                      <Heading
+                        size="md"
+                        className="text-typography-900 dark:text-[#E8EBF0]"
+                        style={{fontFamily: "Inter_700Bold"}}
+                      >
                         {schedule.vmName}
                       </Heading>
-                      <Text className="text-sm text-[#9AA4B8] dark:text-[#8A94A8]" style={{ fontFamily: "Inter_400Regular" }}>
-                        {getFrequencyLabel(schedule.frequencyDays)} • {schedule.minTime} - {schedule.maxTime}
+                      <Text
+                        className="text-sm text-[#9AA4B8] dark:text-[#8A94A8]"
+                        style={{fontFamily: "Inter_400Regular"}}
+                      >
+                        {getFrequencyLabel(schedule.frequencyDays)} •{" "}
+                        {schedule.minTime} - {schedule.maxTime}
                       </Text>
-                      <Text className="text-sm text-[#9AA4B8] dark:text-[#8A94A8]" style={{ fontFamily: "Inter_400Regular" }}>
-                        NFS: {getNfsName(schedule.nfsShareId)} • Retain {schedule.retention} backups
+                      <Text
+                        className="text-sm text-[#9AA4B8] dark:text-[#8A94A8]"
+                        style={{fontFamily: "Inter_400Regular"}}
+                      >
+                        NFS: {getNfsName(schedule.nfsShareId)} • Retain{" "}
+                        {schedule.retention} backups
                       </Text>
-                      <Text className="text-xs text-typography-600 dark:text-typography-400" style={{ fontFamily: "Inter_400Regular" }}>
+                      <Text
+                        className="text-xs text-typography-600 dark:text-typography-400"
+                        style={{fontFamily: "Inter_400Regular"}}
+                      >
                         Last backup: {formatDate(schedule.lastBackup)}
                       </Text>
                     </VStack>
@@ -511,7 +561,10 @@ export default function AutoBackupsScreen() {
                         className="rounded-md"
                         onPress={() => openEdit(schedule)}
                       >
-                        <ButtonIcon as={Edit} className="text-typography-700 dark:text-[#E8EBF0]" />
+                        <ButtonIcon
+                          as={Edit}
+                          className="text-typography-700 dark:text-[#E8EBF0]"
+                        />
                       </Button>
                       <Button
                         size="sm"
@@ -527,17 +580,19 @@ export default function AutoBackupsScreen() {
                     <Badge
                       size="sm"
                       variant="outline"
-                      className={`rounded-full w-fit ${schedule.isEnabled
+                      className={`rounded-full w-fit ${
+                        schedule.isEnabled
                           ? "bg-[#22c55e19] border-[#22c55e] dark:bg-[#22c55e25] dark:border-[#4ade80]"
                           : "bg-[#fbbf2419] border-[#FBBF24] dark:bg-[#FBBF2425] dark:border-[#FCD34D]"
-                        }`}
+                      }`}
                     >
                       <BadgeText
-                        className={`text-xs ${schedule.isEnabled
+                        className={`text-xs ${
+                          schedule.isEnabled
                             ? "text-[#22c55e] dark:text-[#4ade80]"
                             : "text-[#FBBF24] dark:text-[#FCD34D]"
-                          }`}
-                        style={{ fontFamily: "Inter_500Medium" }}
+                        }`}
+                        style={{fontFamily: "Inter_500Medium"}}
                       >
                         {schedule.isEnabled ? "Enabled" : "Disabled"}
                       </BadgeText>
@@ -565,11 +620,16 @@ export default function AutoBackupsScreen() {
       </ScrollView>
 
       {/* FAB mobile */}
-      <Fab placement="bottom right" size="lg" onPress={() => setShowCreateModal(true)} className="md:hidden">
+      <Fab
+        placement="bottom right"
+        size="lg"
+        onPress={() => setShowCreateModal(true)}
+        className="md:hidden"
+      >
         <FabIcon as={Plus} className="text-background-0" />
         <FabLabel
           className="text-background-0"
-          style={{ fontFamily: "Inter_600SemiBold" }}
+          style={{fontFamily: "Inter_600SemiBold"}}
         >
           New
         </FabLabel>
@@ -583,7 +643,7 @@ export default function AutoBackupsScreen() {
             <Heading
               size="lg"
               className="text-typography-900 dark:text-[#E8EBF0]"
-              style={{ fontFamily: "Inter_700Bold" }}
+              style={{fontFamily: "Inter_700Bold"}}
             >
               {editSchedule ? "Edit Auto-Backup" : "New Auto-Backup"}
             </Heading>
@@ -592,7 +652,10 @@ export default function AutoBackupsScreen() {
           <ModalBody className="py-4">
             <VStack className="gap-4">
               <VStack className="gap-2">
-                <Text className="text-sm text-typography-700 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_500Medium" }}>
+                <Text
+                  className="text-sm text-typography-700 dark:text-[#E8EBF0]"
+                  style={{fontFamily: "Inter_500Medium"}}
+                >
                   VM
                 </Text>
                 <Select
@@ -600,13 +663,22 @@ export default function AutoBackupsScreen() {
                   onValueChange={setFormVm}
                   isDisabled={loadingOptions || vmOptions.length === 0}
                 >
-                  <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
+                  <SelectTrigger
+                    variant="outline"
+                    size="md"
+                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]"
+                  >
                     <SelectInput
-                      placeholder={loadingOptions ? "Loading..." : "Choose a VM..."}
+                      placeholder={
+                        loadingOptions ? "Loading..." : "Choose a VM..."
+                      }
                       value={formVm}
                       className="text-typography-900 dark:text-[#E8EBF0]"
                     />
-                    <SelectIcon className="mr-3 text-typography-500 dark:text-typography-400" as={ChevronDownIcon} />
+                    <SelectIcon
+                      className="mr-3 text-typography-500 dark:text-typography-400"
+                      as={ChevronDownIcon}
+                    />
                   </SelectTrigger>
                   <SelectPortal>
                     <SelectBackdropContent />
@@ -615,10 +687,20 @@ export default function AutoBackupsScreen() {
                         <SelectDragIndicator />
                       </SelectDragIndicatorWrapper>
                       {vmOptions.length === 0 ? (
-                        <SelectItem label={loadingOptions ? "Loading..." : "No VMs available"} value="" isDisabled />
+                        <SelectItem
+                          label={
+                            loadingOptions ? "Loading..." : "No VMs available"
+                          }
+                          value=""
+                          isDisabled
+                        />
                       ) : (
                         vmOptions.map((vm) => (
-                          <SelectItem key={vm.name} label={`${vm.name} (${vm.machineName})`} value={vm.name} />
+                          <SelectItem
+                            key={vm.name}
+                            label={`${vm.name} (${vm.machineName})`}
+                            value={vm.name}
+                          />
                         ))
                       )}
                     </SelectContent>
@@ -628,17 +710,30 @@ export default function AutoBackupsScreen() {
 
               <HStack className="gap-3">
                 <VStack className="flex-1 gap-2">
-                  <Text className="text-sm text-typography-700 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_500Medium" }}>
+                  <Text
+                    className="text-sm text-typography-700 dark:text-[#E8EBF0]"
+                    style={{fontFamily: "Inter_500Medium"}}
+                  >
                     Frequency
                   </Text>
-                  <Select selectedValue={String(formFrequency)} onValueChange={(val) => setFormFrequency(Number(val) || 1)}>
-                    <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
+                  <Select
+                    selectedValue={String(formFrequency)}
+                    onValueChange={(val) => setFormFrequency(Number(val) || 1)}
+                  >
+                    <SelectTrigger
+                      variant="outline"
+                      size="md"
+                      className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]"
+                    >
                       <SelectInput
                         placeholder="Select frequency"
                         value={String(formFrequency)}
                         className="text-typography-900 dark:text-[#E8EBF0]"
                       />
-                      <SelectIcon className="mr-3 text-typography-500 dark:text-typography-400" as={ChevronDownIcon} />
+                      <SelectIcon
+                        className="mr-3 text-typography-500 dark:text-typography-400"
+                        as={ChevronDownIcon}
+                      />
                     </SelectTrigger>
                     <SelectPortal>
                       <SelectBackdropContent />
@@ -647,14 +742,21 @@ export default function AutoBackupsScreen() {
                           <SelectDragIndicator />
                         </SelectDragIndicatorWrapper>
                         {FREQUENCY_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.value} label={opt.label} value={String(opt.value)} />
+                          <SelectItem
+                            key={opt.value}
+                            label={opt.label}
+                            value={String(opt.value)}
+                          />
                         ))}
                       </SelectContent>
                     </SelectPortal>
                   </Select>
                 </VStack>
                 <VStack className="flex-1 gap-2">
-                  <Text className="text-sm text-typography-700 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_500Medium" }}>
+                  <Text
+                    className="text-sm text-typography-700 dark:text-[#E8EBF0]"
+                    style={{fontFamily: "Inter_500Medium"}}
+                  >
                     Retention (backups)
                   </Text>
                   <Input variant="outline" className="rounded-lg">
@@ -670,20 +772,30 @@ export default function AutoBackupsScreen() {
 
               <HStack className="gap-3">
                 <VStack className="flex-1 gap-2">
-                  <Text className="text-sm text-typography-700 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_500Medium" }}>
+                  <Text
+                    className="text-sm text-typography-700 dark:text-[#E8EBF0]"
+                    style={{fontFamily: "Inter_500Medium"}}
+                  >
                     Min time
                   </Text>
                   <Select
                     selectedValue={formMinTime || undefined}
                     onValueChange={(val) => setFormMinTime(val)}
                   >
-                    <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
+                    <SelectTrigger
+                      variant="outline"
+                      size="md"
+                      className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]"
+                    >
                       <SelectInput
                         placeholder="Select time"
                         value={formMinTime}
                         className="text-typography-900 dark:text-[#E8EBF0]"
                       />
-                      <SelectIcon className="mr-3 text-typography-500 dark:text-typography-400" as={ChevronDownIcon} />
+                      <SelectIcon
+                        className="mr-3 text-typography-500 dark:text-typography-400"
+                        as={ChevronDownIcon}
+                      />
                     </SelectTrigger>
                     <SelectPortal>
                       <SelectBackdropContent />
@@ -699,20 +811,30 @@ export default function AutoBackupsScreen() {
                   </Select>
                 </VStack>
                 <VStack className="flex-1 gap-2">
-                  <Text className="text-sm text-typography-700 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_500Medium" }}>
+                  <Text
+                    className="text-sm text-typography-700 dark:text-[#E8EBF0]"
+                    style={{fontFamily: "Inter_500Medium"}}
+                  >
                     Max time
                   </Text>
                   <Select
                     selectedValue={formMaxTime || undefined}
                     onValueChange={(val) => setFormMaxTime(val)}
                   >
-                    <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
+                    <SelectTrigger
+                      variant="outline"
+                      size="md"
+                      className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]"
+                    >
                       <SelectInput
                         placeholder="Select time"
                         value={formMaxTime}
                         className="text-typography-900 dark:text-[#E8EBF0]"
                       />
-                      <SelectIcon className="mr-3 text-typography-500 dark:text-typography-400" as={ChevronDownIcon} />
+                      <SelectIcon
+                        className="mr-3 text-typography-500 dark:text-typography-400"
+                        as={ChevronDownIcon}
+                      />
                     </SelectTrigger>
                     <SelectPortal>
                       <SelectBackdropContent />
@@ -730,21 +852,37 @@ export default function AutoBackupsScreen() {
               </HStack>
 
               <VStack className="gap-2">
-                <Text className="text-sm text-typography-700 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_500Medium" }}>
+                <Text
+                  className="text-sm text-typography-700 dark:text-[#E8EBF0]"
+                  style={{fontFamily: "Inter_500Medium"}}
+                >
                   NFS share
                 </Text>
                 <Select
-                  selectedValue={formNfsShare != null ? String(formNfsShare) : ""}
+                  selectedValue={
+                    formNfsShare != null ? String(formNfsShare) : ""
+                  }
                   onValueChange={(val) => setFormNfsShare(Number(val))}
-                  isDisabled={loadingOptions || Object.keys(nfsShares).length === 0}
+                  isDisabled={
+                    loadingOptions || Object.keys(nfsShares).length === 0
+                  }
                 >
-                  <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
+                  <SelectTrigger
+                    variant="outline"
+                    size="md"
+                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]"
+                  >
                     <SelectInput
-                      placeholder={loadingOptions ? "Loading..." : "Choose a NFS share..."}
+                      placeholder={
+                        loadingOptions ? "Loading..." : "Choose a NFS share..."
+                      }
                       value={selectedNfsLabel}
                       className="text-typography-900 dark:text-[#E8EBF0]"
                     />
-                    <SelectIcon className="mr-3 text-typography-500 dark:text-typography-400" as={ChevronDownIcon} />
+                    <SelectIcon
+                      className="mr-3 text-typography-500 dark:text-typography-400"
+                      as={ChevronDownIcon}
+                    />
                   </SelectTrigger>
                   <SelectPortal>
                     <SelectBackdropContent />
@@ -753,7 +891,13 @@ export default function AutoBackupsScreen() {
                         <SelectDragIndicator />
                       </SelectDragIndicatorWrapper>
                       {Object.keys(nfsShares).length === 0 ? (
-                        <SelectItem label={loadingOptions ? "Loading..." : "No NFS shares"} value="" isDisabled />
+                        <SelectItem
+                          label={
+                            loadingOptions ? "Loading..." : "No NFS shares"
+                          }
+                          value=""
+                          isDisabled
+                        />
                       ) : (
                         Object.entries(nfsShares).map(([id, label]) => (
                           <SelectItem key={id} label={label} value={id} />
@@ -771,7 +915,6 @@ export default function AutoBackupsScreen() {
                   isChecked
                   aria-label="Live backups require qemu-guest-agent"
                 >
-                  
                   <CheckboxLabel className="text-sm text-typography-600 dark:text-typography-400">
                     VMs need qemu-guest-agent for live backups
                   </CheckboxLabel>
@@ -789,7 +932,7 @@ export default function AutoBackupsScreen() {
               >
                 <ButtonText
                   className="text-typography-700 dark:text-[#E8EBF0]"
-                  style={{ fontFamily: "Inter_500Medium" }}
+                  style={{fontFamily: "Inter_500Medium"}}
                 >
                   Cancel
                 </ButtonText>
@@ -804,7 +947,7 @@ export default function AutoBackupsScreen() {
                 ) : (
                   <ButtonText
                     className="text-background-0 dark:text-typography-900"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
+                    style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     {editSchedule ? "Save changes" : "Create"}
                   </ButtonText>

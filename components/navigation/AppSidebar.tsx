@@ -62,6 +62,8 @@ import {
 import { usePathname, useRouter } from "expo-router";
 import { clearAuthToken } from "@/services/auth-storage";
 import { setAuthToken } from "@/services/api-client";
+// Snowfall agora é global no layout raiz (web)
+
 export type AppSidebarProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -261,34 +263,37 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
       return (
         <React.Fragment key={itemKey}>
           <Pressable
-            className={`gap-3 flex-row items-center rounded-xl px-4 py-3 transition-all ${isActive
-              ? "bg-background-100 dark:bg-[#1A2637]"
-              : "hover:bg-background-50 dark:hover:bg-[#1A2637]/50 active:bg-background-100 dark:active:bg-[#1A2637]"
-              }`}
-            style={{ marginLeft: paddingLeft }}
+            className={`gap-3 flex-row items-center rounded-xl px-4 py-3 transition-all ${
+              isActive
+                ? "bg-background-100 dark:bg-[#1A2637]"
+                : "hover:bg-background-50 dark:hover:bg-[#1A2637]/50 active:bg-background-100 dark:active:bg-[#1A2637]"
+            }`}
+            style={{marginLeft: paddingLeft}}
             onPress={handlePress}
           >
             <Box
               className="w-6 h-6 shrink-0 !items-center !justify-center"
-              style={{ alignItems: "center", justifyContent: "center" }}
+              style={{alignItems: "center", justifyContent: "center"}}
             >
               {item.icon ? (
                 <Icon
                   as={item.icon}
                   size={iconSizeOverride ?? "md"}
-                  className={`shrink-0 ${isActive
-                    ? "text-typography-900 dark:text-[#E8EBF0]"
-                    : "text-typography-600 dark:text-typography-400"
-                    } ${iconClassOverride ?? ""}`}
+                  className={`shrink-0 ${
+                    isActive
+                      ? "text-typography-900 dark:text-[#E8EBF0]"
+                      : "text-typography-600 dark:text-typography-400"
+                  } ${iconClassOverride ?? ""}`}
                   {...restIconProps}
                 />
               ) : null}
             </Box>
             <Text
-              className={`flex-1 text-base ${isActive
-                ? "text-typography-900 dark:text-[#E8EBF0] font-semibold"
-                : "text-typography-900 dark:text-typography-200 font-medium"
-                }`}
+              className={`flex-1 text-base ${
+                isActive
+                  ? "text-typography-900 dark:text-[#E8EBF0] font-semibold"
+                  : "text-typography-900 dark:text-typography-200 font-medium"
+              }`}
               style={{
                 fontFamily: isActive ? "Inter_600SemiBold" : "Inter_500Medium",
               }}
@@ -299,8 +304,9 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
               <Icon
                 as={ChevronRight}
                 size="sm"
-                className={`ml-auto text-typography-500 dark:text-typography-400 transition-transform origin-center ${isExpanded ? "rotate-45" : ""
-                  }`}
+                className={`ml-auto text-typography-500 dark:text-typography-400 transition-transform origin-center ${
+                  isExpanded ? "rotate-45" : ""
+                }`}
               />
             ) : null}
           </Pressable>
@@ -316,6 +322,7 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
 
   return (
     <Drawer isOpen={isOpen} onClose={onClose} anchor="left" size="full">
+      
       <DrawerBackdrop className="bg-background-950/50 dark:bg-black/70" />
       <DrawerContent className="w-[280px] max-w-[90%] md:w-[340px] bg-background-0 dark:bg-[#0E1524]">
         <DrawerBody contentContainerClassName="gap-1 px-3 py-2">
