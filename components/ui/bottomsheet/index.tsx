@@ -42,10 +42,10 @@ const bottomSheetItemStyle = tva({
   base: 'p-3 flex-row items-center rounded-sm w-full disabled:opacity-0.4 web:pointer-events-auto disabled:cursor-not-allowed hover:bg-background-50 active:bg-background-100 focus:bg-background-100 web:focus-visible:bg-background-100',
 });
 
-const defaultBottomSheetRef = React.createRef<BottomSheetMethods>();
+const defaultBottomSheetRef = React.createRef<BottomSheetMethods | null>();
 const BottomSheetContext = createContext<{
   visible: boolean;
-  bottomSheetRef: React.RefObject<BottomSheetMethods>;
+  bottomSheetRef: React.RefObject<BottomSheetMethods | null>;
   handleClose: () => void;
   handleOpen: () => void;
 }>({
@@ -67,7 +67,7 @@ export const BottomSheet = ({
   onOpen?: () => void;
   onClose?: () => void;
 }) => {
-  const bottomSheetRef = useRef<BottomSheetMethods>(null);
+  const bottomSheetRef = useRef<BottomSheetMethods | null>(null);
 
   const [visible, setVisible] = useState(false);
 

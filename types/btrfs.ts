@@ -30,6 +30,7 @@ export type BtrfsRaid = {
   uuid: string;
   name?: string;
   mount_point?: string;
+  target?: string;
   label?: string;
   raid_level?: string;
   raidType?: string;

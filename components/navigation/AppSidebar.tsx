@@ -21,7 +21,7 @@ import {
   ModalHeader,
   ModalCloseButton,
 } from "@/components/ui/modal";
-import { RadioGroup, RadioIndicator, RadioLabel, RadioIcon } from "@/components/ui/radio";
+import { Radio, RadioGroup, RadioIndicator, RadioLabel, RadioIcon } from "@/components/ui/radio";
 import { Heading } from "@/components/ui/heading";
 import {
   HardDrive,
@@ -53,7 +53,6 @@ import {
   ShieldCheck,
   GitFork,
   ArrowLeftRight,
-  Radio,
   Image as ImageIcon,
   Box as BoxIcon,
   Database,
@@ -394,6 +393,7 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
                   return (
                     <Radio
                       key={option.value}
+                      value={option.value}
                       className={`flex-row items-center gap-3 rounded-xl border px-3 py-3 transition-all ${isActive
                         ? "border-primary-500 bg-primary-50/60 dark:border-[#4A7DFF] dark:bg-[#121C2D]"
                         : "border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524]"

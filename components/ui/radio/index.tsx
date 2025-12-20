@@ -97,6 +97,29 @@ const radioLabelStyle = tva({
 
 type IRadioProps = Omit<React.ComponentProps<typeof UIRadio>, 'context'> &
   VariantProps<typeof radioStyle>;
+
+let hasLoggedMissingContext = false;
+
+const renderWithRadioFallback = (
+  render: () => React.ReactNode,
+  fallback: () => React.ReactNode
+) => {
+  try {
+    return render();
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.includes('RadioContext')) {
+      throw error;
+    }
+    if (!hasLoggedMissingContext) {
+      console.warn(
+        'Radio primitives rendered without a Radio context. Falling back to defaults to avoid a crash.'
+      );
+      hasLoggedMissingContext = true;
+    }
+    return fallback();
+  }
+};
+
 const Radio = React.forwardRef<React.ComponentRef<typeof UIRadio>, IRadioProps>(
   function Radio({ className, size = 'md', ...props }, ref) {
     return (
@@ -132,15 +155,19 @@ const RadioIndicator = React.forwardRef<
   IRadioIndicatorProps
 >(function RadioIndicator({ className, ...props }, ref) {
   const { size } = useStyleContext(SCOPE);
-  return (
-    <UIRadio.Indicator
-      className={radioIndicatorStyle({
-        parentVariants: { size },
-        class: className,
-      })}
-      ref={ref}
-      {...props}
-    />
+  const indicatorClass = radioIndicatorStyle({
+    parentVariants: { size },
+    class: className,
+  });
+  return renderWithRadioFallback(
+    () => (
+      <UIRadio.Indicator className={indicatorClass} ref={ref} {...props} />
+    ),
+    () => (
+      <View className={indicatorClass} ref={ref as any} {...props}>
+        {props.children}
+      </View>
+    )
   );
 });
 
@@ -151,15 +178,17 @@ const RadioLabel = React.forwardRef<
   IRadioLabelProps
 >(function RadioLabel({ className, ...props }, ref) {
   const { size } = useStyleContext(SCOPE);
-  return (
-    <UIRadio.Label
-      className={radioLabelStyle({
-        parentVariants: { size },
-        class: className,
-      })}
-      ref={ref}
-      {...props}
-    />
+  const labelClass = radioLabelStyle({
+    parentVariants: { size },
+    class: className,
+  });
+  return renderWithRadioFallback(
+    () => <UIRadio.Label className={labelClass} ref={ref} {...props} />,
+    () => (
+      <Text className={labelClass} ref={ref as any} {...props}>
+        {props.children}
+      </Text>
+    )
   );
 });
 
@@ -174,40 +203,41 @@ const RadioIcon = React.forwardRef<
 >(function RadioIcon({ className, size, ...props }, ref) {
   const { size: parentSize } = useStyleContext(SCOPE);
 
-  if (typeof size === 'number') {
-    return (
-      <UIRadio.Icon
-        ref={ref}
-        {...props}
-        className={radioIconStyle({ class: className })}
-        size={size}
-      />
-    );
-  } else if (
-    (props.height !== undefined || props.width !== undefined) &&
-    size === undefined
-  ) {
-    return (
-      <UIRadio.Icon
-        ref={ref}
-        {...props}
-        className={radioIconStyle({ class: className })}
-      />
-    );
-  }
+  const iconClass = radioIconStyle({
+    parentVariants: {
+      size: parentSize,
+    },
+    size,
+    class: className,
+  });
 
-  return (
-    <UIRadio.Icon
-      {...props}
-      className={radioIconStyle({
-        parentVariants: {
-          size: parentSize,
-        },
-        size,
-        class: className,
-      })}
-      ref={ref}
-    />
+  return renderWithRadioFallback(
+    () => {
+      if (typeof size === 'number') {
+        return (
+          <UIRadio.Icon
+            ref={ref}
+            {...props}
+            className={radioIconStyle({ class: className })}
+            size={size}
+          />
+        );
+      } else if (
+        (props.height !== undefined || props.width !== undefined) &&
+        size === undefined
+      ) {
+        return (
+          <UIRadio.Icon
+            ref={ref}
+            {...props}
+            className={radioIconStyle({ class: className })}
+          />
+        );
+      }
+
+      return <UIRadio.Icon {...props} className={iconClass} ref={ref} />;
+    },
+    () => <UIIcon {...props} className={iconClass} ref={ref as any} />
   );
 });
 

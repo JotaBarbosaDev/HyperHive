@@ -238,7 +238,6 @@ export default function DockerVolumesScreen() {
 		setConfirmConfig({
 			title: "Remove volume?",
 			description: "This will delete the volume from the selected machine.",
-			onConfirm: () => { },
 		});
 	};
 
