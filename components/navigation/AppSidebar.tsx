@@ -10,7 +10,6 @@ import { Button, ButtonIcon, ButtonText } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { Box } from "@/components/ui/box";
 import { Pressable } from "@/components/ui/pressable";
-import { Divider } from "@/components/ui/divider";
 import { Icon } from "@/components/ui/icon";
 import {
   Modal,
@@ -32,6 +31,7 @@ import {
   LayoutDashboard,
   Share2,
   Shield,
+  WifiPen,
   CloudCog,
   RefreshCw,
   FileText,
@@ -41,8 +41,10 @@ import {
   Dot,
   MoonStar,
   MonitorSmartphone,
+  PcCase,
   SunMedium,
   KeyRound,
+  EthernetPort,
   Layers,
   PlugZap,
   Gauge,
@@ -81,16 +83,16 @@ type MenuItem = {
 const MENU_ITEMS: MenuItem[] = [
   {
     label: "Dashboard",
-    icon: LayoutDashboard,
+    icon: Gauge,
     route: "/dashboard",
   },
   {
     label: "Storage",
     icon: HardDrive,
     children: [
-      { label: "BTRFS / RAIDs", route: "/btrfs-raids", icon: Layers },
-      { label: "Auto-Mounts", route: "/btrfs-automatic-mounts", icon: PlugZap },
-      { label: "SmartDisk", route: "/smartdisk", icon: Gauge },
+      {label: "BTRFS / RAIDs", route: "/btrfs-raids", icon: Layers},
+      {label: "Auto-Mounts", route: "/btrfs-automatic-mounts", icon: PlugZap},
+      {label: "SmartDisk", route: "/smartdisk", icon: Gauge},
     ],
   },
   {
@@ -105,11 +107,12 @@ const MENU_ITEMS: MenuItem[] = [
   },
   {
     label: "VMs",
-    icon: Server,
+    icon: PcCase,
+    iconProps: { size: "md" },
     children: [
-      { label: "Virtual Machines", route: "/vms", icon: ServerCog },
-      { label: "Backups", route: "/backups", icon: DatabaseBackup },
-      { label: "Auto-Backups", route: "/autobackups", icon: History },
+      {label: "Virtual Machines", route: "/vms", icon: ServerCog},
+      {label: "Backups", route: "/backups", icon: DatabaseBackup},
+      {label: "Auto-Backups", route: "/autobackups", icon: History},
     ],
   },
   {
@@ -139,24 +142,24 @@ const MENU_ITEMS: MenuItem[] = [
   },
   {
     label: "Nginx",
-    icon: Network,
+    icon: EthernetPort,
     children: [
-      { label: "404", route: "/404", icon: TriangleAlert },
-      { label: "Certificates", route: "/certificates", icon: ShieldCheck },
-      { label: "Proxy", route: "/proxy", icon: GitFork },
-      { label: "Redirection", route: "/redirection", icon: ArrowLeftRight },
-      { label: "Streams", route: "/streams", icon: Radio },
+      {label: "404", route: "/404", icon: TriangleAlert},
+      {label: "Certificates", route: "/certificates", icon: ShieldCheck},
+      {label: "Proxy", route: "/proxy", icon: GitFork},
+      {label: "Redirection", route: "/redirection", icon: ArrowLeftRight},
+      {label: "Streams", route: "/streams", icon: Radio},
     ],
   },
   {
     label: "Docker",
     icon: Boxes,
     children: [
-      { label: "Images", route: "/docker/images", icon: ImageIcon },
-      { label: "Containers", route: "/docker/containers", icon: BoxIcon },
-      { label: "Volumes", route: "/docker/volumes", icon: Database },
-      { label: "Networks", route: "/docker/networks", icon: Network },
-      { label: "Git", route: "/docker/git", icon: GitBranch },
+      {label: "Images", route: "/docker/images", icon: ImageIcon},
+      {label: "Containers", route: "/docker/containers", icon: BoxIcon},
+      {label: "Volumes", route: "/docker/volumes", icon: Database},
+      {label: "Networks", route: "/docker/networks", icon: WifiPen},
+      {label: "Git", route: "/docker/git", icon: GitBranch},
     ],
   },
 ];
@@ -277,7 +280,7 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
               {item.icon ? (
                 <Icon
                   as={item.icon}
-                  size={iconSizeOverride ?? "md"}
+                  size={iconSizeOverride ?? "lg"}
                   className={`shrink-0 ${
                     isActive
                       ? "text-typography-900 dark:text-[#E8EBF0]"
@@ -335,7 +338,7 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
           >
             <ButtonIcon
               as={Settings}
-              className="text-typography-700 dark:text-[#E8EBF0]"
+              className="text-typography-700 dark:text-[#f0e8e8]"
             />
             <ButtonText className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
               Settings
@@ -371,7 +374,7 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
                 <Icon
                   as={Settings}
                   size="lg"
-                  className="text-primary-700 dark:text-[#8AB9FF]"
+                  className="text-primary-700 dark:text-[#2dd4be88]"
                 />
               </Box>
               <Box className="flex-1">
@@ -412,14 +415,14 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
                       value={option.value}
                       className={`flex-row items-center gap-3 rounded-xl border px-3 py-3 transition-all ${
                         isActive
-                          ? "border-primary-500 bg-primary-50/60 dark:border-[#4A7DFF] dark:bg-[#121C2D]"
+                          ? "border-primary-500 bg-primary-50/60 dark:border-[#2DD4BF] dark:bg-[#121C2D]"
                           : "border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524]"
                       }`}
                     >
                       <RadioIndicator
                         className={`self-center ${
                           isActive
-                            ? "border-primary-600 bg-primary-50/70 dark:bg-[#1B2F4B] dark:border-[#4A7DFF]"
+                            ? "border-primary-600 bg-primary-50/70 dark:bg-[#1B2F4B] dark:border-[#2DD4BF]"
                             : ""
                         }`}
                       >
@@ -427,7 +430,7 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
                           <RadioIcon
                             as={Dot}
                             size="sm"
-                            className="text-primary-700 dark:text-[#8AB9FF]"
+                            className="text-primary-700 dark:text-[#2DD4BF]"
                           />
                         ) : null}
                       </RadioIndicator>
@@ -444,7 +447,7 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
                             size="md"
                             className={
                               isActive
-                                ? "text-primary-700 dark:text-[#8AB9FF]"
+                                ? "text-primary-700 dark:text-[#2dd4be88]"
                                 : "text-typography-600 dark:text-typography-200"
                             }
                           />

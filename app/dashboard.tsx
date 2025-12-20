@@ -260,7 +260,7 @@ export default function DashboardScreen() {
           {title}
         </Text>
         <Box className="w-9 h-9 rounded-xl bg-primary-50/70 dark:bg-[#12213A] items-center justify-center">
-          <Icon as={icon} size="md" className="text-primary-700 dark:text-[#8AB9FF]" />
+          <Icon as={icon} size="md" className="text-[#2DD4BF] opacity-80 dark:text-[#5EEAD4] dark:opacity-80" />
         </Box>
       </HStack>
       <Heading size="xl" className="text-typography-900 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_700Bold" }}>
@@ -325,7 +325,7 @@ export default function DashboardScreen() {
             <HStack className="items-center justify-between mb-4">
               <HStack className="items-center gap-3">
                 <Box className="w-10 h-10 rounded-xl bg-primary-50/70 dark:bg-[#12213A] items-center justify-center">
-                  <Icon as={HardDrive} size="md" className="text-primary-700 dark:text-[#8AB9FF]" />
+                  <Icon as={HardDrive} size="md" className="text-[#2DD4BF] opacity-80 dark:text-[#5EEAD4] dark:opacity-80" />
                 </Box>
                 <VStack className="gap-1">
                   <Text className="text-xs font-semibold uppercase text-typography-500 dark:text-typography-300 tracking-[0.08em]">
@@ -400,7 +400,7 @@ export default function DashboardScreen() {
                     <HStack className="items-start justify-between gap-3">
                       <HStack className="items-start gap-3 flex-1">
                         <Box className="w-11 h-11 rounded-xl bg-primary-50/70 dark:bg-[#12213A] items-center justify-center">
-                          <Icon as={Server} size="md" className="text-primary-700 dark:text-[#8AB9FF]" />
+                          <Icon as={Server} size="md" className="text-[#2DD4BF] opacity-80 dark:text-[#5EEAD4] dark:opacity-80" />
                         </Box>
                         <VStack className="gap-1 flex-1">
                           <HStack className="items-center gap-2 flex-wrap">
@@ -439,7 +439,7 @@ export default function DashboardScreen() {
                       <Box className="flex-1 min-w-[160px] rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
                         <HStack className="items-center justify-between mb-2">
                           <Text className="text-xs text-typography-600 dark:text-typography-400 uppercase font-semibold tracking-[0.08em]">CPU</Text>
-                          <Icon as={Activity} size="sm" className="text-primary-700 dark:text-[#8AB9FF]" />
+                          <Icon as={Activity} size="sm" className="text-[#2DD4BF] opacity-80 dark:text-[#5EEAD4] dark:opacity-80" />
                         </HStack>
                         <Text className="text-lg font-semibold text-typography-900 dark:text-[#E8EBF0]">{formatPercent(avgCpu)}</Text>
                         <Text className="text-xs text-typography-500 dark:text-typography-400">{snap.cpu?.cores?.length ?? 0} cores</Text>
@@ -448,7 +448,7 @@ export default function DashboardScreen() {
                       <Box className="flex-1 min-w-[160px] rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
                         <HStack className="items-center justify-between mb-2">
                           <Text className="text-xs text-typography-600 dark:text-typography-400 uppercase font-semibold tracking-[0.08em]">RAM</Text>
-                          <Icon as={MemoryStick} size="sm" className="text-primary-700 dark:text-[#8AB9FF]" />
+                          <Icon as={MemoryStick} size="sm" className="text-[#2DD4BF] opacity-80 dark:text-[#5EEAD4] dark:opacity-80" />
                         </HStack>
                         <Text className="text-lg font-semibold text-typography-900 dark:text-[#E8EBF0]">{formatPercent(ramPercent)}</Text>
                         <Text className="text-xs text-typography-500 dark:text-typography-400">
@@ -459,7 +459,7 @@ export default function DashboardScreen() {
                       <Box className="flex-1 min-w-[160px] rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
                         <HStack className="items-center justify-between mb-2">
                           <Text className="text-xs text-typography-600 dark:text-typography-400 uppercase font-semibold tracking-[0.08em]">Disk</Text>
-                          <Icon as={HardDrive} size="sm" className="text-primary-700 dark:text-[#8AB9FF]" />
+                          <Icon as={HardDrive} size="sm" className="text-[#2DD4BF] opacity-80 dark:text-[#5EEAD4] dark:opacity-80" />
                         </HStack>
                         <Text className="text-lg font-semibold text-typography-900 dark:text-[#E8EBF0]">{formatPercent(diskUsage)}</Text>
                         <Text className="text-xs text-typography-500 dark:text-typography-400">
@@ -470,7 +470,7 @@ export default function DashboardScreen() {
                       <Box className="flex-1 min-w-[160px] rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
                         <HStack className="items-center justify-between mb-2">
                           <Text className="text-xs text-typography-600 dark:text-typography-400 uppercase font-semibold tracking-[0.08em]">Temp</Text>
-                          <Icon as={ThermometerSun} size="sm" className="text-primary-700 dark:text-[#8AB9FF]" />
+                          <Icon as={ThermometerSun} size="sm" className="text-[#2DD4BF] opacity-80 dark:text-[#5EEAD4] dark:opacity-80" />
                         </HStack>
                         <Text className="text-lg font-semibold text-typography-900 dark:text-[#E8EBF0]">
                           {averageCpuTemp(snap.cpu) ? `${averageCpuTemp(snap.cpu).toFixed(1)}ºC avg / ${maxCpuTemp(snap.cpu).toFixed(1)}ºC max` : "—"}
