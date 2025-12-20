@@ -8,6 +8,7 @@ import { VStack } from "@/components/ui/vstack";
 import { HStack } from "@/components/ui/hstack";
 import { Input, InputField } from "@/components/ui/input";
 import { Button, ButtonIcon, ButtonSpinner, ButtonText } from "@/components/ui/button";
+import { Pressable } from "@/components/ui/pressable";
 import {
   AlertDialog,
   AlertDialogBackdrop,
@@ -17,10 +18,19 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
 } from "@/components/ui/alert-dialog";
+import {
+  Modal,
+  ModalBackdrop,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+} from "@/components/ui/modal";
 import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
-import { SpaPort } from "@/types/spa";
-import { createSpaPort, deleteSpaPort, listSpaPorts } from "@/services/spa";
+import { SpaAllowResponse, SpaPort } from "@/types/spa";
+import { createSpaPort, deleteSpaPort, getSpaAllow, listSpaPorts } from "@/services/spa";
 import { Copy, Plus, ShieldCheck, Trash2 } from "lucide-react-native";
 import { getApiBaseUrl } from "@/config/apiConfig";
 
@@ -36,6 +46,17 @@ const formatDate = (value: string) => {
   });
 };
 
+const formatRemainingSeconds = (value: number) => {
+  if (!Number.isFinite(value)) return String(value);
+  const total = Math.max(0, Math.floor(value));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
+};
+
 export default function SpaScreen() {
   const { isChecking } = useAuthGuard("/");
   const toast = useToast();
@@ -47,6 +68,11 @@ export default function SpaScreen() {
   const [saving, setSaving] = React.useState(false);
   const [deleteTarget, setDeleteTarget] = React.useState<SpaPort | null>(null);
   const [deletingPort, setDeletingPort] = React.useState<number | null>(null);
+  const [allowTarget, setAllowTarget] = React.useState<SpaPort | null>(null);
+  const [allowInfo, setAllowInfo] = React.useState<SpaAllowResponse | null>(null);
+  const [allowLoading, setAllowLoading] = React.useState(false);
+  const [allowError, setAllowError] = React.useState<string | null>(null);
+  const [allowCountdown, setAllowCountdown] = React.useState<SpaAllowResponse | null>(null);
 
   const showToast = React.useCallback(
     (title: string, description: string, action: "success" | "error" = "success") => {
@@ -148,6 +174,68 @@ export default function SpaScreen() {
     }
   };
 
+  React.useEffect(() => {
+    if (!allowTarget) {
+      setAllowInfo(null);
+      setAllowError(null);
+      setAllowLoading(false);
+      setAllowCountdown(null);
+      return;
+    }
+
+    let isActive = true;
+    const loadAllow = async (mode: "full" | "silent" = "full") => {
+      if (mode === "full") {
+        setAllowLoading(true);
+        setAllowError(null);
+      }
+      try {
+        const data = await getSpaAllow(allowTarget.port);
+        if (!isActive) return;
+        setAllowInfo(data);
+        setAllowCountdown(data);
+      } catch (err) {
+        if (!isActive) return;
+        console.error("Failed to load SPA allow list", err);
+        setAllowError("Could not fetch SPA allow list.");
+      } finally {
+        if (!isActive) return;
+        if (mode === "full") setAllowLoading(false);
+      }
+    };
+
+    loadAllow("full");
+    const interval = setInterval(() => {
+      loadAllow("silent");
+    }, 5000);
+
+    return () => {
+      isActive = false;
+      clearInterval(interval);
+    };
+  }, [allowTarget]);
+
+  React.useEffect(() => {
+    if (!allowTarget || !allowCountdown?.allows?.length) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setAllowCountdown((current) => {
+        if (!current) return current;
+        const updated = current.allows
+          .map((entry) => ({
+            ...entry,
+            remaining_seconds: Math.max(0, entry.remaining_seconds - 1),
+          }))
+          .filter((entry) => entry.remaining_seconds > 0);
+        return { ...current, allows: updated };
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [allowTarget, allowCountdown?.allows?.length]);
+
   return (
     <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
@@ -244,36 +332,40 @@ export default function SpaScreen() {
               ) : (
                 <VStack space="md" className="mt-1">
                   {ports.map((item) => (
-                    <HStack
+                    <Pressable
                       key={item.port}
-                      className="items-center justify-between bg-background-50 border border-background-100 rounded-2xl px-4 py-3"
+                      className="rounded-2xl active:opacity-80"
+                      onPress={() => setAllowTarget(item)}
                     >
-                      <VStack space="xs">
-                        <Heading size="sm" className="text-typography-900">Port {item.port}</Heading>
-                        <Text size="xs" className="text-typography-600">Created at {formatDate(item.created_at)}</Text>
-                      </VStack>
-                      <HStack space="sm" className="items-center">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="rounded-full"
-                          onPress={() => copyAccessLink(item.port)}
-                        >
-                          <ButtonIcon as={Copy} />
-                          <ButtonText>Copy link</ButtonText>
-                        </Button>
-                        <Button
-                          action="negative"
-                          variant="outline"
-                          size="sm"
-                          className="rounded-full"
-                          onPress={() => setDeleteTarget(item)}
-                        >
-                          {deletingPort === item.port ? <ButtonSpinner /> : <ButtonIcon as={Trash2} />}
-                          <ButtonText>Remove</ButtonText>
-                        </Button>
+                      <HStack className="items-center justify-between bg-background-50 border border-background-100 rounded-2xl px-4 py-3">
+                        <VStack space="xs">
+                          <Heading size="sm" className="text-typography-900">Port {item.port}</Heading>
+                          <Text size="xs" className="text-typography-600">Created at {formatDate(item.created_at)}</Text>
+                          <Text size="xs" className="text-typography-500">Tap to view allow list</Text>
+                        </VStack>
+                        <HStack space="sm" className="items-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full"
+                            onPress={() => copyAccessLink(item.port)}
+                          >
+                            <ButtonIcon as={Copy} />
+                            <ButtonText>Copy link</ButtonText>
+                          </Button>
+                          <Button
+                            action="negative"
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full"
+                            onPress={() => setDeleteTarget(item)}
+                          >
+                            {deletingPort === item.port ? <ButtonSpinner /> : <ButtonIcon as={Trash2} />}
+                            <ButtonText>Remove</ButtonText>
+                          </Button>
+                        </HStack>
                       </HStack>
-                    </HStack>
+                    </Pressable>
                   ))}
                 </VStack>
               )}
@@ -311,6 +403,53 @@ export default function SpaScreen() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <Modal isOpen={Boolean(allowTarget)} onClose={() => setAllowTarget(null)}>
+          <ModalBackdrop />
+          <ModalContent>
+            <ModalHeader>
+              <VStack space="xs">
+                <Heading size="md" className="text-typography-900">
+                  SPA allow list
+                </Heading>
+              </VStack>
+              <ModalCloseButton />
+            </ModalHeader>
+            <ModalBody className="gap-3">
+              {allowLoading ? (
+                <HStack className="items-center gap-2">
+                  <ButtonSpinner />
+                  <Text size="sm" className="text-typography-500">Loading allow list...</Text>
+                </HStack>
+              ) : allowError ? (
+                <Text size="sm" className="text-typography-600">{allowError}</Text>
+              ) : allowCountdown?.allows?.length ? (
+                <VStack space="sm">
+                  {allowCountdown.allows.map((entry) => (
+                    <HStack
+                      key={`${entry.ip}-${entry.remaining_seconds}`}
+                      className="items-center justify-between bg-background-50 border border-background-100 rounded-xl px-3 py-2"
+                    >
+                      <Text size="sm" className="text-typography-900">{entry.ip}</Text>
+                      <Text size="sm" className="text-typography-600">
+                        {formatRemainingSeconds(entry.remaining_seconds)}
+                      </Text>
+                    </HStack>
+                  ))}
+                </VStack>
+              ) : (
+                <Text size="sm" className="text-typography-500">
+                  No active allows for this port.
+                </Text>
+              )}
+            </ModalBody>
+            <ModalFooter>
+              <Button variant="outline" className="rounded-full" onPress={() => setAllowTarget(null)}>
+                <ButtonText>Close</ButtonText>
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
       </ScrollView>
     </Box>
   );

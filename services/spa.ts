@@ -1,5 +1,5 @@
 import {getApiBaseUrl, setApiBaseUrl} from "@/config/apiConfig";
-import {SpaPort} from "@/types/spa";
+import {SpaAllowResponse, SpaPort} from "@/types/spa";
 import {apiFetch, setAuthToken, triggerUnauthorized} from "./api-client";
 import {loadApiBaseUrl, loadAuthToken} from "./auth-storage";
 
@@ -53,6 +53,14 @@ export async function deleteSpaPort(port: number) {
   const encodedPort = encodeURIComponent(String(port));
   return apiFetch<void>(`/spa/${encodedPort}`, {
     method: "DELETE",
+    token: authToken,
+  });
+}
+
+export async function getSpaAllow(port: number): Promise<SpaAllowResponse> {
+  const authToken = await resolveToken();
+  const encodedPort = encodeURIComponent(String(port));
+  return apiFetch<SpaAllowResponse>(`/spa/allow/${encodedPort}`, {
     token: authToken,
   });
 }
