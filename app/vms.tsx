@@ -2987,7 +2987,7 @@ function EditVmForm({
 
   return (
     <VStack className="gap-4">
-      <Box className="rounded-xl border border-outline-100 bg-gradient-to-r from-indigo-500/10 via-sky-500/10 to-emerald-500/10 p-4">
+      <Box className="rounded-xl border border-outline-100 p-4">
         <HStack className="justify-between items-start">
           <VStack className="gap-1">
             <Text className="text-xs uppercase tracking-wide text-typography-500">
@@ -3000,16 +3000,31 @@ function EditVmForm({
               Slave: {vm.machineName}
             </Text>
           </VStack>
-          <Badge variant={VM_STATES[vm.state].badgeVariant} className="rounded-full">
+          <Badge
+            variant={VM_STATES[vm.state].badgeVariant}
+            className="rounded-full"
+          >
             <BadgeText>{VM_STATES[vm.state].label}</BadgeText>
           </Badge>
         </HStack>
         <HStack className="mt-4 gap-3 flex-wrap">
           {[
-            { label: "vCPU", value: `${vcpu} cores`, previous: `${vm.DefinedCPUS} current` },
-            { label: "RAM", value: formatMemoryLabel(memory), previous: formatMemoryLabel(vm.DefinedRam) },
-            { label: "Disk", value: `${disk} GB`, previous: `${vm.diskSizeGB} GB` },
-            { label: "Network", value: network, previous: vm.network },
+            {
+              label: "vCPU",
+              value: `${vcpu} cores`,
+              previous: `${vm.DefinedCPUS} current`,
+            },
+            {
+              label: "RAM",
+              value: formatMemoryLabel(memory),
+              previous: formatMemoryLabel(vm.DefinedRam),
+            },
+            {
+              label: "Disk",
+              value: `${disk} GB`,
+              previous: `${vm.diskSizeGB} GB`,
+            },
+            {label: "Network", value: network, previous: vm.network},
           ].map((item) => (
             <Box
               key={item.label}
@@ -3022,7 +3037,10 @@ function EditVmForm({
                 <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
                   {item.value}
                 </Text>
-                <Badge variant="outline" className="rounded-full border-outline-200">
+                <Badge
+                  variant="outline"
+                  className="rounded-full border-outline-200"
+                >
                   <BadgeText className="text-[11px] text-typography-600">
                     {item.previous}
                   </BadgeText>
@@ -3033,7 +3051,7 @@ function EditVmForm({
         </HStack>
       </Box>
 
-      <VStack className="rounded-xl border border-outline-100 bg-background-50 dark:bg-[#0E1524] p-4 gap-4">
+      <VStack className="rounded-xl border border-outline-100 dark:bg-[#0E1524] p-4 gap-4">
         <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
           Adjust resources
         </Text>
@@ -3102,10 +3120,11 @@ function EditVmForm({
                 <Pressable
                   key={gb}
                   onPress={() => setMemory(mb)}
-                  className={`px-3 py-2 rounded-full border ${memory === mb
-                    ? "border-primary-500 bg-primary-50"
-                    : "border-outline-200 bg-background-0"
-                    }`}
+                  className={`px-3 py-2 rounded-full border ${
+                    memory === mb
+                      ? "border-primary-500 bg-primary-50/20"
+                      : "border-outline-200 bg-background-0"
+                  }`}
                 >
                   <Text className="text-xs font-medium text-typography-700">
                     {gb} GB
@@ -3140,10 +3159,11 @@ function EditVmForm({
               <Pressable
                 key={gb}
                 onPress={() => setDisk(gb)}
-                className={`px-3 py-2 rounded-full border ${disk === gb
-                  ? "border-primary-500 bg-primary-50"
-                  : "border-outline-200 bg-background-0"
-                  }`}
+                className={`px-3 py-2 rounded-full border ${
+                  disk === gb
+                    ? "border-primary-500 bg-primary-50/20"
+                    : "border-outline-200 bg-background-0"
+                }`}
               >
                 <Text className="text-xs font-medium text-typography-700">
                   {gb} GB
@@ -3160,7 +3180,9 @@ function EditVmForm({
             </FormControlLabelText>
           </FormControlLabel>
           <Select
-            selectedValue={network === "default" || network === "512rede" ? network : "other"}
+            selectedValue={
+              network === "default" || network === "512rede" ? network : "other"
+            }
             onValueChange={(value) => {
               if (value === "other") {
                 setNetwork("");
@@ -3200,11 +3222,8 @@ function EditVmForm({
               </SelectContent>
             </SelectPortal>
           </Select>
-          {(network !== "default" && network !== "512rede") && (
-            <Input
-              variant="outline"
-              className="rounded-md mt-2"
-            >
+          {network !== "default" && network !== "512rede" && (
+            <Input variant="outline" className="rounded-md mt-2">
               <InputField
                 value={network}
                 onChangeText={setNetwork}
