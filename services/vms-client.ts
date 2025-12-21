@@ -201,6 +201,16 @@ export async function removeAllIsos(vmName: string) {
   });
 }
 
+export async function setVmAutostart(vmName: string, autoStart: boolean) {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  await apiFetch<void>(`/virsh/autostart/${encodedVmName}`, {
+    method: "POST",
+    token: authToken,
+    body: { auto_start: autoStart },
+  });
+}
+
 export async function cloneVm(
   vmName: string,
   destNfs: string,

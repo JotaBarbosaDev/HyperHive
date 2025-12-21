@@ -28,7 +28,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Checkbox, CheckboxIndicator, CheckboxIcon, CheckboxLabel } from "@/components/ui/checkbox";
-import { TextInput } from "react-native";
+import { StableTextInput } from "@/components/ui/stable-text-input";
 import { Badge, BadgeText } from "@/components/ui/badge";
 import { ScrollView, Platform } from "react-native";
 import { Cpu, X, Copy, Trash2, ChevronDown, Check, ChevronDownIcon } from "lucide-react-native";
@@ -950,7 +950,7 @@ export default function CreateVmModal({
                           {cpuXml.length} chars
                         </Text>
                       </Box>
-                      <TextInput
+                      <StableTextInput
                         defaultValue={cpuXml}
                         onChangeText={setCpuXml}
                         multiline

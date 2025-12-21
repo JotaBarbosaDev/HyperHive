@@ -74,6 +74,7 @@ import {
   changeVmNetwork,
   changeVncPassword,
   removeAllIsos,
+  setVmAutostart,
   getCpuDisableFeatures,
   updateCpuXml,
   getVmExportUrl,
@@ -215,6 +216,8 @@ export default function VirtualMachinesScreen() {
   const [restoreVm, setRestoreVm] = React.useState<VM | null>(null);
   const [changeVncVm, setChangeVncVm] = React.useState<VM | null>(null);
   const [pendingVmNames, setPendingVmNames] = React.useState<Set<string>>(new Set());
+  const autostartDesiredRef = React.useRef<Map<string, boolean>>(new Map());
+  const autostartInFlightRef = React.useRef<Set<string>>(new Set());
   const [mountOptions, setMountOptions] = React.useState<Mount[]>([]);
   const [slaveOptions, setSlaveOptions] = React.useState<Slave[]>([]);
   const [cloneOptionsLoading, setCloneOptionsLoading] = React.useState(false);
@@ -879,15 +882,62 @@ export default function VirtualMachinesScreen() {
   };
 
   const handleToggleAutostart = (vm: VM, checked: boolean) => {
-    setVms((prev) => prev.map((v) => v.name === vm.name ? { ...v, autoStart: checked } : v));
+    const vmName = vm.name;
+    const previousValue = vm.autoStart;
+    const updateLocalAutostart = (value: boolean) => {
+      setVms((prev) => prev.map((v) => v.name === vmName ? { ...v, autoStart: value } : v));
+      setSelectedVm((prev) => (prev?.name === vmName ? { ...prev, autoStart: value } : prev));
+      setDetailsVm((prev) => (prev?.name === vmName ? { ...prev, autoStart: value } : prev));
+    };
+
+    updateLocalAutostart(checked);
     Haptics.selectionAsync();
-    toast.show({
-      placement: "top", render: ({ id }) => (
-        <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="success">
-          <ToastTitle size="sm">Auto-start {checked ? "enabled" : "disabled"}</ToastTitle>
-        </Toast>
-      )
-    });
+
+    autostartDesiredRef.current.set(vmName, checked);
+    if (autostartInFlightRef.current.has(vmName)) {
+      return;
+    }
+
+    autostartInFlightRef.current.add(vmName);
+    void (async () => {
+      let lastApplied: boolean | undefined;
+      try {
+        while (true) {
+          const desired = autostartDesiredRef.current.get(vmName);
+          if (desired === undefined) {
+            break;
+          }
+          autostartDesiredRef.current.delete(vmName);
+          if (lastApplied !== undefined && desired === lastApplied) {
+            continue;
+          }
+          await setVmAutostart(vmName, desired);
+          lastApplied = desired;
+        }
+
+        if (lastApplied !== undefined) {
+          showToastMessage(`Auto-start ${lastApplied ? "enabled" : "disabled"}`);
+          void fetchAndSetVms().catch((error) => {
+            console.warn("Error refreshing VMs after auto-start update:", error);
+          });
+        }
+      } catch (error) {
+        console.error("Error updating auto-start:", error);
+        autostartDesiredRef.current.delete(vmName);
+        const fallbackValue = lastApplied ?? previousValue;
+        updateLocalAutostart(fallbackValue);
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to update auto-start.";
+        showToastMessage("Auto-start update failed", message, "error");
+        void fetchAndSetVms().catch((err) => {
+          console.warn("Error refreshing VMs after auto-start update failure:", err);
+        });
+      } finally {
+        autostartInFlightRef.current.delete(vmName);
+      }
+    })();
   };
 
   const handleDelete = (vm: VM) => {

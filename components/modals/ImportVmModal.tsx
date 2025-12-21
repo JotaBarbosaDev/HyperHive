@@ -28,10 +28,11 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Checkbox, CheckboxIndicator, CheckboxIcon, CheckboxLabel } from "@/components/ui/checkbox";
-import { ScrollView, Platform, TextInput } from "react-native";
+import { ScrollView, Platform } from "react-native";
 import { Cpu, X, Copy, Trash2, ChevronDown, Check, Upload } from "lucide-react-native";
 import { Pressable } from "@/components/ui/pressable";
 import { useToast, Toast, ToastTitle, ToastDescription } from "@/components/ui/toast";
+import { StableTextInput } from "@/components/ui/stable-text-input";
 import { importVm, listSlaves, Slave, getCpuDisableFeatures } from "@/services/vms-client";
 import { listMounts } from "@/services/hyperhive";
 import { Mount } from "@/types/mount";
@@ -727,7 +728,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                         <Text className="text-xs text-[#64748B] font-mono">XML Editor</Text>
                         <Text className="text-xs text-[#475569]">{cpuXml.length} chars</Text>
                       </Box>
-                      <TextInput
+                      <StableTextInput
                         defaultValue={cpuXml}
                         onChangeText={setCpuXml}
                         multiline

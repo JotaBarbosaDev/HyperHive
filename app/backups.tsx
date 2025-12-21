@@ -1238,19 +1238,23 @@ export default function BackupsScreen() {
                 </ButtonText>
               </Button>
               <Button
-                className="rounded-lg px-6 py-2.5 bg-typography-900 dark:bg-[#E8EBF0]"
+                size="md"
+                className="rounded-lg px-4"
                 disabled={creatingBackup || !createVmName || !createNfsId}
                 onPress={handleCreateBackup}
               >
                 {creatingBackup ? (
                   <ButtonSpinner />
                 ) : (
-                  <ButtonText
-                    className="text-background-0 dark:text-typography-900"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
-                  >
-                    Start backup
-                  </ButtonText>
+                  <>
+                    <ButtonIcon as={Plus} className="text-background-0 mr-1.5" />
+                    <ButtonText
+                      className="text-background-0"
+                      style={{ fontFamily: "Inter_600SemiBold" }}
+                    >
+                      New backup
+                    </ButtonText>
+                  </>
                 )}
               </Button>
             </HStack>

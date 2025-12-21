@@ -55,6 +55,7 @@ import {
   ShieldCheck,
   GitFork,
   ArrowLeftRight,
+  ChevronsLeftRightEllipsis,
   Image as ImageIcon,
   Box as BoxIcon,
   Database,
@@ -148,7 +149,7 @@ const MENU_ITEMS: MenuItem[] = [
       {label: "Certificates", route: "/certificates", icon: ShieldCheck},
       {label: "Proxy", route: "/proxy", icon: GitFork},
       {label: "Redirection", route: "/redirection", icon: ArrowLeftRight},
-      {label: "Streams", route: "/streams", icon: Radio},
+      {label: "Streams", route: "/streams", icon: ChevronsLeftRightEllipsis},
     ],
   },
   {

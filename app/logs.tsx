@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Switch,
   Text,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   View,
@@ -19,6 +18,7 @@ import { useLogs } from "@/hooks/useLogs";
 import { LogEntry, LogLevel } from "@/types/log";
 import { useAppTheme } from "@/hooks/useAppTheme";
 import { getApiBaseUrl } from "@/config/apiConfig";
+import { StableTextInput } from "@/components/ui/stable-text-input";
 
 const LEVEL_LABEL: Record<LogLevel, string> = {
   error: "ERROR",
@@ -406,7 +406,7 @@ export default function LogsScreen() {
 
           <View style={styles.filterItem}>
             <Text style={styles.label}>Quick search</Text>
-            <TextInput
+            <StableTextInput
               style={styles.input}
               placeholder="Filter by message, machine, or timestamp..."
               placeholderTextColor={theme.muted}
@@ -418,7 +418,7 @@ export default function LogsScreen() {
           <View style={styles.filterRow}>
             <View style={[styles.filterItem, styles.flexItem]}>
               <Text style={styles.label}>Machine</Text>
-              <TextInput
+              <StableTextInput
                 style={styles.input}
                 placeholder="all for all"
                 placeholderTextColor={theme.muted}
@@ -428,7 +428,7 @@ export default function LogsScreen() {
             </View>
             <View style={[styles.filterItem, styles.smallColumn]}>
               <Text style={styles.label}>Level (API)</Text>
-              <TextInput
+              <StableTextInput
                 style={styles.input}
                 placeholder="all/0/1/2/3"
                 placeholderTextColor={theme.muted}
@@ -438,7 +438,7 @@ export default function LogsScreen() {
             </View>
             <View style={[styles.filterItem, styles.smallColumn]}>
               <Text style={styles.label}>Limit</Text>
-              <TextInput
+              <StableTextInput
                 style={styles.input}
                 keyboardType="numeric"
                 value={limitInput}

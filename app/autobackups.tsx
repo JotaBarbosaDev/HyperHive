@@ -48,11 +48,15 @@ type AutoBackupStats = {
   avgFrequency: number;
 };
 
+const CUSTOM_FREQUENCY_VALUE = "custom";
+
 const FREQUENCY_OPTIONS = [
   { label: "Daily", value: 1 },
   { label: "Weekly", value: 7 },
   { label: "Monthly", value: 30 },
 ];
+const DEFAULT_FREQUENCY = FREQUENCY_OPTIONS[0]?.value ?? 1;
+const FREQUENCY_PRESETS = new Set(FREQUENCY_OPTIONS.map((opt) => opt.value));
 
 const TIME_OPTIONS = [
   ...Array.from({ length: 96 }, (_, idx) => {
@@ -77,7 +81,13 @@ export default function AutoBackupsScreen() {
 
   // Form state
   const [formVm, setFormVm] = React.useState("");
-  const [formFrequency, setFormFrequency] = React.useState(1);
+  const [formFrequency, setFormFrequency] = React.useState(DEFAULT_FREQUENCY);
+  const [formFrequencyOption, setFormFrequencyOption] = React.useState(
+    String(DEFAULT_FREQUENCY)
+  );
+  const [formCustomFrequency, setFormCustomFrequency] = React.useState(
+    String(DEFAULT_FREQUENCY)
+  );
   const [formMinTime, setFormMinTime] = React.useState("");
   const [formMaxTime, setFormMaxTime] = React.useState("");
   const [formNfsShare, setFormNfsShare] = React.useState<number | null>(null);
@@ -205,12 +215,38 @@ export default function AutoBackupsScreen() {
 
   const resetForm = () => {
     setFormVm(vmOptions[0]?.name ?? "");
-    setFormFrequency(1);
+    setFormFrequency(DEFAULT_FREQUENCY);
+    setFormFrequencyOption(String(DEFAULT_FREQUENCY));
+    setFormCustomFrequency(String(DEFAULT_FREQUENCY));
     setFormMinTime(TIME_OPTIONS[0]);
     setFormMaxTime(TIME_OPTIONS[TIME_OPTIONS.length - 1]);
     setFormNfsShare(nfsShares ? Number(Object.keys(nfsShares)[0]) || null : null);
     setFormRetention("");
     setEditSchedule(null);
+  };
+
+  const handleFrequencyChange = (value: string) => {
+    setFormFrequencyOption(value);
+    if (value === CUSTOM_FREQUENCY_VALUE) {
+      const fallback = formCustomFrequency || String(formFrequency || 1);
+      if (!formCustomFrequency) {
+        setFormCustomFrequency(fallback);
+      }
+      const parsed = Number(fallback);
+      setFormFrequency(Number.isNaN(parsed) ? 1 : parsed);
+      return;
+    }
+    const parsed = Number(value);
+    setFormFrequency(Number.isNaN(parsed) ? 1 : parsed);
+  };
+
+  const handleCustomFrequencyChange = (value: string) => {
+    const cleaned = value.replace(/[^0-9]/g, "");
+    setFormCustomFrequency(cleaned);
+    const parsed = Number(cleaned);
+    if (!Number.isNaN(parsed)) {
+      setFormFrequency(parsed);
+    }
   };
 
   const stats: AutoBackupStats = React.useMemo(() => {
@@ -231,6 +267,18 @@ export default function AutoBackupsScreen() {
     if (days === 30) return "Monthly";
     return `${days} days`;
   };
+
+  const isPresetFrequency = (days: number): boolean =>
+    FREQUENCY_PRESETS.has(days);
+
+  const frequencySelectLabel = React.useMemo(() => {
+    if (formFrequencyOption === CUSTOM_FREQUENCY_VALUE) {
+      return formCustomFrequency
+        ? `Custom (${formCustomFrequency} days)`
+        : "Custom";
+    }
+    return getFrequencyLabel(formFrequency);
+  }, [formFrequencyOption, formCustomFrequency, formFrequency]);
 
   const getNfsName = (id: number): string => nfsShares[id] || `NFS #${id}`;
   const selectedNfsLabel = formNfsShare != null ? getNfsName(formNfsShare) : "";
@@ -266,6 +314,12 @@ export default function AutoBackupsScreen() {
     setEditSchedule(schedule);
     setFormVm(schedule.vmName);
     setFormFrequency(schedule.frequencyDays);
+    setFormFrequencyOption(
+      isPresetFrequency(schedule.frequencyDays)
+        ? String(schedule.frequencyDays)
+        : CUSTOM_FREQUENCY_VALUE
+    );
+    setFormCustomFrequency(String(schedule.frequencyDays));
     setFormMinTime(schedule.minTime);
     setFormMaxTime(schedule.maxTime);
     setFormNfsShare(schedule.nfsShareId);
@@ -309,9 +363,18 @@ export default function AutoBackupsScreen() {
       return;
     }
 
+    const frequencyDays =
+      formFrequencyOption === CUSTOM_FREQUENCY_VALUE
+        ? Number(formCustomFrequency)
+        : formFrequency;
+    if (!Number.isFinite(frequencyDays) || frequencyDays < 1) {
+      showToastMessage("Frequency must be at least 1 day", "error");
+      return;
+    }
+
     const payload = {
       vm_name: formVm,
-      frequency_days: formFrequency,
+      frequency_days: frequencyDays,
       min_time: formMinTime,
       max_time: formMaxTime,
       nfs_mount_id: formNfsShare,
@@ -717,8 +780,8 @@ export default function AutoBackupsScreen() {
                     Frequency
                   </Text>
                   <Select
-                    selectedValue={String(formFrequency)}
-                    onValueChange={(val) => setFormFrequency(Number(val) || 1)}
+                    selectedValue={formFrequencyOption}
+                    onValueChange={handleFrequencyChange}
                   >
                     <SelectTrigger
                       variant="outline"
@@ -727,7 +790,7 @@ export default function AutoBackupsScreen() {
                     >
                       <SelectInput
                         placeholder="Select frequency"
-                        value={String(formFrequency)}
+                        value={frequencySelectLabel}
                         className="text-typography-900 dark:text-[#E8EBF0]"
                       />
                       <SelectIcon
@@ -748,9 +811,24 @@ export default function AutoBackupsScreen() {
                             value={String(opt.value)}
                           />
                         ))}
+                        <SelectItem
+                          key={CUSTOM_FREQUENCY_VALUE}
+                          label="Custom"
+                          value={CUSTOM_FREQUENCY_VALUE}
+                        />
                       </SelectContent>
                     </SelectPortal>
                   </Select>
+                  {formFrequencyOption === CUSTOM_FREQUENCY_VALUE ? (
+                    <Input variant="outline" className="rounded-lg">
+                      <InputField
+                        keyboardType="numeric"
+                        value={formCustomFrequency}
+                        onChangeText={handleCustomFrequencyChange}
+                        placeholder="Custom days (>=1)"
+                      />
+                    </Input>
+                  ) : null}
                 </VStack>
                 <VStack className="flex-1 gap-2">
                   <Text

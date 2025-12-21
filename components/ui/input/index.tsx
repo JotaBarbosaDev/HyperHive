@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { createInput } from '@gluestack-ui/core/input/creator';
-import { View, Pressable, TextInput } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { tva } from '@gluestack-ui/utils/nativewind-utils';
 import {
   withStyleContext,
@@ -10,6 +10,7 @@ import {
 import { cssInterop } from 'nativewind';
 import type { VariantProps } from '@gluestack-ui/utils/nativewind-utils';
 import { PrimitiveIcon, UIIcon } from '@gluestack-ui/core/icon/creator';
+import { StableTextInput } from '../stable-text-input';
 
 const SCOPE = 'INPUT';
 
@@ -17,7 +18,7 @@ const UIInput = createInput({
   Root: withStyleContext(View, SCOPE),
   Icon: UIIcon,
   Slot: Pressable,
-  Input: TextInput,
+  Input: StableTextInput,
 });
 
 cssInterop(PrimitiveIcon, {
