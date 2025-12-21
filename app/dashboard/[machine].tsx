@@ -201,6 +201,12 @@ export default function MachineDetailsScreen() {
 		}
 	}, [params.machine]);
 
+	React.useEffect(() => {
+		if (!machineName) {
+			router.replace("/dashboard");
+		}
+	}, [machineName, router]);
+
 	const { token, isChecking } = useAuthGuard();
 	const { machines, isLoading: isLoadingMachines } = useMachines(token);
 
