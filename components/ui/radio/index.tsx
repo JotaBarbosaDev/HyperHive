@@ -13,6 +13,40 @@ import { PrimitiveIcon, UIIcon } from '@gluestack-ui/core/icon/creator';
 
 const SCOPE = 'Radio';
 
+class RadioErrorBoundary extends React.Component<
+  { fallback: React.ReactNode; children: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    if (
+      error instanceof Error &&
+      error.message.includes('RadioGroupContext') &&
+      !hasLoggedMissingContext
+    ) {
+      console.warn(
+        'Radio rendered outside of RadioGroup; showing fallback UI to avoid crash.'
+      );
+      hasLoggedMissingContext = true;
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
+
 const UIRadio = createRadio({
   Root: (Platform.OS === 'web'
     ? withStyleContext(View, SCOPE)
@@ -122,13 +156,25 @@ const renderWithRadioFallback = (
 
 const Radio = React.forwardRef<React.ComponentRef<typeof UIRadio>, IRadioProps>(
   function Radio({ className, size = 'md', ...props }, ref) {
+    const radioClass = radioStyle({ class: className, size });
+    const fallback = (
+      <Pressable
+        className={radioClass}
+        ref={ref as any}
+        accessibilityRole="radio"
+      >
+        {props.children}
+      </Pressable>
+    );
     return (
-      <UIRadio
-        className={radioStyle({ class: className, size })}
-        {...props}
-        ref={ref}
-        context={{ size }}
-      />
+      <RadioErrorBoundary fallback={fallback}>
+        <UIRadio
+          className={radioClass}
+          {...props}
+          ref={ref}
+          context={{ size }}
+        />
+      </RadioErrorBoundary>
     );
   }
 );

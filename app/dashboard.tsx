@@ -259,8 +259,13 @@ export default function DashboardScreen() {
         <Text className="text-xs font-semibold uppercase text-typography-500 dark:text-typography-300 tracking-[0.08em]">
           {title}
         </Text>
-        <Box className="w-9 h-9 rounded-xl bg-primary-50/70 dark:bg-[#12213A] items-center justify-center">
-          <Icon as={icon} size="md" className="text-[#2DD4BF] opacity-80 dark:text-[#5EEAD4] dark:opacity-80" />
+        <Box className="w-9 h-9 rounded-xl bg-primary-50/70 dark:bg-[#12213A] items-center justify-center shrink-0">
+          <Icon
+            as={icon}
+            size={20}
+            strokeWidth={1.5}
+            className="text-[#2DD4BF] opacity-80 dark:text-[#5EEAD4] dark:opacity-80 flex-none"
+          />
         </Box>
       </HStack>
       <Heading size="xl" className="text-typography-900 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_700Bold" }}>
