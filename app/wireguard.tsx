@@ -24,6 +24,18 @@ type WireGuardConfig = {
   network: string;
 };
 
+const localPeerBefore = `[Peer]
+PublicKey = Qx7k9Lm2vP4n...
+Endpoint = domain.com:51512
+AllowedIPs = 0.0.0.0/0, ::/0
+PersistentKeepalive = 25`;
+
+const localPeerAfter = `[Peer]
+PublicKey = Qx7k9Lm2vP4n...
+Endpoint = 192.168.1.198:51512
+AllowedIPs = 0.0.0.0/0, ::/0
+PersistentKeepalive = 25`;
+
 const formatAllowedIps = (peer: WireguardPeer) => {
   const allowed = peer.wireguard?.AllowedIPs;
   if (allowed && allowed.length) {
@@ -63,6 +75,7 @@ export default function WireGuardScreen() {
   const [deletingPeerId, setDeletingPeerId] = React.useState<number | string | null>(null);
   const [showCreateVpnModal, setShowCreateVpnModal] = React.useState(false);
   const [showAddPeerModal, setShowAddPeerModal] = React.useState(false);
+  const [showLocalConnectModal, setShowLocalConnectModal] = React.useState(false);
   const [formPeerName, setFormPeerName] = React.useState("");
   const [formPeerEndpoint, setFormPeerEndpoint] = React.useState("");
   const [formPeerKeepalive, setFormPeerKeepalive] = React.useState("25");
@@ -313,6 +326,7 @@ export default function WireGuardScreen() {
     return null;
   }
 
+  const isDarkMode = colorScheme === "dark";
   const refreshControlTint = colorScheme === "dark" ? "#F8FAFC" : "#0F172A";
   const refreshControlBackground = colorScheme === "dark" ? "#0E1524" : "#E2E8F0";
 
@@ -339,9 +353,22 @@ export default function WireGuardScreen() {
           >
             WireGuard VPN
           </Heading>
-          <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl mb-6">
+          <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl mb-3">
             Configure and manage the WireGuard VPN for secure cluster access with end-to-end encryption.
           </Text>
+          <Button
+            size="xs"
+            className="self-start rounded-md bg-typography-900 dark:bg-[#0A1628] dark:border dark:border-[#2A3B52] mb-6"
+            style={isDarkMode ? { backgroundColor: "#0A1628", borderColor: "#2A3B52" } : undefined}
+            onPress={() => setShowLocalConnectModal(true)}
+          >
+            <ButtonText
+              className="text-background-0 dark:text-[#E8EBF0]"
+              style={{ fontFamily: "Inter_600SemiBold" }}
+            >
+              Connect locally
+            </ButtonText>
+          </Button>
 
           {error ? (
             <Box className="p-3 mb-4 rounded-lg border border-[#FCA5A5] bg-[#FEF2F2] dark:bg-[#2A1212]">
@@ -417,11 +444,12 @@ export default function WireGuardScreen() {
                     <Box className="hidden web:flex">
                       <Button
                         size="md"
-                        className="rounded-lg bg-typography-900 dark:bg-[#E8EBF0]"
+                        className="rounded-lg bg-typography-900 dark:bg-[#0A1628] dark:border dark:border-[#2A3B52]"
+                        style={isDarkMode ? { backgroundColor: "#0A1628", borderColor: "#2A3B52" } : undefined}
                         onPress={() => setShowAddPeerModal(true)}
                       >
-                        <ButtonIcon as={Plus} className="text-background-0 dark:text-typography-900" />
-                        <ButtonText className="text-background-0 dark:text-typography-900">
+                        <ButtonIcon as={Plus} className="text-background-0 dark:text-[#E8EBF0]" />
+                        <ButtonText className="text-background-0 dark:text-[#E8EBF0]">
                           Add Peer
                         </ButtonText>
                       </Button>
@@ -553,10 +581,11 @@ export default function WireGuardScreen() {
         <Fab
           size="lg"
           placement="bottom right"
-          className="bg-typography-900 dark:bg-[#E8EBF0] shadow-lg"
+          className="bg-typography-900 dark:bg-[#0A1628] shadow-lg"
+          style={isDarkMode ? { backgroundColor: "#0A1628" } : undefined}
           onPress={() => setShowAddPeerModal(true)}
         >
-          <FabIcon as={Plus} className="text-background-0 dark:text-typography-900" />
+          <FabIcon as={Plus} className="text-background-0 dark:text-[#E8EBF0]" />
         </Fab>
       )}
 
@@ -746,18 +775,101 @@ export default function WireGuardScreen() {
                 </ButtonText>
               </Button>
               <Button
-                className="rounded-lg px-6 py-2.5 bg-typography-900 dark:bg-[#E8EBF0]"
+                className="rounded-lg px-6 py-2.5 bg-typography-900 dark:bg-[#0A1628] dark:border dark:border-[#2A3B52]"
+                style={isDarkMode ? { backgroundColor: "#0A1628", borderColor: "#2A3B52" } : undefined}
                 onPress={handleAddPeer}
                 isDisabled={creatingPeer}
               >
                 {creatingPeer ? (
-                  <ButtonSpinner className="text-background-0 dark:text-typography-900" />
+                  <ButtonSpinner className="text-background-0 dark:text-[#E8EBF0]" />
                 ) : null}
                 <ButtonText
-                  className="text-background-0 dark:text-typography-900"
+                  className="text-background-0 dark:text-[#E8EBF0]"
                   style={{ fontFamily: "Inter_600SemiBold" }}
                 >
                   {creatingPeer ? "Adding..." : "Add"}
+                </ButtonText>
+              </Button>
+            </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Modal: Local Connection Instructions */}
+      <Modal isOpen={showLocalConnectModal} onClose={() => setShowLocalConnectModal(false)}>
+        <ModalBackdrop className="bg-black/60" />
+        <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] shadow-2xl max-w-2xl p-6">
+          <ModalHeader className="pb-4">
+            <Heading
+              size="lg"
+              className="text-typography-900 dark:text-[#E8EBF0]"
+              style={{ fontFamily: "Inter_700Bold" }}
+            >
+              Connect locally
+            </Heading>
+            <ModalCloseButton className="text-typography-600 dark:text-typography-400" />
+          </ModalHeader>
+          <ModalBody className="py-4">
+            <VStack className="gap-5">
+              <HStack className="bg-[#EFF6FF] dark:bg-[#1E3A8A20] p-4 rounded-lg gap-3 items-start">
+                <Info size={20} className="text-[#1E3A8A] dark:text-[#60A5FA] mt-0.5" />
+                <Text
+                  className="flex-1 text-sm text-[#1E3A8A] dark:text-[#93C5FD]"
+                  style={{ fontFamily: "Inter_400Regular" }}
+                >
+                  If you are on the local network, open wg0.conf and replace domain.com with the master's
+                  local IP (e.g., 192.168.1.198).
+                </Text>
+              </HStack>
+
+              <Box className="flex flex-col gap-4 web:grid web:grid-cols-2">
+                <Box className="flex flex-col gap-2">
+                  <Text
+                    className="text-[11px] font-semibold uppercase text-typography-500 dark:text-typography-400 tracking-wide"
+                    style={{ fontFamily: "Inter_600SemiBold" }}
+                  >
+                    Before
+                  </Text>
+                  <Box className="bg-background-100 dark:bg-[#0F172A] border border-outline-200 dark:border-[#1E2F47] rounded-lg p-3">
+                    <Text
+                      className="font-mono text-xs text-typography-900 dark:text-[#E2E8F0]"
+                      selectable
+                    >
+                      {localPeerBefore}
+                    </Text>
+                  </Box>
+                </Box>
+                <Box className="flex flex-col gap-2">
+                  <Text
+                    className="text-[11px] font-semibold uppercase text-typography-500 dark:text-typography-400 tracking-wide"
+                    style={{ fontFamily: "Inter_600SemiBold" }}
+                  >
+                    After
+                  </Text>
+                  <Box className="bg-background-100 dark:bg-[#0F172A] border border-outline-200 dark:border-[#1E2F47] rounded-lg p-3">
+                    <Text
+                      className="font-mono text-xs text-typography-900 dark:text-[#E2E8F0]"
+                      selectable
+                    >
+                      {localPeerAfter}
+                    </Text>
+                  </Box>
+                </Box>
+              </Box>
+            </VStack>
+          </ModalBody>
+          <ModalFooter className="pt-6 border-t border-outline-100 dark:border-[#2A3B52]">
+            <HStack className="justify-end w-full">
+              <Button
+                className="rounded-lg px-6 py-2.5 bg-typography-900 dark:bg-[#0A1628] dark:border dark:border-[#2A3B52]"
+                style={isDarkMode ? { backgroundColor: "#0A1628", borderColor: "#2A3B52" } : undefined}
+                onPress={() => setShowLocalConnectModal(false)}
+              >
+                <ButtonText
+                  className="text-background-0 dark:text-[#E8EBF0]"
+                  style={{ fontFamily: "Inter_600SemiBold" }}
+                >
+                  Close
                 </ButtonText>
               </Button>
             </HStack>

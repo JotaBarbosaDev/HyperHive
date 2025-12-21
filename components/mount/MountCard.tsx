@@ -11,6 +11,7 @@ import {deleteMount as deleteMountService} from "@/services/hyperhive";
 import {MountUsageGauge} from "./MountUsageGauge";
 import {MountDeleteModal} from "@/components/modals/MountDeleteModal";
 import {MountDetailsModal} from "@/components/modals/MountDetailsModal";
+import {MountConnectModal} from "@/components/modals/MountConnectModal";
 export type MountCardProps = Mount & {
   onDelete?: (share: MountShare) => void;
 };
@@ -31,6 +32,7 @@ export function MountCard({
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [showDetailsModal, setShowDetailsModal] = React.useState(false);
+  const [showConnectModal, setShowConnectModal] = React.useState(false);
   const handleDelete = React.useCallback(async () => {
     try {
       setDeleteError(null);
@@ -141,48 +143,64 @@ export function MountCard({
             </Box>
           </Box>
         </Box>
-        <Box className="rounded-b-2xl flex flex-col gap-2 border-t border-outline-100 bg-background-50 p-3 dark:border-[#2A3B52] dark:bg-[#0E1828] md:flex-row md:justify-end md:gap-3 web:flex-row web:gap-3 web:p-3 web:mt-auto">
+        <Box className="rounded-b-2xl flex flex-col gap-2 border-t border-outline-100 bg-background-50 p-3 dark:border-[#2A3B52] dark:bg-[#0E1828] web:p-3 web:mt-auto">
           <Button
             variant="solid"
             size="md"
             action="secondary"
-            className="w-full rounded-xl md:w-auto web:flex-1 web:h-11 dark:bg-[#2A3B52] dark:hover:bg-[#34445E] dark:active:bg-[#3D4F6A]"
-            onPress={() => setShowDetailsModal(true)}
+            className="w-full rounded-xl web:h-11 dark:bg-[#2A3B52] dark:hover:bg-[#34445E] dark:active:bg-[#3D4F6A]"
+            onPress={() => setShowConnectModal(true)}
           >
             <ButtonText
               className="web:text-sm web:font-semibold dark:text-[#E8EBF0]"
               style={{fontFamily: "Inter_600SemiBold"}}
             >
-              See Details
+              Connect to it
             </ButtonText>
           </Button>
-
-          {!isDeleting ? (
+          <Box className="flex flex-col gap-2 md:flex-row md:justify-end md:gap-3 web:flex-row web:gap-3">
             <Button
               variant="solid"
               size="md"
-              action="primary"
-              className="w-full rounded-xl md:w-auto web:flex-1 web:h-11 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
-              onPress={() => setShowDeleteModal(true)}
+              action="secondary"
+              className="w-full rounded-xl md:w-auto web:flex-1 web:h-11 dark:bg-[#2A3B52] dark:hover:bg-[#34445E] dark:active:bg-[#3D4F6A]"
+              onPress={() => setShowDetailsModal(true)}
             >
               <ButtonText
-                className="web:text-sm web:font-semibold dark:text-[#0D1420]"
+                className="web:text-sm web:font-semibold dark:text-[#E8EBF0]"
                 style={{fontFamily: "Inter_600SemiBold"}}
               >
-                UMount
+                See Details
               </ButtonText>
             </Button>
-          ) : (
-            <Button className="p-3 rounded-xl web:flex-1 dark:bg-[#2A3B52]" isDisabled>
-              <ButtonSpinner color="gray" />
-              <ButtonText
-                className="font-semibold text-sm ml-2 web:text-sm dark:text-[#E8EBF0]"
-                style={{fontFamily: "Inter_600SemiBold"}}
+
+            {!isDeleting ? (
+              <Button
+                variant="solid"
+                size="md"
+                action="primary"
+                className="w-full rounded-xl md:w-auto web:flex-1 web:h-11 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+                onPress={() => setShowDeleteModal(true)}
               >
-                Removing...
-              </ButtonText>
-            </Button>
-          )}
+                <ButtonText
+                  className="web:text-sm web:font-semibold dark:text-[#0D1420]"
+                  style={{fontFamily: "Inter_600SemiBold"}}
+                >
+                  UMount
+                </ButtonText>
+              </Button>
+            ) : (
+              <Button className="p-3 rounded-xl web:flex-1 dark:bg-[#2A3B52]" isDisabled>
+                <ButtonSpinner color="gray" />
+                <ButtonText
+                  className="font-semibold text-sm ml-2 web:text-sm dark:text-[#E8EBF0]"
+                  style={{fontFamily: "Inter_600SemiBold"}}
+                >
+                  Removing...
+                </ButtonText>
+              </Button>
+            )}
+          </Box>
         </Box>
         {deleteError ? (
           <Box className="px-4 pb-4">
@@ -204,6 +222,11 @@ export function MountCard({
         isOpen={showDetailsModal}
         mount={{NfsShare, Status}}
         onClose={() => setShowDetailsModal(false)}
+      />
+      <MountConnectModal
+        isOpen={showConnectModal}
+        mount={{NfsShare, Status}}
+        onClose={() => setShowConnectModal(false)}
       />
     </>
   );
