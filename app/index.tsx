@@ -97,7 +97,7 @@ export default function LoginScreen() {
       try {
         await listMachines();
         if (!isActive) return;
-        router.replace("/mounts");
+        router.replace("/dashboard");
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) {
           // Handled globally via unauthorized listeners.
@@ -172,7 +172,7 @@ export default function LoginScreen() {
           void WebBrowser.openBrowserAsync(targetUrl);
         }
       }
-      router.replace("/mounts");
+      router.replace("/dashboard");
     } catch (err) {
       let message = "Error signing in. Please try again.";
       if (err instanceof ApiError) {
@@ -225,7 +225,7 @@ export default function LoginScreen() {
           Welcome back
         </Heading>
         <Text className="text-typography-500 dark:text-typography-400 text-sm font-body mt-2 web:text-base">
-          Sign in with your credentials to access the mounts dashboard.
+          Sign in with your credentials to access the dashboard.
         </Text>
       </Box>
 

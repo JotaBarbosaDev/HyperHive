@@ -418,7 +418,7 @@ function RootLayoutNav() {
           }
         }
         if (pathname === "/") {
-          router.replace("/mounts");
+          router.replace("/dashboard");
         }
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) {
