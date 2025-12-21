@@ -155,7 +155,7 @@ export function MountCard({
               className="web:text-sm web:font-semibold dark:text-[#E8EBF0]"
               style={{fontFamily: "Inter_600SemiBold"}}
             >
-              Connect to it
+              Connect to NFS
             </ButtonText>
           </Button>
           <Box className="flex flex-col gap-2 md:flex-row md:justify-end md:gap-3 web:flex-row web:gap-3">
