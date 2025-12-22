@@ -182,14 +182,19 @@ export default function BtrfsAutomaticMountsScreen() {
     <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 32 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadData("refresh")} />}
+        contentContainerStyle={{paddingBottom: 32}}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => loadData("refresh")}
+          />
+        }
       >
         <Box className="p-4 pt-16 web:p-10 web:max-w-5xl web:mx-auto web:w-full">
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
-            style={{ fontFamily: "Inter_700Bold" }}
+            style={{fontFamily: "Inter_700Bold"}}
           >
             BTRFS Auto-Mounts
           </Heading>
@@ -199,8 +204,11 @@ export default function BtrfsAutomaticMountsScreen() {
 
           <HStack className="mt-6 items-center justify-between flex-wrap gap-3">
             <HStack className="gap-3 items-center flex-wrap">
-              <Select selectedValue={selectedMachine} onValueChange={(val) => setSelectedMachine(val)}>
-                <SelectTrigger className="min-w-[180px]">
+              <Select
+                selectedValue={selectedMachine}
+                onValueChange={(val) => setSelectedMachine(val)}
+              >
+                <SelectTrigger className="min-w-[180px] border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] px-3 py-2">
                   <SelectInput placeholder="Machine" value={selectedMachine} />
                   <SelectIcon as={ChevronDownIcon} />
                 </SelectTrigger>
@@ -211,14 +219,26 @@ export default function BtrfsAutomaticMountsScreen() {
                       <SelectDragIndicator />
                     </SelectDragIndicatorWrapper>
                     {(machines ?? []).map((m) => (
-                      <SelectItem key={m.MachineName} label={m.MachineName} value={m.MachineName} />
+                      <SelectItem
+                        key={m.MachineName}
+                        label={m.MachineName}
+                        value={m.MachineName}
+                      />
                     ))}
                   </SelectContent>
                 </SelectPortal>
               </Select>
-              <Button variant="outline" action="default" size="sm" onPress={() => loadData("refresh")}>
+              <Button
+                variant="outline"
+                action="default"
+                size="sm"
+                onPress={() => loadData("refresh")}
+                className="border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]"
+              >
                 <ButtonIcon as={RefreshCcw} size="sm" />
-                <ButtonText>Refresh</ButtonText>
+                <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                  Refresh
+                </ButtonText>
               </Button>
             </HStack>
             <Button action="primary" onPress={() => setCreateModal(true)}>
@@ -229,14 +249,21 @@ export default function BtrfsAutomaticMountsScreen() {
 
           <Box className="mt-6 rounded-2xl bg-background-0 border border-background-200 shadow-soft-1">
             <HStack className="items-center justify-between px-4 py-3">
-              <Text className="text-typography-900 font-semibold text-base">Rules</Text>
-              <Text className="text-typography-700 text-sm">{autoMounts.length} items</Text>
+              <Text className="text-typography-900 font-semibold text-base">
+                Rules
+              </Text>
+              <Text className="text-typography-700 text-sm">
+                {autoMounts.length} items
+              </Text>
             </HStack>
             <Divider />
             {loading ? (
               <VStack className="gap-3 p-4">
                 {[1, 2].map((i) => (
-                  <Box key={i} className="p-3 rounded-xl border border-background-100">
+                  <Box
+                    key={i}
+                    className="p-3 rounded-xl border border-background-100"
+                  >
                     <Skeleton className="h-5 w-1/2 mb-2" />
                     <SkeletonText className="w-1/3" />
                   </Box>
@@ -244,7 +271,9 @@ export default function BtrfsAutomaticMountsScreen() {
               </VStack>
             ) : autoMounts.length === 0 ? (
               <Box className="p-4">
-              <Text className="text-typography-600 text-sm">No rules configured.</Text>
+                <Text className="text-typography-600 text-sm">
+                  No rules configured.
+                </Text>
               </Box>
             ) : (
               <VStack className="divide-y divide-background-200">
@@ -252,16 +281,38 @@ export default function BtrfsAutomaticMountsScreen() {
                   <Box key={rule.id} className="px-4 py-3">
                     <HStack className="justify-between items-start gap-3 flex-wrap">
                       <VStack className="gap-1">
-                        <Text className="text-typography-900 font-semibold">{rule.mount_point}</Text>
-                        <Text className="text-typography-700 text-sm">RAID: {getRaidLabel(rule.uuid || rule.raid_uuid, raids)}</Text>
-                        <Text className="text-typography-600 text-sm">UUID: {rule.uuid || rule.raid_uuid}</Text>
+                        <Text className="text-typography-900 font-semibold">
+                          {rule.mount_point}
+                        </Text>
+                        <Text className="text-typography-700 text-sm">
+                          RAID:{" "}
+                          {getRaidLabel(rule.uuid || rule.raid_uuid, raids)}
+                        </Text>
+                        <Text className="text-typography-600 text-sm">
+                          UUID: {rule.uuid || rule.raid_uuid}
+                        </Text>
                         <HStack className="gap-2 mt-1 flex-wrap">
-                          <Badge className="rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
-                            <BadgeText className="text-xs text-typography-800">Compression: {getCompressionLabel(rule.compression)}</BadgeText>
+                          <Badge
+                            className="rounded-full px-3 py-1"
+                            size="sm"
+                            action="muted"
+                            variant="solid"
+                          >
+                            <BadgeText className="text-xs text-typography-800">
+                              Compression:{" "}
+                              {getCompressionLabel(rule.compression)}
+                            </BadgeText>
                           </Badge>
                           {rule.machine_name ? (
-                            <Badge className="rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
-                              <BadgeText className="text-xs text-typography-800">{rule.machine_name}</BadgeText>
+                            <Badge
+                              className="rounded-full px-3 py-1"
+                              size="sm"
+                              action="muted"
+                              variant="solid"
+                            >
+                              <BadgeText className="text-xs text-typography-800">
+                                {rule.machine_name}
+                              </BadgeText>
                             </Badge>
                           ) : null}
                         </HStack>
@@ -272,7 +323,11 @@ export default function BtrfsAutomaticMountsScreen() {
                         onPress={() => handleRemove(rule.id)}
                         isDisabled={removingId !== null}
                       >
-                        {removingId === rule.id ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
+                        {removingId === rule.id ? (
+                          <ButtonSpinner />
+                        ) : (
+                          <ButtonIcon as={Trash2} size="sm" />
+                        )}
                         <ButtonText>Remove</ButtonText>
                       </Button>
                     </HStack>
@@ -284,7 +339,11 @@ export default function BtrfsAutomaticMountsScreen() {
         </Box>
       </ScrollView>
 
-      <Modal isOpen={createModal} onClose={() => setCreateModal(false)} size="lg">
+      <Modal
+        isOpen={createModal}
+        onClose={() => setCreateModal(false)}
+        size="lg"
+      >
         <ModalBackdrop />
         <ModalContent className="max-w-2xl">
           <ModalHeader className="flex-row items-start justify-between">
@@ -297,7 +356,10 @@ export default function BtrfsAutomaticMountsScreen() {
             <VStack className="gap-3">
               <Select selectedValue={formRaid} onValueChange={setFormRaid}>
                 <SelectTrigger>
-                  <SelectInput placeholder="Select RAID" value={getRaidLabel(formRaid, raids)} />
+                  <SelectInput
+                    placeholder="Select RAID"
+                    value={getRaidLabel(formRaid, raids)}
+                  />
                   <SelectIcon as={ChevronDownIcon} />
                 </SelectTrigger>
                 <SelectPortal>
@@ -307,17 +369,31 @@ export default function BtrfsAutomaticMountsScreen() {
                       <SelectDragIndicator />
                     </SelectDragIndicatorWrapper>
                     {(raids ?? []).map((r) => (
-                      <SelectItem key={r.uuid} value={r.uuid} label={getRaidLabel(r.uuid, raids)} />
+                      <SelectItem
+                        key={r.uuid}
+                        value={r.uuid}
+                        label={getRaidLabel(r.uuid, raids)}
+                      />
                     ))}
                   </SelectContent>
                 </SelectPortal>
               </Select>
               <Input>
-                <InputField value={formMountPoint} onChangeText={setFormMountPoint} placeholder="/mnt/raid" />
+                <InputField
+                  value={formMountPoint}
+                  onChangeText={setFormMountPoint}
+                  placeholder="/mnt/raid"
+                />
               </Input>
-              <Select selectedValue={formCompression} onValueChange={setFormCompression}>
+              <Select
+                selectedValue={formCompression}
+                onValueChange={setFormCompression}
+              >
                 <SelectTrigger>
-                  <SelectInput placeholder="Compression" value={getCompressionLabel(formCompression)} />
+                  <SelectInput
+                    placeholder="Compression"
+                    value={getCompressionLabel(formCompression)}
+                  />
                   <SelectIcon as={ChevronDownIcon} />
                 </SelectTrigger>
                 <SelectPortal>
@@ -327,7 +403,11 @@ export default function BtrfsAutomaticMountsScreen() {
                       <SelectDragIndicator />
                     </SelectDragIndicatorWrapper>
                     {COMPRESSION_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value || "none"} value={opt.value} label={opt.label} />
+                      <SelectItem
+                        key={opt.value || "none"}
+                        value={opt.value}
+                        label={opt.label}
+                      />
                     ))}
                   </SelectContent>
                 </SelectPortal>
@@ -335,10 +415,19 @@ export default function BtrfsAutomaticMountsScreen() {
             </VStack>
           </ModalBody>
           <ModalFooter className="gap-3">
-            <Button variant="outline" action="default" onPress={() => setCreateModal(false)} isDisabled={saving}>
+            <Button
+              variant="outline"
+              action="default"
+              onPress={() => setCreateModal(false)}
+              isDisabled={saving}
+            >
               <ButtonText>Cancel</ButtonText>
             </Button>
-            <Button action="primary" onPress={() => handleCreate().then(() => setCreateModal(false))} isDisabled={saving}>
+            <Button
+              action="primary"
+              onPress={() => handleCreate().then(() => setCreateModal(false))}
+              isDisabled={saving}
+            >
               {saving ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
               <ButtonText>Create</ButtonText>
             </Button>

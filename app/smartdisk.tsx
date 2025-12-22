@@ -626,7 +626,7 @@ export default function SmartDiskScreen() {
           <HStack className="mt-6 items-center justify-between flex-wrap gap-3">
             <HStack className="gap-3 items-center flex-wrap">
               <Select selectedValue={selectedMachine} onValueChange={(val) => setSelectedMachine(val)}>
-                <SelectTrigger className="min-w-[200px]">
+                <SelectTrigger className="min-w-[200px] border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] px-3 py-2">
                   <SelectInput placeholder="Machine" value={selectedMachine} />
                   <SelectIcon as={ChevronDown} />
                 </SelectTrigger>
@@ -642,9 +642,9 @@ export default function SmartDiskScreen() {
                   </SelectContent>
                 </SelectPortal>
               </Select>
-              <Button variant="outline" action="default" size="sm" onPress={() => loadData("refresh")}>
+              <Button variant="outline" action="default" size="sm" onPress={() => loadData("refresh")} className="border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]">
                 <ButtonIcon as={RefreshCcw} size="sm" />
-                <ButtonText>Refresh</ButtonText>
+                <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Refresh</ButtonText>
               </Button>
             </HStack>
             <Button action="primary" variant="solid" size="md" onPress={() => openSchedule()}>
