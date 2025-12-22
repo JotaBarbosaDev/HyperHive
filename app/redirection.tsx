@@ -17,7 +17,6 @@ import {
   SelectDragIndicator,
   SelectDragIndicatorWrapper,
   SelectIcon,
-  SelectInput,
   SelectItem,
   SelectPortal,
   SelectTrigger,
@@ -169,9 +168,9 @@ export default function RedirectionHostsScreen() {
     [showToast]
   );
 
-  const { certificateOptions, loadingCertificates, refreshCertificates } = useCertificatesOptions(handleCertificatesError);
-  const selectedCertificateLabel =
-    certificateOptions.find((option) => option.value === String(form.certificate_id ?? 0))?.label || "No certificate";
+  const { certificateOptions, loadingCertificates, refreshCertificates, resolveCertificateLabel } =
+    useCertificatesOptions(handleCertificatesError);
+  const selectedCertificateLabel = resolveCertificateLabel(form.certificate_id);
 
   const loadItems = React.useCallback(
     async (mode: "full" | "refresh" | "silent" = "full") => {
@@ -719,14 +718,7 @@ export default function RedirectionHostsScreen() {
                         isDisabled={loadingCertificates && certificateOptions.length === 0}
                       >
                         <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] h-11 px-4">
-                          {String(form.certificate_id ?? 0) !== "0" ? (
-                            <Text className="text-typography-900 dark:text-[#E8EBF0]">{selectedCertificateLabel}</Text>
-                          ) : (
-                            <SelectInput
-                              placeholder={loadingCertificates ? "Loading certificates..." : selectedCertificateLabel}
-                              className="text-typography-900 dark:text-[#E8EBF0]"
-                            />
-                          )}
+                          <Text className="text-typography-900 dark:text-[#E8EBF0]">{selectedCertificateLabel}</Text>
                           <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-typography-400" />
                         </SelectTrigger>
                         <SelectPortal>

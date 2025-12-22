@@ -3512,8 +3512,9 @@ function MigrateVmForm({
   const uniqueChoices = Array.from(new Set(slaveChoices));
   const initial = uniqueChoices.find((s) => s !== vm.machineName) || vm.machineName;
   const [target, setTarget] = React.useState(initial);
+  const canHotMigrate = vm.isLive;
   const [mode, setMode] = React.useState<"hot" | "cold">(
-    vm.state === VmState.RUNNING ? "hot" : "cold"
+    vm.state === VmState.RUNNING && canHotMigrate ? "hot" : "cold"
   );
   const [live, setLive] = React.useState(true);
   const [timeout, setTimeoutValue] = React.useState("500");
@@ -3600,13 +3601,15 @@ function MigrateVmForm({
           </FormControlLabelText>
         </FormControlLabel>
         <HStack className="gap-2">
-          <Button
-            variant={isHot ? "solid" : "outline"}
-            className="flex-1 rounded-md"
-            onPress={() => setMode("hot")}
-          >
-            <ButtonText>{`Hot (VM running)`}</ButtonText>
-          </Button>
+          {canHotMigrate ? (
+            <Button
+              variant={isHot ? "solid" : "outline"}
+              className="flex-1 rounded-md"
+              onPress={() => setMode("hot")}
+            >
+              <ButtonText>{`Hot (VM running)`}</ButtonText>
+            </Button>
+          ) : null}
           <Button
             variant={!isHot ? "solid" : "outline"}
             className="flex-1 rounded-md"
@@ -3617,7 +3620,9 @@ function MigrateVmForm({
         </HStack>
         <FormControlHelper>
           <FormControlHelperText className="text-xs text-typography-500">
-            Hot keeps the VM running during migration. Cold requires the VM to be powered off.
+            {canHotMigrate
+              ? "Hot keeps the VM running during migration. Cold requires the VM to be powered off."
+              : "Only cold migration is available for this VM."}
           </FormControlHelperText>
         </FormControlHelper>
       </FormControl>

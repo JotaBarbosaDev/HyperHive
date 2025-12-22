@@ -14,7 +14,7 @@ import { useEffect } from "react";
 import { useColorScheme } from "@/components/useColorScheme";
 import { Slot, usePathname, useRouter } from "expo-router";
 import { StatusBar, setStatusBarHidden } from "expo-status-bar";
-import { AppState, Platform } from "react-native";
+import { AppState, Platform, ScrollView, useWindowDimensions } from "react-native";
 import * as SystemUI from "expo-system-ui";
 import * as NavigationBar from "expo-navigation-bar";
 import { Button, ButtonIcon, ButtonText } from "@/components/ui/button";
@@ -26,8 +26,11 @@ import { CreateMountDrawer } from "@/components/drawers/CreateMountDrawer";
 import { AppSidebar } from "@/components/navigation/AppSidebar";
 import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";
+import { Image } from "@/components/ui/image";
+import { VStack } from "@/components/ui/vstack";
+import { HStack } from "@/components/ui/hstack";
 import { Menu } from "lucide-react-native";
-import { setApiBaseUrl } from "@/config/apiConfig";
+import { getApiBaseUrl, setApiBaseUrl } from "@/config/apiConfig";
 import {
   API_BASE_URL_STORAGE_KEY,
   AUTH_TOKEN_STORAGE_KEY,
@@ -95,6 +98,24 @@ const ROUTE_TITLE_MAP: Record<string, string> = {
   "/docker/git": "Docker Git",
 };
 
+const TUTORIAL_STEPS = [
+  {
+    title: "Step 1 - Open Proxy Hosts in NPM",
+    description: "Go to your NPM dashboard and open the Proxy Hosts page.",
+    image: require("../assets/tutorial/step1.png"),
+  },
+  {
+    title: "Step 2 - Create or edit the host",
+    description: "Add your domain, set the target, and configure SSL if needed.",
+    image: require("../assets/tutorial/step2.png"),
+  },
+  {
+    title: "Step 3 - Confirm the front-end setup",
+    description: "Back in HyperHive, click Setup FrontEnd Page and confirm.",
+    image: require("../assets/tutorial/step3.png"),
+  },
+];
+
 const normalizePathname = (path: string) => {
   if (!path) return "/";
   const withoutQuery = path.split("?")[0] ?? "/";
@@ -129,6 +150,22 @@ const sanitizeRequestPath = (path?: string) => {
     return "Request";
   }
   return path.replace(/^https?:\/\//, "");
+};
+
+const normalizeUrlForCompare = (value?: string | null) => {
+  if (!value) {
+    return null;
+  }
+  try {
+    const parsed = new URL(value);
+    parsed.hash = "";
+    parsed.search = "";
+    const pathname = parsed.pathname.replace(/\/+$/, "");
+    const normalizedPath = pathname === "/" ? "" : pathname;
+    return `${parsed.protocol}//${parsed.host}${normalizedPath}`;
+  } catch {
+    return null;
+  }
 };
 
 const getLiteralApiErrorMessage = (errorText?: string, errorPayload?: unknown) => {
@@ -231,6 +268,9 @@ function RootLayoutNav() {
   const pathname = usePathname();
   const router = useRouter();
   const systemColorScheme = useColorScheme();
+  const [apiBaseUrlState, setApiBaseUrlState] = React.useState<string | null>(
+    () => getApiBaseUrl() ?? null
+  );
   const [themePreference, setThemePreference] = React.useState<ThemePreference>("system");
   const resolvedMode = React.useMemo(
     () => (themePreference === "system" ? (systemColorScheme === "dark" ? "dark" : "light") : themePreference),
@@ -240,11 +280,14 @@ function RootLayoutNav() {
   const statusBarBackground = resolvedMode === "dark" ? "#070D19" : "#F8FAFC";
   const [showDrawer, setShowDrawer] = React.useState(false);
   const [showSidebar, setShowSidebar] = React.useState(false);
+  const [tutorialModalOpen, setTutorialModalOpen] = React.useState(false);
   const [apiErrorModal, setApiErrorModal] = React.useState<
     { status?: number; path?: string; details: string } | null
   >(null);
   const isSigningOutRef = React.useRef(false);
   const isWeb = Platform.OS === "web";
+  const { height: screenHeight } = useWindowDimensions();
+  const tutorialBodyMaxHeight = Math.min(screenHeight * 0.6, 520);
 
   const handleCloseApiErrorModal = React.useCallback(() => {
     setApiErrorModal(null);
@@ -318,7 +361,8 @@ function RootLayoutNav() {
       if (!isMounted) {
         return;
       }
-      setApiBaseUrl(storedBaseUrl ?? null);
+      const normalizedBaseUrl = setApiBaseUrl(storedBaseUrl ?? null);
+      setApiBaseUrlState(normalizedBaseUrl ?? null);
       if (storedToken) {
         setAuthToken(storedToken);
       }
@@ -377,7 +421,8 @@ function RootLayoutNav() {
           loadAuthToken(),
           loadApiBaseUrl(),
         ]);
-        setApiBaseUrl(storedBaseUrl ?? null);
+        const normalizedBaseUrl = setApiBaseUrl(storedBaseUrl ?? null);
+        setApiBaseUrlState(normalizedBaseUrl ?? null);
         if (!storedToken) {
           await signOut();
           return;
@@ -396,7 +441,8 @@ function RootLayoutNav() {
     let isActive = true;
     const enforceAuth = async () => {
       const storedBaseUrl = await loadApiBaseUrl();
-      setApiBaseUrl(storedBaseUrl ?? null);
+      const normalizedBaseUrl = setApiBaseUrl(storedBaseUrl ?? null);
+      setApiBaseUrlState(normalizedBaseUrl ?? null);
       const storedToken = await loadAuthToken();
       setAuthToken(storedToken ?? null);
 
@@ -459,6 +505,23 @@ function RootLayoutNav() {
     }
   }, [pathname, showDrawer, showSidebar]);
 
+  const apiBaseMismatch = React.useMemo(() => {
+    if (!isWeb) {
+      return false;
+    }
+    const currentOrigin =
+      typeof window !== "undefined" ? window.location?.origin : null;
+    if (!currentOrigin) {
+      return false;
+    }
+    const expectedApiBase = normalizeUrlForCompare(`${currentOrigin.replace(/\/+$/, "")}/api`);
+    const configuredApiBase = normalizeUrlForCompare(apiBaseUrlState ?? getApiBaseUrl());
+    if (!expectedApiBase || !configuredApiBase) {
+      return false;
+    }
+    return expectedApiBase !== configuredApiBase;
+  }, [apiBaseUrlState, isWeb]);
+
   return (
     <SafeAreaProvider>
       <GluestackUIProvider mode={resolvedMode}>
@@ -489,6 +552,30 @@ function RootLayoutNav() {
                 <VmProgressToastListener />
                 <SocketErrorModalListener />
                 <Box className="flex-1">
+                  {apiBaseMismatch && (
+                    <Box
+                      className="absolute top-0 left-0 right-0 z-10 bg-warning-100 border-b border-warning-300 px-4 py-2"
+                      pointerEvents="box-none"
+                    >
+                      <HStack className="items-center gap-2 flex-wrap justify-center" pointerEvents="box-none">
+                        <Text className="text-warning-800 text-xs web:text-sm" pointerEvents="none">
+                          To unlock all features, go to the Proxy Hosts page in NPM and click the
+                          "Setup FrontEnd Page" button.
+                        </Text>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          action="secondary"
+                          className="h-7 rounded-full px-3 border-warning-400"
+                          onPress={() => setTutorialModalOpen(true)}
+                        >
+                          <ButtonText className="text-warning-800 text-xs">
+                            View tutorial
+                          </ButtonText>
+                        </Button>
+                      </HStack>
+                    </Box>
+                  )}
                   {pathname !== "/" && (
                     <Box
                       className="absolute top-3 left-3 web:top-5 web:left-5 z-20"
@@ -612,6 +699,70 @@ function RootLayoutNav() {
                   <Button onPress={handleCloseApiErrorModal} size="sm">
                     <ButtonText>Close</ButtonText>
                   </Button>
+                </ModalFooter>
+              </ModalContent>
+            </Modal>
+            <Modal
+              isOpen={tutorialModalOpen}
+              onClose={() => setTutorialModalOpen(false)}
+              size="lg"
+            >
+              <ModalBackdrop className="bg-black/60" />
+              <ModalContent className="max-w-3xl w-full rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628] shadow-2xl">
+                <ModalHeader className="flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
+                  <VStack className="flex-1">
+                    <Text className="text-lg font-semibold text-typography-900 dark:text-[#E2E8F0]">
+                      Front-End Setup Tutorial
+                    </Text>
+                    <Text className="text-typography-600 dark:text-typography-400 mt-1">
+                      Follow these steps to configure your front-end in NPM.
+                    </Text>
+                  </VStack>
+                  <ModalCloseButton className="text-typography-500" />
+                </ModalHeader>
+                <ModalBody className="px-6 pt-4 pb-2">
+                  <ScrollView
+                    nestedScrollEnabled
+                    showsVerticalScrollIndicator
+                    style={{ maxHeight: tutorialBodyMaxHeight }}
+                  >
+                    <VStack className="gap-6 pb-2">
+                      {TUTORIAL_STEPS.map((step) => (
+                        <VStack key={step.title} className="gap-3">
+                          <VStack className="gap-1">
+                            <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                              {step.title}
+                            </Text>
+                            <Text className="text-sm text-typography-600 dark:text-typography-400">
+                              {step.description}
+                            </Text>
+                          </VStack>
+                          <Box className="rounded-xl border border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] overflow-hidden">
+                            <Image
+                              source={step.image}
+                              alt={step.title}
+                              resizeMode="contain"
+                              size="none"
+                              className="w-full h-48"
+                            />
+                          </Box>
+                        </VStack>
+                      ))}
+                    </VStack>
+                  </ScrollView>
+                </ModalBody>
+                <ModalFooter className="px-6 pb-6 pt-2 border-t border-outline-100 dark:border-[#2A3B52]">
+                  <HStack className="gap-3 justify-end w-full">
+                    <Button
+                      variant="outline"
+                      action="default"
+                      onPress={() => setTutorialModalOpen(false)}
+                    >
+                      <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                        Close
+                      </ButtonText>
+                    </Button>
+                  </HStack>
                 </ModalFooter>
               </ModalContent>
             </Modal>

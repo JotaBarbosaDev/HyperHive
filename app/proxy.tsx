@@ -17,7 +17,6 @@ import {
   SelectDragIndicator,
   SelectDragIndicatorWrapper,
   SelectIcon,
-  SelectInput,
   SelectItem,
   SelectPortal,
   SelectTrigger,
@@ -175,9 +174,10 @@ export default function ProxyHostsScreen() {
     [showToast]
   );
 
-  const { certificateOptions, loadingCertificates, refreshCertificates } = useCertificatesOptions(handleCertificatesError);
-  const selectedCertificateLabel =
-    certificateOptions.find((option) => option.value === String(form.certificate_id ?? 0))?.label || "No certificate";
+  const { certificateOptions, loadingCertificates, refreshCertificates, resolveCertificateLabel } =
+    useCertificatesOptions(handleCertificatesError);
+  const selectedCertificateLabel = resolveCertificateLabel(form.certificate_id);
+  const setupCertificateLabel = resolveCertificateLabel(setupCertificateId);
 
   const loadHosts = React.useCallback(
     async (mode: "full" | "refresh" | "silent" = "full") => {
@@ -382,7 +382,7 @@ export default function ProxyHostsScreen() {
     }
     setSetupSaving(true);
     try {
-      await setupFrontEnd({ domain, certificate_id: Number(setupCertificateId) || 0 });
+      await setupFrontEnd({ domain, certificateId: Number(setupCertificateId) || 0 });
       showToast("Front-end ready", "Setup completed for the provided domain.");
       setSetupModalOpen(false);
     } catch (err) {
@@ -600,7 +600,7 @@ export default function ProxyHostsScreen() {
                   <InputField
                     value={setupDomain}
                     onChangeText={setSetupDomain}
-                    placeholder="app.seudominio.com"
+                    placeholder="yourdomain.com"
                     autoCapitalize="none"
                   />
                 </Input>
@@ -631,16 +631,7 @@ export default function ProxyHostsScreen() {
                   isDisabled={loadingCertificates && certificateOptions.length === 0}
                 >
                   <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] h-11 px-4">
-                    {String(setupCertificateId ?? 0) !== "0" ? (
-                      <Text className="text-typography-900 dark:text-[#E8EBF0]">
-                        {certificateOptions.find((option) => option.value === String(setupCertificateId))?.label || "Select certificate"}
-                      </Text>
-                    ) : (
-                      <SelectInput
-                        placeholder={loadingCertificates ? "Loading certificates..." : "No certificate"}
-                        className="text-typography-900 dark:text-[#E8EBF0]"
-                      />
-                    )}
+                    <Text className="text-typography-900 dark:text-[#E8EBF0]">{setupCertificateLabel}</Text>
                     <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-typography-400" />
                   </SelectTrigger>
                   <SelectPortal>
@@ -649,14 +640,6 @@ export default function ProxyHostsScreen() {
                       <SelectDragIndicatorWrapper>
                         <SelectDragIndicator />
                       </SelectDragIndicatorWrapper>
-                      <SelectItem
-                        key="0"
-                        label="No certificate"
-                        value="0"
-                        className="text-base text-typography-900 dark:text-[#E8EBF0]"
-                      >
-                        No certificate
-                      </SelectItem>
                       {certificateOptions.map((option) => (
                         <SelectItem
                           key={option.value}
@@ -671,7 +654,7 @@ export default function ProxyHostsScreen() {
                   </SelectPortal>
                 </Select>
                 <FormControlHelper>
-                  <FormControlHelperText>Leave as "No certificate" to use HTTP only.</FormControlHelperText>
+                  <FormControlHelperText>Leave as "No Certificate" to use HTTP only.</FormControlHelperText>
                 </FormControlHelper>
               </FormControl>
             </VStack>
@@ -923,14 +906,7 @@ export default function ProxyHostsScreen() {
                         isDisabled={loadingCertificates && certificateOptions.length === 0}
                       >
                         <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] h-11 px-4">
-                          {String(form.certificate_id ?? 0) !== "0" ? (
-                            <Text className="text-typography-900 dark:text-[#E8EBF0]">{selectedCertificateLabel}</Text>
-                          ) : (
-                            <SelectInput
-                              placeholder={loadingCertificates ? "Loading certificates..." : selectedCertificateLabel}
-                              className="text-typography-900 dark:text-[#E8EBF0]"
-                            />
-                          )}
+                          <Text className="text-typography-900 dark:text-[#E8EBF0]">{selectedCertificateLabel}</Text>
                           <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-typography-400" />
                         </SelectTrigger>
                         <SelectPortal>

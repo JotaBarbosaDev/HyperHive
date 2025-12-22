@@ -83,11 +83,11 @@ export async function disableProxyHost(id: number): Promise<void> {
   });
 }
 
-export async function setupFrontEnd(payload: { domain: string; certificate_id: number }): Promise<void> {
+export async function setupFrontEnd(payload: { domain: string; certificateId: number }): Promise<void> {
   const authToken = await resolveToken();
   await apiFetch<void>("/proxy/setupFrontEnd", {
     method: "POST",
     token: authToken,
-    body: payload,
+    body: { domain: payload.domain, id: payload.certificateId },
   });
 }

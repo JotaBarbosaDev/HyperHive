@@ -7,6 +7,8 @@ export type CertificateOption = {
   label: string;
 };
 
+const NO_CERTIFICATE_LABEL = "No Certificate";
+
 export function useCertificatesOptions(onError?: (error: unknown) => void) {
   const [certificates, setCertificates] = React.useState<Certificate[]>([]);
   const [loadingCertificates, setLoadingCertificates] = React.useState(false);
@@ -30,7 +32,7 @@ export function useCertificatesOptions(onError?: (error: unknown) => void) {
 
   const certificateOptions = React.useMemo<CertificateOption[]>(() => {
     return [
-      { value: "0", label: "Sem certificado" },
+      { value: "0", label: NO_CERTIFICATE_LABEL },
       ...certificates.map((cert) => ({
         value: String(cert.id),
         label: cert.nice_name || cert.domain_names?.[0] || `Certificado #${cert.id}`,
@@ -40,9 +42,9 @@ export function useCertificatesOptions(onError?: (error: unknown) => void) {
 
   const resolveCertificateLabel = React.useCallback(
     (id?: number | null) => {
-      if (!id) return "Sem certificado";
+      if (!id) return NO_CERTIFICATE_LABEL;
       const match = certificateOptions.find((option) => option.value === String(id));
-      return match?.label ?? "Sem certificado";
+      return match?.label ?? NO_CERTIFICATE_LABEL;
     },
     [certificateOptions]
   );
