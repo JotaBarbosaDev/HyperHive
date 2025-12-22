@@ -1318,15 +1318,15 @@ function IsoCard({ iso, onDelete, isDeleting }: IsoCardProps) {
           ) : null}
           <HStack className="justify-end pt-2">
             <Button
-              variant="outline"
+              action="negative"
               onPress={() => onDelete?.(iso.id)}
               isDisabled={!onDelete || isDeleting}
-              className="rounded-xl border border-error-300 dark:border-error-700 px-4 h-10"
+              className="rounded-xl px-4 h-10 bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
             >
               {isDeleting ? (
                 <ButtonSpinner />
               ) : (
-                <ButtonText className="text-error-600 dark:text-error-400 font-semibold" style={{ fontFamily: "Inter_600SemiBold" }}>
+                <ButtonText className="text-background-0 dark:text-[#0A1628] font-semibold" style={{ fontFamily: "Inter_600SemiBold" }}>
                   Delete
                 </ButtonText>
               )}

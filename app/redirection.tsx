@@ -838,9 +838,14 @@ export default function RedirectionHostsScreen() {
             <Button variant="outline" action="default" onPress={() => setDeleteTarget(null)} isDisabled={Boolean(deletingId)}>
               <ButtonText>Cancel</ButtonText>
             </Button>
-            <Button action="negative" onPress={handleDelete} isDisabled={Boolean(deletingId)}>
+            <Button
+              action="negative"
+              className="rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
+              onPress={handleDelete}
+              isDisabled={Boolean(deletingId)}
+            >
               {deletingId ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
-              <ButtonText>Delete</ButtonText>
+              <ButtonText className="text-background-0 dark:text-[#0A1628]">Delete</ButtonText>
             </Button>
           </AlertDialogFooter>
           <AlertDialogCloseButton />

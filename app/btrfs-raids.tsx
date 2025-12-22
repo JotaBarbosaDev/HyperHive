@@ -588,14 +588,26 @@ export default function BtrfsRaidsScreen() {
                   </SelectContent>
                 </SelectPortal>
               </Select>
-              <Button variant="outline" action="default" size="sm" onPress={() => loadData("refresh")} className="border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]">
+              <Button
+                variant="outline"
+                action="default"
+                size="sm"
+                onPress={() => loadData("refresh")}
+                className="h-10 rounded-xl px-4 border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E]"
+              >
                 <ButtonIcon as={RefreshCcw} size="sm" />
                 <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Refresh</ButtonText>
               </Button>
             </HStack>
-            <Button action="primary" variant="solid" size="md" onPress={() => setCreateModal(true)} className="rounded-full px-5">
+            <Button
+              action="primary"
+              variant="solid"
+              size="md"
+              onPress={() => setCreateModal(true)}
+              className="rounded-full px-5 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+            >
               <ButtonIcon as={Plus} size="sm" />
-              <ButtonText>Create RAID</ButtonText>
+              <ButtonText style={{ fontFamily: "Inter_600SemiBold" }}>Create RAID</ButtonText>
             </Button>
           </HStack>
 
@@ -1300,13 +1312,12 @@ export default function BtrfsRaidsScreen() {
                     </Button>
                     <Button
                       action="negative"
-                      variant="outline"
-                      className="flex-1 min-w-[100px] rounded-xl"
+                      className="flex-1 min-w-[100px] rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
                       onPress={() => raidModal?.uuid && performAction("cancel balance", () => cancelBalance(selectedMachine, raidModal.uuid))}
                       isDisabled={savingAction !== null || !isBalanceRunning(raidStatus)}
                     >
                       {savingAction === "cancel balance" ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
-                      <ButtonText>Cancel</ButtonText>
+                      <ButtonText className="text-background-0 dark:text-[#0A1628]">Cancel</ButtonText>
                     </Button>
                   </HStack>
                 </Box>
@@ -1436,12 +1447,11 @@ export default function BtrfsRaidsScreen() {
           <ModalFooter className="gap-3 flex-wrap">
             <Button
               action="negative"
-              variant="outline"
+              className="rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
               onPress={() => setDeleteRaidTarget(raidModal)}
-              className="border-error-500"
             >
               <ButtonIcon as={Trash2} size="sm" />
-              <ButtonText>Remove RAID</ButtonText>
+              <ButtonText className="text-background-0 dark:text-[#0A1628]">Remove RAID</ButtonText>
             </Button>
             <Button action="primary" onPress={() => setRaidModal(null)}>
               <ButtonText>Close</ButtonText>
@@ -1541,6 +1551,7 @@ export default function BtrfsRaidsScreen() {
                 <QuickPills options={raidDeviceNames} onSelect={setRemoveDiskValue} />
                 <Button
                   action="negative"
+                  className="rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
                   onPress={() =>
                     raidModal?.uuid &&
                     performAction("remove disk", () => removeDiskRaid(selectedMachine, { uuid: raidModal.uuid, disk: removeDiskValue }), false).finally(closeActionModal)
@@ -1548,7 +1559,7 @@ export default function BtrfsRaidsScreen() {
                   isDisabled={savingAction !== null}
                 >
                   {savingAction === "remove disk" ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
-                  <ButtonText>Remove Disk</ButtonText>
+                  <ButtonText className="text-background-0 dark:text-[#0A1628]">Remove Disk</ButtonText>
                 </Button>
               </VStack>
             ) : null}
@@ -1643,14 +1654,14 @@ export default function BtrfsRaidsScreen() {
                   {currentAutoMount?.id ? (
                     <Button
                       action="negative"
-                      variant="outline"
+                      className="rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
                       onPress={() =>
                         performAction("remove auto-mount", () => deleteAutomaticMount(currentAutoMount.id), false).finally(closeActionModal)
                       }
                       isDisabled={savingAction !== null}
                     >
                       {savingAction === "remove auto-mount" ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
-                      <ButtonText>Remove Auto-mount</ButtonText>
+                      <ButtonText className="text-background-0 dark:text-[#0A1628]">Remove Auto-mount</ButtonText>
                     </Button>
                   ) : null}
                   <Button variant="outline" action="default" onPress={() => { closeActionModal(); router.push("/btrfs-automatic-mounts"); }}>
@@ -1688,6 +1699,7 @@ export default function BtrfsRaidsScreen() {
             </Button>
             <Button
               action="negative"
+              className="rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
               onPress={() =>
                 deleteRaidTarget?.uuid &&
                 performAction("remove RAID", () => removeRaid(selectedMachine, deleteRaidTarget.uuid)).then(() => {
@@ -1698,7 +1710,7 @@ export default function BtrfsRaidsScreen() {
               isDisabled={savingAction !== null}
             >
               {savingAction === "remove RAID" ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
-              <ButtonText>Remove</ButtonText>
+              <ButtonText className="text-background-0 dark:text-[#0A1628]">Remove</ButtonText>
             </Button>
           </AlertDialogFooter>
           <AlertDialogCloseButton />

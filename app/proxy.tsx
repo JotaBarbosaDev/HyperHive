@@ -872,8 +872,13 @@ export default function ProxyHostsScreen() {
                             </Input>
                           </HStack>
                           <HStack className="justify-end">
-                            <Button action="negative" variant="outline" size="sm" onPress={() => removeLocation(idx)}>
-                              <ButtonText>Remove</ButtonText>
+                            <Button
+                              action="negative"
+                              size="sm"
+                              className="rounded-lg bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
+                              onPress={() => removeLocation(idx)}
+                            >
+                              <ButtonText className="text-background-0 dark:text-[#0A1628]">Remove</ButtonText>
                             </Button>
                           </HStack>
                         </Box>
@@ -1026,9 +1031,14 @@ export default function ProxyHostsScreen() {
             <Button variant="outline" action="default" onPress={() => setDeleteTarget(null)} isDisabled={Boolean(deletingId)}>
               <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
             </Button>
-            <Button action="negative" onPress={handleDelete} isDisabled={Boolean(deletingId)}>
+            <Button
+              action="negative"
+              className="rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
+              onPress={handleDelete}
+              isDisabled={Boolean(deletingId)}
+            >
               {deletingId ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
-              <ButtonText>Delete</ButtonText>
+              <ButtonText className="text-background-0 dark:text-[#0A1628]">Delete</ButtonText>
             </Button>
           </AlertDialogFooter>
           <AlertDialogCloseButton />

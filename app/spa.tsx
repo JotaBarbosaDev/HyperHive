@@ -244,20 +244,20 @@ export default function SpaScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadPorts("refresh")} />}
       >
         <Box className="p-4 pt-16 web:p-10 web:max-w-6xl web:mx-auto web:w-full">
+          <VStack className="gap-2 mb-6">
+            <Heading
+              size="2xl"
+              className="text-typography-900 dark:text-[#E8EBF0] mb-1 web:text-4xl"
+              style={{ fontFamily: "Inter_700Bold" }}
+            >
+              Single Packet Authorization
+            </Heading>
+            <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
+              Create password-protected ports for temporary access. Don't rely on SPA as your only line of defense.
+            </Text>
+          </VStack>
+
           <VStack space="lg">
-            <VStack space="xs">
-              <HStack className="items-center gap-3">
-                <Box className="rounded-2xl bg-background-0 border border-background-100 shadow-soft-1 p-3">
-                  <ShieldCheck size={24} color="#0f172a" />
-                </Box>
-                <VStack space="xs">
-                  <Heading size="2xl" className="text-typography-900">Single Packet Authorization</Heading>
-                  <Text size="sm" className="text-typography-600 max-w-3xl">
-                    Create password-protected ports for temporary access. Don't rely on SPA as your only line of defense.
-                  </Text>
-                </VStack>
-              </HStack>
-            </VStack>
 
             <Box className="rounded-2xl bg-background-0 border border-background-100 shadow-soft-1 p-4 md:p-5 gap-5">
               <VStack space="sm">
@@ -295,12 +295,12 @@ export default function SpaScreen() {
                 <HStack className="items-center gap-3 flex-wrap">
                   <Button
                     action="primary"
-                    className="rounded-full"
+                    className="rounded-full px-5 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
                     onPress={handleCreate}
                     isDisabled={saving}
                   >
                     {saving ? <ButtonSpinner /> : <ButtonIcon as={Plus} className="mr-1" />}
-                    <ButtonText>{saving ? "Saving..." : "Create port"}</ButtonText>
+                    <ButtonText style={{ fontFamily: "Inter_600SemiBold" }}>{saving ? "Saving..." : "Create port"}</ButtonText>
                   </Button>
                   <Text size="xs" className="text-typography-500">
                     Once created, you can copy the link to share access.
@@ -355,13 +355,12 @@ export default function SpaScreen() {
                           </Button>
                           <Button
                             action="negative"
-                            variant="outline"
                             size="sm"
-                            className="rounded-full"
+                            className="rounded-full bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
                             onPress={() => setDeleteTarget(item)}
                           >
                             {deletingPort === item.port ? <ButtonSpinner /> : <ButtonIcon as={Trash2} />}
-                            <ButtonText>Remove</ButtonText>
+                            <ButtonText className="text-background-0 dark:text-[#0A1628]">Remove</ButtonText>
                           </Button>
                         </HStack>
                       </HStack>
@@ -393,12 +392,12 @@ export default function SpaScreen() {
               </Button>
               <Button
                 action="negative"
-                className="flex-1 rounded-full"
+                className="flex-1 rounded-full bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
                 onPress={confirmDelete}
                 isDisabled={deletingPort !== null}
               >
                 {deletingPort ? <ButtonSpinner /> : <ButtonIcon as={Trash2} />}
-                <ButtonText>Remove</ButtonText>
+                <ButtonText className="text-background-0 dark:text-[#0A1628]">Remove</ButtonText>
               </Button>
             </AlertDialogFooter>
           </AlertDialogContent>

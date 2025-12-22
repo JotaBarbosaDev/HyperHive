@@ -344,12 +344,13 @@ export default function DashboardScreen() {
               <Button
                 size="sm"
                 variant="outline"
-                className="rounded-xl"
+                action="default"
+                className="rounded-xl border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E]"
                 onPress={() => loadSnapshots("refresh")}
                 isDisabled={isLoading || isRefreshing}
               >
                 <ButtonIcon as={RefreshCcw} />
-                <ButtonText>Update</ButtonText>
+                <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Update</ButtonText>
               </Button>
             </HStack>
             <HStack className="gap-4 items-center flex-wrap">
@@ -433,10 +434,11 @@ export default function DashboardScreen() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="rounded-xl"
+                        action="default"
+                        className="rounded-xl border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E]"
                         onPress={() => router.push(`/dashboard/${encodeURIComponent(snap.machine.MachineName)}` as any)}
                       >
-                        <ButtonText>View details</ButtonText>
+                        <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">View details</ButtonText>
                       </Button>
                     </HStack>
 
