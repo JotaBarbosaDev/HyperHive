@@ -233,7 +233,7 @@ export default function BtrfsAutomaticMountsScreen() {
                 action="default"
                 size="sm"
                 onPress={() => loadData("refresh")}
-                className="h-10 rounded-xl px-4 border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E]"
+                className="border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628] h-10"
               >
                 <ButtonIcon as={RefreshCcw} size="sm" />
                 <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
@@ -243,11 +243,13 @@ export default function BtrfsAutomaticMountsScreen() {
             </HStack>
             <Button
               action="primary"
-              className="h-10 rounded-xl px-5 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+              className="h-10 px-5 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
               onPress={() => setCreateModal(true)}
             >
               <ButtonIcon as={Plus} size="sm" />
-              <ButtonText style={{ fontFamily: "Inter_600SemiBold" }}>New Auto-mount</ButtonText>
+              <ButtonText style={{fontFamily: "Inter_600SemiBold"}}>
+                New Auto-mount
+              </ButtonText>
             </Button>
           </HStack>
 
@@ -323,7 +325,7 @@ export default function BtrfsAutomaticMountsScreen() {
                       </VStack>
                       <Button
                         action="negative"
-                        className="rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
+                        className="bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
                         onPress={() => handleRemove(rule.id)}
                         isDisabled={removingId !== null}
                       >
@@ -332,7 +334,9 @@ export default function BtrfsAutomaticMountsScreen() {
                         ) : (
                           <ButtonIcon as={Trash2} size="sm" />
                         )}
-                        <ButtonText className="text-background-0 dark:text-[#0A1628]">Remove</ButtonText>
+                        <ButtonText className="text-background-0 dark:text-[#0A1628]">
+                          Remove
+                        </ButtonText>
                       </Button>
                     </HStack>
                   </Box>
@@ -424,8 +428,11 @@ export default function BtrfsAutomaticMountsScreen() {
               action="default"
               onPress={() => setCreateModal(false)}
               isDisabled={saving}
+              className="border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]"
             >
-              <ButtonText>Cancel</ButtonText>
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                Cancel
+              </ButtonText>
             </Button>
             <Button
               action="primary"

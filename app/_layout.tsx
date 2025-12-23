@@ -621,28 +621,7 @@ function RootLayoutNav() {
                 />
               </Button>
             )}
-            {pathname === "/mounts" && isWeb && (
-              <Box
-                className="hidden web:flex absolute top-6 right-6 z-20 web:top-10 web:right-10"
-                pointerEvents="box-none"
-              >
-                <Button
-                  size="md"
-                  action="primary"
-                  className="h-11 rounded-xl px-4 gap-2 shadow-soft-3"
-                  onPress={handleOpenDrawer}
-                >
-                  <ButtonIcon
-                    as={EditIcon}
-                    size="sm"
-                    className="dark:text-[#0D1420]"
-                  />
-                  <ButtonText className="text-sm font-semibold">
-                    Create new NFS
-                  </ButtonText>
-                </Button>
-              </Box>
-            )}
+            
             {pathname !== "/" && (
               <AppSidebar
                 isOpen={showSidebar}

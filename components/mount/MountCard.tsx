@@ -134,10 +134,16 @@ export function MountCard({
             />
             <Box className="w-full h-px bg-outline-100 dark:bg-[#2A3B52]" />
             <Box className="flex items-center justify-center gap-2 pb-1">
-              <Text className="text-[#9AA4B8] dark:text-[#8A94A8] text-xs" style={{fontFamily: "Inter_500Medium"}}>
+              <Text
+                className="text-[#9AA4B8] dark:text-[#8A94A8] text-xs"
+                style={{fontFamily: "Inter_500Medium"}}
+              >
                 Host:
               </Text>
-              <Text className="text-typography-900 dark:text-[#E8EBF0] text-sm font-semibold truncate" style={{fontFamily: "Inter_600SemiBold"}}>
+              <Text
+                className="text-typography-900 dark:text-[#E8EBF0] text-sm font-semibold truncate"
+                style={{fontFamily: "Inter_600SemiBold"}}
+              >
                 {MachineName}
               </Text>
             </Box>
@@ -145,14 +151,14 @@ export function MountCard({
         </Box>
         <Box className="rounded-b-2xl flex flex-col gap-2 border-t border-outline-100 bg-background-50 p-3 dark:border-[#2A3B52] dark:bg-[#0E1828] web:p-3 web:mt-auto">
           <Button
-            variant="solid"
+            variant="outline"
             size="md"
             action="secondary"
-            className="w-full rounded-xl web:h-11 dark:bg-[#2A3B52] dark:hover:bg-[#34445E] dark:active:bg-[#3D4F6A]"
+            className="border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]"
             onPress={() => setShowConnectModal(true)}
           >
             <ButtonText
-              className="web:text-sm web:font-semibold dark:text-[#E8EBF0]"
+              className="web:text-sm web:font-semibold text-typography-900 dark:text-[#E8EBF0]"
               style={{fontFamily: "Inter_600SemiBold"}}
             >
               Connect to NFS
@@ -160,14 +166,14 @@ export function MountCard({
           </Button>
           <Box className="flex flex-col gap-2 md:flex-row md:justify-end md:gap-3 web:flex-row web:gap-3">
             <Button
-              variant="solid"
+              variant="outline"
               size="md"
               action="secondary"
-              className="w-full rounded-xl md:w-auto web:flex-1 web:h-11 dark:bg-[#2A3B52] dark:hover:bg-[#34445E] dark:active:bg-[#3D4F6A]"
+              className="border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]"
               onPress={() => setShowDetailsModal(true)}
             >
               <ButtonText
-                className="web:text-sm web:font-semibold dark:text-[#E8EBF0]"
+                className="web:text-sm web:font-semibold text-typography-900 dark:text-[#E8EBF0]"
                 style={{fontFamily: "Inter_600SemiBold"}}
               >
                 See Details
@@ -179,7 +185,7 @@ export function MountCard({
                 variant="solid"
                 size="md"
                 action="primary"
-                className="w-full rounded-xl md:w-auto web:flex-1 web:h-11 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+                className="w-full  md:w-auto web:flex-1  dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
                 onPress={() => setShowDeleteModal(true)}
               >
                 <ButtonText
@@ -190,7 +196,10 @@ export function MountCard({
                 </ButtonText>
               </Button>
             ) : (
-              <Button className="p-3 rounded-xl web:flex-1 dark:bg-[#2A3B52]" isDisabled>
+              <Button
+                className="p-3 rounded-xl web:flex-1 dark:bg-[#2A3B52]"
+                isDisabled
+              >
                 <ButtonSpinner color="gray" />
                 <ButtonText
                   className="font-semibold text-sm ml-2 web:text-sm dark:text-[#E8EBF0]"
@@ -204,7 +213,10 @@ export function MountCard({
         </Box>
         {deleteError ? (
           <Box className="px-4 pb-4">
-            <Text className="text-[#EF4444]" style={{fontFamily: "Inter_400Regular"}}>
+            <Text
+              className="text-[#EF4444]"
+              style={{fontFamily: "Inter_400Regular"}}
+            >
               {deleteError}
             </Text>
           </Box>

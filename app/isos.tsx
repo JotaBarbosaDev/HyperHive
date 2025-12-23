@@ -1033,7 +1033,7 @@ export default function ProfileScreen() {
     <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{paddingBottom: 32}}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -1048,19 +1048,20 @@ export default function ProfileScreen() {
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
-            style={{ fontFamily: "Inter_700Bold" }}
+            style={{fontFamily: "Inter_700Bold"}}
           >
             ISO Downloads
           </Heading>
           <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
-            Browse all ISOs available for your VMs and add new images by downloading them straight to the cluster.
+            Browse all ISOs available for your VMs and add new images by
+            downloading them straight to the cluster.
           </Text>
 
           <VStack className="mt-6 gap-4 web:flex-row web:items-end">
             <Box className="flex-1">
               <Text
                 className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400 mb-2"
-                style={{ fontFamily: "Inter_600SemiBold" }}
+                style={{fontFamily: "Inter_600SemiBold"}}
               >
                 Filter ISOs
               </Text>
@@ -1075,33 +1076,44 @@ export default function ProfileScreen() {
                   value={query}
                   onChangeText={setQuery}
                   placeholder="Name, operating system, version..."
-                  placeholderTextColor={colorScheme === "dark" ? "#8A94A8" : "#94A3B8"}
+                  placeholderTextColor={
+                    colorScheme === "dark" ? "#8A94A8" : "#94A3B8"
+                  }
                   className="text-base text-typography-900 dark:text-[#E8EBF0]"
-                  style={{ fontFamily: "Inter_500Medium" }}
+                  style={{fontFamily: "Inter_500Medium"}}
                 />
               </Input>
             </Box>
             <HStack className="gap-3">
-              <Box className="relative rounded-2xl overflow-hidden">
+              <Box className="relative  overflow-hidden">
                 {isButtonTrackingDownload && activeDownloadProgress != null ? (
                   <Box
                     className="absolute left-0 top-0 h-full bg-primary-500/30 dark:bg-[#5EEAD4]/30"
-                    style={{ width: `${activeDownloadProgress}%` }}
+                    style={{width: `${activeDownloadProgress}%`}}
                     pointerEvents="none"
                   />
                 ) : null}
                 <Button
                   action="primary"
                   onPress={handleOpenAddIso}
-                  className="h-12 rounded-2xl px-6 bg-primary-500 dark:bg-[#2DD4BF] hover:bg-primary-600 dark:hover:bg-[#5EEAD4] active:bg-primary-700 dark:active:bg-[#14B8A6]"
+                  className="bg-primary-500 dark:bg-[#2DD4BF] hover:bg-primary-600 dark:hover:bg-[#5EEAD4] active:bg-primary-700 dark:active:bg-[#14B8A6]"
                 >
-                  <ButtonIcon as={Plus} className="text-typography-0 dark:text-[#0D1420]" />
+                  <ButtonIcon
+                    as={Plus}
+                    className="text-typography-0 dark:text-[#0D1420]"
+                  />
                   <VStack className="flex-1 items-start">
-                    <ButtonText className="text-base font-semibold text-typography-0 dark:text-[#0D1420]" style={{ fontFamily: "Inter_600SemiBold" }}>
+                    <ButtonText
+                      className="text-base font-semibold text-typography-0 dark:text-[#0D1420]"
+                      style={{fontFamily: "Inter_600SemiBold"}}
+                    >
                       {downloadProgressLabel}
                     </ButtonText>
                     {downloadProgressDetail ? (
-                      <Text className="text-xs text-typography-0 dark:text-[#0D1420] opacity-80" style={{ fontFamily: "Inter_500Medium" }}>
+                      <Text
+                        className="text-xs text-typography-0 dark:text-[#0D1420] opacity-80"
+                        style={{fontFamily: "Inter_500Medium"}}
+                      >
                         {downloadProgressDetail}
                       </Text>
                     ) : null}
@@ -1112,7 +1124,7 @@ export default function ProfileScreen() {
                 variant="outline"
                 onPress={handleManualRefresh}
                 isDisabled={isLoading || isRefreshing}
-                className="h-12 rounded-2xl border border-outline-100 dark:border-[#2A3B52] web:w-auto web:px-6"
+                className="border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628] h-10"
               >
                 {isRefreshing ? (
                   <ButtonSpinner />
@@ -1123,8 +1135,8 @@ export default function ProfileScreen() {
                   />
                 )}
                 <ButtonText
-                  className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]"
-                  style={{ fontFamily: "Inter_600SemiBold" }}
+                  className="text-typography-900 dark:text-[#E8EBF0]"
+                  style={{fontFamily: "Inter_600SemiBold"}}
                 >
                   Refresh
                 </ButtonText>
@@ -1136,16 +1148,23 @@ export default function ProfileScreen() {
             <Box className="mt-6 rounded-2xl border border-error-300 dark:border-error-700 bg-error-500/5 dark:bg-error-900/20 p-4">
               <HStack className="gap-3">
                 <Box className="h-12 w-12 items-center justify-center rounded-2xl bg-error-500/10 dark:bg-error-500/20">
-                  <Icon as={AlertCircle} className="text-error-500 dark:text-error-400" size="lg" />
+                  <Icon
+                    as={AlertCircle}
+                    className="text-error-500 dark:text-error-400"
+                    size="lg"
+                  />
                 </Box>
                 <VStack className="flex-1 gap-2">
                   <Text
                     className="text-base font-semibold text-error-600 dark:text-error-400"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
+                    style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     Something went wrong
                   </Text>
-                  <Text className="text-sm text-error-600 dark:text-error-400" style={{ fontFamily: "Inter_400Regular" }}>
+                  <Text
+                    className="text-sm text-error-600 dark:text-error-400"
+                    style={{fontFamily: "Inter_400Regular"}}
+                  >
                     {error}
                   </Text>
                   <Button
@@ -1154,7 +1173,9 @@ export default function ProfileScreen() {
                     onPress={() => fetchIsos("initial")}
                     className="h-10 rounded-xl bg-error-500/10 dark:bg-error-500/20 hover:bg-error-500/20 dark:hover:bg-error-500/30"
                   >
-                    <ButtonText className="text-error-600 dark:text-error-400 font-semibold">Try again</ButtonText>
+                    <ButtonText className="text-error-600 dark:text-error-400 font-semibold">
+                      Try again
+                    </ButtonText>
                   </Button>
                 </VStack>
               </HStack>
@@ -1174,9 +1195,11 @@ export default function ProfileScreen() {
             <Box className="mt-8 rounded-2xl border border-outline-100 bg-background-0 p-8 text-center shadow-soft-2 dark:border-[#2A3B52] dark:bg-[#0E1524]">
               <Text
                 className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]"
-                style={{ fontFamily: "Inter_600SemiBold" }}
+                style={{fontFamily: "Inter_600SemiBold"}}
               >
-                {query.trim() ? "No ISOs found for this filter." : "No ISOs available yet."}
+                {query.trim()
+                  ? "No ISOs found for this filter."
+                  : "No ISOs available yet."}
               </Text>
               <Text className="mt-2 text-sm text-typography-600 dark:text-typography-400">
                 {query.trim()

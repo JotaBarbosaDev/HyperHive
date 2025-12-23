@@ -612,11 +612,20 @@ export default function SmartDiskScreen() {
     <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 32 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadData("refresh")} />}
+        contentContainerStyle={{paddingBottom: 32}}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => loadData("refresh")}
+          />
+        }
       >
         <Box className="p-4 pt-16 web:p-10 web:max-w-6xl web:mx-auto web:w-full">
-          <Heading size="2xl" className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl" style={{ fontFamily: "Inter_700Bold" }}>
+          <Heading
+            size="2xl"
+            className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
+            style={{fontFamily: "Inter_700Bold"}}
+          >
             SMART Tests
           </Heading>
           <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
@@ -625,8 +634,11 @@ export default function SmartDiskScreen() {
 
           <HStack className="mt-6 items-center justify-between flex-wrap gap-3">
             <HStack className="gap-3 items-center flex-wrap">
-              <Select selectedValue={selectedMachine} onValueChange={(val) => setSelectedMachine(val)}>
-                <SelectTrigger className="min-w-[200px] border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] px-3 py-2">
+              <Select
+                selectedValue={selectedMachine}
+                onValueChange={(val) => setSelectedMachine(val)}
+              >
+                <SelectTrigger className="min-w-[200px] border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] pr-2">
                   <SelectInput placeholder="Machine" value={selectedMachine} />
                   <SelectIcon as={ChevronDown} />
                 </SelectTrigger>
@@ -637,17 +649,34 @@ export default function SmartDiskScreen() {
                       <SelectDragIndicator />
                     </SelectDragIndicatorWrapper>
                     {(machines ?? []).map((m) => (
-                      <SelectItem key={m.MachineName} value={m.MachineName} label={m.MachineName} />
+                      <SelectItem
+                        key={m.MachineName}
+                        value={m.MachineName}
+                        label={m.MachineName}
+                      />
                     ))}
                   </SelectContent>
                 </SelectPortal>
               </Select>
-              <Button variant="outline" action="default" size="sm" onPress={() => loadData("refresh")} className="border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]">
+              <Button
+                variant="outline"
+                action="default"
+                size="sm"
+                onPress={() => loadData("refresh")}
+                className="border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628] h-10"
+              >
                 <ButtonIcon as={RefreshCcw} size="sm" />
-                <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Refresh</ButtonText>
+                <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                  Refresh
+                </ButtonText>
               </Button>
             </HStack>
-            <Button action="primary" variant="solid" size="md" onPress={() => openSchedule()}>
+            <Button
+              action="primary"
+              variant="solid"
+              size="md"
+              onPress={() => openSchedule()}
+            >
               <ButtonIcon as={CalendarClock} size="sm" />
               <ButtonText>New Schedule</ButtonText>
             </Button>
@@ -656,7 +685,10 @@ export default function SmartDiskScreen() {
           {loading ? (
             <VStack className="mt-6 gap-4">
               {[1, 2, 3].map((idx) => (
-                <Box key={idx} className="p-4 rounded-2xl bg-background-0 border border-background-100 shadow-soft-1">
+                <Box
+                  key={idx}
+                  className="p-4 rounded-2xl bg-background-0 border border-background-100 shadow-soft-1"
+                >
                   <Skeleton className="h-5 w-1/3 mb-2" />
                   <SkeletonText className="w-3/4" />
                 </Box>
@@ -667,7 +699,9 @@ export default function SmartDiskScreen() {
               <VStack className="mt-6 gap-3">
                 {(disks ?? []).length === 0 ? (
                   <Box className="p-4 rounded-2xl bg-background-0 border border-background-200 shadow-soft-1">
-                    <Text className="text-typography-600 text-sm">No eligible disks found.</Text>
+                    <Text className="text-typography-600 text-sm">
+                      No eligible disks found.
+                    </Text>
                   </Box>
                 ) : (
                   (disks ?? []).map((disk) => (
@@ -680,7 +714,9 @@ export default function SmartDiskScreen() {
                         <HStack className="items-center gap-2 flex-1">
                           <HardDrive size={18} color="#0f172a" />
                           <VStack>
-                            <Text className="text-typography-900 font-semibold">{getDeviceLabel(disk.device, disks, deviceMeta)}</Text>
+                            <Text className="text-typography-900 font-semibold">
+                              {getDeviceLabel(disk.device, disks, deviceMeta)}
+                            </Text>
                             <Text className="text-typography-600 text-xs">
                               {disk.serial ? `Serial ${disk.serial}` : ""}
                             </Text>
@@ -688,32 +724,68 @@ export default function SmartDiskScreen() {
                         </HStack>
                         <HStack className="items-center gap-2">
                           {badgeStatus(disk.healthStatus || disk.status)}
-                          <Badge className="rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
-                            <BadgeText className="text-xs text-typography-800">Temp {formatTemp(disk.temp)}</BadgeText>
+                          <Badge
+                            className="rounded-full px-3 py-1"
+                            size="sm"
+                            action="muted"
+                            variant="solid"
+                          >
+                            <BadgeText className="text-xs text-typography-800">
+                              Temp {formatTemp(disk.temp)}
+                            </BadgeText>
                           </Badge>
                         </HStack>
                       </HStack>
 
                       <HStack className="mt-3 items-center flex-wrap gap-3">
-                        <Text className="text-typography-700 text-sm">Model: {disk.model || deviceMeta[disk.device] || "—"}</Text>
-                        <Text className="text-typography-700 text-sm">Capacity: {formatCapacity(disk.capacity)}</Text>
-                        <Text className="text-typography-700 text-sm">Reallocated: {disk.reallocated ?? 0}</Text>
-                        <Text className="text-typography-700 text-sm">Pending: {disk.pending ?? 0}</Text>
+                        <Text className="text-typography-700 text-sm">
+                          Model: {disk.model || deviceMeta[disk.device] || "—"}
+                        </Text>
+                        <Text className="text-typography-700 text-sm">
+                          Capacity: {formatCapacity(disk.capacity)}
+                        </Text>
+                        <Text className="text-typography-700 text-sm">
+                          Reallocated: {disk.reallocated ?? 0}
+                        </Text>
+                        <Text className="text-typography-700 text-sm">
+                          Pending: {disk.pending ?? 0}
+                        </Text>
                       </HStack>
 
                       {renderSelfTestBar(disk.device)}
                       {renderReallocBar(disk.device)}
 
                       <HStack className="mt-3 gap-2">
-                        <Button action="default" variant="outline" size="sm" onPress={() => openDetail(disk.device, "selftest")}>
+                        <Button
+                          action="default"
+                          variant="outline"
+                          size="sm"
+                          onPress={() => openDetail(disk.device, "selftest")}
+                          className="border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]"
+                        >
                           <ButtonIcon as={Activity} size="sm" />
-                          <ButtonText>Self-test</ButtonText>
+                          <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                            Self-test
+                          </ButtonText>
                         </Button>
-                        <Button action="default" variant="outline" size="sm" onPress={() => openDetail(disk.device, "realloc")}>
+                        <Button
+                          action="default"
+                          variant="outline"
+                          size="sm"
+                          onPress={() => openDetail(disk.device, "realloc")}
+                          className="border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]"
+                        >
                           <ButtonIcon as={RefreshCcw} size="sm" />
-                          <ButtonText>Realloc</ButtonText>
+                          <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                            Realloc
+                          </ButtonText>
                         </Button>
-                        <Button action="primary" variant="solid" size="sm" onPress={() => openDetail(disk.device, "info")}>
+                        <Button
+                          action="primary"
+                          variant="solid"
+                          size="sm"
+                          onPress={() => openDetail(disk.device, "info")}
+                        >
                           <ButtonIcon as={Info} size="sm" />
                           <ButtonText>Details</ButtonText>
                         </Button>
@@ -725,13 +797,19 @@ export default function SmartDiskScreen() {
 
               <Box className="mt-8 rounded-2xl bg-background-0 border border-background-200 shadow-soft-1">
                 <HStack className="px-4 py-3 items-center justify-between">
-                  <Text className="text-typography-900 font-semibold text-base">Schedules</Text>
-                  <Text className="text-typography-600 text-sm">{schedules.length} items</Text>
+                  <Text className="text-typography-900 font-semibold text-base">
+                    Schedules
+                  </Text>
+                  <Text className="text-typography-600 text-sm">
+                    {schedules.length} items
+                  </Text>
                 </HStack>
                 <Divider />
                 {schedules.length === 0 ? (
                   <Box className="p-4">
-                    <Text className="text-typography-600 text-sm">No schedules configured.</Text>
+                    <Text className="text-typography-600 text-sm">
+                      No schedules configured.
+                    </Text>
                   </Box>
                 ) : (
                   <VStack className="divide-y divide-background-200">
@@ -742,13 +820,31 @@ export default function SmartDiskScreen() {
                           <Text className="text-typography-900 font-semibold flex-1">
                             {getDeviceLabel(sched.device, disks, deviceMeta)}
                           </Text>
-                          <Badge className="rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
-                            <BadgeText className="text-xs text-typography-800">{sched.type}</BadgeText>
+                          <Badge
+                            className="rounded-full px-3 py-1"
+                            size="sm"
+                            action="muted"
+                            variant="solid"
+                          >
+                            <BadgeText className="text-xs text-typography-800">
+                              {sched.type}
+                            </BadgeText>
                           </Badge>
-                          <Text className="text-typography-700 text-sm">{WEEK_DAYS[sched.week_day] ?? sched.week_day}</Text>
-                          <Text className="text-typography-700 text-sm">{`${String(sched.hour).padStart(2, "0")}:00`}</Text>
-                          <Badge className="rounded-full px-3 py-1" size="sm" action={sched.active ? "success" : "muted"} variant="solid">
-                            <BadgeText className="text-xs text-typography-800">{sched.active ? "Active" : "Inactive"}</BadgeText>
+                          <Text className="text-typography-700 text-sm">
+                            {WEEK_DAYS[sched.week_day] ?? sched.week_day}
+                          </Text>
+                          <Text className="text-typography-700 text-sm">{`${String(
+                            sched.hour
+                          ).padStart(2, "0")}:00`}</Text>
+                          <Badge
+                            className="rounded-full px-3 py-1"
+                            size="sm"
+                            action={sched.active ? "success" : "muted"}
+                            variant="solid"
+                          >
+                            <BadgeText className="text-xs text-typography-800">
+                              {sched.active ? "Active" : "Inactive"}
+                            </BadgeText>
                           </Badge>
                         </HStack>
                         <HStack className="mt-2 gap-2">
@@ -766,18 +862,30 @@ export default function SmartDiskScreen() {
                             variant="outline"
                             size="sm"
                             onPress={() => toggleSchedule(sched)}
-                            isDisabled={savingAction === `sched-toggle-${sched.id}`}
+                            isDisabled={
+                              savingAction === `sched-toggle-${sched.id}`
+                            }
                           >
-                            {savingAction === `sched-toggle-${sched.id}` ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
+                            {savingAction === `sched-toggle-${sched.id}` ? (
+                              <ButtonSpinner />
+                            ) : (
+                              <ButtonIcon as={RefreshCcw} size="sm" />
+                            )}
                           </Button>
                           <Button
                             action="negative"
                             variant="outline"
                             size="sm"
                             onPress={() => handleDeleteSchedule(sched)}
-                            isDisabled={savingAction === `sched-del-${sched.id}`}
+                            isDisabled={
+                              savingAction === `sched-del-${sched.id}`
+                            }
                           >
-                            {savingAction === `sched-del-${sched.id}` ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
+                            {savingAction === `sched-del-${sched.id}` ? (
+                              <ButtonSpinner />
+                            ) : (
+                              <ButtonIcon as={Trash2} size="sm" />
+                            )}
                           </Button>
                         </HStack>
                       </Box>
@@ -790,7 +898,11 @@ export default function SmartDiskScreen() {
         </Box>
       </ScrollView>
 
-      <Modal isOpen={detailDevice !== null} onClose={() => setDetailDevice(null)} size="lg">
+      <Modal
+        isOpen={detailDevice !== null}
+        onClose={() => setDetailDevice(null)}
+        size="lg"
+      >
         <ModalBackdrop />
         <ModalContent className="max-w-3xl max-h-[90vh]">
           <ModalHeader className="flex-row items-start justify-between">
@@ -800,8 +912,15 @@ export default function SmartDiskScreen() {
               </Heading>
               <HStack className="gap-2 items-center flex-wrap">
                 {badgeStatus(detailDisk?.healthStatus || detailDisk?.status)}
-                <Badge className="rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
-                  <BadgeText className="text-xs text-typography-800">Temp {formatTemp(detailDisk?.temp)}</BadgeText>
+                <Badge
+                  className="rounded-full px-3 py-1"
+                  size="sm"
+                  action="muted"
+                  variant="solid"
+                >
+                  <BadgeText className="text-xs text-typography-800">
+                    Temp {formatTemp(detailDisk?.temp)}
+                  </BadgeText>
                 </Badge>
               </HStack>
             </VStack>
@@ -814,11 +933,23 @@ export default function SmartDiskScreen() {
                   key={tab}
                   onPress={() => setDetailTab(tab)}
                   className={`px-4 py-2 rounded-xl border ${
-                    detailTab === tab ? "border-primary-500 bg-primary-50" : "border-background-200 bg-background-0"
+                    detailTab === tab
+                      ? "border-primary-500 bg-primary-50"
+                      : "border-background-200 bg-background-0"
                   }`}
                 >
-                  <Text className={`font-semibold ${detailTab === tab ? "text-primary-700" : "text-typography-700"}`}>
-                    {tab === "info" ? "Information" : tab === "selftest" ? "Self-test" : "Realloc"}
+                  <Text
+                    className={`font-semibold ${
+                      detailTab === tab
+                        ? "text-primary-700"
+                        : "text-typography-700"
+                    }`}
+                  >
+                    {tab === "info"
+                      ? "Information"
+                      : tab === "selftest"
+                      ? "Self-test"
+                      : "Realloc"}
                   </Text>
                 </Pressable>
               ))}
@@ -832,73 +963,140 @@ export default function SmartDiskScreen() {
             ) : detailTab === "info" ? (
               <VStack className="gap-4">
                 <Box className="p-3 rounded-xl border border-background-200 bg-background-50">
-                  <Text className="text-typography-800 font-semibold mb-2">General</Text>
+                  <Text className="text-typography-800 font-semibold mb-2">
+                    General
+                  </Text>
                   <VStack className="gap-1">
-                    <Text className="text-typography-700">Model: {detailDisk?.model || "—"}</Text>
-                    <Text className="text-typography-700">Serial: {detailDisk?.serial || "—"}</Text>
-                    <Text className="text-typography-700">Firmware: {detailDisk?.firmware || "—"}</Text>
-                    <Text className="text-typography-700">Capacity: {formatCapacity(detailDisk?.capacity)}</Text>
-                    <Text className="text-typography-700">Power On Hours: {detailDisk?.powerOnHours ?? "—"}</Text>
-                    <Text className="text-typography-700">Power Cycles: {detailDisk?.powerCycles ?? detailDisk?.powerCycleCount ?? "—"}</Text>
+                    <Text className="text-typography-700">
+                      Model: {detailDisk?.model || "—"}
+                    </Text>
+                    <Text className="text-typography-700">
+                      Serial: {detailDisk?.serial || "—"}
+                    </Text>
+                    <Text className="text-typography-700">
+                      Firmware: {detailDisk?.firmware || "—"}
+                    </Text>
+                    <Text className="text-typography-700">
+                      Capacity: {formatCapacity(detailDisk?.capacity)}
+                    </Text>
+                    <Text className="text-typography-700">
+                      Power On Hours: {detailDisk?.powerOnHours ?? "—"}
+                    </Text>
+                    <Text className="text-typography-700">
+                      Power Cycles:{" "}
+                      {detailDisk?.powerCycles ??
+                        detailDisk?.powerCycleCount ??
+                        "—"}
+                    </Text>
                   </VStack>
-                  <Button className="mt-3 self-start" variant="outline" action="default" size="sm" onPress={() => setRawDetailsOpen(true)}>
+                  <Button
+                    className="mt-3 self-start"
+                    variant="outline"
+                    action="default"
+                    size="sm"
+                    onPress={() => setRawDetailsOpen(true)}
+                  >
                     <ButtonIcon as={Info} size="sm" />
                     <ButtonText>See full details</ButtonText>
                   </Button>
                 </Box>
                 <Box className="p-3 rounded-xl border border-background-200">
-                  <Text className="text-typography-800 font-semibold mb-2">SMART</Text>
+                  <Text className="text-typography-800 font-semibold mb-2">
+                    SMART
+                  </Text>
                   <HStack className="gap-3 flex-wrap">
-                    <Text className="text-typography-700">Reallocated Sectors: {detailDisk?.metrics?.reallocatedSectors ?? "—"}</Text>
-                    <Text className="text-typography-700">Pending Sectors: {detailDisk?.metrics?.pendingSectors ?? "—"}</Text>
-                    <Text className="text-typography-700">Offline Uncorrectable: {detailDisk?.metrics?.offlineUncorrectable ?? "—"}</Text>
+                    <Text className="text-typography-700">
+                      Reallocated Sectors:{" "}
+                      {detailDisk?.metrics?.reallocatedSectors ?? "—"}
+                    </Text>
+                    <Text className="text-typography-700">
+                      Pending Sectors:{" "}
+                      {detailDisk?.metrics?.pendingSectors ?? "—"}
+                    </Text>
+                    <Text className="text-typography-700">
+                      Offline Uncorrectable:{" "}
+                      {detailDisk?.metrics?.offlineUncorrectable ?? "—"}
+                    </Text>
                   </HStack>
                   {detailDisk?.recommendedAction ? (
-                    <Badge className="mt-2 rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
-                      <BadgeText className="text-xs text-typography-800">{detailDisk.recommendedAction}</BadgeText>
+                    <Badge
+                      className="mt-2 rounded-full px-3 py-1"
+                      size="sm"
+                      action="muted"
+                      variant="solid"
+                    >
+                      <BadgeText className="text-xs text-typography-800">
+                        {detailDisk.recommendedAction}
+                      </BadgeText>
                     </Badge>
                   ) : null}
                 </Box>
                 <Box className="p-3 rounded-xl border border-background-200">
-                  <Text className="text-typography-800 font-semibold mb-2">Self-test History</Text>
-                  {detailDisk?.testsHistory && detailDisk.testsHistory.length > 0 ? (
+                  <Text className="text-typography-800 font-semibold mb-2">
+                    Self-test History
+                  </Text>
+                  {detailDisk?.testsHistory &&
+                  detailDisk.testsHistory.length > 0 ? (
                     <VStack className="gap-2">
                       {detailDisk.testsHistory.map((t, idx) => (
-                        <Box key={idx} className="p-2 rounded-lg border border-background-200 bg-background-50">
-                          <Text className="text-typography-900 font-semibold">{t.type || "Test"}</Text>
-                          <Text className="text-typography-700 text-sm">Status: {t.status || "—"}</Text>
-                          <Text className="text-typography-700 text-sm">Lifetime Hours: {t.lifetimeHours ?? "—"}</Text>
+                        <Box
+                          key={idx}
+                          className="p-2 rounded-lg border border-background-200 bg-background-50"
+                        >
+                          <Text className="text-typography-900 font-semibold">
+                            {t.type || "Test"}
+                          </Text>
+                          <Text className="text-typography-700 text-sm">
+                            Status: {t.status || "—"}
+                          </Text>
+                          <Text className="text-typography-700 text-sm">
+                            Lifetime Hours: {t.lifetimeHours ?? "—"}
+                          </Text>
                         </Box>
                       ))}
                     </VStack>
                   ) : (
-                    <Text className="text-typography-600 text-sm">No history.</Text>
+                    <Text className="text-typography-600 text-sm">
+                      No history.
+                    </Text>
                   )}
                 </Box>
               </VStack>
             ) : detailTab === "selftest" ? (
               <VStack className="gap-4">
                 <Box className="p-3 rounded-xl border border-background-200 bg-background-50">
-                  <Text className="text-typography-800 font-semibold mb-2">Progress</Text>
-                  {detailProgress && detailProgress.status?.toLowerCase?.() !== "idle" ? (
+                  <Text className="text-typography-800 font-semibold mb-2">
+                    Progress
+                  </Text>
+                  {detailProgress &&
+                  detailProgress.status?.toLowerCase?.() !== "idle" ? (
                     <>
                       <HStack className="justify-between items-center mb-1">
-                        <Text className="text-typography-700 text-sm">{detailProgress.status}</Text>
-                        <Text className="text-typography-700 text-sm">{detailProgress.progressPercent ?? 0}%</Text>
+                        <Text className="text-typography-700 text-sm">
+                          {detailProgress.status}
+                        </Text>
+                        <Text className="text-typography-700 text-sm">
+                          {detailProgress.progressPercent ?? 0}%
+                        </Text>
                       </HStack>
                       <Progress value={detailProgress.progressPercent ?? 0}>
                         <ProgressFilledTrack />
                       </Progress>
                     </>
                   ) : (
-                    <Text className="text-typography-600 text-sm">No self-test running.</Text>
+                    <Text className="text-typography-600 text-sm">
+                      No self-test running.
+                    </Text>
                   )}
                 </Box>
                 <FormControl>
                   <FormControlLabel>
                     <FormControlLabelText>Test type</FormControlLabelText>
                   </FormControlLabel>
-                  <Select selectedValue={selfTestType} onValueChange={(val) => setSelfTestType(val)}>
+                  <Select
+                    selectedValue={selfTestType}
+                    onValueChange={(val) => setSelfTestType(val)}
+                  >
                     <SelectTrigger>
                       <SelectInput placeholder="Type" value={selfTestType} />
                       <SelectIcon as={ChevronDown} />
@@ -910,18 +1108,33 @@ export default function SmartDiskScreen() {
                           <SelectDragIndicator />
                         </SelectDragIndicatorWrapper>
                         {TEST_TYPES.map((t) => (
-                          <SelectItem key={t.value} value={t.value} label={t.label} />
+                          <SelectItem
+                            key={t.value}
+                            value={t.value}
+                            label={t.label}
+                          />
                         ))}
                       </SelectContent>
                     </SelectPortal>
                   </Select>
                   <FormControlHelper>
-                    <FormControlHelperText>Self-test runs in background; we refresh progress every minute.</FormControlHelperText>
+                    <FormControlHelperText>
+                      Self-test runs in background; we refresh progress every
+                      minute.
+                    </FormControlHelperText>
                   </FormControlHelper>
                 </FormControl>
                 <HStack className="gap-3">
-                  <Button action="primary" onPress={requestStartSelfTest} isDisabled={savingAction === "selftest-start"}>
-                    {savingAction === "selftest-start" ? <ButtonSpinner /> : <ButtonIcon as={Play} size="sm" />}
+                  <Button
+                    action="primary"
+                    onPress={requestStartSelfTest}
+                    isDisabled={savingAction === "selftest-start"}
+                  >
+                    {savingAction === "selftest-start" ? (
+                      <ButtonSpinner />
+                    ) : (
+                      <ButtonIcon as={Play} size="sm" />
+                    )}
                     <ButtonText>Start</ButtonText>
                   </Button>
                   <Button
@@ -930,31 +1143,51 @@ export default function SmartDiskScreen() {
                     onPress={handleCancelSelfTest}
                     isDisabled={savingAction === "selftest-cancel"}
                   >
-                    {savingAction === "selftest-cancel" ? <ButtonSpinner /> : <ButtonIcon as={XCircle} size="sm" />}
-                    <ButtonText>Cancel</ButtonText>
+                    {savingAction === "selftest-cancel" ? (
+                      <ButtonSpinner />
+                    ) : (
+                      <ButtonIcon as={XCircle} size="sm" />
+                    )}
+                    <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                      Cancel
+                    </ButtonText>
                   </Button>
                 </HStack>
               </VStack>
             ) : (
               <VStack className="gap-4">
                 <Box className="p-3 rounded-xl border border-background-200 bg-background-50">
-                  <Text className="text-typography-800 font-semibold mb-2">Realloc Status</Text>
+                  <Text className="text-typography-800 font-semibold mb-2">
+                    Realloc Status
+                  </Text>
                   {detailRealloc && !detailRealloc.completed ? (
                     <>
                       <HStack className="justify-between items-center mb-1">
-                        <Text className="text-typography-700 text-sm">{detailRealloc.mode || "Running"}</Text>
-                        <Text className="text-typography-700 text-sm">{detailRealloc.percent ?? 0}%</Text>
+                        <Text className="text-typography-700 text-sm">
+                          {detailRealloc.mode || "Running"}
+                        </Text>
+                        <Text className="text-typography-700 text-sm">
+                          {detailRealloc.percent ?? 0}%
+                        </Text>
                       </HStack>
                       <Progress value={detailRealloc.percent ?? 0}>
                         <ProgressFilledTrack />
                       </Progress>
-                      {detailRealloc.lastLine ? <Text className="text-typography-600 text-xs mt-1">{detailRealloc.lastLine}</Text> : null}
+                      {detailRealloc.lastLine ? (
+                        <Text className="text-typography-600 text-xs mt-1">
+                          {detailRealloc.lastLine}
+                        </Text>
+                      ) : null}
                     </>
                   ) : (
-                    <Text className="text-typography-600 text-sm">No operation in progress.</Text>
+                    <Text className="text-typography-600 text-sm">
+                      No operation in progress.
+                    </Text>
                   )}
                 </Box>
-                <Text className="text-typography-700 text-sm">Choose a realloc mode for this disk:</Text>
+                <Text className="text-typography-700 text-sm">
+                  Choose a realloc mode for this disk:
+                </Text>
                 <HStack className="gap-2 flex-wrap">
                   <Button
                     action="primary"
@@ -962,7 +1195,11 @@ export default function SmartDiskScreen() {
                     onPress={() => requestReallocAction("full")}
                     isDisabled={savingAction === "realloc-full"}
                   >
-                    {savingAction === "realloc-full" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
+                    {savingAction === "realloc-full" ? (
+                      <ButtonSpinner />
+                    ) : (
+                      <ButtonIcon as={RefreshCcw} size="sm" />
+                    )}
                     <ButtonText>Full wipe</ButtonText>
                   </Button>
                   <Button
@@ -971,7 +1208,11 @@ export default function SmartDiskScreen() {
                     onPress={() => requestReallocAction("non")}
                     isDisabled={savingAction === "realloc-non"}
                   >
-                    {savingAction === "realloc-non" ? <ButtonSpinner /> : <ButtonIcon as={ShieldCheck} size="sm" />}
+                    {savingAction === "realloc-non" ? (
+                      <ButtonSpinner />
+                    ) : (
+                      <ButtonIcon as={ShieldCheck} size="sm" />
+                    )}
                     <ButtonText>Non-destructive</ButtonText>
                   </Button>
                   <Button
@@ -980,25 +1221,39 @@ export default function SmartDiskScreen() {
                     onPress={() => requestReallocAction("cancel")}
                     isDisabled={savingAction === "realloc-cancel"}
                   >
-                    {savingAction === "realloc-cancel" ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
+                    {savingAction === "realloc-cancel" ? (
+                      <ButtonSpinner />
+                    ) : (
+                      <ButtonIcon as={Trash2} size="sm" />
+                    )}
                     <ButtonText>Cancel</ButtonText>
                   </Button>
                 </HStack>
                 {detailRealloc?.error ? (
-                  <Text className="text-error-600 text-sm">Error: {detailRealloc.error}</Text>
+                  <Text className="text-error-600 text-sm">
+                    Error: {detailRealloc.error}
+                  </Text>
                 ) : null}
               </VStack>
             )}
           </ModalBody>
           <ModalFooter className="gap-3">
-            <Button action="default" variant="outline" onPress={() => setDetailDevice(null)}>
+            <Button
+              action="default"
+              variant="outline"
+              onPress={() => setDetailDevice(null)}
+            >
               <ButtonText>Close</ButtonText>
             </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
 
-      <Modal isOpen={scheduleModal} onClose={() => setScheduleModal(false)} size="lg">
+      <Modal
+        isOpen={scheduleModal}
+        onClose={() => setScheduleModal(false)}
+        size="lg"
+      >
         <ModalBackdrop />
         <ModalContent className="max-w-2xl">
           <ModalHeader className="flex-row items-start justify-between">
@@ -1006,7 +1261,9 @@ export default function SmartDiskScreen() {
               <Heading size="md" className="text-typography-900">
                 {editingSchedule ? "Edit schedule" : "New schedule"}
               </Heading>
-              <Text className="text-typography-600 text-sm">Configure recurring tests</Text>
+              <Text className="text-typography-600 text-sm">
+                Configure recurring tests
+              </Text>
             </VStack>
             <ModalCloseButton />
           </ModalHeader>
@@ -1015,9 +1272,21 @@ export default function SmartDiskScreen() {
               <FormControlLabel>
                 <FormControlLabelText>Device</FormControlLabelText>
               </FormControlLabel>
-              <Select selectedValue={scheduleForm.device} onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, device: val }))}>
+              <Select
+                selectedValue={scheduleForm.device}
+                onValueChange={(val) =>
+                  setScheduleForm((prev) => ({...prev, device: val}))
+                }
+              >
                 <SelectTrigger>
-                  <SelectInput placeholder="Select disk" value={getDeviceLabel(scheduleForm.device, disks, deviceMeta)} />
+                  <SelectInput
+                    placeholder="Select disk"
+                    value={getDeviceLabel(
+                      scheduleForm.device,
+                      disks,
+                      deviceMeta
+                    )}
+                  />
                   <SelectIcon as={ChevronDown} />
                 </SelectTrigger>
                 <SelectPortal>
@@ -1026,10 +1295,14 @@ export default function SmartDiskScreen() {
                     <SelectDragIndicatorWrapper>
                       <SelectDragIndicator />
                     </SelectDragIndicatorWrapper>
-                    {(Array.isArray(deviceOptions) ? deviceOptions : []).map((dev) => {
-                      const label = getDeviceLabel(dev, disks, deviceMeta);
-                      return <SelectItem key={dev} value={dev} label={label} />;
-                    })}
+                    {(Array.isArray(deviceOptions) ? deviceOptions : []).map(
+                      (dev) => {
+                        const label = getDeviceLabel(dev, disks, deviceMeta);
+                        return (
+                          <SelectItem key={dev} value={dev} label={label} />
+                        );
+                      }
+                    )}
                   </SelectContent>
                 </SelectPortal>
               </Select>
@@ -1039,7 +1312,12 @@ export default function SmartDiskScreen() {
               <FormControlLabel>
                 <FormControlLabelText>Type</FormControlLabelText>
               </FormControlLabel>
-              <Select selectedValue={scheduleForm.type} onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, type: val }))}>
+              <Select
+                selectedValue={scheduleForm.type}
+                onValueChange={(val) =>
+                  setScheduleForm((prev) => ({...prev, type: val}))
+                }
+              >
                 <SelectTrigger>
                   <SelectInput placeholder="Type" value={scheduleForm.type} />
                   <SelectIcon as={ChevronDown} />
@@ -1051,7 +1329,11 @@ export default function SmartDiskScreen() {
                       <SelectDragIndicator />
                     </SelectDragIndicatorWrapper>
                     {TEST_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value} label={t.label} />
+                      <SelectItem
+                        key={t.value}
+                        value={t.value}
+                        label={t.label}
+                      />
                     ))}
                   </SelectContent>
                 </SelectPortal>
@@ -1064,10 +1346,15 @@ export default function SmartDiskScreen() {
               </FormControlLabel>
               <Select
                 selectedValue={String(scheduleForm.week_day)}
-                onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, week_day: Number(val) }))}
+                onValueChange={(val) =>
+                  setScheduleForm((prev) => ({...prev, week_day: Number(val)}))
+                }
               >
                 <SelectTrigger>
-                  <SelectInput placeholder="Day" value={String(scheduleForm.week_day)} />
+                  <SelectInput
+                    placeholder="Day"
+                    value={String(scheduleForm.week_day)}
+                  />
                   <SelectIcon as={ChevronDown} />
                 </SelectTrigger>
                 <SelectPortal>
@@ -1088,9 +1375,17 @@ export default function SmartDiskScreen() {
               <FormControlLabel>
                 <FormControlLabelText>Hour</FormControlLabelText>
               </FormControlLabel>
-              <Select selectedValue={String(scheduleForm.hour)} onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, hour: Number(val) }))}>
+              <Select
+                selectedValue={String(scheduleForm.hour)}
+                onValueChange={(val) =>
+                  setScheduleForm((prev) => ({...prev, hour: Number(val)}))
+                }
+              >
                 <SelectTrigger>
-                  <SelectInput placeholder="Hour" value={String(scheduleForm.hour)} />
+                  <SelectInput
+                    placeholder="Hour"
+                    value={String(scheduleForm.hour)}
+                  />
                   <SelectIcon as={ChevronDown} />
                 </SelectTrigger>
                 <SelectPortal>
@@ -1100,7 +1395,11 @@ export default function SmartDiskScreen() {
                       <SelectDragIndicator />
                     </SelectDragIndicatorWrapper>
                     {HOURS.map((h) => (
-                      <SelectItem key={h.value} value={String(h.value)} label={h.label} />
+                      <SelectItem
+                        key={h.value}
+                        value={String(h.value)}
+                        label={h.label}
+                      />
                     ))}
                   </SelectContent>
                 </SelectPortal>
@@ -1108,12 +1407,19 @@ export default function SmartDiskScreen() {
             </FormControl>
 
             <HStack className="items-center gap-2">
-              <Switch value={scheduleForm.active} onValueChange={(val) => setScheduleForm((prev) => ({ ...prev, active: val }))} />
+              <Switch
+                value={scheduleForm.active}
+                onValueChange={(val) =>
+                  setScheduleForm((prev) => ({...prev, active: val}))
+                }
+              />
               <Text className="text-typography-800">Active</Text>
             </HStack>
 
             {editingSchedule?.last_run ? (
-              <Text className="text-typography-600 text-xs">Last run: {editingSchedule.last_run}</Text>
+              <Text className="text-typography-600 text-xs">
+                Last run: {editingSchedule.last_run}
+              </Text>
             ) : null}
           </ModalBody>
           <ModalFooter className="gap-3">
@@ -1121,25 +1427,48 @@ export default function SmartDiskScreen() {
               <Button
                 action="negative"
                 variant="outline"
-                onPress={() => editingSchedule && handleDeleteSchedule(editingSchedule)}
+                onPress={() =>
+                  editingSchedule && handleDeleteSchedule(editingSchedule)
+                }
                 isDisabled={savingAction?.startsWith("sched-del-")}
               >
-                {savingAction?.startsWith("sched-del-") ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
+                {savingAction?.startsWith("sched-del-") ? (
+                  <ButtonSpinner />
+                ) : (
+                  <ButtonIcon as={Trash2} size="sm" />
+                )}
                 <ButtonText>Delete</ButtonText>
               </Button>
             ) : null}
-            <Button variant="outline" action="default" onPress={() => setScheduleModal(false)} isDisabled={savingAction?.startsWith("schedule")}>
-              <ButtonText>Cancel</ButtonText>
+            <Button
+              variant="outline"
+              action="default"
+              onPress={() => setScheduleModal(false)}
+              isDisabled={savingAction?.startsWith("schedule")}
+              className="border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]"
+            >
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
             </Button>
-            <Button action="primary" onPress={handleSaveSchedule} isDisabled={savingAction?.startsWith("schedule")}>
-              {savingAction?.startsWith("schedule") ? <ButtonSpinner /> : <ButtonIcon as={CalendarClock} size="sm" />}
+            <Button
+              action="primary"
+              onPress={handleSaveSchedule}
+              isDisabled={savingAction?.startsWith("schedule")}
+            >
+              {savingAction?.startsWith("schedule") ? (
+                <ButtonSpinner />
+              ) : (
+                <ButtonIcon as={CalendarClock} size="sm" />
+              )}
               <ButtonText>Save</ButtonText>
             </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
 
-      <AlertDialog isOpen={confirmState !== null} onClose={() => setConfirmState(null)}>
+      <AlertDialog
+        isOpen={confirmState !== null}
+        onClose={() => setConfirmState(null)}
+      >
         <AlertDialogBackdrop />
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1152,12 +1481,17 @@ export default function SmartDiskScreen() {
             <Text className="text-typography-800">{confirmState?.message}</Text>
             {confirmState && confirmState.remaining > 1 ? (
               <Text className="text-typography-600 text-sm">
-                This action needs multiple confirmations. Confirm {confirmState.remaining} time(s) to proceed.
+                This action needs multiple confirmations. Confirm{" "}
+                {confirmState.remaining} time(s) to proceed.
               </Text>
             ) : null}
           </AlertDialogBody>
           <AlertDialogFooter className="gap-2">
-            <Button variant="outline" action="default" onPress={() => setConfirmState(null)}>
+            <Button
+              variant="outline"
+              action="default"
+              onPress={() => setConfirmState(null)}
+            >
               <ButtonText>Cancel</ButtonText>
             </Button>
             <Button
@@ -1165,7 +1499,9 @@ export default function SmartDiskScreen() {
               onPress={async () => {
                 if (!confirmState) return;
                 if (confirmState.remaining > 1) {
-                  setConfirmState((prev) => (prev ? { ...prev, remaining: prev.remaining - 1 } : prev));
+                  setConfirmState((prev) =>
+                    prev ? {...prev, remaining: prev.remaining - 1} : prev
+                  );
                   return;
                 }
                 const run = confirmState.run;
@@ -1179,7 +1515,11 @@ export default function SmartDiskScreen() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Modal isOpen={rawDetailsOpen} onClose={() => setRawDetailsOpen(false)} size="lg">
+      <Modal
+        isOpen={rawDetailsOpen}
+        onClose={() => setRawDetailsOpen(false)}
+        size="lg"
+      >
         <ModalBackdrop />
         <ModalContent className="max-w-3xl max-h-[90vh]">
           <ModalHeader className="flex-row items-start justify-between">
@@ -1187,20 +1527,26 @@ export default function SmartDiskScreen() {
               <Heading size="md" className="text-typography-900">
                 Full Disk Details
               </Heading>
-              <Text className="text-typography-600 text-sm">{detailDevice}</Text>
+              <Text className="text-typography-600 text-sm">
+                {detailDevice}
+              </Text>
             </VStack>
             <ModalCloseButton />
           </ModalHeader>
           <ModalBody className="gap-3 max-h-[70vh]">
             {rawEntries.length === 0 ? (
-              <Text className="text-typography-600 text-sm">No details available.</Text>
+              <Text className="text-typography-600 text-sm">
+                No details available.
+              </Text>
             ) : (
               <VStack className="gap-2">
                 {rawEntries.map(([key, value]) => (
                   <HStack key={key} className="justify-between gap-3">
                     <Text className="text-typography-700 flex-1">{key}</Text>
                     <Text className="text-typography-900 flex-1 text-right">
-                      {Array.isArray(value) ? JSON.stringify(value) : String(value)}
+                      {Array.isArray(value)
+                        ? JSON.stringify(value)
+                        : String(value)}
                     </Text>
                   </HStack>
                 ))}
