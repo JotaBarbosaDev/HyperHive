@@ -611,13 +611,13 @@ export default function BackupsScreen() {
               ) : (
                 <ButtonIcon
                   as={RefreshCw}
-                  className="text-typography-700 dark:text-[#E8EBF0]"
+                  className="text-typography-700 rounded-xl dark:text-[#E8EBF0]"
                 />
               )}
             </Button>
             <Button
               size="md"
-              className="rounded-lg px-4"
+              className="rounded-xl"
               onPress={() => setShowCreateModal(true)}
               disabled={creatingBackup}
             >
@@ -788,7 +788,7 @@ export default function BackupsScreen() {
                                 <Button
                                   size="xs"
                                   variant="outline"
-                                  className="rounded-md"
+                                  className="rounded-xl"
                                   onPress={() => handleDownload(backup)}
                                 >
                                   <ButtonIcon
@@ -800,7 +800,7 @@ export default function BackupsScreen() {
                                 <Button
                                   size="xs"
                                   variant="outline"
-                                  className="rounded-md"
+                                  className="rounded-xl"
                                   onPress={() => setRestoreBackup(backup)}
                                   disabled={restoring}
                                 >
@@ -813,7 +813,7 @@ export default function BackupsScreen() {
                                 <Button
                                   size="xs"
                                   variant="outline"
-                                  className="rounded-md border-red-500"
+                                  className="rounded-xl border-red-500"
                                   onPress={() => handleDelete(backup)}
                                   disabled={deletingId === backup.id}
                                 >
@@ -1090,7 +1090,7 @@ export default function BackupsScreen() {
             <HStack className="justify-end gap-3 w-full">
               <Button
                 variant="outline"
-                className="rounded-lg px-6 py-2.5 border-outline-200 dark:border-[#2A3B52]"
+                className="rounded-xl px-6 py-2.5 border-outline-200 dark:border-[#2A3B52]"
                 onPress={() => {
                   setRestoreBackup(null);
                   resetRestoreForm();
@@ -1226,7 +1226,7 @@ export default function BackupsScreen() {
             <HStack className="justify-end gap-3 w-full">
               <Button
                 variant="outline"
-                className="rounded-lg px-6 py-2.5 border-outline-200 dark:border-[#2A3B52]"
+                className="rounded-xl px-6 py-2.5 border-outline-200 dark:border-[#2A3B52]"
                 onPress={() => setShowCreateModal(false)}
                 disabled={creatingBackup}
               >
@@ -1239,7 +1239,7 @@ export default function BackupsScreen() {
               </Button>
               <Button
                 size="md"
-                className="rounded-lg px-4"
+                className="rounded-xl px-4"
                 disabled={creatingBackup || !createVmName || !createNfsId}
                 onPress={handleCreateBackup}
               >

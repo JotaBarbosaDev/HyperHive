@@ -572,7 +572,7 @@ export default function BtrfsRaidsScreen() {
                 selectedValue={selectedMachine}
                 onValueChange={(val) => setSelectedMachine(val)}
               >
-                <SelectTrigger className="min-w-[180px] border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] px-3 py-2">
+                <SelectTrigger className="min-w-[180px] rounded-xl border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] px-3 py-2">
                   <SelectInput placeholder="Machine" value={selectedMachine} />
                   <SelectIcon as={ChevronDownIcon} />
                 </SelectTrigger>
@@ -593,7 +593,7 @@ export default function BtrfsRaidsScreen() {
                 action="default"
                 size="sm"
                 onPress={() => loadData("refresh")}
-                className="border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628] h-10"
+                className="rounded-xl border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E] h-10"
               >
                 <ButtonIcon as={RefreshCcw} size="sm" />
                 <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Refresh</ButtonText>
@@ -604,7 +604,7 @@ export default function BtrfsRaidsScreen() {
               variant="solid"
               size="md"
               onPress={() => setCreateModal(true)}
-              className="px-5 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+              className="px-5 rounded-xl dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
             >
               <ButtonIcon as={Plus} size="sm" />
               <ButtonText style={{ fontFamily: "Inter_600SemiBold" }}>Create RAID</ButtonText>
@@ -875,10 +875,10 @@ export default function BtrfsRaidsScreen() {
             </FormControl>
           </ModalBody>
           <ModalFooter className="gap-3">
-            <Button className="border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]" variant="outline" action="default" onPress={() => setCreateModal(false)} isDisabled={creatingRaid}>
+            <Button className="border-outline-200 rounded-xl dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]" variant="outline" action="default" onPress={() => setCreateModal(false)} isDisabled={creatingRaid}>
               <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
             </Button>
-            <Button action="primary" onPress={handleCreateRaid} isDisabled={creatingRaid}>
+            <Button action="primary" onPress={handleCreateRaid} isDisabled={creatingRaid} className="rounded-xl">
               {creatingRaid ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
               <ButtonText>Create RAID</ButtonText>
             </Button>

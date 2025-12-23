@@ -154,7 +154,7 @@ export function MountCard({
             variant="outline"
             size="md"
             action="secondary"
-            className="border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]"
+            className="border-outline-200 rounded-xl dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]"
             onPress={() => setShowConnectModal(true)}
           >
             <ButtonText
@@ -169,7 +169,7 @@ export function MountCard({
               variant="outline"
               size="md"
               action="secondary"
-              className="border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]"
+              className="border-outline-200 rounded-xl dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]"
               onPress={() => setShowDetailsModal(true)}
             >
               <ButtonText
@@ -185,7 +185,7 @@ export function MountCard({
                 variant="solid"
                 size="md"
                 action="primary"
-                className="w-full  md:w-auto web:flex-1  dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+                className="w-full rounded-xl md:w-auto web:flex-1  dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
                 onPress={() => setShowDeleteModal(true)}
               >
                 <ButtonText

@@ -358,7 +358,7 @@ export default function WireGuardScreen() {
           </Text>
           <Button
             size="xs"
-            className="self-start rounded-md bg-typography-900 dark:bg-[#0A1628] dark:border dark:border-[#2A3B52] mb-6"
+            className="self-start rounded-xl bg-typography-900 dark:bg-[#0A1628] dark:border dark:border-[#2A3B52] mb-6"
             style={isDarkMode ? { backgroundColor: "#0A1628", borderColor: "#2A3B52" } : undefined}
             onPress={() => setShowLocalConnectModal(true)}
           >
@@ -411,7 +411,7 @@ export default function WireGuardScreen() {
                   </Text>
                   <Button
                     size="lg"
-                    className="rounded-lg bg-typography-900 dark:bg-[#E8EBF0] mt-4"
+                    className="rounded-xl bg-typography-900 dark:bg-[#E8EBF0] mt-4"
                     onPress={() => setShowCreateVpnModal(true)}
                   >
                     <ButtonIcon as={Plus} className="text-background-0 dark:text-typography-900" />
@@ -444,7 +444,7 @@ export default function WireGuardScreen() {
                     <Box className="hidden web:flex">
                       <Button
                         size="md"
-                        className="rounded-lg bg-typography-900 dark:bg-[#0A1628] dark:border dark:border-[#2A3B52]"
+                        className="rounded-xl bg-typography-900 dark:bg-[#0A1628] dark:border dark:border-[#2A3B52]"
                         style={isDarkMode ? { backgroundColor: "#0A1628", borderColor: "#2A3B52" } : undefined}
                         onPress={() => setShowAddPeerModal(true)}
                       >
@@ -536,6 +536,7 @@ export default function WireGuardScreen() {
                               variant="link"
                               size="xs"
                               onPress={() => copyToClipboard(peer.public_key, "Public Key")}
+                              className="mr-2"
                             >
                               <ButtonIcon
                                 as={Copy}
@@ -554,7 +555,7 @@ export default function WireGuardScreen() {
                             <Button
                               variant="outline"
                               size="xs"
-                              className="rounded-md border-red-500"
+                              className="rounded-xl border-red-500"
                               onPress={() => handleDeletePeer(peer)}
                               isDisabled={deletingPeerId === peer.id}
                             >
@@ -628,7 +629,7 @@ export default function WireGuardScreen() {
             <HStack className="justify-end gap-3 w-full">
               <Button
                 variant="outline"
-                className="rounded-lg px-6 py-2.5 border-outline-200 dark:border-[#2A3B52]"
+                className="rounded-xl px-6 py-2.5 border-outline-200 dark:border-[#2A3B52]"
                 onPress={() => setShowCreateVpnModal(false)}
               >
                 <ButtonText
@@ -639,7 +640,7 @@ export default function WireGuardScreen() {
                 </ButtonText>
               </Button>
               <Button
-                className="rounded-lg px-6 py-2.5 bg-typography-900 dark:bg-[#E8EBF0]"
+                className="rounded-xl px-6 py-2.5 bg-typography-900 dark:bg-[#E8EBF0]"
                 onPress={handleCreateVpn}
                 isDisabled={creatingVpn}
               >
@@ -764,7 +765,7 @@ export default function WireGuardScreen() {
             <HStack className="justify-end gap-3 w-full">
               <Button
                 variant="outline"
-                className="rounded-lg px-6 py-2.5 border-outline-200 dark:border-[#2A3B52]"
+                className="rounded-xl px-6 py-2.5 border-outline-200 dark:border-[#2A3B52]"
                 onPress={() => setShowAddPeerModal(false)}
               >
                 <ButtonText
@@ -775,7 +776,7 @@ export default function WireGuardScreen() {
                 </ButtonText>
               </Button>
               <Button
-                className="rounded-lg px-6 py-2.5 bg-typography-900 dark:bg-[#0A1628] dark:border dark:border-[#2A3B52]"
+                className="rounded-xl px-6 py-2.5 bg-typography-900 dark:bg-[#0A1628] dark:border dark:border-[#2A3B52]"
                 style={isDarkMode ? { backgroundColor: "#0A1628", borderColor: "#2A3B52" } : undefined}
                 onPress={handleAddPeer}
                 isDisabled={creatingPeer}
@@ -861,7 +862,7 @@ export default function WireGuardScreen() {
           <ModalFooter className="pt-6 border-t border-outline-100 dark:border-[#2A3B52]">
             <HStack className="justify-end w-full">
               <Button
-                className="rounded-lg px-6 py-2.5 bg-typography-900 dark:bg-[#0A1628] dark:border dark:border-[#2A3B52]"
+                className="rounded-xl px-6 py-2.5 bg-typography-900 dark:bg-[#0A1628] dark:border dark:border-[#2A3B52]"
                 style={isDarkMode ? { backgroundColor: "#0A1628", borderColor: "#2A3B52" } : undefined}
                 onPress={() => setShowLocalConnectModal(false)}
               >

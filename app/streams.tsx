@@ -345,7 +345,7 @@ export default function StreamsScreen() {
                 );
               })}
             </HStack>
-            <Button action="primary" variant="solid" size="md" onPress={openCreateModal} className="rounded-full px-5">
+            <Button action="primary" variant="solid" size="md" onPress={openCreateModal} className="rounded-xl px-5">
               <ButtonIcon as={Plus} size="sm" />
               <ButtonText>Add Stream</ButtonText>
             </Button>
@@ -416,17 +416,17 @@ export default function StreamsScreen() {
                           size="sm"
                           onPress={() => handleToggle(host)}
                           isDisabled={togglingId === host.id}
-                          className="border-background-300"
+                          className="border-background-300 rounded-xl"
                         >
                           {togglingId === host.id ? <ButtonSpinner /> : <ButtonIcon as={Power} size="sm" />}
-                          <ButtonText>{enabled ? "Disable" : "Enable"}</ButtonText>
+                          <ButtonText className="text-typography-900">{enabled ? "Disable" : "Enable"}</ButtonText>
                         </Button>
                         <Button
                           action="default"
                           variant="outline"
                           size="sm"
                           onPress={() => openEditModal(host)}
-                          className="border-background-300 px-3"
+                          className="border-background-300 rounded-xl px-3"
                         >
                           <ButtonIcon as={Pencil} size="sm" />
                         </Button>
@@ -435,7 +435,7 @@ export default function StreamsScreen() {
                           variant="solid"
                           size="sm"
                           onPress={() => setDeleteTarget(host)}
-                          className="px-3"
+                          className="px-3 rounded-xl"
                         >
                           <ButtonIcon as={Trash2} size="sm" />
                         </Button>
@@ -616,10 +616,10 @@ export default function StreamsScreen() {
           </ModalBody>
           <ModalFooter className="px-6 pb-6 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
             <HStack className="gap-3 justify-end w-full">
-              <Button variant="outline" action="default" onPress={closeModal} isDisabled={saving}>
-                <ButtonText>Cancel</ButtonText>
+              <Button className="rounded-xl" variant="outline" action="default" onPress={closeModal} isDisabled={saving}>
+                <ButtonText className="text-typography-900">Cancel</ButtonText>
               </Button>
-              <Button action="primary" onPress={handleSave} isDisabled={saving}>
+              <Button className="rounded-xl" action="primary" onPress={handleSave} isDisabled={saving}>
                 {saving ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
                 <ButtonText>{editingHost ? "Save changes" : "Create stream"}</ButtonText>
               </Button>
@@ -646,8 +646,8 @@ export default function StreamsScreen() {
             </Text>
           </AlertDialogBody>
           <AlertDialogFooter className="gap-3">
-            <Button variant="outline" action="default" onPress={() => setDeleteTarget(null)} isDisabled={Boolean(deletingId)}>
-              <ButtonText>Cancel</ButtonText>
+            <Button className="rounded-xl" variant="outline" action="default" onPress={() => setDeleteTarget(null)} isDisabled={Boolean(deletingId)}>
+              <ButtonText className="text-typography-900">Cancel</ButtonText>
             </Button>
             <Button
               action="negative"

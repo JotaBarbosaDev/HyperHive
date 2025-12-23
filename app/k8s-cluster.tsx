@@ -312,7 +312,7 @@ export default function K8ClusterScreen() {
 							<Button
 								onPress={handleDownload}
 								isDisabled={!selectedIp || isDownloading}
-								className="rounded-lg h-12"
+								className="rounded-xl h-12"
 								action="primary"
 							>
 								{isDownloading ? <ButtonSpinner color="white" /> : <ButtonIcon as={Download} className="text-background-0" />}

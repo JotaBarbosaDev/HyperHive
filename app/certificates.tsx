@@ -376,7 +376,7 @@ export default function CertificatesScreen() {
                 {certs.length} certificate{certs.length === 1 ? "" : "s"} total
               </Text>
             </Box>
-            <Button action="primary" variant="solid" size="md" onPress={openCreateModal} className="rounded-full px-5">
+            <Button action="primary" variant="solid" size="md" onPress={openCreateModal} className="rounded-xl px-5">
               <ButtonIcon as={Plus} size="sm" />
               <ButtonText>Add Certificate</ButtonText>
             </Button>
@@ -464,10 +464,10 @@ export default function CertificatesScreen() {
                           size="sm"
                           onPress={() => handleRenew(cert)}
                           isDisabled={renewingId === cert.id}
-                          className="border-background-300"
+                          className="border-background-300 rounded-xl"
                         >
                           {renewingId === cert.id ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
-                          <ButtonText>Renew</ButtonText>
+                          <ButtonText className="text-typography-900">Renew</ButtonText>
                         </Button>
                         {/* Download removed per request */}
                         <Button
@@ -475,7 +475,7 @@ export default function CertificatesScreen() {
                           variant="solid"
                           size="sm"
                           onPress={() => setDeleteTarget(cert)}
-                          className="px-3"
+                          className="px-3 rounded-xl"
                         >
                           <ButtonIcon as={Trash2} size="sm" />
                         </Button>
@@ -656,10 +656,10 @@ export default function CertificatesScreen() {
           </ModalBody>
           <ModalFooter className="px-6 pb-6 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
             <HStack className="gap-3 justify-end w-full">
-              <Button variant="outline" action="default" onPress={closeModal} isDisabled={saving}>
-                <ButtonText>Cancel</ButtonText>
+              <Button variant="outline" action="default" onPress={closeModal} isDisabled={saving} className="rounded-xl">
+                <ButtonText className="text-typography-900">Cancel</ButtonText>
               </Button>
-              <Button action="primary" onPress={handleCreate} isDisabled={saving}>
+              <Button action="primary" onPress={handleCreate} isDisabled={saving} className="rounded-xl">
                 {saving ? <ButtonSpinner /> : <ButtonIcon as={CloudLightning} size="sm" />}
                 <ButtonText>Issue</ButtonText>
               </Button>
@@ -686,8 +686,8 @@ export default function CertificatesScreen() {
             </Text>
           </AlertDialogBody>
           <AlertDialogFooter className="gap-3">
-            <Button variant="outline" action="default" onPress={() => setDeleteTarget(null)} isDisabled={Boolean(deletingId)}>
-              <ButtonText>Cancel</ButtonText>
+            <Button variant="outline" action="default" onPress={() => setDeleteTarget(null)} isDisabled={Boolean(deletingId)} className="rounded-xl">
+              <ButtonText className="text-typography-900">Cancel</ButtonText>
             </Button>
             <Button
               action="negative"

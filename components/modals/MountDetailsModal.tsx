@@ -295,7 +295,11 @@ export function MountDetailsModal({isOpen, mount, onClose}: MountDetailsModalPro
             {isRemounting ? (
               <ButtonSpinner size="small" className="mr-2" />
             ) : (
-              <Icon as={RotateCw} size="sm" className="mr-2" />
+              <Icon
+                as={RotateCw}
+                size="sm"
+                className="mr-2 text-white dark:text-[#E8EBF0]"
+              />
             )}
             <ButtonText
               className="font-semibold web:text-base"

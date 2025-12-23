@@ -982,7 +982,7 @@ export default function VirtualMachinesScreen() {
                 size="md"
                 onPress={handleRefresh}
                 disabled={loading}
-                className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
               >
                 {loading ? (
                   <ButtonSpinner />
@@ -997,7 +997,7 @@ export default function VirtualMachinesScreen() {
                 variant="outline"
                 size="md"
                 onPress={() => setOpenImport(true)}
-                className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
               >
                 <ButtonIcon
                   as={Upload}
@@ -1010,7 +1010,7 @@ export default function VirtualMachinesScreen() {
               <Button
                 size="md"
                 onPress={handleNewVM}
-                className="rounded-lg bg-typography-900 dark:bg-[#2DD4BF]"
+                className="rounded-xl bg-typography-900 dark:bg-[#2DD4BF]"
               >
                 <ButtonIcon
                   as={Plus}
@@ -1686,7 +1686,7 @@ export default function VirtualMachinesScreen() {
                 <VStack className="gap-2">
                   <HStack className="">
                     <Button
-                      className="rounded-md px-4 py-2 bg-typography-900 dark:bg-[#2DD4BF]"
+                      className="rounded-xl px-4 py-2 bg-typography-900 dark:bg-[#2DD4BF]"
                       onPress={() => {
                         if (!detailsVm) return;
                         setConsoleOptionsVm(detailsVm);
@@ -1784,7 +1784,7 @@ export default function VirtualMachinesScreen() {
                       <HStack className="gap-2 flex-wrap web:justify-start">
                         <Button
                           variant="outline"
-                          className="rounded-md px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
+                          className="rounded-xl px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
                           onPress={() => setEditVm(detailsVm)}
                         >
                           <ButtonIcon as={Settings} className="text-typography-900 dark:text-[#E8EBF0]" />
@@ -1792,7 +1792,7 @@ export default function VirtualMachinesScreen() {
                         </Button>
                         <Button
                           variant="outline"
-                          className="rounded-md px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
+                          className="rounded-xl px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
                           onPress={() => setCloneVm(detailsVm)}
                         >
                           <ButtonIcon as={Copy} className="text-typography-900 dark:text-[#E8EBF0]" />
@@ -1800,7 +1800,7 @@ export default function VirtualMachinesScreen() {
                         </Button>
                         <Button
                           variant="outline"
-                          className="rounded-md px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
+                          className="rounded-xl px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
                           onPress={() => setMigrateVm(detailsVm)}
                         >
                           <ButtonIcon as={GitBranch} className="text-typography-900 dark:text-[#E8EBF0]" />
@@ -1815,7 +1815,7 @@ export default function VirtualMachinesScreen() {
                 <HStack className="justify-end gap-2">
                   <Button
                     variant="outline"
-                    className="rounded-md px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
+                    className="rounded-xl px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
                     onPress={() => setDetailsVm(null)}
                   >
                     <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Close</ButtonText>
@@ -1848,7 +1848,7 @@ export default function VirtualMachinesScreen() {
                 <Button
                   variant="outline"
                   onPress={() => setConfirmAction(null)}
-                  className="rounded-md px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
+                  className="rounded-xl px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
                 >
                   <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
                 </Button>
@@ -2410,7 +2410,7 @@ export default function VirtualMachinesScreen() {
                     <HStack className="justify-end gap-2">
                       <Button
                         variant="outline"
-                        className="rounded-md px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
+                        className="rounded-xl px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
                         onPress={() => setRestoreVm(null)}
                       >
                         <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
@@ -2500,7 +2500,7 @@ export default function VirtualMachinesScreen() {
               <ModalFooter>
                 <Button
                   variant="outline"
-                  className="rounded-md px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
+                  className="rounded-xl px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
                   onPress={() => {
                     setShowConsoleOptions(false);
                     setConsoleOptionsVm(null);
@@ -2741,7 +2741,7 @@ export default function VirtualMachinesScreen() {
             <ModalFooter>
               <Button
                 variant="outline"
-                className="rounded-md px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
+                className="rounded-xl px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
                 onPress={() => setShowActionsheet(false)}
               >
                 <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
@@ -3308,7 +3308,7 @@ function EditVmForm({
       <HStack className="justify-end gap-3 pt-2">
         <Button
           variant="outline"
-          className="rounded-md px-4 py-2"
+          className="rounded-xl px-4 py-2"
           onPress={onCancel}
           disabled={saving}
         >
@@ -3746,7 +3746,7 @@ function ChangeVncPasswordForm({
       <HStack className="justify-end gap-2 mt-2">
         <Button
           variant="outline"
-          className="rounded-md px-4 py-2"
+          className="rounded-xl px-4 py-2"
           onPress={onCancel}
           disabled={saving}
         >
@@ -3893,10 +3893,10 @@ function MoveDiskForm({
       {error && <Text className="text-sm text-red-600">{error}</Text>}
 
       <HStack className="justify-end gap-2 mt-2">
-        <Button variant="outline" className="rounded-md px-4 py-2" onPress={onCancel} disabled={saving}>
+        <Button variant="outline" className="rounded-xl px-4 py-2" onPress={onCancel} disabled={saving}>
           <ButtonText>Cancel</ButtonText>
         </Button>
-        <Button className="rounded-md px-4 py-2" disabled={!isValid || saving} onPress={handleSubmit}>
+        <Button className="rounded-xl px-4 py-2" disabled={!isValid || saving} onPress={handleSubmit}>
           {saving ? <ButtonSpinner className="mr-2" /> : null}
           <ButtonText>Move</ButtonText>
         </Button>

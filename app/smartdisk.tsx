@@ -638,7 +638,7 @@ export default function SmartDiskScreen() {
                 selectedValue={selectedMachine}
                 onValueChange={(val) => setSelectedMachine(val)}
               >
-                <SelectTrigger className="min-w-[200px] border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] pr-2">
+                <SelectTrigger className="min-w-[200px] rounded-xl border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] pr-2">
                   <SelectInput placeholder="Machine" value={selectedMachine} />
                   <SelectIcon as={ChevronDown} />
                 </SelectTrigger>
@@ -663,7 +663,7 @@ export default function SmartDiskScreen() {
                 action="default"
                 size="sm"
                 onPress={() => loadData("refresh")}
-                className="border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628] h-10"
+                className="rounded-xl border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628] h-10"
               >
                 <ButtonIcon as={RefreshCcw} size="sm" />
                 <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
@@ -676,6 +676,7 @@ export default function SmartDiskScreen() {
               variant="solid"
               size="md"
               onPress={() => openSchedule()}
+              className="rounded-xl"
             >
               <ButtonIcon as={CalendarClock} size="sm" />
               <ButtonText>New Schedule</ButtonText>
@@ -761,7 +762,7 @@ export default function SmartDiskScreen() {
                           variant="outline"
                           size="sm"
                           onPress={() => openDetail(disk.device, "selftest")}
-                          className="border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]"
+                          className="border-outline-200 rounded-xl dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]"
                         >
                           <ButtonIcon as={Activity} size="sm" />
                           <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
@@ -773,7 +774,7 @@ export default function SmartDiskScreen() {
                           variant="outline"
                           size="sm"
                           onPress={() => openDetail(disk.device, "realloc")}
-                          className="border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]"
+                          className="border-outline-200 rounded-xl dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]"
                         >
                           <ButtonIcon as={RefreshCcw} size="sm" />
                           <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
@@ -785,6 +786,7 @@ export default function SmartDiskScreen() {
                           variant="solid"
                           size="sm"
                           onPress={() => openDetail(disk.device, "info")}
+                          className="rounded-xl"
                         >
                           <ButtonIcon as={Info} size="sm" />
                           <ButtonText>Details</ButtonText>
@@ -1142,6 +1144,7 @@ export default function SmartDiskScreen() {
                     variant="outline"
                     onPress={handleCancelSelfTest}
                     isDisabled={savingAction === "selftest-cancel"}
+                    className="rounded-xl"
                   >
                     {savingAction === "selftest-cancel" ? (
                       <ButtonSpinner />
@@ -1220,6 +1223,7 @@ export default function SmartDiskScreen() {
                     variant="outline"
                     onPress={() => requestReallocAction("cancel")}
                     isDisabled={savingAction === "realloc-cancel"}
+                    className="rounded-xl"
                   >
                     {savingAction === "realloc-cancel" ? (
                       <ButtonSpinner />
@@ -1242,6 +1246,7 @@ export default function SmartDiskScreen() {
               action="default"
               variant="outline"
               onPress={() => setDetailDevice(null)}
+              className="rounded-xl"
             >
               <ButtonText>Close</ButtonText>
             </Button>
@@ -1445,7 +1450,7 @@ export default function SmartDiskScreen() {
               action="default"
               onPress={() => setScheduleModal(false)}
               isDisabled={savingAction?.startsWith("schedule")}
-              className="border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]"
+              className="border-outline-200 rounded-xl dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]"
             >
               <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
             </Button>
@@ -1453,6 +1458,7 @@ export default function SmartDiskScreen() {
               action="primary"
               onPress={handleSaveSchedule}
               isDisabled={savingAction?.startsWith("schedule")}
+              className="rounded-xl"
             >
               {savingAction?.startsWith("schedule") ? (
                 <ButtonSpinner />

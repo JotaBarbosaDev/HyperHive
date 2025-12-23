@@ -74,7 +74,7 @@ export default function MountsScreen() {
             <Button
               variant="outline"
               action="default"
-              className="h-11 px-4 border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E]"
+              className="h-11 px-4 rounded-xl border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E]"
               onPress={refresh}
               isDisabled={isRefreshing || isLoading}
             >
@@ -86,7 +86,7 @@ export default function MountsScreen() {
             </Button>
             <Button
               action="primary"
-              className="h-11 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+              className="h-11 rounded-xl dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
               onPress={() => setShowDrawer(true)}
             >
               <ButtonIcon as={Plus} />

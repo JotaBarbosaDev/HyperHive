@@ -1096,7 +1096,7 @@ export default function ProfileScreen() {
                 <Button
                   action="primary"
                   onPress={handleOpenAddIso}
-                  className="bg-primary-500 dark:bg-[#2DD4BF] hover:bg-primary-600 dark:hover:bg-[#5EEAD4] active:bg-primary-700 dark:active:bg-[#14B8A6]"
+                  className="bg-primary-500 rounded-xl dark:bg-[#2DD4BF] hover:bg-primary-600 dark:hover:bg-[#5EEAD4] active:bg-primary-700 dark:active:bg-[#14B8A6]"
                 >
                   <ButtonIcon
                     as={Plus}
@@ -1124,7 +1124,7 @@ export default function ProfileScreen() {
                 variant="outline"
                 onPress={handleManualRefresh}
                 isDisabled={isLoading || isRefreshing}
-                className="border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628] h-10"
+                className="border-outline-200 rounded-xl dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628] h-10"
               >
                 {isRefreshing ? (
                   <ButtonSpinner />
@@ -2117,7 +2117,7 @@ function AddIsoModal({ isOpen, onClose, onSuccess, authToken, onDownloadChange }
                   : handleSubmit
               }
               isDisabled={isFooterDisabled}
-              className="h-12 w-full rounded-2xl bg-primary-500 dark:bg-[#2DD4BF] hover:bg-primary-600 dark:hover:bg-[#5EEAD4] active:bg-primary-700 dark:active:bg-[#14B8A6]"
+              className="h-12 w-full rounded-xl bg-primary-500 dark:bg-[#2DD4BF] hover:bg-primary-600 dark:hover:bg-[#5EEAD4] active:bg-primary-700 dark:active:bg-[#14B8A6]"
             >
               {isBusy ? (
                 <ButtonText

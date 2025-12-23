@@ -284,7 +284,7 @@ export default function LogsScreen() {
       text: isDark ? "#E8EBF0" : "#0F172A",
       muted: isDark ? "#9AA4B8" : "#475569",
       subtle: isDark ? "#0B1424" : "#F1F5F9",
-      accent: "#2563EB",
+      accent: "#070D19", //2563EB
       accentText: "#FFFFFF",
     }),
     [isDark]

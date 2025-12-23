@@ -398,7 +398,7 @@ export default function NotFoundHostsScreen() {
                 );
               })}
             </HStack>
-            <Button action="primary" variant="solid" size="md" onPress={openCreateModal} className="rounded-full px-5">
+            <Button action="primary" variant="solid" size="md" onPress={openCreateModal} className="rounded-xl px-5">
               <ButtonIcon as={Plus} size="sm" />
               <ButtonText>Add 404 Host</ButtonText>
             </Button>
@@ -717,10 +717,10 @@ export default function NotFoundHostsScreen() {
           </ModalBody>
           <ModalFooter className="px-6 pb-6 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
             <HStack className="gap-3 justify-end w-full">
-              <Button variant="outline" action="default" onPress={closeModal} isDisabled={saving}>
-                <ButtonText>Cancel</ButtonText>
+              <Button variant="outline" action="default" onPress={closeModal} isDisabled={saving} className="rounded-xl">
+                <ButtonText className="text-typography-900">Cancel</ButtonText>
               </Button>
-              <Button action="primary" onPress={handleSaveHost} isDisabled={saving}>
+              <Button action="primary" onPress={handleSaveHost} isDisabled={saving} className="rounded-xl">
                 {saving ? <ButtonSpinner /> : null}
                 <ButtonText>{editingHost ? "Save changes" : "Create host"}</ButtonText>
               </Button>

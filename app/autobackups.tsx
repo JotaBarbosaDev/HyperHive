@@ -437,7 +437,7 @@ export default function AutoBackupsScreen() {
             </VStack>
             <Box className="hidden web:flex">
               <Button
-                className="rounded-lg px-4"
+                className="rounded-xl px-4"
                 onPress={() => setShowCreateModal(true)}
               >
                 <ButtonIcon as={Plus} className="text-background-0 mr-1.5" />
@@ -545,7 +545,7 @@ export default function AutoBackupsScreen() {
               size="md"
               onPress={handleRefresh}
               disabled={loading}
-              className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+              className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
             >
               {loading ? (
                 <ButtonSpinner />
@@ -621,7 +621,7 @@ export default function AutoBackupsScreen() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="rounded-md"
+                        className="rounded-xl"
                         onPress={() => openEdit(schedule)}
                       >
                         <ButtonIcon
@@ -632,7 +632,7 @@ export default function AutoBackupsScreen() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="rounded-md border-red-500"
+                        className="rounded-xl border-red-500"
                         onPress={() => handleDelete(schedule)}
                       >
                         <ButtonIcon as={Trash2} className="text-red-500" />
@@ -663,7 +663,7 @@ export default function AutoBackupsScreen() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="rounded-md"
+                      className="rounded-xl"
                       onPress={() => handleToggleEnabled(schedule)}
                     >
                       <ButtonIcon
@@ -1004,7 +1004,7 @@ export default function AutoBackupsScreen() {
             <HStack className="justify-end gap-3 w-full">
               <Button
                 variant="outline"
-                className="rounded-lg px-6 py-2.5 border-outline-200 dark:border-[#2A3B52]"
+                className="rounded-xl px-6 py-2.5 border-outline-200 dark:border-[#2A3B52]"
                 onPress={() => setShowCreateModal(false)}
                 disabled={saving}
               >
@@ -1016,7 +1016,7 @@ export default function AutoBackupsScreen() {
                 </ButtonText>
               </Button>
               <Button
-                className="rounded-lg px-6 py-2.5 bg-typography-900 dark:bg-[#E8EBF0]"
+                className="rounded-xl px-6 py-2.5 bg-typography-900 dark:bg-[#E8EBF0]"
                 onPress={handleSubmit}
                 disabled={saving}
               >

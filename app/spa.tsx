@@ -295,7 +295,7 @@ export default function SpaScreen() {
                 <HStack className="items-center gap-3 flex-wrap">
                   <Button
                     action="primary"
-                    className="rounded-full px-5 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+                    className="rounded-xl px-5 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
                     onPress={handleCreate}
                     isDisabled={saving}
                   >
@@ -347,7 +347,7 @@ export default function SpaScreen() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="rounded-full"
+                            className="rounded-xl"
                             onPress={() => copyAccessLink(item.port)}
                           >
                             <ButtonIcon as={Copy} />
@@ -356,7 +356,7 @@ export default function SpaScreen() {
                           <Button
                             action="negative"
                             size="sm"
-                            className="rounded-full bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
+                            className="rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
                             onPress={() => setDeleteTarget(item)}
                           >
                             {deletingPort === item.port ? <ButtonSpinner /> : <ButtonIcon as={Trash2} />}
@@ -385,14 +385,14 @@ export default function SpaScreen() {
             <AlertDialogFooter className="gap-2">
               <Button
                 variant="outline"
-                className="flex-1 rounded-full"
+                className="flex-1 rounded-xl"
                 onPress={() => setDeleteTarget(null)}
               >
                 <ButtonText>Cancel</ButtonText>
               </Button>
               <Button
                 action="negative"
-                className="flex-1 rounded-full bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
+                className="flex-1 rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
                 onPress={confirmDelete}
                 isDisabled={deletingPort !== null}
               >
@@ -443,7 +443,7 @@ export default function SpaScreen() {
               )}
             </ModalBody>
             <ModalFooter>
-              <Button variant="outline" className="rounded-full" onPress={() => setAllowTarget(null)}>
+              <Button variant="outline" className="rounded-xl" onPress={() => setAllowTarget(null)}>
                 <ButtonText>Close</ButtonText>
               </Button>
             </ModalFooter>
