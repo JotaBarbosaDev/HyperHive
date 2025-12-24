@@ -264,7 +264,7 @@ export default function DashboardScreen() {
             as={icon}
             size={20}
             strokeWidth={1.5}
-            className="text-[#2DD4BF] opacity-80 dark:text-[#5EEAD4] dark:opacity-80 flex-none"
+            className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80 flex-none"
           />
         </Box>
       </HStack>
@@ -330,7 +330,7 @@ export default function DashboardScreen() {
             <HStack className="items-center justify-between mb-4">
               <HStack className="items-center gap-3">
                 <Box className="w-10 h-10 rounded-xl bg-primary-50/70 dark:bg-[#12213A] items-center justify-center">
-                  <Icon as={HardDrive} size="md" className="text-[#2DD4BF] opacity-80 dark:text-[#5EEAD4] dark:opacity-80" />
+                  <Icon as={HardDrive} size="md" className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80" />
                 </Box>
                 <VStack className="gap-1">
                   <Text className="text-xs font-semibold uppercase text-typography-500 dark:text-typography-300 tracking-[0.08em]">
@@ -406,27 +406,46 @@ export default function DashboardScreen() {
                     <HStack className="items-start justify-between gap-3">
                       <HStack className="items-start gap-3 flex-1">
                         <Box className="w-11 h-11 rounded-xl bg-primary-50/70 dark:bg-[#12213A] items-center justify-center">
-                          <Icon as={Server} size="md" className="text-[#2DD4BF] opacity-80 dark:text-[#5EEAD4] dark:opacity-80" />
+                          <Icon
+                            as={Server}
+                            size="md"
+                            className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80"
+                          />
                         </Box>
                         <VStack className="gap-1 flex-1">
                           <HStack className="items-center gap-2 flex-wrap">
                             <Text className="text-lg font-semibold text-typography-900 dark:text-[#E8EBF0]">
                               {snap.machine.MachineName}
                             </Text>
-                            <Badge size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
+                            <Badge
+                              size="sm"
+                              variant="outline"
+                              className="border-outline-300 dark:border-[#243247]"
+                            >
                               <BadgeText className="text-xs text-typography-600 dark:text-typography-300">
                                 {formatRelative(lastSeen)} online
                               </BadgeText>
                             </Badge>
                           </HStack>
                           <HStack className="items-center gap-2">
-                            <Icon as={LinkIcon} size="sm" className="text-typography-500 dark:text-typography-400" />
-                            <Text className="text-sm text-typography-600 dark:text-typography-400">{addr || "—"}</Text>
+                            <Icon
+                              as={LinkIcon}
+                              size="sm"
+                              className="text-typography-500 dark:text-typography-400"
+                            />
+                            <Text className="text-sm text-typography-600 dark:text-typography-400">
+                              {addr || "—"}
+                            </Text>
                           </HStack>
                           <HStack className="items-center gap-2">
-                            <Icon as={Clock3} size="sm" className="text-typography-500 dark:text-typography-400" />
+                            <Icon
+                              as={Clock3}
+                              size="sm"
+                              className="text-typography-500 dark:text-typography-400"
+                            />
                             <Text className="text-sm text-typography-600 dark:text-typography-400">
-                              Uptime: {parseUptime(snap.uptime?.uptime)} • Since {formatRelative(entryTime)}
+                              Uptime: {parseUptime(snap.uptime?.uptime)} • Since{" "}
+                              {formatRelative(entryTime)}
                             </Text>
                           </HStack>
                         </VStack>
@@ -436,53 +455,103 @@ export default function DashboardScreen() {
                         variant="outline"
                         action="default"
                         className="rounded-xl border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E]"
-                        onPress={() => router.push(`/dashboard/${encodeURIComponent(snap.machine.MachineName)}` as any)}
+                        onPress={() =>
+                          router.push(
+                            `/dashboard/${encodeURIComponent(
+                              snap.machine.MachineName
+                            )}` as any
+                          )
+                        }
                       >
-                        <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">View details</ButtonText>
+                        <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                          View details
+                        </ButtonText>
                       </Button>
                     </HStack>
 
                     <HStack className="mt-4 gap-3 flex-wrap">
                       <Box className="flex-1 min-w-[160px] rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
                         <HStack className="items-center justify-between mb-2">
-                          <Text className="text-xs text-typography-600 dark:text-typography-400 uppercase font-semibold tracking-[0.08em]">CPU</Text>
-                          <Icon as={Activity} size="sm" className="text-[#2DD4BF] opacity-80 dark:text-[#5EEAD4] dark:opacity-80" />
-                        </HStack>
-                        <Text className="text-lg font-semibold text-typography-900 dark:text-[#E8EBF0]">{formatPercent(avgCpu)}</Text>
-                        <Text className="text-xs text-typography-500 dark:text-typography-400">{snap.cpu?.cores?.length ?? 0} cores</Text>
-                      </Box>
-
-                      <Box className="flex-1 min-w-[160px] rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
-                        <HStack className="items-center justify-between mb-2">
-                          <Text className="text-xs text-typography-600 dark:text-typography-400 uppercase font-semibold tracking-[0.08em]">RAM</Text>
-                          <Icon as={MemoryStick} size="sm" className="text-[#2DD4BF] opacity-80 dark:text-[#5EEAD4] dark:opacity-80" />
-                        </HStack>
-                        <Text className="text-lg font-semibold text-typography-900 dark:text-[#E8EBF0]">{formatPercent(ramPercent)}</Text>
-                        <Text className="text-xs text-typography-500 dark:text-typography-400">
-                          {bytesToGb((snap.mem?.usedMb ?? 0) * 1024 ** 2)} / {bytesToGb((snap.mem?.totalMb ?? 0) * 1024 ** 2)} GB
-                        </Text>
-                      </Box>
-
-                      <Box className="flex-1 min-w-[160px] rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
-                        <HStack className="items-center justify-between mb-2">
-                          <Text className="text-xs text-typography-600 dark:text-typography-400 uppercase font-semibold tracking-[0.08em]">Disk</Text>
-                          <Icon as={HardDrive} size="sm" className="text-[#2DD4BF] opacity-80 dark:text-[#5EEAD4] dark:opacity-80" />
-                        </HStack>
-                        <Text className="text-lg font-semibold text-typography-900 dark:text-[#E8EBF0]">{formatPercent(diskUsage)}</Text>
-                        <Text className="text-xs text-typography-500 dark:text-typography-400">
-                          {formatGbCompact(diskTotals.used)} / {formatGbCompact(diskTotals.total)}
-                        </Text>
-                      </Box>
-
-                      <Box className="flex-1 min-w-[160px] rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
-                        <HStack className="items-center justify-between mb-2">
-                          <Text className="text-xs text-typography-600 dark:text-typography-400 uppercase font-semibold tracking-[0.08em]">Temp</Text>
-                          <Icon as={ThermometerSun} size="sm" className="text-[#2DD4BF] opacity-80 dark:text-[#5EEAD4] dark:opacity-80" />
+                          <Text className="text-xs text-typography-600 dark:text-typography-400 uppercase font-semibold tracking-[0.08em]">
+                            CPU
+                          </Text>
+                          <Icon
+                            as={Activity}
+                            size="sm"
+                            className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80"
+                          />
                         </HStack>
                         <Text className="text-lg font-semibold text-typography-900 dark:text-[#E8EBF0]">
-                          {averageCpuTemp(snap.cpu) ? `${averageCpuTemp(snap.cpu).toFixed(1)}ºC avg / ${maxCpuTemp(snap.cpu).toFixed(1)}ºC max` : "—"}
+                          {formatPercent(avgCpu)}
                         </Text>
-                        <Text className="text-xs text-typography-500 dark:text-typography-400">Average and max of core sensors</Text>
+                        <Text className="text-xs text-typography-500 dark:text-typography-400">
+                          {snap.cpu?.cores?.length ?? 0} cores
+                        </Text>
+                      </Box>
+
+                      <Box className="flex-1 min-w-[160px] rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
+                        <HStack className="items-center justify-between mb-2">
+                          <Text className="text-xs text-typography-600 dark:text-typography-400 uppercase font-semibold tracking-[0.08em]">
+                            RAM
+                          </Text>
+                          <Icon
+                            as={MemoryStick}
+                            size="sm"
+                            className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80"
+                          />
+                        </HStack>
+                        <Text className="text-lg font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                          {formatPercent(ramPercent)}
+                        </Text>
+                        <Text className="text-xs text-typography-500 dark:text-typography-400">
+                          {bytesToGb((snap.mem?.usedMb ?? 0) * 1024 ** 2)} /{" "}
+                          {bytesToGb((snap.mem?.totalMb ?? 0) * 1024 ** 2)} GB
+                        </Text>
+                      </Box>
+
+                      <Box className="flex-1 min-w-[160px] rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
+                        <HStack className="items-center justify-between mb-2">
+                          <Text className="text-xs text-typography-600 dark:text-typography-400 uppercase font-semibold tracking-[0.08em]">
+                            Disk
+                          </Text>
+                          <Icon
+                            as={HardDrive}
+                            size="sm"
+                            className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80"
+                          />
+                        </HStack>
+                        <Text className="text-lg font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                          {formatPercent(diskUsage)}
+                        </Text>
+                        <Text className="text-xs text-typography-500 dark:text-typography-400">
+                          {formatGbCompact(diskTotals.used)} /{" "}
+                          {formatGbCompact(diskTotals.total)}
+                        </Text>
+                      </Box>
+
+                      <Box className="flex-1 min-w-[160px] rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
+                        <HStack className="items-center justify-between mb-2">
+                          <Text className="text-xs text-typography-600 dark:text-typography-400 uppercase font-semibold tracking-[0.08em]">
+                            Temp
+                          </Text>
+                          <Icon
+                            as={ThermometerSun}
+                            size="sm"
+                            className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80"
+                          />
+                        </HStack>
+                        <Text className="text-lg font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                          {averageCpuTemp(snap.cpu)
+                            ? `${averageCpuTemp(snap.cpu).toFixed(
+                                1
+                              )}ºC avg / ${maxCpuTemp(snap.cpu).toFixed(
+                                1
+                              )}ºC max`
+                            : "—"}
+                        </Text>
+                        <Text className="text-xs text-typography-500 dark:text-typography-400">
+                          Average and max of core sensors
+                        </Text>
                       </Box>
                     </HStack>
                   </Box>
