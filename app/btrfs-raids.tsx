@@ -65,6 +65,8 @@ type RaidTab = "details" | "actions" | "balance" | "scrub";
 
 const DEFAULT_COMPRESSION = "zstd:3";
 const DEFAULT_RAID_LEVEL = RAID_LEVEL_OPTIONS.find((opt) => opt.value === "raid1")?.value ?? RAID_LEVEL_OPTIONS[0].value;
+const getRaidLevelOption = (level?: string) => RAID_LEVEL_OPTIONS.find((opt) => opt.value === level);
+const getRaidMinDisks = (level?: string) => getRaidLevelOption(level)?.minDisks;
 
 const formatSize = (value?: string | number) => {
   if (value === undefined || value === null || value === "") return "—";
@@ -165,6 +167,19 @@ export default function BtrfsRaidsScreen() {
   const [savingAction, setSavingAction] = React.useState<string | null>(null);
   const [deleteRaidTarget, setDeleteRaidTarget] = React.useState<BtrfsRaid | null>(null);
   const [actionModal, setActionModal] = React.useState<null | RaidTab | "mount" | "unmount" | "addDisk" | "removeDisk" | "replaceDisk" | "changeLevel" | "autoMount">(null);
+
+  const raidLevelOption = getRaidLevelOption(raidLevel);
+  const raidLevelMinDisks = getRaidMinDisks(raidLevel);
+  const raidLevelLabel = raidLevelOption?.label ?? raidLevel;
+  const newRaidLevelOption = getRaidLevelOption(newRaidLevel);
+  const newRaidMinDisks = getRaidMinDisks(newRaidLevel);
+  const newRaidLabel = newRaidLevelOption?.label ?? newRaidLevel;
+  const raidDeviceCount =
+    typeof raidStatus?.totalDevices === "number"
+      ? raidStatus.totalDevices
+      : Array.isArray(raidModal?.devices)
+        ? raidModal.devices.length
+        : undefined;
   const balancePollRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   const scrubPollRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -244,8 +259,9 @@ export default function BtrfsRaidsScreen() {
       showToast("Name required", "Provide a name for the RAID.", "error");
       return;
     }
-    if (selectedDisks.size < 2 && raidLevel !== "single") {
-      showToast("Select disks", "Select at least 2 disks for the RAID.", "error");
+    if (typeof raidLevelMinDisks === "number" && selectedDisks.size < raidLevelMinDisks) {
+      const diskLabel = raidLevelMinDisks === 1 ? "disk" : "disks";
+      showToast("Select disks", `Select at least ${raidLevelMinDisks} ${diskLabel} for ${raidLevelLabel}.`, "error");
       return;
     }
     setCreatingRaid(true);
@@ -869,7 +885,9 @@ export default function BtrfsRaidsScreen() {
               </VStack>
               <FormControlHelper>
                 <FormControlHelperText>
-                  Select at least 2 disks for redundant levels.
+                  {typeof raidLevelMinDisks === "number"
+                    ? `Requires at least ${raidLevelMinDisks} disk${raidLevelMinDisks === 1 ? "" : "s"} for ${raidLevelLabel}.`
+                    : "Select disks for the RAID."}
                 </FormControlHelperText>
               </FormControlHelper>
             </FormControl>
@@ -1612,12 +1630,22 @@ export default function BtrfsRaidsScreen() {
                     </SelectContent>
                   </SelectPortal>
                 </Select>
+                {typeof newRaidMinDisks === "number" ? (
+                  <Text className="text-typography-600 text-xs">
+                    {`Min disks for ${newRaidLabel}: ${newRaidMinDisks}. Current: ${raidDeviceCount ?? "n/a"}.`}
+                  </Text>
+                ) : null}
                 <Button
                   action="primary"
-                  onPress={() =>
-                    raidModal?.uuid &&
-                    performAction("change level", () => changeRaidLevel(selectedMachine, { uuid: raidModal.uuid, new_raid_level: newRaidLevel }), false).finally(closeActionModal)
-                  }
+                  onPress={() => {
+                    if (!raidModal?.uuid) return;
+                    if (typeof newRaidMinDisks === "number" && typeof raidDeviceCount === "number" && raidDeviceCount < newRaidMinDisks) {
+                      const diskLabel = newRaidMinDisks === 1 ? "disk" : "disks";
+                      showToast("Not enough disks", `Requires at least ${newRaidMinDisks} ${diskLabel} for ${newRaidLabel}. Current: ${raidDeviceCount}.`, "error");
+                      return;
+                    }
+                    performAction("change level", () => changeRaidLevel(selectedMachine, { uuid: raidModal.uuid, new_raid_level: newRaidLevel }), false).finally(closeActionModal);
+                  }}
                   isDisabled={savingAction !== null}
                 >
                   {savingAction === "change level" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}

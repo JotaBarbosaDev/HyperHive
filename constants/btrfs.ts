@@ -15,8 +15,12 @@ export const COMPRESSION_OPTIONS: CompressionOption[] = [
 ];
 
 export const RAID_LEVEL_OPTIONS = [
-  {value: "raid0", label: "RAID0"},
-  {value: "raid1", label: "RAID1"},
-  {value: "raid1c3", label: "RAID1C3"},
-  {value: "raid1c4", label: "RAID1C4"},
+  {value: "raid0", label: "RAID0", minDisks: 2},
+  {value: "raid1", label: "RAID1", minDisks: 2},
+  {value: "raid1c3", label: "RAID1C3", minDisks: 3},
+  {value: "raid1c4", label: "RAID1C4", minDisks: 4},
+  {value: "single", label: "SINGLE", minDisks: 1},
+  {value: "dup", label: "DUP", minDisks: 1},
+  {value: "raid5", label: "RAID5", minDisks: 3},
+  {value: "raid6", label: "RAID6", minDisks: 4},
 ];
