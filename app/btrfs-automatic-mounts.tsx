@@ -24,6 +24,7 @@ import { Badge, BadgeText } from "@/components/ui/badge";
 import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
 import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
 import { ChevronDownIcon } from "@/components/ui/icon";
+import { DirectoryPickerModal } from "@/components/modals/DirectoryPickerModal";
 import {
   Modal,
   ModalBackdrop,
@@ -33,9 +34,10 @@ import {
   ModalFooter,
   ModalCloseButton,
 } from "@/components/ui/modal";
+import { DirectoryListing } from "@/types/directory";
 import { Machine } from "@/types/machine";
 import { AutomaticMount, BtrfsRaid } from "@/types/btrfs";
-import { listMachines } from "@/services/hyperhive";
+import { listDirectory, listMachines } from "@/services/hyperhive";
 import { createAutomaticMount, deleteAutomaticMount, listAutomaticMounts, listRaids } from "@/services/btrfs";
 import { COMPRESSION_OPTIONS } from "@/constants/btrfs";
 import { RefreshCcw, Plus, Trash2 } from "lucide-react-native";
@@ -54,6 +56,27 @@ const getRaidLabel = (uuid: string | undefined, raids: BtrfsRaid[]) => {
   return raid.mount_point || raid.name || raid.label || uuid;
 };
 
+const computeNextPath = (current: string, selection: string) => {
+  if (!selection) return current;
+  if (selection.startsWith("/")) {
+    return selection.replace(/\/{2,}/g, "/") || "/";
+  }
+  const sanitized = selection.replace(/^\/+|\/+$/g, "");
+  if (!sanitized) return current;
+  const base = current === "/" ? "" : current.replace(/\/+$/g, "");
+  return `${base}/${sanitized}`.replace(/\/{2,}/g, "/");
+};
+
+const normalizePathInput = (input: string) => {
+  const sanitized = input.trim();
+  if (sanitized.length === 0) {
+    return "/";
+  }
+  return sanitized.startsWith("/")
+    ? sanitized.replace(/\/{2,}/g, "/")
+    : `/${sanitized}`.replace(/\/{2,}/g, "/");
+};
+
 export default function BtrfsAutomaticMountsScreen() {
   const toast = useToast();
   const [machines, setMachines] = React.useState<Machine[]>([]);
@@ -69,6 +92,11 @@ export default function BtrfsAutomaticMountsScreen() {
   const [saving, setSaving] = React.useState(false);
   const [removingId, setRemovingId] = React.useState<number | null>(null);
   const [createModal, setCreateModal] = React.useState(false);
+  const [dirListing, setDirListing] = React.useState<DirectoryListing | null>(null);
+  const [dirError, setDirError] = React.useState<string | null>(null);
+  const [selectedDirectory, setSelectedDirectory] = React.useState<string | null>(null);
+  const [isDirModalOpen, setIsDirModalOpen] = React.useState(false);
+  const [isFetchingDir, setIsFetchingDir] = React.useState(false);
 
   const showToast = React.useCallback(
     (title: string, description: string, action: "success" | "error" = "success") => {
@@ -136,6 +164,97 @@ export default function BtrfsAutomaticMountsScreen() {
     }
   }, [selectedMachine, loadData]);
 
+  React.useEffect(() => {
+    setDirListing(null);
+    setSelectedDirectory(null);
+    setDirError(null);
+  }, [selectedMachine]);
+
+  React.useEffect(() => {
+    if (createModal) return;
+    setIsDirModalOpen(false);
+    setSelectedDirectory(null);
+    setDirListing(null);
+    setDirError(null);
+    setIsFetchingDir(false);
+  }, [createModal]);
+
+  const directories = React.useMemo(
+    () =>
+      Array.isArray(dirListing?.directories)
+        ? (dirListing?.directories as string[])
+        : [],
+    [dirListing]
+  );
+
+  const handleDirectoryFetch = React.useCallback(
+    async (customPath?: string) => {
+      if (!selectedMachine.trim()) {
+        setDirError("Select a machine before listing folders.");
+        return undefined;
+      }
+
+      const normalizedPath = normalizePathInput(customPath ?? formMountPoint);
+
+      setDirError(null);
+      setDirListing(null);
+      setIsFetchingDir(true);
+      setSelectedDirectory(null);
+
+      try {
+        const data = await listDirectory(selectedMachine.trim(), normalizedPath);
+        setDirListing(data);
+        setFormMountPoint(normalizedPath);
+        return data;
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : "Error loading directory contents.";
+        setDirError(message);
+        setDirListing(null);
+        return undefined;
+      } finally {
+        setIsFetchingDir(false);
+      }
+    },
+    [formMountPoint, selectedMachine]
+  );
+
+  const handleOpenDirectoryModal = React.useCallback(async () => {
+    if (!selectedMachine.trim()) {
+      setDirError("Select a machine before listing folders.");
+      return;
+    }
+    setDirError(null);
+    const hasCachedDirectories = dirListing && Array.isArray(dirListing.directories);
+    const result = hasCachedDirectories ? dirListing : await handleDirectoryFetch();
+    if (!result) {
+      return;
+    }
+    setSelectedDirectory(null);
+    setIsDirModalOpen(true);
+  }, [dirListing, handleDirectoryFetch, selectedMachine]);
+
+  const handleDirectoryAdd = React.useCallback(async () => {
+    if (!selectedDirectory) return;
+    const nextPath = computeNextPath(normalizePathInput(formMountPoint), selectedDirectory);
+    await handleDirectoryFetch(nextPath);
+    setSelectedDirectory(null);
+  }, [formMountPoint, handleDirectoryFetch, selectedDirectory]);
+
+  const handleDirectoryCancel = React.useCallback(() => {
+    setIsDirModalOpen(false);
+    setSelectedDirectory(null);
+    setDirListing(null);
+    setDirError(null);
+  }, []);
+
+  const handleDirectoryOk = React.useCallback(() => {
+    setIsDirModalOpen(false);
+    setSelectedDirectory(null);
+  }, []);
+
   const handleCreate = async () => {
     if (!selectedMachine) return;
     if (!formRaid) {
@@ -155,6 +274,10 @@ export default function BtrfsAutomaticMountsScreen() {
       });
       showToast("Auto-mount created", "Rule added successfully.");
       setFormMountPoint("");
+      setDirListing(null);
+      setSelectedDirectory(null);
+      setDirError(null);
+      setIsDirModalOpen(false);
       await loadData("refresh");
     } catch (err) {
       console.error("Failed to create auto-mount", err);
@@ -389,10 +512,39 @@ export default function BtrfsAutomaticMountsScreen() {
               <Input>
                 <InputField
                   value={formMountPoint}
-                  onChangeText={setFormMountPoint}
+                  onChangeText={(text) => {
+                    setFormMountPoint(text);
+                    setDirError(null);
+                    setDirListing(null);
+                    setSelectedDirectory(null);
+                  }}
                   placeholder="/mnt/raid"
                 />
               </Input>
+              <Button
+                variant="link"
+                className="self-start bg-background-50 dark:bg-[#0F1A2E] border border-[#0F1A2E] p-2 rounded-xl"
+                onPress={handleOpenDirectoryModal}
+                isDisabled={!selectedMachine.trim() || isFetchingDir}
+              >
+                {isFetchingDir ? (
+                  <>
+                    <ButtonSpinner size="small" />
+                    <ButtonText className="ml-2 text-sm">
+                      Loading directories...
+                    </ButtonText>
+                  </>
+                ) : (
+                  <ButtonText className="text-sm text-[#0E1524] dark:text-[#E8EBF0]">
+                    Browse directories
+                  </ButtonText>
+                )}
+              </Button>
+              {dirError ? (
+                <Text className="text-error-700 dark:text-error-400 text-xs">
+                  {dirError}
+                </Text>
+              ) : null}
               <Select
                 selectedValue={formCompression}
                 onValueChange={setFormCompression}
@@ -446,6 +598,16 @@ export default function BtrfsAutomaticMountsScreen() {
           </ModalFooter>
         </ModalContent>
       </Modal>
+      <DirectoryPickerModal
+        isOpen={isDirModalOpen}
+        directories={directories}
+        selectedDirectory={selectedDirectory}
+        onSelect={setSelectedDirectory}
+        onCancel={handleDirectoryCancel}
+        onOk={handleDirectoryOk}
+        onConfirm={handleDirectoryAdd}
+        isLoading={isFetchingDir}
+      />
     </Box>
   );
 }

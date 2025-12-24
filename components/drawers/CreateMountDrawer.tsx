@@ -24,15 +24,20 @@ import { Icon, CloseIcon, ChevronDownIcon, AlertCircleIcon, CheckIcon, InfoIcon 
 import { FormControl, FormControlError, FormControlErrorIcon, FormControlErrorText, FormControlLabel, FormControlLabelText } from "@/components/ui/form-control";
 import { Input, InputField } from "@/components/ui/input";
 import { Select, SelectBackdrop, SelectContent, SelectDragIndicator, SelectDragIndicatorWrapper, SelectIcon, SelectInput, SelectItem, SelectPortal, SelectTrigger } from "@/components/ui/select";
+import { Radio, RadioGroup, RadioIndicator, RadioLabel, RadioIcon } from "@/components/ui/radio";
 import { VStack } from "@/components/ui/vstack";
+import { HStack } from "@/components/ui/hstack";
 import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";
 import { Tooltip, TooltipContent, TooltipText } from "@/components/ui/tooltip";
 import { createMount, listDirectory, listMachines } from "@/services/hyperhive";
+import { listAutomaticMounts } from "@/services/btrfs";
 import { Machine } from "@/types/machine";
 import { DirectoryListing } from "@/types/directory";
+import { AutomaticMount } from "@/types/btrfs";
 import { DirectoryPickerModal } from "@/components/modals/DirectoryPickerModal";
-import { Alert, Platform } from "react-native";
+import { Alert, Platform, Pressable } from "react-native";
+import { Dot } from "lucide-react-native";
 
 export type CreateMountDrawerProps = {
   isOpen: boolean;
@@ -81,6 +86,13 @@ export function CreateMountDrawer({
   const [isDirModalOpen, setIsDirModalOpen] = React.useState(false);
   const [isFetchingDir, setIsFetchingDir] = React.useState(false);
   const [isCreating, setIsCreating] = React.useState(false);
+  const [mountTab, setMountTab] = React.useState<"normal" | "btrfs">("normal");
+  const [btrfsMachineName, setBtrfsMachineName] = React.useState<string>("");
+  const [btrfsMountName, setBtrfsMountName] = React.useState<string>("");
+  const [btrfsAutoMounts, setBtrfsAutoMounts] = React.useState<AutomaticMount[]>([]);
+  const [btrfsAutoMountError, setBtrfsAutoMountError] = React.useState<string | null>(null);
+  const [btrfsAutoMountLoading, setBtrfsAutoMountLoading] = React.useState(false);
+  const [selectedAutoMountId, setSelectedAutoMountId] = React.useState<string>("");
 
   const resetState = React.useCallback(() => {
     setMachineName("");
@@ -94,6 +106,13 @@ export function CreateMountDrawer({
     setIsDirModalOpen(false);
     setIsFetchingDir(false);
     setIsCreating(false);
+    setMountTab("normal");
+    setBtrfsMachineName("");
+    setBtrfsMountName("");
+    setBtrfsAutoMounts([]);
+    setBtrfsAutoMountError(null);
+    setBtrfsAutoMountLoading(false);
+    setSelectedAutoMountId("");
   }, []);
 
   React.useEffect(() => {
@@ -128,6 +147,55 @@ export function CreateMountDrawer({
     }
     Alert.alert("Host Normal Mount", hostInfoDescription);
   }, []);
+
+  const selectedAutoMount = React.useMemo(() => {
+    if (!selectedAutoMountId) return null;
+    return (
+      btrfsAutoMounts.find((mount) => String(mount.id) === selectedAutoMountId) ?? null
+    );
+  }, [btrfsAutoMounts, selectedAutoMountId]);
+
+  React.useEffect(() => {
+    if (!isOpen || mountTab !== "btrfs") {
+      return;
+    }
+
+    const trimmedMachine = btrfsMachineName.trim();
+    if (!trimmedMachine) {
+      setBtrfsAutoMounts([]);
+      setBtrfsAutoMountError(null);
+      setBtrfsAutoMountLoading(false);
+      return;
+    }
+
+    let isCancelled = false;
+    const loadAutoMounts = async () => {
+      setBtrfsAutoMountLoading(true);
+      setBtrfsAutoMountError(null);
+      try {
+        const data = await listAutomaticMounts(trimmedMachine);
+        if (!isCancelled) {
+          setBtrfsAutoMounts(Array.isArray(data) ? data : []);
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Error loading automatic mounts.";
+        if (!isCancelled) {
+          setBtrfsAutoMountError(message);
+          setBtrfsAutoMounts([]);
+        }
+      } finally {
+        if (!isCancelled) {
+          setBtrfsAutoMountLoading(false);
+        }
+      }
+    };
+
+    loadAutoMounts();
+    return () => {
+      isCancelled = true;
+    };
+  }, [btrfsMachineName, isOpen, mountTab]);
 
   const directories = React.useMemo(
     () =>
@@ -212,6 +280,47 @@ export function CreateMountDrawer({
   const handleSubmit = React.useCallback(async () => {
     if (isCreating) return;
 
+    if (mountTab === "btrfs") {
+      const trimmedMachine = btrfsMachineName.trim();
+      const trimmedName = btrfsMountName.trim();
+
+      if (!trimmedMachine) {
+        setCreateError("Select a machine.");
+        return;
+      }
+
+      if (!trimmedName) {
+        setCreateError("Enter a name for the mount.");
+        return;
+      }
+
+      if (!selectedAutoMount?.mount_point) {
+        setCreateError("Select an automatic mount.");
+        return;
+      }
+
+      setCreateError(null);
+      setIsCreating(true);
+
+      try {
+        await createMount({
+          machineName: trimmedMachine,
+          folderPath: selectedAutoMount.mount_point,
+          name: trimmedName,
+          hostNormalMount: false,
+        });
+
+        onClose();
+        onSuccess?.();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Error creating mount.";
+        setCreateError(message);
+      } finally {
+        setIsCreating(false);
+      }
+      return;
+    }
+
     const trimmedMachine = machineName.trim();
     const trimmedName = mountName.trim();
 
@@ -244,11 +353,28 @@ export function CreateMountDrawer({
     } finally {
       setIsCreating(false);
     }
-  }, [hostNormalMount, isCreating, machineName, mountName, onClose, onSuccess, path]);
+  }, [
+    btrfsMachineName,
+    btrfsMountName,
+    hostNormalMount,
+    isCreating,
+    machineName,
+    mountName,
+    mountTab,
+    onClose,
+    onSuccess,
+    path,
+    selectedAutoMount,
+  ]);
 
   const isWeb = Platform.OS === "web";
 
-  const formContent = (
+  const mountTabs = [
+    { key: "normal", label: "Normal" },
+    { key: "btrfs", label: "BTRFS" },
+  ] as const;
+
+  const normalForm = (
     <VStack className="gap-4 web:gap-6">
       <FormControl isInvalid={Boolean(createError)} size="md">
         <FormControlLabel className="mb-2 web:mb-2">
@@ -442,6 +568,194 @@ export function CreateMountDrawer({
           </Text>
         </Button>
       </VStack>
+    </VStack>
+  );
+
+  const btrfsForm = (
+    <VStack className="gap-4 web:gap-6">
+      <FormControl isInvalid={Boolean(createError)} size="md">
+        <FormControlLabel className="mb-2 web:mb-2">
+          <FormControlLabelText className="text-typography-900 dark:text-[#E8EBF0] text-sm font-semibold web:text-sm web:font-semibold web:tracking-wide">
+            Name
+          </FormControlLabelText>
+        </FormControlLabel>
+        <Input
+          variant="outline"
+          size="md"
+          className="bg-background-50 dark:bg-[#0E1524] border-outline-200 dark:border-[#2A3647] rounded-xl h-11 web:bg-background-50 dark:web:bg-[#0E1524] web:border-outline-200 dark:web:border-[#2A3647] web:rounded-xl web:h-12"
+        >
+          <InputField
+            placeholder="Enter mount name..."
+            value={btrfsMountName}
+            onChangeText={(text) => {
+              setBtrfsMountName(text);
+              setCreateError(null);
+            }}
+            className="text-base px-3 web:text-base web:px-4"
+          />
+        </Input>
+      </FormControl>
+      <FormControl size="md">
+        <FormControlLabel className="mb-2 web:mb-2">
+          <FormControlLabelText className="text-typography-900 dark:text-[#E8EBF0] text-sm font-semibold web:text-sm web:font-semibold web:tracking-wide">
+            Machine
+          </FormControlLabelText>
+        </FormControlLabel>
+        <Select
+          selectedValue={btrfsMachineName}
+          onValueChange={(value) => {
+            setBtrfsMachineName(value);
+            setSelectedAutoMountId("");
+            setBtrfsAutoMounts([]);
+            setBtrfsAutoMountError(null);
+            setCreateError(null);
+          }}
+        >
+          <SelectTrigger
+            variant="outline"
+            size="md"
+            className="bg-background-50 dark:bg-[#0E1524] border-outline-200 dark:border-[#2A3647] rounded-xl h-11 web:bg-background-50 dark:web:bg-[#0E1524] web:border-outline-200 dark:web:border-[#2A3647] web:rounded-xl web:h-12"
+          >
+            <SelectInput
+              placeholder="Select machine"
+              className="text-base px-3 web:text-base web:px-4"
+            />
+            <SelectIcon className="mr-3" as={ChevronDownIcon} />
+          </SelectTrigger>
+          <SelectPortal>
+            <SelectBackdrop />
+            <SelectContent>
+              <SelectDragIndicatorWrapper>
+                <SelectDragIndicator />
+              </SelectDragIndicatorWrapper>
+              {machines.map((machine, index) => {
+                const keyCandidate =
+                  machine?.Id ??
+                  machine?.id ??
+                  (machine as any)?.MachineUuid ??
+                  machine?.MachineName ??
+                  index;
+                return (
+                  <SelectItem
+                    label={machine.MachineName}
+                    value={machine.MachineName}
+                    key={`btrfs-machine-${keyCandidate}`}
+                  />
+                );
+              })}
+            </SelectContent>
+          </SelectPortal>
+        </Select>
+      </FormControl>
+      <FormControl isInvalid={Boolean(btrfsAutoMountError)} size="md">
+        <FormControlLabel className="mb-2 web:mb-2">
+          <FormControlLabelText className="text-typography-900 dark:text-[#E8EBF0] text-sm font-semibold web:text-sm web:font-semibold web:tracking-wide">
+            Automatic Mount
+          </FormControlLabelText>
+        </FormControlLabel>
+        {btrfsMachineName.trim() ? (
+          btrfsAutoMountLoading ? (
+            <HStack className="items-center gap-2">
+              <ButtonSpinner size="small" />
+              <Text className="text-sm text-typography-500 dark:text-typography-400">
+                Loading automatic mounts...
+              </Text>
+            </HStack>
+          ) : btrfsAutoMounts.length ? (
+            <RadioGroup
+              value={selectedAutoMountId || undefined}
+              onChange={(value: any) => {
+                setSelectedAutoMountId(String(value));
+                setCreateError(null);
+              }}
+              className="gap-3"
+            >
+              {btrfsAutoMounts.map((mount) => {
+                const isSelected = selectedAutoMountId === String(mount.id);
+                const mountLabel = mount.mount_point || "Unknown mount point";
+                const mountUuid = mount.uuid || mount.raid_uuid || "—";
+                return (
+                  <Radio
+                    key={mount.id}
+                    value={String(mount.id)}
+                    aria-label={mountLabel}
+                    className="flex-row items-start gap-3 rounded-xl border border-outline-100 dark:border-[#2A3647] bg-background-50/70 dark:bg-[#0F1A2E] px-3 py-3"
+                  >
+                    <RadioIndicator className="mt-1">
+                      {isSelected ? (
+                        <RadioIcon as={Dot} size="sm" className="text-primary-700 dark:text-[#8AB9FF]" />
+                      ) : null}
+                    </RadioIndicator>
+                    <VStack className="flex-1">
+                      <RadioLabel
+                        className="text-base text-typography-900 dark:text-[#E8EBF0]"
+                        style={{ fontFamily: "Inter_600SemiBold" }}
+                      >
+                        {mountLabel}
+                      </RadioLabel>
+                      <Text className="text-xs text-typography-500 dark:text-typography-400">
+                        UUID: {mountUuid}
+                      </Text>
+                      {mount.compression ? (
+                        <Text className="text-xs text-typography-500 dark:text-typography-400">
+                          Compression: {mount.compression}
+                        </Text>
+                      ) : null}
+                    </VStack>
+                  </Radio>
+                );
+              })}
+            </RadioGroup>
+          ) : (
+            <Text className="text-sm text-typography-500 dark:text-typography-400">
+              No automatic mounts found for this machine.
+            </Text>
+          )
+        ) : (
+          <Text className="text-sm text-typography-500 dark:text-typography-400">
+            Select a machine to load automatic mounts.
+          </Text>
+        )}
+        {btrfsAutoMountError ? (
+          <FormControlError className="mt-2">
+            <FormControlErrorIcon as={AlertCircleIcon} />
+            <FormControlErrorText>{btrfsAutoMountError}</FormControlErrorText>
+          </FormControlError>
+        ) : null}
+      </FormControl>
+    </VStack>
+  );
+
+  const formContent = (
+    <VStack className="gap-4 web:gap-6">
+      <HStack className="gap-2">
+        {mountTabs.map((tab) => {
+          const active = mountTab === tab.key;
+          return (
+            <Pressable
+              key={tab.key}
+              onPress={() => {
+                setMountTab(tab.key);
+                setCreateError(null);
+              }}
+              className="flex-1"
+            >
+              <Box
+                className={`rounded-xl border border-outline-200 dark:border-[#2A3647] px-4 py-2 items-center ${active ? "bg-primary-50/70 dark:bg-[#132038]" : "bg-background-50 dark:bg-[#0E1524]"
+                  }`}
+              >
+                <Text
+                  className={`text-sm ${active ? "text-primary-700 dark:text-[#8AB9FF]" : "text-typography-700 dark:text-typography-300"}`}
+                  style={{ fontFamily: active ? "Inter_600SemiBold" : "Inter_500Medium" }}
+                >
+                  {tab.label}
+                </Text>
+              </Box>
+            </Pressable>
+          );
+        })}
+      </HStack>
+      {mountTab === "normal" ? normalForm : btrfsForm}
       {createError ? (
         <Box className="p-3 bg-error-50 dark:bg-error-900/20 rounded-xl border border-error-300 dark:border-error-700 web:p-4 web:bg-error-50 dark:web:bg-error-900/20 web:rounded-xl web:border web:border-error-300 dark:web:border-error-700">
           <Text className="text-error-700 dark:text-error-400 text-sm font-medium web:text-base web:font-medium">

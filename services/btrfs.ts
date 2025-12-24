@@ -1,6 +1,6 @@
-import {getApiBaseUrl, setApiBaseUrl} from "@/config/apiConfig";
-import {apiFetch, setAuthToken, triggerUnauthorized} from "./api-client";
-import {loadApiBaseUrl, loadAuthToken} from "./auth-storage";
+import { getApiBaseUrl, setApiBaseUrl } from "@/config/apiConfig";
+import { apiFetch, setAuthToken, triggerUnauthorized } from "./api-client";
+import { loadApiBaseUrl, loadAuthToken } from "./auth-storage";
 import {
   AutomaticMount,
   BalancePayload,
@@ -46,14 +46,14 @@ const machinePath = (machineName: string, path: string) => {
 
 export async function listAllDisks(machineName: string): Promise<BtrfsDisk[]> {
   const authToken = await resolveToken();
-  const data = await apiFetch<any>(machinePath(machineName, "getAllDuckingDisks"), {token: authToken});
+  const data = await apiFetch<any>(machinePath(machineName, "getAllDuckingDisks"), { token: authToken });
   const disks = Array.isArray(data) ? data : Array.isArray(data?.disks) ? data.disks : [];
   return disks.map(normalizeDisk);
 }
 
 export async function listFreeDisks(machineName: string): Promise<BtrfsDisk[]> {
   const authToken = await resolveToken();
-  const data = await apiFetch<any>(machinePath(machineName, "getFreeDisks"), {token: authToken});
+  const data = await apiFetch<any>(machinePath(machineName, "getFreeDisks"), { token: authToken });
   const disks = Array.isArray(data) ? data : Array.isArray(data?.disks) ? data.disks : [];
   return disks.map(normalizeDisk);
 }
@@ -214,7 +214,7 @@ const normalizeAutomaticMount = (entry: any): AutomaticMount => ({
 
 export async function listRaids(machineName: string): Promise<BtrfsRaid[]> {
   const authToken = await resolveToken();
-  const data = await apiFetch<any>(machinePath(machineName, "getraids"), {token: authToken});
+  const data = await apiFetch<any>(machinePath(machineName, "getraids"), { token: authToken });
   if (Array.isArray(data)) {
     return data.map(normalizeRaid);
   }
@@ -224,7 +224,7 @@ export async function listRaids(machineName: string): Promise<BtrfsRaid[]> {
   return [];
 }
 
-export async function createRaid(machineName: string, payload: {name: string; raid: string; disks: string[]}): Promise<unknown> {
+export async function createRaid(machineName: string, payload: { name: string; raid: string; disks: string[] }): Promise<unknown> {
   const authToken = await resolveToken();
   return apiFetch<unknown>(machinePath(machineName, "createraid"), {
     method: "POST",
@@ -238,11 +238,11 @@ export async function removeRaid(machineName: string, uuid: string): Promise<voi
   await apiFetch<void>(machinePath(machineName, "removeraid"), {
     method: "DELETE",
     token: authToken,
-    body: {uuid},
+    body: { uuid },
   });
 }
 
-export async function mountRaid(machineName: string, body: {uuid: string; mount_point: string; compression?: string}): Promise<unknown> {
+export async function mountRaid(machineName: string, body: { uuid: string; mount_point: string; compression?: string }): Promise<unknown> {
   const authToken = await resolveToken();
   return apiFetch<unknown>(machinePath(machineName, "mount_raid"), {
     method: "POST",
@@ -251,16 +251,16 @@ export async function mountRaid(machineName: string, body: {uuid: string; mount_
   });
 }
 
-export async function unmountRaid(machineName: string, body: {uuid: string; force?: boolean}): Promise<unknown> {
+export async function unmountRaid(machineName: string, body: { uuid: string; force?: boolean }): Promise<unknown> {
   const authToken = await resolveToken();
   return apiFetch<unknown>(machinePath(machineName, "umount_raid"), {
     method: "POST",
     token: authToken,
-    body: {...body, force: Boolean(body.force)},
+    body: { ...body, force: Boolean(body.force) },
   });
 }
 
-export async function addDiskRaid(machineName: string, body: {uuid: string; disk: string}): Promise<unknown> {
+export async function addDiskRaid(machineName: string, body: { uuid: string; disk: string }): Promise<unknown> {
   const authToken = await resolveToken();
   return apiFetch<unknown>(machinePath(machineName, "add_diskraid"), {
     method: "POST",
@@ -269,7 +269,7 @@ export async function addDiskRaid(machineName: string, body: {uuid: string; disk
   });
 }
 
-export async function removeDiskRaid(machineName: string, body: {uuid: string; disk: string}): Promise<unknown> {
+export async function removeDiskRaid(machineName: string, body: { uuid: string; disk: string }): Promise<unknown> {
   const authToken = await resolveToken();
   return apiFetch<unknown>(machinePath(machineName, "remove_diskraid"), {
     method: "POST",
@@ -278,7 +278,7 @@ export async function removeDiskRaid(machineName: string, body: {uuid: string; d
   });
 }
 
-export async function replaceDiskRaid(machineName: string, body: {uuid: string; old_disk: string; new_disk: string}): Promise<unknown> {
+export async function replaceDiskRaid(machineName: string, body: { uuid: string; old_disk: string; new_disk: string }): Promise<unknown> {
   const authToken = await resolveToken();
   return apiFetch<unknown>(machinePath(machineName, "replace_diskraid"), {
     method: "POST",
@@ -287,7 +287,7 @@ export async function replaceDiskRaid(machineName: string, body: {uuid: string; 
   });
 }
 
-export async function changeRaidLevel(machineName: string, body: {uuid: string; new_raid_level: string}): Promise<unknown> {
+export async function changeRaidLevel(machineName: string, body: { uuid: string; new_raid_level: string }): Promise<unknown> {
   const authToken = await resolveToken();
   return apiFetch<unknown>(machinePath(machineName, "change_raid_level"), {
     method: "POST",
@@ -310,7 +310,7 @@ export async function pauseBalance(machineName: string, uuid: string): Promise<u
   return apiFetch<unknown>(machinePath(machineName, "pause_balance"), {
     method: "POST",
     token: authToken,
-    body: {uuid},
+    body: { uuid },
   });
 }
 
@@ -319,7 +319,7 @@ export async function resumeBalance(machineName: string, uuid: string): Promise<
   return apiFetch<unknown>(machinePath(machineName, "resume_balance"), {
     method: "POST",
     token: authToken,
-    body: {uuid},
+    body: { uuid },
   });
 }
 
@@ -328,7 +328,7 @@ export async function cancelBalance(machineName: string, uuid: string): Promise<
   return apiFetch<unknown>(machinePath(machineName, "cancel_balance"), {
     method: "POST",
     token: authToken,
-    body: {uuid},
+    body: { uuid },
   });
 }
 
@@ -337,7 +337,7 @@ export async function defragmentRaid(machineName: string, uuid: string): Promise
   return apiFetch<unknown>(machinePath(machineName, "defragment_raid"), {
     method: "POST",
     token: authToken,
-    body: {uuid},
+    body: { uuid },
   });
 }
 
@@ -346,7 +346,7 @@ export async function scrubRaid(machineName: string, uuid: string): Promise<unkn
   return apiFetch<unknown>(machinePath(machineName, "scrub_raid"), {
     method: "POST",
     token: authToken,
-    body: {uuid},
+    body: { uuid },
   });
 }
 
@@ -354,7 +354,7 @@ export async function getScrubStats(machineName: string, uuid: string): Promise<
   const authToken = await resolveToken();
   const encodedMachine = encodeURIComponent(machineName);
   const encodedUuid = encodeURIComponent(uuid);
-  const resp = await apiFetch<any>(`/btrfs/scrub_stats/${encodedMachine}?uuid=${encodedUuid}`, {token: authToken});
+  const resp = await apiFetch<any>(`/btrfs/scrub_stats/${encodedMachine}?uuid=${encodedUuid}`, { token: authToken });
   return normalizeScrubStats(resp);
 }
 
@@ -362,16 +362,16 @@ export async function getRaidStatus(machineName: string, uuid: string): Promise<
   const authToken = await resolveToken();
   const encodedMachine = encodeURIComponent(machineName);
   const encodedUuid = encodeURIComponent(uuid);
-  const resp = await apiFetch<any>(`/btrfs/raid_status/${encodedMachine}?uuid=${encodedUuid}`, {token: authToken});
+  const resp = await apiFetch<any>(`/btrfs/raid_status/${encodedMachine}?uuid=${encodedUuid}`, { token: authToken });
   return normalizeRaidStatus(resp);
 }
 
-export async function createAutomaticMount(machine_name: string, body: {uuid: string; mount_point: string; compression?: string}): Promise<unknown> {
+export async function createAutomaticMount(machine_name: string, body: { uuid: string; mount_point: string; compression?: string }): Promise<unknown> {
   const authToken = await resolveToken();
   return apiFetch<unknown>("/btrfs/automatic_mount", {
     method: "POST",
     token: authToken,
-    body: {...body, machine_name},
+    body: { ...body, machine_name },
   });
 }
 
@@ -380,7 +380,7 @@ export async function deleteAutomaticMount(id: number): Promise<void> {
   await apiFetch<void>("/btrfs/automatic_mount", {
     method: "DELETE",
     token: authToken,
-    body: {id},
+    body: { id },
   });
 }
 
@@ -391,5 +391,12 @@ export async function listAutomaticMounts(machineName: string): Promise<Automati
     token: authToken,
   });
   const list = Array.isArray(resp) ? resp : Array.isArray(resp?.data) ? resp.data : [];
-  return list.map(normalizeAutomaticMount);
+  return list
+    .map((entry: any) =>
+      normalizeAutomaticMount({
+        ...entry,
+        machine_name: entry?.machine_name ?? entry?.machineName ?? machineName,
+      })
+    )
+    .filter((mount: AutomaticMount) => mount.machine_name === machineName);
 }
