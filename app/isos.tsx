@@ -1349,8 +1349,8 @@ function IsoCard({ iso, onDelete, isDeleting }: IsoCardProps) {
               {isDeleting ? (
                 <ButtonSpinner />
               ) : (
-                <ButtonText className="text-background-0 dark:text-[#0A1628] font-semibold" style={{ fontFamily: "Inter_600SemiBold" }}>
-                  Delete
+                <ButtonText className="text-background-0 dark:text-[#0A1628]" style={{ fontFamily: "Inter_600SemiBold" }}>
+                  Remove
                 </ButtonText>
               )}
             </Button>

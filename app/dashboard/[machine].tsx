@@ -409,7 +409,13 @@ export default function MachineDetailsScreen() {
 								voronoiPadding={{ left: 8, right: 8, top: 8, bottom: 12 }}
 								mouseFollowTooltips
 								labels={({ datum }: { datum: { x: Date; y: number } }) => formatPointLabel(datum.x, datum.y, unit)}
-								labelComponent={<VictoryTooltip cornerRadius={6} flyoutStyle={{ fill: isDark ? "#0A1628" : "white", stroke: color }} />}
+								labelComponent={
+									<VictoryTooltip
+										cornerRadius={6}
+										flyoutStyle={{ fill: isDark ? "#0A1628" : "#F8FAFF", stroke: color }}
+										style={{ fill: isDark ? "#E8EBF0" : "#0F172A", fontSize: 10 }}
+									/>
+								}
 							/>
 						}
 					>
@@ -493,7 +499,13 @@ export default function MachineDetailsScreen() {
 								labels={({ datum }: { datum: { x: Date; y: number; series?: string } }) =>
 									formatPointLabelWithSeries(datum.series ?? "", datum.x, datum.y, unit)
 								}
-								labelComponent={<VictoryTooltip cornerRadius={6} flyoutStyle={{ fill: isDark ? "#0A1628" : "white", stroke: "#CBD5E1" }} />}
+								labelComponent={
+									<VictoryTooltip
+										cornerRadius={6}
+										flyoutStyle={{ fill: isDark ? "#0A1628" : "#F8FAFF", stroke: "#CBD5E1" }}
+										style={{ fill: isDark ? "#E8EBF0" : "#0F172A", fontSize: 10 }}
+									/>
+								}
 							/>
 						}
 					>

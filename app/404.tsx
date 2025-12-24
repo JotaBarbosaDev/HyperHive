@@ -739,7 +739,7 @@ export default function NotFoundHostsScreen() {
           </AlertDialogHeader>
           <AlertDialogBody>
             <Text className="text-typography-700">
-              This action will delete{" "}
+              This action will remove{" "}
               <Text className="font-semibold">
                 {(deleteTarget?.domain_names ?? []).join(", ")}
               </Text>
@@ -752,7 +752,7 @@ export default function NotFoundHostsScreen() {
             </Button>
             <Button action="negative" onPress={handleDelete} isDisabled={Boolean(deletingId)}>
               {deletingId ? <ButtonSpinner /> : null}
-              <ButtonText>Delete</ButtonText>
+              <ButtonText>Remove</ButtonText>
             </Button>
           </AlertDialogFooter>
           <AlertDialogCloseButton />
