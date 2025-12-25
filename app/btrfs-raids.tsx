@@ -180,6 +180,10 @@ export default function BtrfsRaidsScreen() {
       : Array.isArray(raidModal?.devices)
         ? raidModal.devices.length
         : undefined;
+  const raidUsagePercent =
+    raidModal?.total && raidModal?.used ? (Number(raidModal.used) / Number(raidModal.total)) * 100 : null;
+  const sectionCardClass = "p-4 rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]";
+  const softCardClass = "p-3 rounded-xl border border-outline-100 dark:border-[#1E2F47] bg-background-50 dark:bg-[#132038]";
   const balancePollRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   const scrubPollRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -511,13 +515,13 @@ export default function BtrfsRaidsScreen() {
     return (
       <Pressable
         onPress={() => setRaidTab(tab)}
-        className={`px-4 py-2 rounded-lg border transition-all ${active
-          ? "border-typography-900 dark:border-[#2DD4BF] bg-background-50 dark:bg-[#0A1628]"
-          : "border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]"
+        className={`px-4 py-2 rounded-full border transition-all active:scale-[0.98] ${active
+          ? "border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]"
+          : "border-transparent"
           }`}
       >
         <Text
-          className={`text-sm ${active ? "text-typography-900 dark:text-[#E8EBF0]" : "text-typography-600 dark:text-[#8A94A8]"}`}
+          className={`text-sm ${active ? "text-typography-900 dark:text-[#E8EBF0]" : "text-typography-600 dark:text-[#9AA4B8]"}`}
           style={{ fontFamily: active ? "Inter_700Bold" : "Inter_500Medium" }}
         >
           {label}
@@ -905,91 +909,139 @@ export default function BtrfsRaidsScreen() {
       </Modal>
 
       <Modal isOpen={raidModal !== null} onClose={() => setRaidModal(null)} size="lg">
-        <ModalBackdrop />
-        <ModalContent className="max-w-4xl max-h-[90vh]">
-          <ModalHeader className="flex-row items-start justify-between">
-            <VStack>
-              <Heading size="md" className="text-typography-900">
+        <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+        <ModalContent className="max-w-4xl w-full max-h-[90vh] rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]">
+          <ModalHeader className="flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#1E2F47]">
+            <VStack className="flex-1 gap-1">
+              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
                 RAID {raidModal?.raid_level?.toUpperCase() || ""} {raidModal?.name || ""}
               </Heading>
-              <Text className="text-typography-600">{raidModal?.mount_point || raidModal?.uuid}</Text>
+              <Text className="text-typography-600 dark:text-[#9AA4B8]">{raidModal?.mount_point || raidModal?.uuid}</Text>
             </VStack>
-            <ModalCloseButton />
+            <ModalCloseButton className="text-typography-500" />
           </ModalHeader>
-          <ModalBody className="gap-4 max-h-[60vh] overflow-y-auto">
-            <HStack className="gap-2 flex-wrap">
-              {RAID_TABS.map((tab) => (
-                <RaidTabButton key={tab.key} tab={tab.key} />
-              ))}
-            </HStack>
+          <ModalBody className="px-6 pt-5 pb-6 max-h-[70vh] overflow-y-auto">
+            <Box className="rounded-2xl border border-outline-100 dark:border-[#1E2F47] bg-background-50 dark:bg-[#132038] p-1">
+              <HStack className="gap-2 flex-wrap">
+                {RAID_TABS.map((tab) => (
+                  <RaidTabButton key={tab.key} tab={tab.key} />
+                ))}
+              </HStack>
+            </Box>
+
+            <Box className="rounded-2xl border border-outline-100 dark:border-[#1E2F47] bg-background-50 dark:bg-[#132038] p-4 mt-4">
+              <HStack className="gap-4 flex-wrap">
+                <VStack className="min-w-[160px] flex-1">
+                  <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs uppercase tracking-wide">Status</Text>
+                  <HStack className="items-center gap-2 mt-1">
+                    <Box className={`h-2 w-2 rounded-full ${raidModal?.mounted ? "bg-success-500" : "bg-outline-400"}`} />
+                    <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold">
+                      {raidModal?.mounted === undefined ? "Unknown" : raidModal?.mounted ? "Mounted" : "Unmounted"}
+                    </Text>
+                  </HStack>
+                  <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs mt-1">Health: {raidModal?.status || "—"}</Text>
+                </VStack>
+                <VStack className="min-w-[160px] flex-1">
+                  <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs uppercase tracking-wide">Level</Text>
+                  <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-lg mt-1">
+                    {raidModal?.raid_level?.toUpperCase() || "—"}
+                  </Text>
+                  <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs mt-1">Devices: {raidDeviceCount ?? "—"}</Text>
+                </VStack>
+                <VStack className="min-w-[180px] flex-1">
+                  <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs uppercase tracking-wide">Compression</Text>
+                  <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-lg mt-1">
+                    {getCompressionLabel(raidModal?.compression)}
+                  </Text>
+                  <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs mt-1">Auto-mount: {currentAutoMount?.id ? "Enabled" : "Off"}</Text>
+                </VStack>
+              </HStack>
+            </Box>
 
             {raidTab === "details" ? (
-              <VStack className="gap-4">
+              <VStack className="mt-4">
                 {/* Storage Overview */}
-                <Box className="p-4 rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]">
-                  <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base mb-4">Storage Overview</Text>
+                <Box className={sectionCardClass}>
+                  <HStack className="items-start justify-between flex-wrap gap-3 mb-4">
+                    <VStack className="gap-1">
+                      <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base">Storage Overview</Text>
+                      <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs">Usage, capacity, and free space.</Text>
+                    </VStack>
+                    {raidUsagePercent !== null ? (
+                      <Badge className="rounded-full px-3 py-1 border-outline-200 dark:border-[#1E2F47]" size="sm" action="muted" variant="outline">
+                        <BadgeText className="text-xs text-typography-800 dark:text-[#E8EBF0]">{raidUsagePercent.toFixed(1)}% used</BadgeText>
+                      </Badge>
+                    ) : null}
+                  </HStack>
                   <HStack className="gap-3 flex-wrap mb-4">
-                    <Box className="flex-1 min-w-[140px] p-3 rounded-xl bg-background-50 dark:bg-[#132038] border border-outline-100 dark:border-[#1E2F47]">
+                    <Box className={`flex-1 min-w-[140px] ${softCardClass}`}>
                       <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs uppercase tracking-wide mb-1">Used</Text>
                       <Text className="text-typography-900 dark:text-[#E8EBF0] text-xl font-bold">{formatSize(raidModal?.used)}</Text>
                     </Box>
-                    <Box className="flex-1 min-w-[140px] p-3 rounded-xl bg-background-50 dark:bg-[#132038] border border-outline-100 dark:border-[#1E2F47]">
+                    <Box className={`flex-1 min-w-[140px] ${softCardClass}`}>
                       <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs uppercase tracking-wide mb-1">Total</Text>
                       <Text className="text-typography-900 dark:text-[#E8EBF0] text-xl font-bold">{formatSize(raidModal?.total)}</Text>
                     </Box>
-                    <Box className="flex-1 min-w-[140px] p-3 rounded-xl bg-background-50 dark:bg-[#132038] border border-outline-100 dark:border-[#1E2F47]">
+                    <Box className={`flex-1 min-w-[140px] ${softCardClass}`}>
                       <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs uppercase tracking-wide mb-1">Free</Text>
                       <Text className="text-typography-900 dark:text-[#E8EBF0] text-xl font-bold">{formatSize(raidModal?.free)}</Text>
                     </Box>
                   </HStack>
-                  {raidModal?.total && raidModal?.used ? (
+                  {raidUsagePercent !== null ? (
                     <VStack className="gap-2">
                       <HStack className="justify-between">
                         <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm">Usage</Text>
                         <Text className="text-typography-900 dark:text-[#E8EBF0] text-sm font-semibold">
-                          {((Number(raidModal.used) / Number(raidModal.total)) * 100).toFixed(1)}%
+                          {raidUsagePercent.toFixed(1)}%
                         </Text>
                       </HStack>
-                      <Progress value={(Number(raidModal.used) / Number(raidModal.total)) * 100} className="bg-background-200 dark:bg-background-300 h-2.5">
+                      <Progress value={raidUsagePercent} className="bg-background-200 dark:bg-background-300 h-2.5">
                         <ProgressFilledTrack className="bg-primary-500 dark:bg-primary-400" />
                       </Progress>
                     </VStack>
                   ) : null}
                 </Box>
 
-                {/* Configuration */}
-                <Box className="p-4 rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]">
-                  <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base mb-3">Configuration</Text>
-                  <VStack className="gap-2.5">
-                    <StatsRow label="UUID" value={raidModal?.uuid} />
-                    <StatsRow label="Label" value={raidModal?.label} />
-                    <StatsRow label="Compression" value={raidModal ? getCompressionLabel(raidModal.compression) : undefined} />
-                    <StatsRow label="Mount Point" value={raidModal?.mount_point} />
-                    <StatsRow label="Source" value={raidModal?.source} />
-                  </VStack>
-                </Box>
+                <HStack className="gap-4 flex-wrap mt-4">
+                  {/* Configuration */}
+                  <Box className={`flex-1 min-w-[240px] ${sectionCardClass}`}>
+                    <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base">Configuration</Text>
+                    <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs mt-1">Filesystem and mount settings.</Text>
+                    <VStack className="gap-2.5 mt-3">
+                      <StatsRow label="UUID" value={raidModal?.uuid} />
+                      <StatsRow label="Label" value={raidModal?.label} />
+                      <StatsRow label="Compression" value={raidModal ? getCompressionLabel(raidModal.compression) : undefined} />
+                      <StatsRow label="Mount Point" value={raidModal?.mount_point} />
+                      <StatsRow label="Source" value={raidModal?.source} />
+                    </VStack>
+                  </Box>
 
-                {/* Status */}
-                <Box className="p-4 rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]">
-                  <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base mb-3">Status</Text>
-                  <VStack className="gap-2.5">
-                    <HStack className="justify-between items-center">
-                      <Text className="text-typography-700 dark:text-typography-300">State</Text>
-                      <HStack className="items-center gap-2">
-                        <Box className={`h-2 w-2 rounded-full ${raidModal?.mounted ? "bg-success-500" : "bg-outline-400"}`} />
-                        <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold">
-                          {raidModal?.mounted === undefined ? "—" : raidModal?.mounted ? "Mounted" : "Unmounted"}
-                        </Text>
-                      </HStack>
-                    </HStack>
-                    <StatsRow label="Health" value={raidModal?.status || "—"} />
-                  </VStack>
-                </Box>
+                  {/* Status */}
+                  <Box className={`flex-1 min-w-[240px] ${sectionCardClass}`}>
+                    <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base">Status</Text>
+                    <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs mt-1">Mount state and health.</Text>
+                    <VStack className="gap-2.5 mt-3">
+                      <Box className={softCardClass}>
+                        <HStack className="justify-between items-center">
+                          <Text className="text-typography-700 dark:text-typography-300 text-sm">State</Text>
+                          <HStack className="items-center gap-2">
+                            <Box className={`h-2 w-2 rounded-full ${raidModal?.mounted ? "bg-success-500" : "bg-outline-400"}`} />
+                            <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold">
+                              {raidModal?.mounted === undefined ? "—" : raidModal?.mounted ? "Mounted" : "Unmounted"}
+                            </Text>
+                          </HStack>
+                        </HStack>
+                      </Box>
+                      <StatsRow label="Health" value={raidModal?.status || "—"} />
+                    </VStack>
+                  </Box>
+                </HStack>
 
                 {raidStatus ? (
-                  <Box className="p-4 rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]">
-                    <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base mb-3">Advanced Status</Text>
-                    <VStack className="gap-2.5 mb-4">
+                  <Box className={`${sectionCardClass} mt-4`}>
+                    <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base">Advanced Status</Text>
+                    <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs mt-1">Filesystem metadata and device stats.</Text>
+                    <VStack className="gap-2.5 mt-3 mb-4">
                       <StatsRow label="Filesystem Label" value={raidStatus.fsLabel} />
                       <StatsRow label="Filesystem UUID" value={raidStatus.fsUuid} />
                       <StatsRow
@@ -1003,7 +1055,7 @@ export default function BtrfsRaidsScreen() {
                         {raidStatus.deviceStats.map((dev) => {
                           const hasErrors = (dev.writeIoErrs && Number(dev.writeIoErrs) > 0) || (dev.readIoErrs && Number(dev.readIoErrs) > 0);
                           return (
-                            <Box key={dev.device ?? `${dev.devId}`} className="p-3 rounded-xl border border-outline-100 dark:border-[#1E2F47] bg-background-50 dark:bg-[#132038]">
+                            <Box key={dev.device ?? `${dev.devId}`} className={softCardClass}>
                               <HStack className="items-center justify-between flex-wrap gap-2 mb-2">
                                 <HStack className="items-center gap-2">
                                   <Box className={`h-2 w-2 rounded-full ${dev.deviceMissing ? "bg-error-500" : hasErrors ? "bg-warning-500" : "bg-success-500"}`} />
@@ -1055,15 +1107,16 @@ export default function BtrfsRaidsScreen() {
                 ) : null}
 
                 {/* Devices */}
-                <Box className="p-4 rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]">
-                  <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base mb-3">Physical Devices</Text>
-                  <VStack className="gap-2.5">
+                <Box className={`${sectionCardClass} mt-4`}>
+                  <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base">Physical Devices</Text>
+                  <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs mt-1">Disks currently part of this RAID.</Text>
+                  <VStack className="gap-2.5 mt-3">
                     {(Array.isArray(raidModal?.devices) && raidModal.devices.length > 0 ? raidModal.devices : []).map((dev) => {
                       const devDisplay = getRaidDeviceLabel(dev, disks);
                       return (
                         <Box
                           key={typeof dev === "string" ? dev : dev.device}
-                          className="p-3 rounded-xl border border-outline-100 dark:border-[#1E2F47] bg-background-50 dark:bg-[#132038]"
+                          className={softCardClass}
                         >
                           <HStack className="items-center gap-2 mb-1">
                             <Box className="h-2 w-2 rounded-full bg-success-500" />
@@ -1093,8 +1146,8 @@ export default function BtrfsRaidsScreen() {
             ) : null}
 
             {raidTab === "actions" ? (
-              <VStack className="gap-4">
-                <Box className="p-4 rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]">
+              <VStack className="mt-4">
+                <Box className={sectionCardClass}>
                   <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base mb-2">Available Actions</Text>
                   <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm mb-4">Select an action to manage your RAID configuration</Text>
 
@@ -1207,11 +1260,11 @@ export default function BtrfsRaidsScreen() {
             ) : null}
 
             {raidTab === "balance" ? (
-              <VStack className="gap-4">
+              <VStack className="mt-4">
                 {/* Status Card */}
-                <Box className="p-4 rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]">
+                <Box className={sectionCardClass}>
                   <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base mb-3">Balance Status</Text>
-                  <Box className="p-4 rounded-xl bg-background-50 dark:bg-[#132038] border border-outline-100 dark:border-[#1E2F47]">
+                  <Box className={softCardClass}>
                     <HStack className="items-center gap-3">
                       <Box className={`h-3 w-3 rounded-full ${isBalanceRunning(raidStatus) ? "bg-warning-500 animate-pulse" : "bg-success-500"}`} />
                       <VStack className="flex-1">
@@ -1225,7 +1278,7 @@ export default function BtrfsRaidsScreen() {
                 </Box>
 
                 {/* Balance Configuration */}
-                <Box className="p-4 rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]">
+                <Box className={`${sectionCardClass} mt-4`}>
                   <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base mb-3">Balance Configuration</Text>
                   <VStack className="gap-4">
                     <HStack className="gap-3 flex-wrap">
@@ -1305,7 +1358,7 @@ export default function BtrfsRaidsScreen() {
                 </Box>
 
                 {/* Balance Controls */}
-                <Box className="p-4 rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]">
+                <Box className={`${sectionCardClass} mt-4`}>
                   <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base mb-3">Controls</Text>
                   <HStack className="gap-2 flex-wrap">
                     <Button
@@ -1343,15 +1396,15 @@ export default function BtrfsRaidsScreen() {
             ) : null}
 
             {raidTab === "scrub" ? (
-              <VStack className="gap-4">
+              <VStack className="mt-4">
                 {/* Scrub Status */}
-                <Box className="p-4 rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]">
+                <Box className={sectionCardClass}>
                   <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base mb-4">Scrub & Health Check</Text>
                   {scrubStats ? (
                     <VStack className="gap-4">
                       {/* Progress Overview */}
                       {scrubStats.percentDone !== undefined ? (
-                        <Box className="p-4 rounded-xl bg-background-50 dark:bg-[#132038] border border-outline-100 dark:border-[#1E2F47]">
+                        <Box className={`${softCardClass} p-4`}>
                           <HStack className="justify-between items-center mb-3">
                             <VStack>
                               <Text className="text-typography-700 dark:text-[#9AA4B8] text-xs uppercase tracking-wide">Progress</Text>
@@ -1377,22 +1430,22 @@ export default function BtrfsRaidsScreen() {
 
                       {/* Stats Grid */}
                       <Box className="grid grid-cols-2 gap-3">
-                        <Box className="p-3 rounded-xl bg-background-50 dark:bg-[#132038] border border-outline-100 dark:border-[#1E2F47]">
+                        <Box className={softCardClass}>
                           <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs uppercase tracking-wide mb-1">Status</Text>
                           <HStack className="items-center gap-2">
                             <Box className={`h-2 w-2 rounded-full ${scrubStats.status?.toLowerCase().includes("running") ? "bg-warning-500 animate-pulse" : "bg-success-500"}`} />
                             <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold">{scrubStats.status || "—"}</Text>
                           </HStack>
                         </Box>
-                        <Box className="p-3 rounded-xl bg-background-50 dark:bg-[#132038] border border-outline-100 dark:border-[#1E2F47]">
+                        <Box className={softCardClass}>
                           <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs uppercase tracking-wide mb-1">Duration</Text>
                           <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold">{scrubStats.duration || "—"}</Text>
                         </Box>
-                        <Box className="p-3 rounded-xl bg-background-50 dark:bg-[#132038] border border-outline-100 dark:border-[#1E2F47]">
+                        <Box className={softCardClass}>
                           <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs uppercase tracking-wide mb-1">Rate</Text>
                           <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold">{scrubStats.rate || "—"}</Text>
                         </Box>
-                        <Box className="p-3 rounded-xl bg-background-50 dark:bg-[#132038] border border-outline-100 dark:border-[#1E2F47]">
+                        <Box className={softCardClass}>
                           <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs uppercase tracking-wide mb-1">Errors</Text>
                           <HStack className="items-center gap-2">
                             {scrubStats.errorSummary && scrubStats.errorSummary !== "0" && scrubStats.errorSummary !== "No errors" ? (
@@ -1404,7 +1457,7 @@ export default function BtrfsRaidsScreen() {
                       </Box>
 
                       {/* Details */}
-                      <Box className="p-3 rounded-xl border border-outline-100 dark:border-[#1E2F47] bg-background-50 dark:bg-[#132038]">
+                      <Box className={softCardClass}>
                         <VStack className="gap-2">
                           <StatsRow label="Path" value={scrubStats.path} />
                           <StatsRow label="Started At" value={scrubStats.startedAt} />
@@ -1412,7 +1465,7 @@ export default function BtrfsRaidsScreen() {
                       </Box>
                     </VStack>
                   ) : (
-                    <Box className="p-6 rounded-xl bg-background-50 dark:bg-[#132038] border border-outline-100 dark:border-[#1E2F47] text-center">
+                    <Box className={`${softCardClass} p-6 text-center`}>
                       <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">No scrub data available</Text>
                       <Text className="text-typography-500 dark:text-[#9AA4B8] text-xs mt-1">Run a scrub to check RAID health</Text>
                     </Box>
@@ -1420,7 +1473,7 @@ export default function BtrfsRaidsScreen() {
                 </Box>
 
                 {/* Actions */}
-                <Box className="p-4 rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]">
+                <Box className={`${sectionCardClass} mt-4`}>
                   <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base mb-3">Maintenance Actions</Text>
                   <HStack className="gap-3 flex-wrap">
                     <Button
@@ -1462,7 +1515,7 @@ export default function BtrfsRaidsScreen() {
               </VStack>
             ) : null}
           </ModalBody>
-          <ModalFooter className="gap-3 flex-wrap">
+          <ModalFooter className="gap-3 flex-wrap px-6 pt-4 pb-6 border-t border-outline-100 dark:border-[#1E2F47]">
             <Button
               action="negative"
               className="rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
@@ -1471,7 +1524,7 @@ export default function BtrfsRaidsScreen() {
               <ButtonIcon as={Trash2} size="sm" />
               <ButtonText className="text-background-0 dark:text-[#0A1628]">Remove RAID</ButtonText>
             </Button>
-            <Button action="primary" onPress={() => setRaidModal(null)}>
+            <Button action="primary" className="rounded-xl" onPress={() => setRaidModal(null)}>
               <ButtonText>Close</ButtonText>
             </Button>
           </ModalFooter>

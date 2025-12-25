@@ -97,6 +97,25 @@ export default function BtrfsAutomaticMountsScreen() {
   const [selectedDirectory, setSelectedDirectory] = React.useState<string | null>(null);
   const [isDirModalOpen, setIsDirModalOpen] = React.useState(false);
   const [isFetchingDir, setIsFetchingDir] = React.useState(false);
+  const modalBackdropClass = "bg-background-950/60 dark:bg-black/70";
+  const modalShellClass = "w-full rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]";
+  const modalHeaderClass = "flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#1E2F47]";
+  const modalBodyClass = "px-6 pt-5 pb-6 max-h-[70vh] overflow-y-auto";
+  const modalFooterClass = "gap-3 px-6 pt-4 pb-6 border-t border-outline-100 dark:border-[#1E2F47]";
+  const cardShellClass = "rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E] shadow-soft-1";
+  const softCardShellClass = "rounded-xl border border-outline-100 bg-background-50 dark:border-[#1E2F47] dark:bg-[#132038]";
+  const outlineButtonClass = "border-outline-200 rounded-xl dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]";
+  const outlineButtonTextClass = "text-typography-900 dark:text-[#E8EBF0]";
+  const outlineButtonIconClass = "text-typography-900 dark:text-[#E8EBF0]";
+  const dangerOutlineTextClass = "text-error-600 dark:text-error-400";
+  const dangerOutlineIconClass = "text-error-600 dark:text-error-400";
+  const neutralBadgeClass = "rounded-full px-3 py-1 border border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]";
+  const neutralBadgeTextClass = "text-xs text-typography-800 dark:text-[#E8EBF0]";
+  const selectTriggerClass = "rounded-xl border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]";
+  const selectInputClass = "text-typography-900 dark:text-[#E8EBF0] placeholder:text-typography-500 dark:placeholder:text-[#9AA4B8]";
+  const selectIconClass = "text-typography-700 dark:text-[#9AA4B8]";
+  const inputShellClass = "rounded-xl border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]";
+  const dividerClass = "opacity-60 border-outline-100 dark:border-[#1E2F47]";
 
   const showToast = React.useCallback(
     (title: string, description: string, action: "success" | "error" = "success") => {
@@ -331,9 +350,9 @@ export default function BtrfsAutomaticMountsScreen() {
                 selectedValue={selectedMachine}
                 onValueChange={(val) => setSelectedMachine(val)}
               >
-                <SelectTrigger className="min-w-[180px] rounded-xl border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] px-3 py-2">
-                  <SelectInput placeholder="Machine" value={selectedMachine} />
-                  <SelectIcon as={ChevronDownIcon} />
+                <SelectTrigger className={`${selectTriggerClass} min-w-[180px] pr-2`}>
+                  <SelectInput placeholder="Machine" value={selectedMachine} className={selectInputClass} />
+                  <SelectIcon as={ChevronDownIcon} className={selectIconClass} />
                 </SelectTrigger>
                 <SelectPortal>
                   <SelectBackdrop />
@@ -356,17 +375,17 @@ export default function BtrfsAutomaticMountsScreen() {
                 action="default"
                 size="sm"
                 onPress={() => loadData("refresh")}
-                className="border-outline-200 rounded-xl dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628] h-10"
+                className={`${outlineButtonClass} h-10`}
               >
-                <ButtonIcon as={RefreshCcw} size="sm" />
-                <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                <ButtonIcon as={RefreshCcw} size="sm" className={outlineButtonIconClass} />
+                <ButtonText className={outlineButtonTextClass}>
                   Refresh
                 </ButtonText>
               </Button>
             </HStack>
             <Button
               action="primary"
-              className="h-10 px-5 rounded-xl dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+              className="h-10 px-5 rounded-xl"
               onPress={() => setCreateModal(true)}
             >
               <ButtonIcon as={Plus} size="sm" />
@@ -376,22 +395,22 @@ export default function BtrfsAutomaticMountsScreen() {
             </Button>
           </HStack>
 
-          <Box className="mt-6 rounded-2xl bg-background-0 border border-background-200 shadow-soft-1">
+          <Box className={`mt-6 ${cardShellClass}`}>
             <HStack className="items-center justify-between px-4 py-3">
-              <Text className="text-typography-900 font-semibold text-base">
+              <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base">
                 Rules
               </Text>
-              <Text className="text-typography-700 text-sm">
+              <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm">
                 {autoMounts.length} items
               </Text>
             </HStack>
-            <Divider />
+            <Divider className={dividerClass} />
             {loading ? (
               <VStack className="gap-3 p-4">
                 {[1, 2].map((i) => (
                   <Box
                     key={i}
-                    className="p-3 rounded-xl border border-background-100"
+                    className={`p-3 ${softCardShellClass}`}
                   >
                     <Skeleton className="h-5 w-1/2 mb-2" />
                     <SkeletonText className="w-1/3" />
@@ -400,46 +419,46 @@ export default function BtrfsAutomaticMountsScreen() {
               </VStack>
             ) : autoMounts.length === 0 ? (
               <Box className="p-4">
-                <Text className="text-typography-600 text-sm">
+                <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">
                   No rules configured.
                 </Text>
               </Box>
             ) : (
-              <VStack className="divide-y divide-background-200">
+              <VStack className="divide-y divide-outline-100 dark:divide-[#1E2F47]">
                 {autoMounts.map((rule) => (
                   <Box key={rule.id} className="px-4 py-3">
                     <HStack className="justify-between items-start gap-3 flex-wrap">
                       <VStack className="gap-1">
-                        <Text className="text-typography-900 font-semibold">
+                        <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold">
                           {rule.mount_point}
                         </Text>
-                        <Text className="text-typography-700 text-sm">
+                        <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm">
                           RAID:{" "}
                           {getRaidLabel(rule.uuid || rule.raid_uuid, raids)}
                         </Text>
-                        <Text className="text-typography-600 text-sm">
+                        <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">
                           UUID: {rule.uuid || rule.raid_uuid}
                         </Text>
                         <HStack className="gap-2 mt-1 flex-wrap">
                           <Badge
-                            className="rounded-full px-3 py-1"
+                            className={neutralBadgeClass}
                             size="sm"
                             action="muted"
-                            variant="solid"
+                            variant="outline"
                           >
-                            <BadgeText className="text-xs text-typography-800">
+                            <BadgeText className={neutralBadgeTextClass}>
                               Compression:{" "}
                               {getCompressionLabel(rule.compression)}
                             </BadgeText>
                           </Badge>
                           {rule.machine_name ? (
                             <Badge
-                              className="rounded-full px-3 py-1"
+                              className={neutralBadgeClass}
                               size="sm"
                               action="muted"
-                              variant="solid"
+                              variant="outline"
                             >
-                              <BadgeText className="text-xs text-typography-800">
+                              <BadgeText className={neutralBadgeTextClass}>
                                 {rule.machine_name}
                               </BadgeText>
                             </Badge>
@@ -448,16 +467,17 @@ export default function BtrfsAutomaticMountsScreen() {
                       </VStack>
                       <Button
                         action="negative"
-                        className="bg-error-600 rounded-xl hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
+                        variant="outline"
                         onPress={() => handleRemove(rule.id)}
                         isDisabled={removingId !== null}
+                        className={outlineButtonClass}
                       >
                         {removingId === rule.id ? (
                           <ButtonSpinner />
                         ) : (
-                          <ButtonIcon as={Trash2} size="sm" />
+                          <ButtonIcon as={Trash2} size="sm" className={dangerOutlineIconClass} />
                         )}
-                        <ButtonText className="text-background-0 dark:text-[#0A1628]">
+                        <ButtonText className={dangerOutlineTextClass}>
                           Remove
                         </ButtonText>
                       </Button>
@@ -475,23 +495,24 @@ export default function BtrfsAutomaticMountsScreen() {
         onClose={() => setCreateModal(false)}
         size="lg"
       >
-        <ModalBackdrop />
-        <ModalContent className="max-w-2xl">
-          <ModalHeader className="flex-row items-start justify-between">
-            <Heading size="md" className="text-typography-900">
+        <ModalBackdrop className={modalBackdropClass} />
+        <ModalContent className={`max-w-2xl max-h-[90vh] ${modalShellClass}`}>
+          <ModalHeader className={modalHeaderClass}>
+            <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
               New Auto-mount
             </Heading>
-            <ModalCloseButton />
+            <ModalCloseButton className="text-typography-500 dark:text-[#9AA4B8]" />
           </ModalHeader>
-          <ModalBody className="gap-4">
+          <ModalBody className={`${modalBodyClass} gap-4`}>
             <VStack className="gap-3">
               <Select selectedValue={formRaid} onValueChange={setFormRaid}>
-                <SelectTrigger>
+                <SelectTrigger className={selectTriggerClass}>
                   <SelectInput
                     placeholder="Select RAID"
                     value={getRaidLabel(formRaid, raids)}
+                    className={selectInputClass}
                   />
-                  <SelectIcon as={ChevronDownIcon} />
+                  <SelectIcon as={ChevronDownIcon} className={selectIconClass} />
                 </SelectTrigger>
                 <SelectPortal>
                   <SelectBackdrop />
@@ -509,7 +530,7 @@ export default function BtrfsAutomaticMountsScreen() {
                   </SelectContent>
                 </SelectPortal>
               </Select>
-              <Input>
+              <Input className={inputShellClass}>
                 <InputField
                   value={formMountPoint}
                   onChangeText={(text) => {
@@ -519,23 +540,26 @@ export default function BtrfsAutomaticMountsScreen() {
                     setSelectedDirectory(null);
                   }}
                   placeholder="/mnt/raid"
+                  className={selectInputClass}
                 />
               </Input>
               <Button
-                variant="link"
-                className="self-start bg-background-50 dark:bg-[#0F1A2E] border border-[#0F1A2E] p-2 rounded-xl"
+                variant="outline"
+                action="default"
+                size="sm"
+                className={`${outlineButtonClass} self-start`}
                 onPress={handleOpenDirectoryModal}
                 isDisabled={!selectedMachine.trim() || isFetchingDir}
               >
                 {isFetchingDir ? (
                   <>
                     <ButtonSpinner size="small" />
-                    <ButtonText className="ml-2 text-sm">
+                    <ButtonText className={`${outlineButtonTextClass} ml-2 text-sm`}>
                       Loading directories...
                     </ButtonText>
                   </>
                 ) : (
-                  <ButtonText className="text-sm text-[#0E1524] dark:text-[#E8EBF0]">
+                  <ButtonText className={`${outlineButtonTextClass} text-sm`}>
                     Browse directories
                   </ButtonText>
                 )}
@@ -549,12 +573,13 @@ export default function BtrfsAutomaticMountsScreen() {
                 selectedValue={formCompression}
                 onValueChange={setFormCompression}
               >
-                <SelectTrigger>
+                <SelectTrigger className={selectTriggerClass}>
                   <SelectInput
                     placeholder="Compression"
                     value={getCompressionLabel(formCompression)}
+                    className={selectInputClass}
                   />
-                  <SelectIcon as={ChevronDownIcon} />
+                  <SelectIcon as={ChevronDownIcon} className={selectIconClass} />
                 </SelectTrigger>
                 <SelectPortal>
                   <SelectBackdrop />
@@ -574,15 +599,15 @@ export default function BtrfsAutomaticMountsScreen() {
               </Select>
             </VStack>
           </ModalBody>
-          <ModalFooter className="gap-3">
+          <ModalFooter className={modalFooterClass}>
             <Button
               variant="outline"
               action="default"
               onPress={() => setCreateModal(false)}
               isDisabled={saving}
-              className="border-outline-200 rounded-xl dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]"
+              className={outlineButtonClass}
             >
-              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+              <ButtonText className={outlineButtonTextClass}>
                 Cancel
               </ButtonText>
             </Button>

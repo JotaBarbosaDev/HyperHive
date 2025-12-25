@@ -43,11 +43,18 @@ export function DirectoryPickerModal({
   onOk,
   isLoading = false,
 }: DirectoryPickerModalProps) {
+  const modalBackdropClass = "bg-background-950/60 dark:bg-black/70";
+  const modalShellClass = "w-full rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]";
+  const modalHeaderClass = "px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#1E2F47]";
+  const modalBodyClass = "px-6 pt-3 pb-4 max-h-[60vh] overflow-y-auto";
+  const modalFooterClass = "gap-3 px-6 pt-4 pb-6 border-t border-outline-100 dark:border-[#1E2F47]";
+  const outlineButtonClass = "border-outline-200 rounded-xl dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]";
+  const outlineButtonTextClass = "text-typography-900 dark:text-[#E8EBF0]";
   return (
     <Modal isOpen={isOpen} onClose={onCancel}>
-      <ModalBackdrop className="bg-background-950/50 dark:bg-black/70" />
-      <ModalContent className="w-full max-w-[520px] web:max-w-[560px] p-5 web:p-6 rounded-2xl dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52] shadow-xl">
-        <ModalHeader className="pb-3 border-b border-outline-100 dark:border-[#2A3B52]">
+      <ModalBackdrop className={modalBackdropClass} />
+      <ModalContent className={`w-full max-w-[520px] web:max-w-[560px] ${modalShellClass}`}>
+        <ModalHeader className={modalHeaderClass}>
           <Heading
             size="md"
             className="web:text-2xl text-typography-900 dark:text-[#E8EBF0]"
@@ -56,16 +63,16 @@ export function DirectoryPickerModal({
             Choose directory
           </Heading>
         </ModalHeader>
-        <ModalBody className="pt-2 max-h-[60vh] overflow-y-auto pr-1 web:pr-2">
+        <ModalBody className={`${modalBodyClass} pr-1 web:pr-2`}>
           {isLoading ? (
             <VStack className="items-center justify-center py-6 gap-3">
-              <Spinner color="#2DD4BF" />
-              <Text className="text-typography-500 dark:text-[#8A94A8] text-sm web:text-base">
+              <Spinner className="text-primary-500" />
+              <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm web:text-base">
                 Loading directories...
               </Text>
             </VStack>
           ) : directories.length === 0 ? (
-            <Text className="text-typography-500 dark:text-[#8A94A8] text-sm web:text-base text-center py-6">
+            <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm web:text-base text-center py-6">
               No directories available.
             </Text>
           ) : (
@@ -77,16 +84,12 @@ export function DirectoryPickerModal({
                   <Button
                     key={dir}
                     variant={isSelected ? "solid" : "outline"}
-                    action="primary"
-                    className={`justify-start web:px-4 h-11 web:h-11 rounded-xl transition-all ${isSelected
-                      ? "bg-[#2DD4BF] border-[#2DD4BF] dark:bg-[#2DD4BF] dark:border-[#2DD4BF]"
-                      : "bg-background-0 dark:bg-[#0E1524] dark:border-[#2A3B52] hover:web:bg-background-100 dark:hover:web:bg-[#1A2637]"
-                      }`}
+                    action={isSelected ? "primary" : "default"}
+                    className={`justify-start web:px-4 h-11 web:h-11 rounded-xl ${isSelected ? "" : outlineButtonClass}`}
                     onPress={() => onSelect(dir)}
                   >
                     <ButtonText
-                      className={`text-sm web:text-base ${isSelected ? "text-[#0D1420] dark:text-[#0D1420] font-semibold" : "text-typography-900 dark:text-[#E8EBF0]"
-                        }`}
+                      className={`text-sm web:text-base ${isSelected ? "font-semibold" : outlineButtonTextClass}`}
                       style={{ fontFamily: isSelected ? "Inter_600SemiBold" : "Inter_400Regular" }}
                     >
                       {label}
@@ -97,14 +100,14 @@ export function DirectoryPickerModal({
             </VStack>
           )}
         </ModalBody>
-        <ModalFooter className="gap-3 web:gap-4 pt-3 border-t border-outline-100 dark:border-[#2A3B52] mt-3">
+        <ModalFooter className={`${modalFooterClass} web:gap-4`}>
           <Button
             variant="outline"
             onPress={onCancel}
-            className="flex-1 web:px-5 h-11 web:h-11 rounded-xl dark:border-[#2A3B52] hover:web:bg-background-100 dark:hover:web:bg-[#1A2637]"
+            className={`flex-1 web:px-5 h-11 web:h-11 ${outlineButtonClass}`}
           >
             <ButtonText
-              className="web:text-base dark:text-[#E8EBF0] font-semibold"
+              className={`web:text-base font-semibold ${outlineButtonTextClass}`}
               style={{ fontFamily: "Inter_600SemiBold" }}
             >
               Cancel
@@ -113,10 +116,10 @@ export function DirectoryPickerModal({
           <Button
             variant="outline"
             onPress={onOk ?? onCancel}
-            className="flex-1 web:px-5 h-11 web:h-11 rounded-xl border-outline-200 dark:border-[#2A3B52] hover:web:bg-background-100 dark:hover:web:bg-[#1A2637]"
+            className={`flex-1 web:px-5 h-11 web:h-11 ${outlineButtonClass}`}
           >
             <ButtonText
-              className="web:text-base dark:text-[#E8EBF0] font-semibold"
+              className={`web:text-base font-semibold ${outlineButtonTextClass}`}
               style={{ fontFamily: "Inter_600SemiBold" }}
             >
               OK
@@ -126,10 +129,10 @@ export function DirectoryPickerModal({
             action="primary"
             onPress={onConfirm}
             isDisabled={isLoading || directories.length === 0 || !selectedDirectory}
-            className="flex-1 web:px-5 h-11 web:h-11 rounded-xl dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4]"
+            className="flex-1 web:px-5 h-11 web:h-11 rounded-xl"
           >
             <ButtonText
-              className="web:text-base dark:text-[#0D1420] font-semibold"
+              className="web:text-base font-semibold"
               style={{ fontFamily: "Inter_600SemiBold" }}
             >
               Add
