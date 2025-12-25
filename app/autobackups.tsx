@@ -1,5 +1,5 @@
 import React from "react";
-import { ScrollView, RefreshControl, useColorScheme, Alert } from "react-native";
+import { ScrollView, RefreshControl, useColorScheme } from "react-native";
 import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";
 import { Heading } from "@/components/ui/heading";
@@ -14,6 +14,7 @@ import { Checkbox, CheckboxIndicator, CheckboxIcon, CheckboxLabel } from "@/comp
 import { ChevronDownIcon } from "@/components/ui/icon";
 import { Toast, ToastTitle, useToast } from "@/components/ui/toast";
 import { Fab, FabIcon, FabLabel } from "@/components/ui/fab";
+import ConfirmDialog from "@/components/modals/ConfirmDialog";
 import { Calendar, Database, TrendingUp, RefreshCw, Trash2, Edit, Power, PowerOff, Plus, Clock, Check, Info } from "lucide-react-native";
 
 import {
@@ -78,6 +79,7 @@ export default function AutoBackupsScreen() {
   const [vmOptions, setVmOptions] = React.useState<VirtualMachine[]>([]);
   const [loadingOptions, setLoadingOptions] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const [confirmDelete, setConfirmDelete] = React.useState<AutoBackup | null>(null);
 
   // Form state
   const [formVm, setFormVm] = React.useState("");
@@ -285,29 +287,22 @@ export default function AutoBackupsScreen() {
 
   const handleRefresh = () => refreshSchedules(true);
 
+  const deleteSchedule = async (schedule: AutoBackup) => {
+    try {
+      await deleteAutoBackup(schedule.id);
+      setSchedules((prev) => prev.filter((s) => s.id !== schedule.id));
+      showToastMessage("Schedule deleted");
+    } catch (err) {
+      console.error("Error deleting auto-backup", err);
+      const message = err instanceof Error ? err.message : "Failed to delete schedule.";
+      showToastMessage(message, "error");
+    } finally {
+      setConfirmDelete(null);
+    }
+  };
+
   const handleDelete = (schedule: AutoBackup) => {
-    Alert.alert(
-      "Delete schedule",
-      `Delete auto-backup for ${schedule.vmName}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteAutoBackup(schedule.id);
-              setSchedules((prev) => prev.filter((s) => s.id !== schedule.id));
-              showToastMessage("Schedule deleted");
-            } catch (err) {
-              console.error("Error deleting auto-backup", err);
-              const message = err instanceof Error ? err.message : "Failed to delete schedule.";
-              showToastMessage(message, "error");
-            }
-          },
-        },
-      ]
-    );
+    setConfirmDelete(schedule);
   };
 
   const openEdit = (schedule: AutoBackup) => {
@@ -1035,6 +1030,19 @@ export default function AutoBackupsScreen() {
           </ModalFooter>
         </ModalContent>
       </Modal>
+      <ConfirmDialog
+        isOpen={!!confirmDelete}
+        title="Delete schedule"
+        description={
+          confirmDelete ? `Delete auto-backup for ${confirmDelete.vmName}?` : ""
+        }
+        confirmLabel="Delete"
+        onConfirm={() => {
+          if (!confirmDelete) return;
+          void deleteSchedule(confirmDelete);
+        }}
+        onClose={() => setConfirmDelete(null)}
+      />
     </Box>
   );
 }
