@@ -810,6 +810,8 @@ export default function ProfileScreen() {
   const [shareInfos, setShareInfos] = React.useState<ShareInfo[]>([]);
   const [activeDownload, setActiveDownload] = React.useState<DownloadMonitor | null>(null);
   const [deletingIsoId, setDeletingIsoId] = React.useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = React.useState<IsoItem | null>(null);
+  const [deleteError, setDeleteError] = React.useState<string | null>(null);
   const colorScheme = useColorScheme();
 
   const refreshControlTint = colorScheme === "dark" ? "#F8FAFC" : "#0F172A";
@@ -932,6 +934,14 @@ export default function ProfileScreen() {
     fetchIsos("initial");
   }, [fetchIsos]);
 
+  const handleCloseDeleteModal = React.useCallback(() => {
+    if (deletingIsoId) {
+      return;
+    }
+    setDeleteTarget(null);
+    setDeleteError(null);
+  }, [deletingIsoId]);
+
   const displayIsos = React.useMemo(() => {
     if (shareInfos.length === 0) {
       return isos;
@@ -975,41 +985,51 @@ export default function ProfileScreen() {
     fetchIsos("refresh");
   }, [fetchIsos]);
 
-  const handleDeleteIso = React.useCallback(
-    async (isoId: string) => {
-      if (!isoId || deletingIsoId) {
+  const handleRequestDelete = React.useCallback(
+    (iso: IsoItem) => {
+      if (deletingIsoId) {
         return;
       }
-      setError(null);
-      setDeletingIsoId(isoId);
-      try {
-        await deleteIsoApi(isoId);
-        setIsos((prev) => prev.filter((iso) => iso.id !== isoId));
-      } catch (err) {
-        let message = "Unable to delete ISO.";
-        if (err instanceof ApiError) {
-          if (typeof err.data === "string" && err.data.trim()) {
-            message = err.data;
-          } else if (
-            typeof err.data === "object" &&
-            err.data !== null &&
-            "message" in err.data &&
-            typeof (err.data as { message?: unknown }).message === "string"
-          ) {
-            message = (err.data as { message: string }).message;
-          } else if (err.message) {
-            message = err.message;
-          }
-        } else if (err instanceof Error && err.message) {
+      setDeleteError(null);
+      setDeleteTarget(iso);
+    },
+    [deletingIsoId]
+  );
+
+  const handleDeleteIso = React.useCallback(async () => {
+    if (!deleteTarget || deletingIsoId) {
+      return;
+    }
+    setError(null);
+    setDeleteError(null);
+    setDeletingIsoId(deleteTarget.id);
+    try {
+      await deleteIsoApi(deleteTarget.id);
+      setIsos((prev) => prev.filter((iso) => iso.id !== deleteTarget.id));
+      setDeleteTarget(null);
+    } catch (err) {
+      let message = "Unable to delete ISO.";
+      if (err instanceof ApiError) {
+        if (typeof err.data === "string" && err.data.trim()) {
+          message = err.data;
+        } else if (
+          typeof err.data === "object" &&
+          err.data !== null &&
+          "message" in err.data &&
+          typeof (err.data as { message?: unknown }).message === "string"
+        ) {
+          message = (err.data as { message: string }).message;
+        } else if (err.message) {
           message = err.message;
         }
-        setError(message);
-      } finally {
-        setDeletingIsoId(null);
+      } else if (err instanceof Error && err.message) {
+        message = err.message;
       }
-    },
-    [deletingIsoId, setIsos]
-  );
+      setDeleteError(message);
+    } finally {
+      setDeletingIsoId(null);
+    }
+  }, [deleteTarget, deletingIsoId, setIsos]);
 
   const activeDownloadProgress =
     activeDownload?.progress != null ? clampProgress(activeDownload.progress) : undefined;
@@ -1213,7 +1233,7 @@ export default function ProfileScreen() {
                 <IsoCard
                   key={iso.id}
                   iso={iso}
-                  onDelete={handleDeleteIso}
+                  onDelete={handleRequestDelete}
                   isDeleting={deletingIsoId === iso.id}
                 />
               ))}
@@ -1221,6 +1241,97 @@ export default function ProfileScreen() {
           )}
         </Box>
       </ScrollView>
+      <Modal isOpen={!!deleteTarget} onClose={handleCloseDeleteModal}>
+        <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+        <ModalContent className="max-w-full web:max-w-lg p-5 web:p-6 rounded-2xl bg-background-0 dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52]">
+          <ModalHeader className="pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
+            <HStack className="items-center gap-3">
+              <Box className="h-10 w-10 rounded-2xl bg-error-500/10 dark:bg-error-900/20 items-center justify-center">
+                <Icon as={AlertCircle} size="sm" className="text-error-600 dark:text-error-400" />
+              </Box>
+              <VStack>
+                <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
+                  Remove ISO?
+                </Heading>
+                <Text className="text-sm text-typography-600 dark:text-typography-400">
+                  This action permanently deletes the ISO from storage.
+                </Text>
+              </VStack>
+            </HStack>
+          </ModalHeader>
+          <ModalBody className="pt-5">
+            <VStack className="gap-4">
+              {deleteTarget ? (
+                <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0A1628] p-4">
+                  <VStack className="gap-2">
+                    <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                      ISO
+                    </Text>
+                    <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                      {deleteTarget.name}
+                    </Text>
+                    <HStack className="flex-wrap gap-2">
+                      {deleteTarget.sizeLabel ? (
+                        <Badge action="muted" variant="outline" className="rounded-full border px-3">
+                          <BadgeText className="text-xs text-typography-700 dark:text-typography-200">
+                            {deleteTarget.sizeLabel}
+                          </BadgeText>
+                        </Badge>
+                      ) : null}
+                      {deleteTarget.mountName ? (
+                        <Badge action="muted" variant="outline" className="rounded-full border px-3">
+                          <BadgeText className="text-xs text-typography-700 dark:text-typography-200">
+                            {deleteTarget.mountName}
+                          </BadgeText>
+                        </Badge>
+                      ) : null}
+                      {deleteTarget.machineName ? (
+                        <Badge action="muted" variant="outline" className="rounded-full border px-3">
+                          <BadgeText className="text-xs text-typography-700 dark:text-typography-200">
+                            {deleteTarget.machineName}
+                          </BadgeText>
+                        </Badge>
+                      ) : null}
+                    </HStack>
+                    {deleteTarget.filePath ? (
+                      <Text className="text-xs text-typography-600 dark:text-typography-400 break-all">
+                        {deleteTarget.filePath}
+                      </Text>
+                    ) : null}
+                  </VStack>
+                </Box>
+              ) : null}
+              {deleteError ? (
+                <Box className="rounded-xl border border-error-300 dark:border-error-700 bg-error-50 dark:bg-error-900/20 px-4 py-3">
+                  <Text className="text-sm text-error-700 dark:text-error-200">{deleteError}</Text>
+                </Box>
+              ) : null}
+            </VStack>
+          </ModalBody>
+          <ModalFooter className="gap-3 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
+            <Button
+              variant="outline"
+              className="rounded-xl px-4"
+              onPress={handleCloseDeleteModal}
+              isDisabled={Boolean(deletingIsoId)}
+            >
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
+            </Button>
+            <Button
+              action="negative"
+              onPress={handleDeleteIso}
+              isDisabled={Boolean(deletingIsoId)}
+              className="rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
+            >
+              {deletingIsoId ? (
+                <ButtonSpinner />
+              ) : (
+                <ButtonText className="text-background-0 dark:text-[#0A1628]">Remove ISO</ButtonText>
+              )}
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
       <AddIsoModal
         isOpen={showAddIsoModal}
         onClose={() => setShowAddIsoModal(false)}
@@ -1234,7 +1345,7 @@ export default function ProfileScreen() {
 
 type IsoCardProps = {
   iso: IsoItem;
-  onDelete?: (isoId: string) => void;
+  onDelete?: (iso: IsoItem) => void;
   isDeleting?: boolean;
 };
 
@@ -1342,7 +1453,7 @@ function IsoCard({ iso, onDelete, isDeleting }: IsoCardProps) {
           <HStack className="justify-end pt-2">
             <Button
               action="negative"
-              onPress={() => onDelete?.(iso.id)}
+              onPress={() => onDelete?.(iso)}
               isDisabled={!onDelete || isDeleting}
               className="rounded-xl px-4 h-10 bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
             >

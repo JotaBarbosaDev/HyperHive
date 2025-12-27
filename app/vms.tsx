@@ -121,6 +121,8 @@ import {
   Download,
   Upload,
   Lock,
+  X,
+  ChevronDown,
 } from "lucide-react-native";
 
 // Interfaces TypeScript
@@ -1318,7 +1320,7 @@ export default function VirtualMachinesScreen() {
                           const vmNfsName = getNfsNameByDiskPath(vm.diskPath);
 
                           return (
-                            
+
                             <Pressable
                               key={vm.name}
                               onPress={() => {
@@ -1677,9 +1679,9 @@ export default function VirtualMachinesScreen() {
 
           {/* Modals e Actionsheet */}
           <Modal isOpen={!!detailsVm} onClose={() => setDetailsVm(null)}>
-            <ModalBackdrop />
-            <ModalContent className="rounded-lg shadow-lg max-w-[720px] w-full">
-              <ModalHeader className="flex justify-between">
+            <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+            <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] shadow-soft-2 max-w-[720px] w-full">
+              <ModalHeader className="flex justify-between border-b border-outline-100 dark:border-[#2A3B52]">
                 <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
                   VM Details
                 </Heading>
@@ -1899,11 +1901,11 @@ export default function VirtualMachinesScreen() {
                       setConfirmAction(null);
                     }
                   }}
-                  className="rounded-md px-4 py-2 bg-typography-900 dark:bg-[#E8EBF0]"
+                  className="rounded-xl px-4 py-2 bg-typography-900 dark:bg-[#2DD4BF]"
                   disabled={Boolean(deletingVm)}
                 >
                   {deletingVm ? <ButtonSpinner className="mr-2" /> : null}
-                  <ButtonText className="text-background-0 dark:text-typography-900">Confirm</ButtonText>
+                  <ButtonText className="text-background-0 dark:text-[#0A1628]">Confirm</ButtonText>
                 </Button>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -1943,83 +1945,93 @@ export default function VirtualMachinesScreen() {
           />
 
           {/* Modal: Editar Recursos */}
-          <Modal isOpen={!!editVm} onClose={() => setEditVm(null)} size="lg">
+          <Modal isOpen={!!editVm} onClose={() => setEditVm(null)} size="full">
             <ModalBackdrop />
-            <ModalContent className="rounded-2xl border border-outline-100 shadow-soft-1 web:max-w-2xl w-[90%] max-h-[85vh] web:max-h-[90vh]">
+            <ModalContent className="max-w-[90%] max-h-[90%] web:max-w-4xl">
               <ModalHeader className="border-b border-outline-100 dark:border-[#2A3B52]">
-                <Heading size="md" className="text-gray-900 dark:text-[#E8EBF0]">
+                <Heading
+                  size="lg"
+                  className="text-typography-900 dark:text-[#E8EBF0]"
+                  style={{ fontFamily: "Inter_700Bold" }}
+                >
                   Edit Resources
                 </Heading>
-                <ModalCloseButton />
+                <ModalCloseButton>
+                  <X className="text-typography-700 dark:text-[#E8EBF0]" />
+                </ModalCloseButton>
               </ModalHeader>
-              <ModalBody className="overflow-y-auto max-h-[calc(85vh-140px)] web:max-h-[calc(90vh-140px)]">
-                {editVm && (
-                  <EditVmForm
-                    vm={editVm}
-                    onCancel={() => setEditVm(null)}
-                    onSave={async ({ vcpu, memory, disk, network }) => {
-                      try {
-                        // Atualizar recursos (CPU, RAM, Disco)
-                        await editVmResources(editVm.name, {
-                          memory,
-                          vcpu,
-                          disk_sizeGB: disk,
-                        });
+              <ModalBody className="bg-background-50 dark:bg-[#0A1628]">
+                <ScrollView showsVerticalScrollIndicator={true}>
+                  <Box className="p-4 web:p-6">
+                    {editVm && (
+                      <EditVmForm
+                        vm={editVm}
+                        onCancel={() => setEditVm(null)}
+                        onSave={async ({ vcpu, memory, disk, network }) => {
+                          try {
+                            // Atualizar recursos (CPU, RAM, Disco)
+                            await editVmResources(editVm.name, {
+                              memory,
+                              vcpu,
+                              disk_sizeGB: disk,
+                            });
 
-                        // Atualizar rede se foi alterada
-                        if (network !== editVm.network) {
-                          await changeVmNetwork(editVm.name, network);
-                        }
+                            // Atualizar rede se foi alterada
+                            if (network !== editVm.network) {
+                              await changeVmNetwork(editVm.name, network);
+                            }
 
-                        await fetchAndSetVms();
-                        setEditVm(null);
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        toast.show({
-                          placement: "top",
-                          render: ({ id }) => (
-                            <Toast
-                              nativeID={"toast-" + id}
-                              className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-                              action="success"
-                            >
-                              <ToastTitle size="sm">
-                                Resources updated
-                              </ToastTitle>
-                            </Toast>
-                          ),
-                        });
-                      } catch (error) {
-                        console.error("Error editing VM:", error);
-                        toast.show({
-                          placement: "top",
-                          render: ({ id }) => (
-                            <Toast
-                              nativeID={"toast-" + id}
-                              className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
-                              action="error"
-                            >
-                              <ToastTitle size="sm">
-                                Error editing VM
-                              </ToastTitle>
-                            </Toast>
-                          ),
-                        });
-                        throw error instanceof Error
-                          ? error
-                          : new Error("Error editing VM");
-                      }
-                    }}
-                  />
-                )}
+                            await fetchAndSetVms();
+                            setEditVm(null);
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            toast.show({
+                              placement: "top",
+                              render: ({ id }) => (
+                                <Toast
+                                  nativeID={"toast-" + id}
+                                  className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+                                  action="success"
+                                >
+                                  <ToastTitle size="sm">
+                                    Resources updated
+                                  </ToastTitle>
+                                </Toast>
+                              ),
+                            });
+                          } catch (error) {
+                            console.error("Error editing VM:", error);
+                            toast.show({
+                              placement: "top",
+                              render: ({ id }) => (
+                                <Toast
+                                  nativeID={"toast-" + id}
+                                  className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+                                  action="error"
+                                >
+                                  <ToastTitle size="sm">
+                                    Error editing VM
+                                  </ToastTitle>
+                                </Toast>
+                              ),
+                            });
+                            throw error instanceof Error
+                              ? error
+                              : new Error("Error editing VM");
+                          }
+                        }}
+                      />
+                    )}
+                  </Box>
+                </ScrollView>
               </ModalBody>
             </ModalContent>
           </Modal>
 
           {/* Modal: Clonar VM */}
           <Modal isOpen={!!cloneVm} onClose={() => setCloneVm(null)}>
-            <ModalBackdrop />
-            <ModalContent className="rounded-lg shadow-lg">
-              <ModalHeader>
+            <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+            <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] shadow-soft-2">
+              <ModalHeader className="border-b border-outline-100 dark:border-[#2A3B52]">
                 <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
                   Clone VM
                 </Heading>
@@ -2082,7 +2094,7 @@ export default function VirtualMachinesScreen() {
                   />
                 )}
               </ModalBody>
-              <ModalFooter>
+              <ModalFooter className="border-t border-outline-100 dark:border-[#2A3B52]">
                 <HStack className="justify-end gap-2">
                   <Button
                     variant="outline"
@@ -2098,9 +2110,9 @@ export default function VirtualMachinesScreen() {
 
           {/* Modal: Migrar VM */}
           <Modal isOpen={!!migrateVm} onClose={() => setMigrateVm(null)}>
-            <ModalBackdrop />
-            <ModalContent className="rounded-lg shadow-lg">
-              <ModalHeader>
+            <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+            <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] shadow-soft-2">
+              <ModalHeader className="border-b border-outline-100 dark:border-[#2A3B52]">
                 <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
                   Migrate VM
                 </Heading>
@@ -2178,7 +2190,7 @@ export default function VirtualMachinesScreen() {
                   />
                 )}
               </ModalBody>
-              <ModalFooter>
+              <ModalFooter className="border-t border-outline-100 dark:border-[#2A3B52]">
                 <HStack className="justify-end gap-2">
                   <Button
                     variant="outline"
@@ -2194,9 +2206,9 @@ export default function VirtualMachinesScreen() {
 
           {/* Modal: Mover Disco */}
           <Modal isOpen={!!moveDiskVm} onClose={() => setMoveDiskVm(null)}>
-            <ModalBackdrop />
-            <ModalContent className="rounded-lg shadow-lg">
-              <ModalHeader>
+            <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+            <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] shadow-soft-2">
+              <ModalHeader className="border-b border-outline-100 dark:border-[#2A3B52]">
                 <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
                   Move Disk
                 </Heading>
@@ -2247,7 +2259,7 @@ export default function VirtualMachinesScreen() {
                   />
                 )}
               </ModalBody>
-              <ModalFooter>
+              <ModalFooter className="border-t border-outline-100 dark:border-[#2A3B52]">
                 <HStack className="justify-end gap-2">
                   <Button
                     variant="outline"
@@ -2263,9 +2275,9 @@ export default function VirtualMachinesScreen() {
 
           {/* Modal: Change VNC Password */}
           <Modal isOpen={!!changeVncVm} onClose={() => setChangeVncVm(null)}>
-            <ModalBackdrop />
-            <ModalContent className="rounded-lg shadow-lg">
-              <ModalHeader>
+            <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+            <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] shadow-soft-2">
+              <ModalHeader className="border-b border-outline-100 dark:border-[#2A3B52]">
                 <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
                   Change VNC Password
                 </Heading>
@@ -2326,9 +2338,9 @@ export default function VirtualMachinesScreen() {
 
           {/* Modal: Update CPU XML */}
           <Modal isOpen={!!updateCpuVm} onClose={() => setUpdateCpuVm(null)}>
-            <ModalBackdrop />
-            <ModalContent className="rounded-lg shadow-lg">
-              <ModalHeader>
+            <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+            <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] shadow-soft-2">
+              <ModalHeader className="border-b border-outline-100 dark:border-[#2A3B52]">
                 <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
                   Update CPU XML
                 </Heading>
@@ -3015,7 +3027,7 @@ function EditVmForm({
 
   const quickMemoriesGb = [2, 4, 8, 16, 32, 64];
   const quickDisksGb = [20, 50, 100, 200, 500];
-  const isValid = vcpu > 0 && memory > 0 && disk > 0;
+  const isValid = vcpu > 0 && memory > 0 && disk > 0 && network.trim().length > 0;
   const formatMemoryLabel = (mb: number) =>
     mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb} MB`;
 
@@ -3044,258 +3056,180 @@ function EditVmForm({
   };
 
   return (
-    <VStack className="gap-4">
-      <Box className="rounded-xl border border-outline-100 p-4">
-        <HStack className="justify-between items-start">
-          <VStack className="gap-1">
-            <Text className="text-xs uppercase tracking-wide text-typography-500">
-              Selected VM
-            </Text>
-            <Heading size="md" className="text-typography-900">
-              {vm.name}
-            </Heading>
-            <Text className="text-sm text-typography-600">
-              Slave: {vm.machineName}
-            </Text>
-          </VStack>
-          <Badge
-            variant={VM_STATES[vm.state].badgeVariant}
-            className="rounded-full"
-          >
-            <BadgeText>{VM_STATES[vm.state].label}</BadgeText>
-          </Badge>
-        </HStack>
-        <HStack className="mt-4 gap-3 flex-wrap">
-          {[
-            {
-              label: "vCPU",
-              value: `${vcpu} cores`,
-              previous: `${vm.DefinedCPUS} current`,
-            },
-            {
-              label: "RAM",
-              value: formatMemoryLabel(memory),
-              previous: formatMemoryLabel(vm.DefinedRam),
-            },
-            {
-              label: "Disk",
-              value: `${disk} GB`,
-              previous: `${vm.diskSizeGB} GB`,
-            },
-            {label: "Network", value: network, previous: vm.network},
-          ].map((item) => (
-            <Box
-              key={item.label}
-              className="rounded-lg bg-white/70 dark:bg-[#0A1020] px-3 py-2 border border-white/50 dark:border-outline-100"
-            >
-              <Text className="text-[11px] uppercase tracking-wide text-typography-500">
-                {item.label}
-              </Text>
-              <HStack className="items-center gap-2 mt-1">
-                <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
-                  {item.value}
-                </Text>
-                <Badge
-                  variant="outline"
-                  className="rounded-full border-outline-200"
-                >
-                  <BadgeText className="text-[11px] text-typography-600">
-                    {item.previous}
-                  </BadgeText>
-                </Badge>
-              </HStack>
-            </Box>
-          ))}
-        </HStack>
-      </Box>
-
-      <VStack className="rounded-xl border border-outline-100 dark:bg-[#0E1524] p-4 gap-4">
-        <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
+    <VStack className="gap-6">
+      <VStack className="gap-4">
+        <Text
+          className="text-sm text-typography-700 dark:text-typography-300"
+          style={{ fontFamily: "Inter_600SemiBold" }}
+        >
           Adjust resources
         </Text>
-
-        <FormControl>
-          <FormControlLabel>
-            <FormControlLabelText className="text-sm font-semibold text-typography-800">
+        <VStack className="gap-4 web:grid web:grid-cols-2 web:gap-4">
+          <VStack className="gap-2">
+            <Text
+              className="text-sm text-typography-700 dark:text-typography-300"
+              style={{ fontFamily: "Inter_600SemiBold" }}
+            >
               vCPU
-            </FormControlLabelText>
-          </FormControlLabel>
-          <Select
-            selectedValue={String(vcpu)}
-            onValueChange={(value) => setVcpu(Number(value) || vcpu)}
-          >
-            <SelectTrigger>
-              <SelectInput value={`${vcpu} vCPU`} />
-              <SelectIcon />
-            </SelectTrigger>
-            <SelectPortal>
-              <SelectBackdrop />
-              <SelectContent>
-                <SelectDragIndicatorWrapper>
-                  <SelectDragIndicator />
-                </SelectDragIndicatorWrapper>
-                {[1, 2, 4, 8, 16, 32].map((n) => (
-                  <SelectItem
-                    key={n}
-                    label={`${n} vCPU`}
-                    value={String(n)}
-                    onPress={() => setVcpu(n)}
-                  />
-                ))}
-              </SelectContent>
-            </SelectPortal>
-          </Select>
-          <FormControlHelper>
-            <FormControlHelperText className="text-xs text-typography-500">
-              Select the total virtual CPUs available to this VM.
-            </FormControlHelperText>
-          </FormControlHelper>
-        </FormControl>
+            </Text>
+            <Input
+              variant="outline"
+              className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+            >
+              <InputField
+                value={vcpu ? String(vcpu) : ""}
+                onChangeText={(value) => handleNumericChange(value, setVcpu)}
+                keyboardType="numeric"
+                placeholder="2"
+                className="text-typography-900 dark:text-[#E8EBF0]"
+              />
+            </Input>
+          </VStack>
 
-        <FormControl>
-          <FormControlLabel>
-            <FormControlLabelText className="text-sm font-semibold text-typography-800">
+          <VStack className="gap-2">
+            <Text
+              className="text-sm text-typography-700 dark:text-typography-300"
+              style={{ fontFamily: "Inter_600SemiBold" }}
+            >
               Memory (MB)
-            </FormControlLabelText>
-          </FormControlLabel>
-          <Input variant="outline" className="rounded-md">
-            <InputField
-              placeholder="E.g.: 8192"
-              keyboardType="numeric"
-              value={memory ? String(memory) : ""}
-              onChangeText={(value) => handleNumericChange(value, setMemory)}
-            />
-          </Input>
-          <FormControlHelper>
-            <FormControlHelperText className="text-xs text-typography-500">
-              Enter the value in MB (8192 MB = 8 GB).
-            </FormControlHelperText>
-          </FormControlHelper>
-          <HStack className="mt-2 gap-2 flex-wrap">
-            {quickMemoriesGb.map((gb) => {
-              const mb = gb * 1024;
-              return (
+            </Text>
+            <Input
+              variant="outline"
+              className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+            >
+              <InputField
+                placeholder="4096"
+                keyboardType="numeric"
+                value={memory ? String(memory) : ""}
+                onChangeText={(value) => handleNumericChange(value, setMemory)}
+                className="text-typography-900 dark:text-[#E8EBF0]"
+              />
+            </Input>
+            <HStack className="gap-2 flex-wrap">
+              {quickMemoriesGb.map((gb) => {
+                const mb = gb * 1024;
+                return (
+                  <Pressable
+                    key={`mem-${gb}`}
+                    onPress={() => setMemory(mb)}
+                    className={`px-3 py-2 rounded-full border ${memory === mb
+                        ? "border-primary-500 bg-primary-50/20"
+                        : "border-outline-200 bg-background-0"
+                      }`}
+                  >
+                    <Text className="text-xs font-medium text-typography-700">
+                      {gb} GB
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </HStack>
+          </VStack>
+
+          <VStack className="gap-2">
+            <Text
+              className="text-sm text-typography-700 dark:text-typography-300"
+              style={{ fontFamily: "Inter_600SemiBold" }}
+            >
+              Disk (GB)
+            </Text>
+            <Input
+              variant="outline"
+              className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+            >
+              <InputField
+                placeholder="50"
+                keyboardType="numeric"
+                value={disk ? String(disk) : ""}
+                onChangeText={(value) => handleNumericChange(value, setDisk)}
+                className="text-typography-900 dark:text-[#E8EBF0]"
+              />
+            </Input>
+            <HStack className="gap-2 flex-wrap">
+              {quickDisksGb.map((gb) => (
                 <Pressable
-                  key={gb}
-                  onPress={() => setMemory(mb)}
-                  className={`px-3 py-2 rounded-full border ${
-                    memory === mb
+                  key={`disk-${gb}`}
+                  onPress={() => setDisk(gb)}
+                  className={`px-3 py-2 rounded-full border ${disk === gb
                       ? "border-primary-500 bg-primary-50/20"
                       : "border-outline-200 bg-background-0"
-                  }`}
+                    }`}
                 >
                   <Text className="text-xs font-medium text-typography-700">
                     {gb} GB
                   </Text>
                 </Pressable>
-              );
-            })}
-          </HStack>
-        </FormControl>
+              ))}
+            </HStack>
+          </VStack>
 
-        <FormControl>
-          <FormControlLabel>
-            <FormControlLabelText className="text-sm font-semibold text-typography-800">
-              Disk (GB)
-            </FormControlLabelText>
-          </FormControlLabel>
-          <Input variant="outline" className="rounded-md">
-            <InputField
-              placeholder="E.g.: 60"
-              keyboardType="numeric"
-              value={disk ? String(disk) : ""}
-              onChangeText={(value) => handleNumericChange(value, setDisk)}
-            />
-          </Input>
-          <FormControlHelper>
-            <FormControlHelperText className="text-xs text-typography-500">
-              Total disk capacity in GB.
-            </FormControlHelperText>
-          </FormControlHelper>
-          <HStack className="mt-2 gap-2 flex-wrap">
-            {quickDisksGb.map((gb) => (
-              <Pressable
-                key={gb}
-                onPress={() => setDisk(gb)}
-                className={`px-3 py-2 rounded-full border ${
-                  disk === gb
-                    ? "border-primary-500 bg-primary-50/20"
-                    : "border-outline-200 bg-background-0"
-                }`}
-              >
-                <Text className="text-xs font-medium text-typography-700">
-                  {gb} GB
-                </Text>
-              </Pressable>
-            ))}
-          </HStack>
-        </FormControl>
-
-        <FormControl>
-          <FormControlLabel>
-            <FormControlLabelText className="text-sm font-semibold text-typography-800">
+          <VStack className="gap-2">
+            <Text
+              className="text-sm text-typography-700 dark:text-typography-300"
+              style={{ fontFamily: "Inter_600SemiBold" }}
+            >
               Network
-            </FormControlLabelText>
-          </FormControlLabel>
-          <Select
-            selectedValue={
-              network === "default" || network === "512rede" ? network : "other"
-            }
-            onValueChange={(value) => {
-              if (value === "other") {
-                setNetwork("");
-              } else {
-                setNetwork(value);
+            </Text>
+            <Select
+              selectedValue={
+                network === "default" || network === "512rede"
+                  ? network
+                  : "outro"
               }
-            }}
-          >
-            <SelectTrigger className="rounded-md">
-              <SelectInput
-                placeholder="Select the network"
-                className="text-typography-900 dark:text-[#E8EBF0]"
-              />
-              <SelectIcon />
-            </SelectTrigger>
-            <SelectPortal>
-              <SelectBackdrop />
-              <SelectContent className="bg-background-0 dark:bg-[#151F30]">
-                <SelectDragIndicatorWrapper>
-                  <SelectDragIndicator />
-                </SelectDragIndicatorWrapper>
-                <SelectItem
-                  label="default"
-                  value="default"
+              onValueChange={(value) => {
+                if (value === "outro") {
+                  setNetwork("");
+                } else {
+                  setNetwork(value);
+                }
+              }}
+            >
+              <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
+                <SelectInput
+                  placeholder="Select network"
                   className="text-typography-900 dark:text-[#E8EBF0]"
                 />
-                <SelectItem
-                  label="512rede"
-                  value="512rede"
+                <SelectIcon as={ChevronDown} className="mr-3" />
+              </SelectTrigger>
+              <SelectPortal>
+                <SelectBackdrop />
+                <SelectContent className="bg-background-0 dark:bg-[#151F30]">
+                  <SelectDragIndicatorWrapper>
+                    <SelectDragIndicator />
+                  </SelectDragIndicatorWrapper>
+                  <SelectItem
+                    label="default"
+                    value="default"
+                    className="text-typography-900 dark:text-[#E8EBF0]"
+                  />
+                  <SelectItem
+                    label="512rede"
+                    value="512rede"
+                    className="text-typography-900 dark:text-[#E8EBF0]"
+                  />
+                  <SelectItem
+                    label="other..."
+                    value="outro"
+                    className="text-typography-900 dark:text-[#E8EBF0]"
+                  />
+                </SelectContent>
+              </SelectPortal>
+            </Select>
+            {network !== "default" && network !== "512rede" && (
+              <Input
+                variant="outline"
+                className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] mt-2"
+              >
+                <InputField
+                  value={network}
+                  onChangeText={setNetwork}
+                  placeholder="Enter the network name"
                   className="text-typography-900 dark:text-[#E8EBF0]"
                 />
-                <SelectItem
-                  label="other..."
-                  value="other"
-                  className="text-typography-900 dark:text-[#E8EBF0]"
-                />
-              </SelectContent>
-            </SelectPortal>
-          </Select>
-          {network !== "default" && network !== "512rede" && (
-            <Input variant="outline" className="rounded-md mt-2">
-              <InputField
-                value={network}
-                onChangeText={setNetwork}
-                placeholder="Enter the network name"
-                className="text-typography-900 dark:text-[#E8EBF0]"
-              />
-            </Input>
-          )}
-          <FormControlHelper>
-            <FormControlHelperText className="text-xs text-typography-500">
-              Select the network for this VM.
-            </FormControlHelperText>
-          </FormControlHelper>
-        </FormControl>
+              </Input>
+            )}
+          </VStack>
+        </VStack>
       </VStack>
 
       {error && (
@@ -3305,22 +3239,26 @@ function EditVmForm({
         </HStack>
       )}
 
-      <HStack className="justify-end gap-3 pt-2">
+      <HStack className="gap-3 w-full">
         <Button
           variant="outline"
-          className="rounded-xl px-4 py-2"
+          className="flex-1 rounded-lg border-outline-200 dark:border-[#2A3B52]"
           onPress={onCancel}
           disabled={saving}
         >
-          <ButtonText>Cancel</ButtonText>
+          <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+            Cancel
+          </ButtonText>
         </Button>
         <Button
-          className="rounded-md px-4 py-2"
+          className="flex-1 rounded-lg bg-typography-900 dark:bg-[#2DD4BF]"
           disabled={!isValid || saving}
           onPress={handleSubmit}
         >
           {saving ? <ButtonSpinner className="mr-2" /> : null}
-          <ButtonText>Save changes</ButtonText>
+          <ButtonText className="text-background-0 dark:text-[#0A1628]">
+            Save changes
+          </ButtonText>
         </Button>
       </HStack>
     </VStack>
@@ -3397,7 +3335,7 @@ function CloneVmForm({
         <InputField placeholder="New VM name" value={newName} onChangeText={setNewName} />
       </Input>
       {nameError && (
-        <Text className="text-xs text-red-600">{nameError}</Text>
+        <Text className="text-xs text-error-600 dark:text-error-400">{nameError}</Text>
       )}
 
       <FormControl>
@@ -3477,16 +3415,20 @@ function CloneVmForm({
       </FormControl>
 
       {error && (
-        <HStack className="items-start gap-2 rounded-lg border border-red-100 bg-red-50 px-3 py-2">
-          <AlertCircle size={16} className="text-red-600 mt-0.5" />
-          <Text className="text-sm text-red-700 flex-1">{error}</Text>
+        <HStack className="items-start gap-2 rounded-lg border border-error-300 dark:border-error-700 bg-error-50 dark:bg-error-900/20 px-3 py-2">
+          <AlertCircle size={16} className="text-error-600 dark:text-error-400 mt-0.5" />
+          <Text className="text-sm text-error-700 dark:text-error-200 flex-1">{error}</Text>
         </HStack>
       )}
 
       <HStack className="justify-end gap-2 mt-2">
-        <Button className="rounded-md px-4 py-2" disabled={!isValid || saving} onPress={handleSubmit}>
+        <Button
+          className="rounded-md px-4 py-2 bg-typography-900 dark:bg-[#2DD4BF]"
+          disabled={!isValid || saving}
+          onPress={handleSubmit}
+        >
           {saving ? <ButtonSpinner className="mr-2" /> : null}
-          <ButtonText>Clone</ButtonText>
+          <ButtonText className="text-background-0 dark:text-[#0A1628]">Clone</ButtonText>
         </Button>
       </HStack>
     </VStack>
@@ -3555,7 +3497,7 @@ function MigrateVmForm({
   };
   return (
     <VStack className="gap-4">
-      <Text className="text-gray-700">
+      <Text className="text-typography-700 dark:text-typography-300">
         Migrate {vm.name} from <Text className="font-semibold">{vm.machineName}</Text> to:
       </Text>
       <FormControl>
@@ -3665,16 +3607,16 @@ function MigrateVmForm({
         </FormControlHelper>
       </FormControl>
       {error && (
-        <Text className="text-sm text-red-600">{error}</Text>
+        <Text className="text-sm text-error-600 dark:text-error-400">{error}</Text>
       )}
       <HStack className="justify-end gap-2 mt-2">
         <Button
-          className="rounded-md px-4 py-2"
+          className="rounded-md px-4 py-2 bg-typography-900 dark:bg-[#2DD4BF]"
           onPress={handleSubmit}
           disabled={loading || uniqueChoices.length === 0}
         >
           {loading ? <ButtonSpinner className="mr-2" /> : null}
-          <ButtonText>Migrate</ButtonText>
+          <ButtonText className="text-background-0 dark:text-[#0A1628]">Migrate</ButtonText>
         </Button>
       </HStack>
     </VStack>
@@ -3714,7 +3656,7 @@ function ChangeVncPasswordForm({
 
   return (
     <VStack className="gap-4">
-      <Text className="text-gray-700">
+      <Text className="text-typography-700 dark:text-typography-300">
         Set a new VNC password for <Text className="font-semibold">{vm.name}</Text>.
       </Text>
 
@@ -3740,7 +3682,7 @@ function ChangeVncPasswordForm({
       </FormControl>
 
       {error && (
-        <Text className="text-sm text-red-600">{error}</Text>
+        <Text className="text-sm text-error-600 dark:text-error-400">{error}</Text>
       )}
 
       <HStack className="justify-end gap-2 mt-2">
@@ -3750,15 +3692,15 @@ function ChangeVncPasswordForm({
           onPress={onCancel}
           disabled={saving}
         >
-          <ButtonText>Cancel</ButtonText>
+          <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
         </Button>
         <Button
-          className="rounded-md px-4 py-2"
+          className="rounded-md px-4 py-2 bg-typography-900 dark:bg-[#2DD4BF]"
           onPress={handleSubmit}
           disabled={saving || !password.trim()}
         >
           {saving ? <ButtonSpinner className="mr-2" /> : null}
-          <ButtonText>Update</ButtonText>
+          <ButtonText className="text-background-0 dark:text-[#0A1628]">Update</ButtonText>
         </Button>
       </HStack>
     </VStack>
@@ -3820,7 +3762,7 @@ function MoveDiskForm({
 
   return (
     <VStack className="gap-4">
-      <Text className="text-gray-700">
+      <Text className="text-typography-700 dark:text-typography-300">
         Move disk from {vm.name} to another NFS.
       </Text>
 
@@ -3890,15 +3832,19 @@ function MoveDiskForm({
         </FormControlHelper>
       </FormControl>
 
-      {error && <Text className="text-sm text-red-600">{error}</Text>}
+      {error && <Text className="text-sm text-error-600 dark:text-error-400">{error}</Text>}
 
       <HStack className="justify-end gap-2 mt-2">
         <Button variant="outline" className="rounded-xl px-4 py-2" onPress={onCancel} disabled={saving}>
-          <ButtonText>Cancel</ButtonText>
+          <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
         </Button>
-        <Button className="rounded-xl px-4 py-2" disabled={!isValid || saving} onPress={handleSubmit}>
+        <Button
+          className="rounded-xl px-4 py-2 bg-typography-900 dark:bg-[#2DD4BF]"
+          disabled={!isValid || saving}
+          onPress={handleSubmit}
+        >
           {saving ? <ButtonSpinner className="mr-2" /> : null}
-          <ButtonText>Move</ButtonText>
+          <ButtonText className="text-background-0 dark:text-[#0A1628]">Move</ButtonText>
         </Button>
       </HStack>
     </VStack>
@@ -3969,7 +3915,7 @@ function UpdateCpuXmlForm({
 
   return (
     <VStack className="gap-4">
-      <Text className="text-gray-700">
+      <Text className="text-typography-700 dark:text-typography-300">
         Update CPU XML for VM <Text className="font-semibold">{vm.name}</Text>.
       </Text>
 
@@ -4102,7 +4048,7 @@ function UpdateCpuXmlForm({
         </FormControlHelper>
       </FormControl>
 
-      {error ? <Text className="text-sm text-red-600">{error}</Text> : null}
+      {error ? <Text className="text-sm text-error-600 dark:text-error-400">{error}</Text> : null}
 
       <HStack className="justify-end gap-2 mt-2">
         <Button
@@ -4111,15 +4057,15 @@ function UpdateCpuXmlForm({
           onPress={onCancel}
           disabled={saving}
         >
-          <ButtonText>Cancel</ButtonText>
+          <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
         </Button>
         <Button
-          className="rounded-md px-4 py-2"
+          className="rounded-md px-4 py-2 bg-typography-900 dark:bg-[#2DD4BF]"
           onPress={handleSubmit}
           disabled={saving}
         >
           {saving ? <ButtonSpinner className="mr-2" /> : null}
-          <ButtonText>Update</ButtonText>
+          <ButtonText className="text-background-0 dark:text-[#0A1628]">Update</ButtonText>
         </Button>
       </HStack>
     </VStack>

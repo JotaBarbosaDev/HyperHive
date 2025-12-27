@@ -315,7 +315,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                     <InputField
                       value={vmName}
                       onChangeText={setVmName}
-                      placeholder="vm-importada-01"
+                      placeholder="vm-import-01"
                       className="text-typography-900 dark:text-[#E8EBF0]"
                     />
                   </Input>

@@ -69,7 +69,7 @@ export type AutomaticMount = {
   uuid: string;
   raid_uuid?: string;
   mount_point: string;
-  compression?: string;
+  compression?: string;,
   machine_name?: string;
 };
 

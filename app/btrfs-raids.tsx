@@ -799,20 +799,25 @@ export default function BtrfsRaidsScreen() {
       </Modal>
 
       <Modal isOpen={createModal} onClose={() => setCreateModal(false)} size="lg">
-        <ModalBackdrop />
-        <ModalContent className="max-w-2xl">
-          <ModalHeader className="flex-row items-start justify-between">
-            <Heading size="md" className="text-typography-900">
-              Create RAID
-            </Heading>
-            <ModalCloseButton />
+        <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+        <ModalContent className="max-w-2xl rounded-2xl border border-outline-100 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] shadow-soft-2">
+          <ModalHeader className="flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#1E2F47]">
+            <VStack className="flex-1 gap-1">
+              <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
+                Create RAID
+              </Heading>
+              <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">
+                Set the RAID level and select the disks to include.
+              </Text>
+            </VStack>
+            <ModalCloseButton className="text-typography-500" />
           </ModalHeader>
-          <ModalBody className="gap-4">
+          <ModalBody className="gap-4 px-6 pt-5 pb-6">
             <FormControl isRequired>
               <FormControlLabel>
                 <FormControlLabelText>RAID Name</FormControlLabelText>
               </FormControlLabel>
-              <Input>
+              <Input className="rounded-xl border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]">
                 <InputField
                   value={raidName}
                   onChangeText={setRaidName}
@@ -826,7 +831,7 @@ export default function BtrfsRaidsScreen() {
                 <FormControlLabelText>RAID Level</FormControlLabelText>
               </FormControlLabel>
               <Select selectedValue={raidLevel} onValueChange={setRaidLevel}>
-                <SelectTrigger>
+                <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]">
                   <SelectInput
                     placeholder="Select"
                     value={RAID_LEVEL_OPTIONS.find((opt) => opt.value === raidLevel)?.label ?? raidLevel}
@@ -835,7 +840,7 @@ export default function BtrfsRaidsScreen() {
                 </SelectTrigger>
                 <SelectPortal>
                   <SelectBackdrop />
-                  <SelectContent>
+                  <SelectContent className="bg-background-0 dark:bg-[#0F1A2E] border border-outline-100 dark:border-[#1E2F47] rounded-2xl">
                     <SelectDragIndicatorWrapper>
                       <SelectDragIndicator />
                     </SelectDragIndicatorWrapper>
@@ -853,7 +858,7 @@ export default function BtrfsRaidsScreen() {
               </FormControlLabel>
               <VStack className="gap-3 max-h-60 overflow-y-auto">
                 {(Array.isArray(freeDisks) ? freeDisks : []).length === 0 ? (
-                  <Text className="text-typography-600 text-sm">
+                  <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">
                     No free disk available on this machine.
                   </Text>
                 ) : (
@@ -896,13 +901,13 @@ export default function BtrfsRaidsScreen() {
               </FormControlHelper>
             </FormControl>
           </ModalBody>
-          <ModalFooter className="gap-3">
+          <ModalFooter className="gap-3 px-6 pb-6 pt-4 border-t border-outline-100 dark:border-[#1E2F47]">
             <Button className="border-outline-200 rounded-xl dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]" variant="outline" action="default" onPress={() => setCreateModal(false)} isDisabled={creatingRaid}>
               <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
             </Button>
-            <Button action="primary" onPress={handleCreateRaid} isDisabled={creatingRaid} className="rounded-xl">
-              {creatingRaid ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
-              <ButtonText>Create RAID</ButtonText>
+            <Button action="primary" onPress={handleCreateRaid} isDisabled={creatingRaid} className="rounded-xl bg-typography-900 dark:bg-[#2DD4BF]">
+              {creatingRaid ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" className="text-background-0 dark:text-[#0A1628]" />}
+              <ButtonText className="text-background-0 dark:text-[#0A1628]">Create RAID</ButtonText>
             </Button>
           </ModalFooter>
         </ModalContent>

@@ -396,7 +396,7 @@ export default function ProxyHostsScreen() {
   const renderLoading = () => (
     <VStack className="gap-3 mt-6">
       {[1, 2].map((idx) => (
-        <Box key={idx} className="p-5 rounded-2xl bg-background-0 shadow-soft-1 border border-background-100">
+        <Box className="p-5 rounded-2xl bg-background-0 dark:bg-[#0F1A2E] shadow-soft-1 border border-outline-100 dark:border-[#2A3B52]" key={idx}>
           <Skeleton className="h-5 w-2/3 mb-3" />
           <SkeletonText className="w-1/2" />
           <HStack className="gap-2 mt-4">
@@ -439,11 +439,14 @@ export default function ProxyHostsScreen() {
                   <Pressable
                     key={tab.key}
                     onPress={() => setFilter(tab.key)}
-                    className={`px-4 py-2 rounded-full border ${active ? "bg-typography-900 border-typography-900" : "bg-background-0 border-background-200"
-                      }`}
+                    className={`px-4 py-2 rounded-full border ${
+                      active
+                        ? "bg-typography-900 border-typography-900 dark:bg-[#2DD4BF] dark:border-[#2DD4BF]"
+                        : "bg-background-0 border-outline-200 dark:bg-[#0F1A2E] dark:border-[#243247]"
+                    }`}
                   >
                     <Text
-                      className={`text-sm ${active ? "text-background-0" : "text-typography-700"}`}
+                      className={`text-sm ${active ? "text-background-0 dark:text-[#0A1628]" : "text-typography-700 dark:text-typography-400"}`}
                       style={{ fontFamily: active ? "Inter_700Bold" : "Inter_500Medium" }}
                     >
                       {tab.label}
@@ -459,18 +462,24 @@ export default function ProxyHostsScreen() {
                   variant="solid"
                   size="md"
                   onPress={openSetupModal}
-                  className="rounded-xl px-5"
+                  className="rounded-xl px-5 bg-typography-900 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
                 >
-                  <ButtonIcon as={Shield} size="sm" />
-                  <ButtonText>Setup FrontEnd Page</ButtonText>
+                  <ButtonIcon as={Shield} size="sm" className="text-background-0 dark:text-[#0A1628]" />
+                  <ButtonText className="text-background-0 dark:text-[#0A1628]">Setup FrontEnd Page</ButtonText>
                 </Button>
                 <Text className="text-typography-600 text-xs max-w-xs">
                   Configure this to ensure the application front-end is fully available.
                 </Text>
               </HStack>
-              <Button action="primary" variant="solid" size="md" onPress={openCreateModal} className="rounded-xl px-5">
-                <ButtonIcon as={Plus} size="sm" />
-                <ButtonText>Add Proxy Host</ButtonText>
+              <Button
+                action="primary"
+                variant="solid"
+                size="md"
+                onPress={openCreateModal}
+                className="rounded-xl px-5 bg-typography-900 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+              >
+                <ButtonIcon as={Plus} size="sm" className="text-background-0 dark:text-[#0A1628]" />
+                <ButtonText className="text-background-0 dark:text-[#0A1628]">Add Proxy Host</ButtonText>
               </Button>
             </HStack>
           </HStack>
@@ -478,7 +487,7 @@ export default function ProxyHostsScreen() {
           {loading ? (
             renderLoading()
           ) : filteredHosts.length === 0 ? (
-            <Box className="mt-10 p-6 border border-dashed border-background-300 rounded-2xl bg-background-0 items-center">
+            <Box className="mt-10 p-6 border border-dashed border-outline-200 dark:border-[#2A3B52] rounded-2xl bg-background-0 dark:bg-[#0A1628] items-center">
               <Text className="text-typography-700 font-semibold text-base">No proxies found</Text>
               <Text className="text-typography-500 text-sm mt-1 text-center">
                 Click "Add Proxy Host" to create the first reverse proxy host.
@@ -489,10 +498,7 @@ export default function ProxyHostsScreen() {
               {filteredHosts.map((host) => {
                 const enabled = isEnabled(host);
                 return (
-                  <Box
-                    key={host.id}
-                    className="bg-background-0 rounded-2xl p-5 border border-background-100 shadow-soft-1"
-                  >
+                  <Box className="bg-background-0 dark:bg-[#0F1A2E] rounded-2xl p-5 border border-outline-100 dark:border-[#2A3B52] shadow-soft-1" key={host.id}>
                     <HStack className="items-start justify-between gap-4 flex-wrap">
                       <VStack className="gap-2 flex-1">
                         <HStack className="items-center gap-2 flex-wrap">
@@ -543,7 +549,7 @@ export default function ProxyHostsScreen() {
                           size="sm"
                           onPress={() => handleToggle(host)}
                           isDisabled={togglingId === host.id}
-                          className="border-background-300 rounded-xl"
+                          className="border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E] rounded-xl"
                         >
                           {togglingId === host.id ? <ButtonSpinner /> : <ButtonIcon as={Power} size="sm" />}
                           <ButtonText className="text-typography-900">{enabled ? "Disable" : "Enable"}</ButtonText>
@@ -553,7 +559,7 @@ export default function ProxyHostsScreen() {
                           variant="outline"
                           size="sm"
                           onPress={() => openEditModal(host)}
-                          className="border-background-300 px-3 rounded-xl"
+                          className="border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E] px-3 rounded-xl"
                         >
                           <ButtonIcon as={Pencil} size="sm" />
                         </Button>
@@ -664,9 +670,14 @@ export default function ProxyHostsScreen() {
               <Button className="rounded-xl" variant="outline" action="default" onPress={() => setSetupModalOpen(false)} isDisabled={setupSaving}>
                 <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
               </Button>
-              <Button className="rounded-xl" action="primary" onPress={handleSetupSave} isDisabled={setupSaving}>
-                {setupSaving ? <ButtonSpinner /> : <ButtonIcon as={Shield} size="sm" />}
-                <ButtonText>Confirm Setup</ButtonText>
+              <Button
+                className="rounded-xl bg-typography-900 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+                action="primary"
+                onPress={handleSetupSave}
+                isDisabled={setupSaving}
+              >
+                {setupSaving ? <ButtonSpinner /> : <ButtonIcon as={Shield} size="sm" className="text-background-0 dark:text-[#0A1628]" />}
+                <ButtonText className="text-background-0 dark:text-[#0A1628]">Confirm Setup</ButtonText>
               </Button>
             </HStack>
           </ModalFooter>
@@ -706,11 +717,14 @@ export default function ProxyHostsScreen() {
                       <Pressable
                         key={tab.key}
                         onPress={() => setFormTab(tab.key as typeof formTab)}
-                        className={`px-4 py-2 rounded-full border ${active ? "bg-typography-900 border-typography-900" : "bg-background-50 border-outline-200"
-                          }`}
+                        className={`px-4 py-2 rounded-full border ${
+                          active
+                            ? "bg-typography-900 border-typography-900 dark:bg-[#2DD4BF] dark:border-[#2DD4BF]"
+                            : "bg-background-50 border-outline-200 dark:bg-[#0E1524] dark:border-[#243247]"
+                        }`}
                       >
                         <Text
-                          className={`text-sm ${active ? "text-background-0" : "text-typography-700"}`}
+                          className={`text-sm ${active ? "text-background-0 dark:text-[#0A1628]" : "text-typography-700 dark:text-typography-400"}`}
                           style={{ fontFamily: active ? "Inter_700Bold" : "Inter_500Medium" }}
                         >
                           {tab.label}
@@ -741,7 +755,7 @@ export default function ProxyHostsScreen() {
                       {domainsList.length > 0 ? (
                         <HStack className="gap-2 mt-2 flex-wrap">
                           {domainsList.map((d, idx) => (
-                            <Box key={`${d}-${idx}`} className="px-3 py-1 rounded-full bg-background-50 border border-background-100 items-center flex-row">
+                            <Box className="px-3 py-1 rounded-full bg-background-50 dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52] items-center flex-row" key={`${d}-${idx}`}>
                               <Text className="mr-2 text-typography-900">{d}</Text>
                               <Pressable onPress={() => removeDomain(idx)} className="px-1">
                                 <X size={14} color="#6b7280" />
@@ -831,7 +845,7 @@ export default function ProxyHostsScreen() {
                       <Text className="text-typography-600 text-sm">No locations defined.</Text>
                     ) : (
                       locations.map((loc, idx) => (
-                        <Box key={`${loc.path}-${idx}`} className="p-3 rounded-xl border border-background-200 bg-background-50 gap-3">
+                        <Box className="p-3 rounded-xl border border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] gap-3" key={`${loc.path}-${idx}`}>
                           <FormControl>
                             <FormControlLabel>
                               <FormControlLabelText>Path</FormControlLabelText>
@@ -1001,9 +1015,16 @@ export default function ProxyHostsScreen() {
               <Button className="rounded-xl" variant="outline" action="default" onPress={closeModal} isDisabled={saving}>
                 <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
               </Button>
-              <Button className="rounded-xl" action="primary" onPress={handleSave} isDisabled={saving}>
-                {saving ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
-                <ButtonText>{editingHost ? "Save changes" : "Create proxy"}</ButtonText>
+              <Button
+                className="rounded-xl bg-typography-900 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+                action="primary"
+                onPress={handleSave}
+                isDisabled={saving}
+              >
+                {saving ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" className="text-background-0 dark:text-[#0A1628]" />}
+                <ButtonText className="text-background-0 dark:text-[#0A1628]">
+                  {editingHost ? "Save changes" : "Create proxy"}
+                </ButtonText>
               </Button>
             </HStack>
           </ModalFooter>

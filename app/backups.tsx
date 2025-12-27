@@ -1,5 +1,5 @@
 import React from "react";
-import { ScrollView, RefreshControl, useColorScheme, Alert } from "react-native";
+import { ScrollView, RefreshControl, useColorScheme, Platform } from "react-native";
 import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";
 import { Heading } from "@/components/ui/heading";
@@ -11,13 +11,15 @@ import { Input, InputField, InputSlot, InputIcon } from "@/components/ui/input";
 import { Modal, ModalBackdrop, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton } from "@/components/ui/modal";
 import { Select, SelectTrigger, SelectInput, SelectItem, SelectIcon, SelectPortal, SelectBackdrop as SelectBackdropContent, SelectContent, SelectDragIndicator, SelectDragIndicatorWrapper } from "@/components/ui/select";
 import { Toast, ToastTitle, useToast } from "@/components/ui/toast";
-import { Switch } from "@/components/ui/switch";
+import { Checkbox, CheckboxIndicator, CheckboxIcon, CheckboxLabel } from "@/components/ui/checkbox";
+import { Pressable } from "@/components/ui/pressable";
 import { ChevronDownIcon } from "@/components/ui/icon";
-import { Search, HardDrive, Calendar, Database, RefreshCw, Trash2, RotateCcw, Plus, Download } from "lucide-react-native";
+import { Search, HardDrive, Calendar, Database, RefreshCw, Trash2, RotateCcw, Plus, Download, X, Cpu, Copy, Check } from "lucide-react-native";
 import { listBackups, deleteBackup as deleteBackupApi, createBackup as createBackupApi, useBackup as useBackupApi, getBackupDownloadUrl } from "@/services/backups";
-import { getAllVMs, listSlaves, VirtualMachine, Slave } from "@/services/vms-client";
+import { getAllVMs, listSlaves, VirtualMachine, Slave, getCpuDisableFeatures } from "@/services/vms-client";
 import { listMounts } from "@/services/hyperhive";
 import { Mount } from "@/types/mount";
+import { StableTextInput } from "@/components/ui/stable-text-input";
 
 // Interfaces TypeScript
 type BackupStatus = "complete" | "partial" | "failed" | string;
@@ -61,7 +63,12 @@ export default function BackupsScreen() {
   const [restoreCpuXml, setRestoreCpuXml] = React.useState("");
   const [restoreLive, setRestoreLive] = React.useState(false);
   const [restoring, setRestoring] = React.useState(false);
+  const [selectedSlaves, setSelectedSlaves] = React.useState<string[]>([]);
+  const [currentSlaveSelect, setCurrentSlaveSelect] = React.useState("");
+  const [loadingCPU, setLoadingCPU] = React.useState(false);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = React.useState<Backup | null>(null);
+  const [deleteError, setDeleteError] = React.useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = React.useState(false);
   const [createVmName, setCreateVmName] = React.useState("");
   const [createNfsId, setCreateNfsId] = React.useState<string>("");
@@ -269,11 +276,10 @@ export default function BackupsScreen() {
   React.useEffect(() => {
     if (!restoreBackup) return;
     const vmMatch = vmOptions.find((vm) => vm.name === restoreBackup.vmName);
-    const defaultMachine =
-      restoreBackup.machineName ||
-      vmMatch?.machineName ||
-      machineOptions[0]?.MachineName ||
-      "";
+    const preferredMachine = restoreBackup.machineName || vmMatch?.machineName || "";
+    const defaultMachine = machineOptions.some((m) => m.MachineName === preferredMachine)
+      ? preferredMachine
+      : machineOptions[0]?.MachineName || "";
     const defaultNfs =
       restoreBackup.nfsShareId != null
         ? String(restoreBackup.nfsShareId)
@@ -290,7 +296,9 @@ export default function BackupsScreen() {
     setRestorePassword(vmMatch?.VNCPassword ?? "");
     setRestoreNfsShare(defaultNfs);
     setRestoreCpuXml(vmMatch?.CPUXML ?? "");
-    setRestoreLive(Boolean(restoreBackup.live ?? vmMatch?.isLive));
+    setRestoreLive(false);
+    setSelectedSlaves([]);
+    setCurrentSlaveSelect("");
   }, [restoreBackup, vmOptions, machineOptions, nfsShares]);
 
   React.useEffect(() => {
@@ -361,6 +369,11 @@ export default function BackupsScreen() {
   };
   const restoreNfsLabel = restoreNfsShare ? getNfsName(Number(restoreNfsShare)) : "";
   const createNfsLabel = createNfsId ? getNfsName(Number(createNfsId)) : "";
+  const quickRestoreMemoryGb = [2, 4, 8, 12, 32];
+  const availableSlaves = React.useMemo(
+    () => machineOptions.map((s) => s.MachineName).filter((s) => !selectedSlaves.includes(s)),
+    [machineOptions, selectedSlaves]
+  );
 
   const handleRefresh = () => {
     refreshBackups(true);
@@ -386,31 +399,34 @@ export default function BackupsScreen() {
   };
 
   const handleDelete = (backup: Backup) => {
-    Alert.alert(
-      "Confirm deletion",
-      `Are you sure you want to delete the backup for ${backup.vmName} (${formatDate(backup.backupDate)})?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            setDeletingId(backup.id);
-            try {
-              await deleteBackupApi(backup.id);
-              setBackups((prev) => prev.filter((b) => b.id !== backup.id));
-              showToastMessage("Backup deleted");
-            } catch (err) {
-              console.error("Error deleting backup", err);
-              const message = err instanceof Error ? err.message : "Failed to delete backup.";
-              showToastMessage(message, "error");
-            } finally {
-              setDeletingId(null);
-            }
-          },
-        },
-      ]
-    );
+    if (deletingId) return;
+    setDeleteError(null);
+    setDeleteTarget(backup);
+  };
+
+  const handleCloseDeleteModal = () => {
+    if (deletingId) return;
+    setDeleteTarget(null);
+    setDeleteError(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget || deletingId) return;
+    setDeletingId(deleteTarget.id);
+    setDeleteError(null);
+    try {
+      await deleteBackupApi(deleteTarget.id);
+      setBackups((prev) => prev.filter((b) => b.id !== deleteTarget.id));
+      showToastMessage("Backup deleted");
+      setDeleteTarget(null);
+    } catch (err) {
+      console.error("Error deleting backup", err);
+      const message = err instanceof Error ? err.message : "Failed to delete backup.";
+      setDeleteError(message);
+      showToastMessage(message, "error");
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const resetRestoreForm = React.useCallback(() => {
@@ -423,7 +439,38 @@ export default function BackupsScreen() {
     setRestoreNfsShare("");
     setRestoreCpuXml("");
     setRestoreLive(false);
+    setSelectedSlaves([]);
+    setCurrentSlaveSelect("");
   }, []);
+
+  const handleGetMutualCPUs = async () => {
+    if (selectedSlaves.length === 0) {
+      showToastMessage("Select at least one slave.", "error");
+      return;
+    }
+    setLoadingCPU(true);
+    try {
+      const cpuXmlResult = await getCpuDisableFeatures(selectedSlaves);
+      setRestoreCpuXml(cpuXmlResult);
+    } catch (err) {
+      console.error("Error fetching CPUs:", err);
+      const message = err instanceof Error ? err.message : "Failed to fetch CPUs.";
+      showToastMessage(message, "error");
+    } finally {
+      setLoadingCPU(false);
+    }
+  };
+
+  const handleCopyXml = async () => {
+    if (!restoreCpuXml) return;
+    try {
+      const Clipboard = require("expo-clipboard");
+      await Clipboard.setStringAsync(restoreCpuXml);
+      showToastMessage("XML copied");
+    } catch (err) {
+      console.warn("Clipboard unavailable", err);
+    }
+  };
 
   const handleRestoreSubmit = async () => {
     if (!restoreBackup) return;
@@ -848,10 +895,11 @@ export default function BackupsScreen() {
           setRestoreBackup(null);
           resetRestoreForm();
         }}
+        size="full"
       >
-        <ModalBackdrop className="bg-black/60" />
-        <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] shadow-2xl max-w-lg p-6">
-          <ModalHeader className="pb-4">
+        <ModalBackdrop />
+        <ModalContent className="max-w-[90%] max-h-[90%] web:max-w-4xl">
+          <ModalHeader className="border-b border-outline-100 dark:border-[#2A3B52]">
             <Heading
               size="lg"
               className="text-typography-900 dark:text-[#E8EBF0]"
@@ -859,252 +907,489 @@ export default function BackupsScreen() {
             >
               Restore Backup
             </Heading>
-            <ModalCloseButton className="text-typography-600 dark:text-typography-400" />
+            <ModalCloseButton>
+              <X className="text-typography-700 dark:text-[#E8EBF0]" />
+            </ModalCloseButton>
           </ModalHeader>
-          <ModalBody className="py-4">
-            {restoreBackup && (
-              <VStack className="gap-5">
-                <HStack className="gap-4">
-                  <VStack className="flex-1 gap-2">
-                    <Text
-                      className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                      style={{ fontFamily: "Inter_500Medium" }}
-                    >
-                      VM
-                    </Text>
-                    <Text
-                      className="text-base text-typography-900 dark:text-[#E8EBF0]"
-                      style={{ fontFamily: "Inter_600SemiBold" }}
-                    >
-                      {restoreBackup.vmName}
-                    </Text>
-                  </VStack>
-                  <VStack className="flex-1 gap-2">
-                    <Text
-                      className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                      style={{ fontFamily: "Inter_500Medium" }}
-                    >
-                      Backup Date
-                    </Text>
-                    <Text className="text-base text-typography-900 dark:text-[#E8EBF0]">
-                      {formatDate(restoreBackup.backupDate)}
-                    </Text>
-                  </VStack>
-                </HStack>
-                <VStack className="gap-2">
-                  <Text
-                    className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                    style={{ fontFamily: "Inter_500Medium" }}
-                  >
-                    Size
-                  </Text>
-                  <Text className="text-base text-typography-900 dark:text-[#E8EBF0]">
-                    {typeof restoreBackup.size === "number" && Number.isFinite(restoreBackup.size)
-                      ? `${restoreBackup.size.toFixed(1)} GB`
-                      : "—"}
-                  </Text>
-                </VStack>
+          <ModalBody className="bg-background-50 dark:bg-[#0A1628]">
+            <ScrollView showsVerticalScrollIndicator>
+              <Box className="p-4 web:p-6">
+                {restoreBackup && (
+                  <VStack className="gap-5">
+                    <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] p-4">
+                      <VStack className="gap-3">
+                        <HStack className="items-center justify-between">
+                          <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                            VM
+                          </Text>
+                          <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
+                            {restoreBackup.vmName}
+                          </Text>
+                        </HStack>
+                        <HStack className="items-center justify-between">
+                          <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                            Backup Date
+                          </Text>
+                          <Text className="text-sm text-typography-700 dark:text-typography-200">
+                            {formatDate(restoreBackup.backupDate)}
+                          </Text>
+                        </HStack>
+                      </VStack>
+                    </Box>
 
-                <VStack className="gap-2">
-                  <Text
-                    className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                    style={{ fontFamily: "Inter_500Medium" }}
-                  >
-                    VM name
-                  </Text>
-                  <Input variant="outline" className="rounded-lg">
-                    <InputField value={restoreVmName} onChangeText={setRestoreVmName} />
-                  </Input>
-                </VStack>
+                    <VStack className="gap-4 web:grid web:grid-cols-2 web:gap-4">
+                      <VStack className="gap-2">
+                        <Text
+                          className="text-sm text-typography-700 dark:text-typography-300"
+                          style={{ fontFamily: "Inter_600SemiBold" }}
+                        >
+                          VM name
+                        </Text>
+                        <Input
+                          variant="outline"
+                          className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                        >
+                          <InputField
+                            value={restoreVmName}
+                            onChangeText={setRestoreVmName}
+                            className="text-typography-900 dark:text-[#E8EBF0]"
+                          />
+                        </Input>
+                      </VStack>
 
-                <VStack className="gap-2">
-                  <Text
-                    className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                    style={{ fontFamily: "Inter_500Medium" }}
-                  >
-                    Target machine
-                  </Text>
-                  <Select
-                    selectedValue={restoreMachine}
-                    onValueChange={setRestoreMachine}
-                    isDisabled={loadingOptions || machineOptions.length === 0}
-                  >
-                    <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
-                      <SelectInput
-                        placeholder={loadingOptions ? "Loading..." : "Choose a machine..."}
-                        value={restoreMachine}
-                        className="text-typography-900 dark:text-[#E8EBF0]"
-                      />
-                      <SelectIcon className="mr-3 text-typography-500 dark:text-typography-400" as={ChevronDownIcon} />
-                    </SelectTrigger>
-                    <SelectPortal>
-                      <SelectBackdropContent />
-                      <SelectContent>
-                        <SelectDragIndicatorWrapper>
-                          <SelectDragIndicator />
-                        </SelectDragIndicatorWrapper>
-                        {machineOptions.length === 0 ? (
-                          <SelectItem label={loadingOptions ? "Loading..." : "No machines"} value="" isDisabled />
-                        ) : (
-                          machineOptions.map((machine) => (
-                            <SelectItem
-                              key={machine.MachineName}
-                              label={machine.MachineName}
-                              value={machine.MachineName}
+                      <VStack className="gap-2">
+                        <Text
+                          className="text-sm text-typography-700 dark:text-typography-300"
+                          style={{ fontFamily: "Inter_600SemiBold" }}
+                        >
+                          Target machine
+                        </Text>
+                        <Select
+                          selectedValue={restoreMachine}
+                          onValueChange={setRestoreMachine}
+                          isDisabled={loadingOptions || machineOptions.length === 0}
+                        >
+                          <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
+                            <SelectInput
+                              placeholder={loadingOptions ? "Loading..." : "Choose a machine..."}
+                              value={restoreMachine}
+                              className="text-typography-900 dark:text-[#E8EBF0]"
                             />
-                          ))
-                        )}
-                      </SelectContent>
-                    </SelectPortal>
-                  </Select>
-                </VStack>
+                            <SelectIcon className="mr-3 text-typography-500 dark:text-typography-400" as={ChevronDownIcon} />
+                          </SelectTrigger>
+                          <SelectPortal>
+                            <SelectBackdropContent />
+                            <SelectContent className="bg-background-0 dark:bg-[#151F30]">
+                              <SelectDragIndicatorWrapper>
+                                <SelectDragIndicator />
+                              </SelectDragIndicatorWrapper>
+                              {machineOptions.length === 0 ? (
+                                <SelectItem label={loadingOptions ? "Loading..." : "No machines"} value="" isDisabled />
+                              ) : (
+                                machineOptions.map((machine) => (
+                                  <SelectItem
+                                    key={machine.MachineName}
+                                    label={machine.MachineName}
+                                    value={machine.MachineName}
+                                  />
+                                ))
+                              )}
+                            </SelectContent>
+                          </SelectPortal>
+                        </Select>
+                      </VStack>
 
-                <HStack className="gap-3">
-                  <VStack className="flex-1 gap-2">
-                    <Text
-                      className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                      style={{ fontFamily: "Inter_500Medium" }}
-                    >
-                      Memory (MB)
-                    </Text>
-                    <Input variant="outline" className="rounded-lg">
-                      <InputField
-                        keyboardType="numeric"
-                        value={restoreMemory}
-                        onChangeText={setRestoreMemory}
-                      />
-                    </Input>
+                      <VStack className="gap-2">
+                        <Text
+                          className="text-sm text-typography-700 dark:text-typography-300"
+                          style={{ fontFamily: "Inter_600SemiBold" }}
+                        >
+                          vCPU
+                        </Text>
+                        <Input
+                          variant="outline"
+                          className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                        >
+                          <InputField
+                            keyboardType="numeric"
+                            value={restoreVcpu}
+                            onChangeText={setRestoreVcpu}
+                            className="text-typography-900 dark:text-[#E8EBF0]"
+                          />
+                        </Input>
+                      </VStack>
+
+                      <VStack className="gap-2">
+                        <Text
+                          className="text-sm text-typography-700 dark:text-typography-300"
+                          style={{ fontFamily: "Inter_600SemiBold" }}
+                        >
+                          Memory (MB)
+                        </Text>
+                        <Input
+                          variant="outline"
+                          className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                        >
+                          <InputField
+                            keyboardType="numeric"
+                            value={restoreMemory}
+                            onChangeText={setRestoreMemory}
+                            className="text-typography-900 dark:text-[#E8EBF0]"
+                          />
+                        </Input>
+                        <HStack className="gap-2 flex-wrap">
+                          {quickRestoreMemoryGb.map((gb) => (
+                            <Pressable
+                              key={`restore-mem-${gb}`}
+                              onPress={() => setRestoreMemory(String(gb * 1024))}
+                              className={`px-3 py-2 rounded-full border ${
+                                Number(restoreMemory) === gb * 1024
+                                  ? "border-primary-500 bg-primary-50/20"
+                                  : "border-outline-200 bg-background-0"
+                              }`}
+                            >
+                              <Text className="text-xs font-medium text-typography-700">
+                                {gb} GB
+                              </Text>
+                            </Pressable>
+                          ))}
+                        </HStack>
+                      </VStack>
+
+                      <VStack className="gap-2">
+                        <Text
+                          className="text-sm text-typography-700 dark:text-typography-300"
+                          style={{ fontFamily: "Inter_600SemiBold" }}
+                        >
+                          Network
+                        </Text>
+                        <Input
+                          variant="outline"
+                          className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                        >
+                          <InputField
+                            value={restoreNetwork}
+                            onChangeText={setRestoreNetwork}
+                            className="text-typography-900 dark:text-[#E8EBF0]"
+                          />
+                        </Input>
+                      </VStack>
+
+                      <VStack className="gap-2">
+                        <Text
+                          className="text-sm text-typography-700 dark:text-typography-300"
+                          style={{ fontFamily: "Inter_600SemiBold" }}
+                        >
+                          VNC password
+                        </Text>
+                        <Input
+                          variant="outline"
+                          className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                        >
+                          <InputField
+                            value={restorePassword}
+                            onChangeText={setRestorePassword}
+                            placeholder="Optional"
+                            className="text-typography-900 dark:text-[#E8EBF0]"
+                          />
+                        </Input>
+                      </VStack>
+
+                      <VStack className="gap-2">
+                        <Text
+                          className="text-sm text-typography-700 dark:text-typography-300"
+                          style={{ fontFamily: "Inter_600SemiBold" }}
+                        >
+                          NFS share
+                        </Text>
+                        <Select
+                          selectedValue={restoreNfsShare}
+                          onValueChange={setRestoreNfsShare}
+                          isDisabled={loadingOptions || Object.keys(nfsShares).length === 0}
+                        >
+                          <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
+                            <SelectInput
+                              placeholder={loadingOptions ? "Loading..." : "Choose a NFS share..."}
+                              value={restoreNfsLabel}
+                              className="text-typography-900 dark:text-[#E8EBF0]"
+                            />
+                            <SelectIcon className="mr-3 text-typography-500 dark:text-typography-400" as={ChevronDownIcon} />
+                          </SelectTrigger>
+                          <SelectPortal>
+                            <SelectBackdropContent />
+                            <SelectContent className="bg-background-0 dark:bg-[#151F30]">
+                              <SelectDragIndicatorWrapper>
+                                <SelectDragIndicator />
+                              </SelectDragIndicatorWrapper>
+                              {Object.keys(nfsShares).length === 0 ? (
+                                <SelectItem label={loadingOptions ? "Loading..." : "No NFS shares"} value="" isDisabled />
+                              ) : (
+                                Object.entries(nfsShares).map(([id, label]) => (
+                                  <SelectItem key={id} label={label} value={id} />
+                                ))
+                              )}
+                            </SelectContent>
+                          </SelectPortal>
+                        </Select>
+                      </VStack>
+
+                    </VStack>
+
+                    <VStack className="gap-3 mt-2">
+                      <Checkbox
+                        value="live-restore"
+                        isChecked={restoreLive}
+                        onChange={setRestoreLive}
+                        className="gap-2"
+                      >
+                        <CheckboxIndicator className="border-outline-300 dark:border-[#2A3B52]">
+                          <CheckboxIcon as={Check} />
+                        </CheckboxIndicator>
+                        <CheckboxLabel className="text-typography-700 dark:text-typography-300">
+                          Live restore
+                        </CheckboxLabel>
+                      </Checkbox>
+                    </VStack>
+
+                    {restoreLive && (
+                      <Box className="mt-4 p-4 bg-background-0 dark:bg-[#0F1A2E] border border-outline-200 dark:border-[#2A3B52] rounded-xl">
+                        <HStack className="gap-2 items-center mb-3">
+                          <Cpu size={20} className="text-typography-700 dark:text-[#E8EBF0]" />
+                          <Heading
+                            size="sm"
+                            className="text-typography-900 dark:text-[#E8EBF0]"
+                            style={{ fontFamily: "Inter_700Bold" }}
+                          >
+                            Advanced CPU Configuration
+                          </Heading>
+                        </HStack>
+
+                        <Text className="text-sm text-typography-600 dark:text-typography-400 mb-4">
+                          Select slaves to compare and get a CPU configuration compatible between them.
+                        </Text>
+
+                        <VStack className="gap-2 mb-4">
+                          <Text
+                            className="text-sm text-typography-700 dark:text-typography-300"
+                            style={{ fontFamily: "Inter_600SemiBold" }}
+                          >
+                            Selected slaves ({selectedSlaves.length})
+                          </Text>
+
+                          <Box className="p-3 bg-background-50 dark:bg-[#0A1628] border border-outline-200 dark:border-[#1E2F47] rounded-lg min-h-[60px]">
+                            {selectedSlaves.length === 0 ? (
+                              <Text className="text-sm text-typography-400 dark:text-typography-500 text-center">
+                                No slave selected
+                              </Text>
+                            ) : (
+                              <HStack className="gap-2 flex-wrap">
+                                {selectedSlaves.map((slaveName) => (
+                                  <Badge
+                                    key={slaveName}
+                                    variant="solid"
+                                    className="rounded-full bg-typography-100 dark:bg-[#1E2F47]"
+                                  >
+                                    <HStack className="gap-1 items-center">
+                                      <BadgeText className="text-typography-900 dark:text-[#E8EBF0]">
+                                        {slaveName}
+                                      </BadgeText>
+                                      <Button
+                                        size="xs"
+                                        variant="link"
+                                        onPress={() => {
+                                          setSelectedSlaves(
+                                            selectedSlaves.filter((s) => s !== slaveName)
+                                          );
+                                        }}
+                                        className="p-0 min-w-0 h-4"
+                                      >
+                                        <ButtonIcon
+                                          as={X}
+                                          size="xs"
+                                          className="text-typography-700 dark:text-[#E8EBF0]"
+                                        />
+                                      </Button>
+                                    </HStack>
+                                  </Badge>
+                                ))}
+                              </HStack>
+                            )}
+                          </Box>
+                        </VStack>
+
+                        <VStack className="gap-2 mb-4">
+                          <Text
+                            className="text-sm text-typography-700 dark:text-typography-300"
+                            style={{ fontFamily: "Inter_600SemiBold" }}
+                          >
+                            Add slave to comparison
+                          </Text>
+
+                          <Select
+                            selectedValue={currentSlaveSelect}
+                            onValueChange={(value) => {
+                              if (
+                                value &&
+                                machineOptions.find((s) => s.MachineName === value) &&
+                                !selectedSlaves.includes(value)
+                              ) {
+                                setSelectedSlaves([...selectedSlaves, value]);
+                                setCurrentSlaveSelect("");
+                              }
+                            }}
+                            isDisabled={loadingOptions || availableSlaves.length === 0}
+                          >
+                            <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
+                              <SelectInput
+                                placeholder={loadingOptions ? "Loading..." : "Select a slave..."}
+                                className="text-typography-900 dark:text-[#E8EBF0]"
+                              />
+                              <SelectIcon as={ChevronDownIcon} className="mr-3" />
+                            </SelectTrigger>
+                            <SelectPortal>
+                              <SelectBackdropContent />
+                              <SelectContent className="bg-background-0 dark:bg-[#151F30]">
+                                <SelectDragIndicatorWrapper>
+                                  <SelectDragIndicator />
+                                </SelectDragIndicatorWrapper>
+                                {availableSlaves.length === 0 ? (
+                                  <SelectItem label="All slaves have been added" value="" isDisabled />
+                                ) : (
+                                  availableSlaves.map((s) => (
+                                    <SelectItem
+                                      key={s}
+                                      label={s}
+                                      value={s}
+                                      className="text-typography-900 dark:text-[#E8EBF0]"
+                                    />
+                                  ))
+                                )}
+                              </SelectContent>
+                            </SelectPortal>
+                          </Select>
+                        </VStack>
+
+                        <Button
+                          variant="outline"
+                          onPress={handleGetMutualCPUs}
+                          disabled={selectedSlaves.length === 0 || loadingCPU}
+                          className="rounded-lg mb-4 border-outline-200 dark:border-[#2A3B52]"
+                        >
+                          {loadingCPU ? (
+                            <>
+                              <ButtonSpinner className="mr-2" />
+                              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                                Fetching CPUs...
+                              </ButtonText>
+                            </>
+                          ) : (
+                            <>
+                              <ButtonIcon as={Cpu} className="mr-2 text-typography-900 dark:text-[#E8EBF0]" />
+                              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                                Get Mutual CPUs
+                              </ButtonText>
+                            </>
+                          )}
+                        </Button>
+
+                        <VStack className="gap-2">
+                          <HStack className="justify-between items-center">
+                            <Text
+                              className="text-sm text-typography-700 dark:text-typography-300"
+                              style={{ fontFamily: "Inter_600SemiBold" }}
+                            >
+                              CPU Configuration XML
+                            </Text>
+                            <HStack className="gap-2">
+                              <Button
+                                size="xs"
+                                variant="outline"
+                                onPress={handleCopyXml}
+                                disabled={!restoreCpuXml}
+                                className="rounded-md border-outline-200 dark:border-[#2A3B52]"
+                              >
+                                <ButtonIcon
+                                  as={Copy}
+                                  size="xs"
+                                  className="text-typography-700 dark:text-[#E8EBF0]"
+                                />
+                              </Button>
+                              <Button
+                                size="xs"
+                                variant="outline"
+                                onPress={() => setRestoreCpuXml("")}
+                                disabled={!restoreCpuXml}
+                                className="rounded-md border-red-300 dark:border-red-700"
+                              >
+                                <ButtonIcon
+                                  as={Trash2}
+                                  size="xs"
+                                  className="text-red-600 dark:text-red-400"
+                                />
+                              </Button>
+                            </HStack>
+                          </HStack>
+
+                          <Text className="text-xs text-typography-500 dark:text-typography-400">
+                            This XML configures the VM CPU. You can edit it manually if needed.
+                          </Text>
+
+                          <Box className="bg-[#0F172A] border border-[#1E2F47] rounded-lg overflow-hidden">
+                            <Box className="bg-[#0A0E1A] px-3 py-2 border-b border-[#1E2F47] flex-row justify-between items-center">
+                              <Text className="text-xs text-[#64748B] font-mono">
+                                XML Editor
+                              </Text>
+                              <Text className="text-xs text-[#475569]">
+                                {restoreCpuXml.length} chars
+                              </Text>
+                            </Box>
+                            <StableTextInput
+                              value={restoreCpuXml}
+                              onChangeText={setRestoreCpuXml}
+                              multiline
+                              scrollEnabled
+                              autoCorrect={false}
+                              autoCapitalize="none"
+                              spellCheck={false}
+                              textAlignVertical="top"
+                              style={{
+                                fontFamily: Platform.select({
+                                  ios: "Menlo",
+                                  android: "monospace",
+                                }),
+                                color: restoreCpuXml ? "#22C55E" : "#64748B",
+                                backgroundColor: "#0F172A",
+                                fontSize: 12,
+                                lineHeight: 18,
+                                padding: 12,
+                                height: 240,
+                              }}
+                            />
+                          </Box>
+                        </VStack>
+                      </Box>
+                    )}
                   </VStack>
-                  <VStack className="flex-1 gap-2">
-                    <Text
-                      className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                      style={{ fontFamily: "Inter_500Medium" }}
-                    >
-                      vCPU
-                    </Text>
-                    <Input variant="outline" className="rounded-lg">
-                      <InputField
-                        keyboardType="numeric"
-                        value={restoreVcpu}
-                        onChangeText={setRestoreVcpu}
-                      />
-                    </Input>
-                  </VStack>
-                </HStack>
-
-                <VStack className="gap-2">
-                  <Text
-                    className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                    style={{ fontFamily: "Inter_500Medium" }}
-                  >
-                    Network
-                  </Text>
-                  <Input variant="outline" className="rounded-lg">
-                    <InputField value={restoreNetwork} onChangeText={setRestoreNetwork} />
-                  </Input>
-                </VStack>
-
-                <VStack className="gap-2">
-                  <Text
-                    className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                    style={{ fontFamily: "Inter_500Medium" }}
-                  >
-                    VNC password
-                  </Text>
-                  <Input variant="outline" className="rounded-lg">
-                    <InputField
-                      value={restorePassword}
-                      onChangeText={setRestorePassword}
-                      placeholder="Optional"
-                    />
-                  </Input>
-                </VStack>
-
-                <VStack className="gap-2">
-                  <Text
-                    className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                    style={{ fontFamily: "Inter_500Medium" }}
-                  >
-                    NFS share
-                  </Text>
-                  <Select
-                    selectedValue={restoreNfsShare}
-                    onValueChange={setRestoreNfsShare}
-                    isDisabled={loadingOptions || Object.keys(nfsShares).length === 0}
-                  >
-                    <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
-                      <SelectInput
-                        placeholder={loadingOptions ? "Loading..." : "Choose a NFS share..."}
-                        value={restoreNfsLabel}
-                        className="text-typography-900 dark:text-[#E8EBF0]"
-                      />
-                      <SelectIcon className="mr-3 text-typography-500 dark:text-typography-400" as={ChevronDownIcon} />
-                    </SelectTrigger>
-                    <SelectPortal>
-                      <SelectBackdropContent />
-                      <SelectContent>
-                        <SelectDragIndicatorWrapper>
-                          <SelectDragIndicator />
-                        </SelectDragIndicatorWrapper>
-                        {Object.keys(nfsShares).length === 0 ? (
-                          <SelectItem label={loadingOptions ? "Loading..." : "No NFS shares"} value="" isDisabled />
-                        ) : (
-                          Object.entries(nfsShares).map(([id, label]) => (
-                            <SelectItem key={id} label={label} value={id} />
-                          ))
-                        )}
-                      </SelectContent>
-                    </SelectPortal>
-                  </Select>
-                </VStack>
-
-                <VStack className="gap-2">
-                  <Text
-                    className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                    style={{ fontFamily: "Inter_500Medium" }}
-                  >
-                    CPU XML
-                  </Text>
-                  <Input variant="outline" className="rounded-lg">
-                    <InputField
-                      value={restoreCpuXml}
-                      onChangeText={setRestoreCpuXml}
-                      placeholder="Optional CPU XML override"
-                    />
-                  </Input>
-                </VStack>
-
-                <HStack className="items-center justify-between">
-                  <Text
-                    className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                    style={{ fontFamily: "Inter_500Medium" }}
-                  >
-                    Live restore
-                  </Text>
-                  <Switch value={restoreLive} onValueChange={setRestoreLive} />
-                </HStack>
-              </VStack>
-            )}
+                )}
+              </Box>
+            </ScrollView>
           </ModalBody>
-          <ModalFooter className="pt-6 border-t border-outline-100 dark:border-[#2A3B52]">
-            <HStack className="justify-end gap-3 w-full">
+          <ModalFooter className="border-t border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E]">
+            <HStack className="gap-3 w-full">
               <Button
                 variant="outline"
-                className="rounded-xl px-6 py-2.5 border-outline-200 dark:border-[#2A3B52]"
+                className="flex-1 rounded-lg border-outline-200 dark:border-[#2A3B52]"
                 onPress={() => {
                   setRestoreBackup(null);
                   resetRestoreForm();
                 }}
               >
-                <ButtonText
-                  className="text-typography-700 dark:text-[#E8EBF0]"
-                  style={{ fontFamily: "Inter_500Medium" }}
-                >
+                <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
                   Cancel
                 </ButtonText>
               </Button>
               <Button
-                className="rounded-lg px-6 py-2.5 bg-typography-900 dark:bg-[#E8EBF0]"
+                className="flex-1 rounded-lg bg-typography-900 dark:bg-[#2DD4BF]"
                 disabled={
                   restoring ||
                   !restoreMachine ||
@@ -1113,18 +1398,130 @@ export default function BackupsScreen() {
                 }
                 onPress={handleRestoreSubmit}
               >
-                {restoring ? (
-                  <ButtonSpinner />
-                ) : (
-                  <ButtonText
-                    className="text-background-0 dark:text-typography-900"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
-                  >
-                    Restore
-                  </ButtonText>
-                )}
+                {restoring ? <ButtonSpinner className="mr-2" /> : null}
+                <ButtonText className="text-background-0 dark:text-[#0A1628]">
+                  Restore
+                </ButtonText>
               </Button>
             </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={!!deleteTarget} onClose={handleCloseDeleteModal}>
+        <ModalBackdrop className="bg-black/60" />
+        <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] shadow-2xl max-w-lg p-6">
+          <ModalHeader className="pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
+            <HStack className="items-center gap-3">
+              <Box className="h-10 w-10 rounded-2xl bg-error-500/10 dark:bg-error-900/20 items-center justify-center">
+                <Trash2 size={18} className="text-error-600 dark:text-error-400" />
+              </Box>
+              <VStack>
+                <Heading
+                  size="md"
+                  className="text-typography-900 dark:text-[#E8EBF0]"
+                  style={{ fontFamily: "Inter_700Bold" }}
+                >
+                  Delete backup?
+                </Heading>
+                <Text className="text-sm text-typography-600 dark:text-typography-400">
+                  This permanently removes the backup file from storage.
+                </Text>
+              </VStack>
+            </HStack>
+            <ModalCloseButton className="text-typography-600 dark:text-typography-400" />
+          </ModalHeader>
+          <ModalBody className="pt-5">
+            <VStack className="gap-4">
+              {deleteTarget ? (
+                <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0A1628] p-4">
+                  <VStack className="gap-3">
+                    <HStack className="items-center justify-between">
+                      <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                        VM
+                      </Text>
+                      <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
+                        {deleteTarget.vmName}
+                      </Text>
+                    </HStack>
+                    <HStack className="items-center justify-between">
+                      <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                        Date
+                      </Text>
+                      <Text className="text-sm text-typography-700 dark:text-typography-200">
+                        {formatDate(deleteTarget.backupDate)}
+                      </Text>
+                    </HStack>
+                    <HStack className="items-center justify-between">
+                      <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                        NFS share
+                      </Text>
+                      <Text className="text-sm text-typography-700 dark:text-typography-200">
+                        {getNfsName(deleteTarget.nfsShareId)}
+                      </Text>
+                    </HStack>
+                    <HStack className="items-center justify-between">
+                      <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                        Type
+                      </Text>
+                      <Text className="text-sm text-typography-700 dark:text-typography-200">
+                        {deleteTarget.type ? String(deleteTarget.type) : "—"}
+                      </Text>
+                    </HStack>
+                    <HStack className="items-center justify-between">
+                      <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                        Status
+                      </Text>
+                      <Text className="text-sm text-typography-700 dark:text-typography-200">
+                        {deleteTarget.status ? String(deleteTarget.status) : "—"}
+                      </Text>
+                    </HStack>
+                    <HStack className="items-center justify-between">
+                      <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                        Size
+                      </Text>
+                      <Text className="text-sm text-typography-700 dark:text-typography-200">
+                        {typeof deleteTarget.size === "number" &&
+                        Number.isFinite(deleteTarget.size)
+                          ? `${deleteTarget.size.toFixed(1)} GB`
+                          : "—"}
+                      </Text>
+                    </HStack>
+                  </VStack>
+                </Box>
+              ) : null}
+              {deleteError ? (
+                <Box className="rounded-xl border border-error-300 dark:border-error-700 bg-error-50 dark:bg-error-900/20 px-4 py-3">
+                  <Text className="text-sm text-error-700 dark:text-error-200">
+                    {deleteError}
+                  </Text>
+                </Box>
+              ) : null}
+            </VStack>
+          </ModalBody>
+          <ModalFooter className="gap-3 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
+            <Button
+              variant="outline"
+              className="rounded-xl px-4"
+              onPress={handleCloseDeleteModal}
+              isDisabled={Boolean(deletingId)}
+            >
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
+            </Button>
+            <Button
+              action="negative"
+              onPress={handleConfirmDelete}
+              isDisabled={Boolean(deletingId)}
+              className="rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
+            >
+              {deletingId ? (
+                <ButtonSpinner />
+              ) : (
+                <ButtonText className="text-background-0 dark:text-[#0A1628]">
+                  Delete backup
+                </ButtonText>
+              )}
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

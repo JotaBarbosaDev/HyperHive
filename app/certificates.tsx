@@ -338,7 +338,7 @@ export default function CertificatesScreen() {
   const renderLoading = () => (
     <VStack className="gap-3 mt-6">
       {[1, 2].map((idx) => (
-        <Box key={idx} className="p-5 rounded-2xl bg-background-0 shadow-soft-1 border border-background-100">
+        <Box className="p-5 rounded-2xl bg-background-0 dark:bg-[#0F1A2E] shadow-soft-1 border border-outline-100 dark:border-[#2A3B52]" key={idx}>
           <Skeleton className="h-5 w-2/3 mb-3" />
           <SkeletonText className="w-1/3" />
           <HStack className="gap-2 mt-4">
@@ -370,22 +370,28 @@ export default function CertificatesScreen() {
           </Text>
 
           <HStack className="mt-6 items-center justify-between flex-wrap gap-3">
-            <Box className="flex-row items-center gap-3 px-4 py-3 rounded-xl bg-background-0 border border-background-200 shadow-soft-1">
+            <Box className="flex-row items-center gap-3 px-4 py-3 rounded-xl bg-background-0 dark:bg-[#0F1A2E] border border-outline-200 dark:border-[#2A3B52] shadow-soft-1">
               <Shield size={20} color="#0f172a" />
               <Text className="text-typography-900 font-semibold text-base">
                 {certs.length} certificate{certs.length === 1 ? "" : "s"} total
               </Text>
             </Box>
-            <Button action="primary" variant="solid" size="md" onPress={openCreateModal} className="rounded-xl px-5">
-              <ButtonIcon as={Plus} size="sm" />
-              <ButtonText>Add Certificate</ButtonText>
+            <Button
+              action="primary"
+              variant="solid"
+              size="md"
+              onPress={openCreateModal}
+              className="rounded-xl px-5 bg-typography-900 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+            >
+              <ButtonIcon as={Plus} size="sm" className="text-background-0 dark:text-[#0A1628]" />
+              <ButtonText className="text-background-0 dark:text-[#0A1628]">Add Certificate</ButtonText>
             </Button>
           </HStack>
 
           {loading ? (
             renderLoading()
           ) : certs.length === 0 ? (
-            <Box className="mt-10 p-6 border border-dashed border-background-300 rounded-2xl bg-background-0 items-center">
+            <Box className="mt-10 p-6 border border-dashed border-outline-200 dark:border-[#2A3B52] rounded-2xl bg-background-0 dark:bg-[#0A1628] items-center">
               <Text className="text-typography-700 font-semibold text-base">No certificates found</Text>
               <Text className="text-typography-500 text-sm mt-1 text-center">
                 Click "New Certificate" to issue via Let's Encrypt.
@@ -396,10 +402,7 @@ export default function CertificatesScreen() {
               {certs.map((cert) => {
                 const expired = isExpired(cert);
                 return (
-                  <Box
-                    key={cert.id}
-                    className="bg-background-0 rounded-2xl p-5 border border-background-100 shadow-soft-1"
-                  >
+                  <Box className="bg-background-0 dark:bg-[#0F1A2E] rounded-2xl p-5 border border-outline-100 dark:border-[#2A3B52] shadow-soft-1" key={cert.id}>
                     <HStack className="items-start justify-between gap-4 flex-wrap">
                       <VStack className="gap-2 flex-1">
                         <HStack className="items-center gap-2 flex-wrap">
@@ -464,7 +467,7 @@ export default function CertificatesScreen() {
                           size="sm"
                           onPress={() => handleRenew(cert)}
                           isDisabled={renewingId === cert.id}
-                          className="border-background-300 rounded-xl"
+                          className="border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E] rounded-xl"
                         >
                           {renewingId === cert.id ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
                           <ButtonText className="text-typography-900">Renew</ButtonText>
@@ -530,7 +533,7 @@ export default function CertificatesScreen() {
                   {domainsList.length > 0 ? (
                     <HStack className="gap-2 mt-2 flex-wrap">
                       {domainsList.map((d, idx) => (
-                        <Box key={`${d}-${idx}`} className="px-3 py-1 rounded-full bg-background-50 border border-background-100 items-center flex-row">
+                        <Box className="px-3 py-1 rounded-full bg-background-50 dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52] items-center flex-row" key={`${d}-${idx}`}>
                           <Text className="mr-2 text-typography-900">{d}</Text>
                           <Pressable onPress={() => setDomainsList((prev) => prev.filter((_, i) => i !== idx))} className="px-1">
                             <X size={14} color="#6b7280" />
@@ -659,9 +662,14 @@ export default function CertificatesScreen() {
               <Button variant="outline" action="default" onPress={closeModal} isDisabled={saving} className="rounded-xl">
                 <ButtonText className="text-typography-900">Cancel</ButtonText>
               </Button>
-              <Button action="primary" onPress={handleCreate} isDisabled={saving} className="rounded-xl">
-                {saving ? <ButtonSpinner /> : <ButtonIcon as={CloudLightning} size="sm" />}
-                <ButtonText>Issue</ButtonText>
+              <Button
+                action="primary"
+                onPress={handleCreate}
+                isDisabled={saving}
+                className="rounded-xl bg-typography-900 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+              >
+                {saving ? <ButtonSpinner /> : <ButtonIcon as={CloudLightning} size="sm" className="text-background-0 dark:text-[#0A1628]" />}
+                <ButtonText className="text-background-0 dark:text-[#0A1628]">Issue</ButtonText>
               </Button>
             </HStack>
           </ModalFooter>
