@@ -1,4 +1,5 @@
 import React from "react";
+import { Platform } from "react-native";
 import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
 import { getNewSlaveCount } from "@/services/new-slave-count";
 
@@ -24,16 +25,20 @@ export function NewSlaveCountToastListener() {
       const { title, description } = buildMessage(count);
       toast.show({
         id: TOAST_ID,
-        placement: "top",
+        placement: Platform.OS === "web" ? "top" : "bottom",
         duration: null,
         render: ({ id }) => (
           <Toast
             nativeID={"toast-" + id}
-            className="px-5 py-3 gap-3 shadow-soft-1 items-start flex-row"
+            className="w-[92vw] max-w-[92vw] px-4 py-3 gap-2 shadow-soft-1 items-start flex-col self-center web:w-auto web:max-w-3xl web:flex-row web:flex-wrap web:items-center"
             action="warning"
           >
-            <ToastTitle size="sm">{title}</ToastTitle>
-            <ToastDescription size="sm">{description}</ToastDescription>
+            <ToastTitle size="sm" className="w-full web:w-auto web:whitespace-nowrap">
+              {title}
+            </ToastTitle>
+            <ToastDescription size="sm" className="w-full web:w-auto web:flex-1 web:min-w-0">
+              {description}
+            </ToastDescription>
           </Toast>
         ),
       });

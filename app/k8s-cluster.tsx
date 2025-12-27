@@ -239,7 +239,7 @@ export default function K8ClusterScreen() {
 	};
 
 	return (
-		<Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
+		<Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
 			<ScrollView
 				showsVerticalScrollIndicator={false}
 				contentContainerStyle={{ paddingBottom: 80 }}

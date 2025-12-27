@@ -568,7 +568,7 @@ export default function BtrfsRaidsScreen() {
   );
 
   return (
-    <Box className="flex-1 bg-background-50 dark:bg-[#0A1628] web:bg-background-0 dark:web:bg-[#0A1628]">
+    <Box className="flex-1 bg-background-0 dark:bg-[#0A1628] web:bg-background-0 dark:web:bg-[#0A1628]">
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}

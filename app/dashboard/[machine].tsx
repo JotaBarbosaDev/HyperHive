@@ -551,14 +551,14 @@ export default function MachineDetailsScreen() {
 
 	if (!machineName) {
 		return (
-			<Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0 items-center justify-center">
+			<Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0 items-center justify-center">
 				<Text className="text-typography-600 dark:text-typography-300">No machine selected.</Text>
 			</Box>
 		);
 	}
 
 	return (
-		<Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
+		<Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
 			<ScrollView showsVerticalScrollIndicator={false} refreshControl={refreshControl} contentContainerStyle={{ paddingBottom: 36 }}>
 				<Box className="p-4 pt-14 web:p-10 web:max-w-7xl web:mx-auto web:w-full">
 					<HStack className="items-center justify-between mb-4">

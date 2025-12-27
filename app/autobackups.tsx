@@ -1,5 +1,5 @@
 import React from "react";
-import { ScrollView, RefreshControl, useColorScheme } from "react-native";
+import { ScrollView, RefreshControl, useColorScheme, Platform } from "react-native";
 import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";
 import { Heading } from "@/components/ui/heading";
@@ -9,12 +9,12 @@ import { Button, ButtonText, ButtonIcon, ButtonSpinner } from "@/components/ui/b
 import { Badge, BadgeText } from "@/components/ui/badge";
 import { Input, InputField } from "@/components/ui/input";
 import { Modal, ModalBackdrop, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton } from "@/components/ui/modal";
-import { Select, SelectTrigger, SelectInput, SelectItem, SelectIcon, SelectPortal, SelectBackdrop as SelectBackdropContent, SelectContent, SelectDragIndicator, SelectDragIndicatorWrapper } from "@/components/ui/select";
+import { Select, SelectTrigger, SelectInput, SelectItem, SelectIcon, SelectPortal, SelectBackdrop as SelectBackdropContent, SelectContent, SelectDragIndicator, SelectDragIndicatorWrapper, SelectScrollView } from "@/components/ui/select";
 import { Checkbox, CheckboxIndicator, CheckboxIcon, CheckboxLabel } from "@/components/ui/checkbox";
 import { ChevronDownIcon } from "@/components/ui/icon";
 import { Toast, ToastTitle, useToast } from "@/components/ui/toast";
-import { Fab, FabIcon, FabLabel } from "@/components/ui/fab";
 import { Calendar, Database, TrendingUp, RefreshCw, Trash2, Edit, Power, PowerOff, Plus, Clock, Check, Info } from "lucide-react-native";
+import { useAppTheme } from "@/hooks/useAppTheme";
 
 import {
   listAutoBackups,
@@ -69,6 +69,12 @@ const TIME_OPTIONS = [
 
 export default function AutoBackupsScreen() {
   const colorScheme = useColorScheme();
+  const { resolvedMode } = useAppTheme();
+  const isWeb = Platform.OS === "web";
+  const primaryButtonClass =
+    isWeb ? "bg-typography-900 dark:bg-[#2DD4BF]" : resolvedMode === "dark" ? "bg-[#2DD4BF]" : "bg-typography-900";
+  const primaryButtonTextClass =
+    isWeb ? "text-background-0 dark:text-[#0A1628]" : resolvedMode === "dark" ? "text-[#0A1628]" : "text-background-0";
   const toast = useToast();
   const [schedules, setSchedules] = React.useState<AutoBackup[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -414,7 +420,7 @@ export default function AutoBackupsScreen() {
   const refreshControlBackground = colorScheme === "dark" ? "#0E1524" : "#E2E8F0";
 
   return (
-    <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
+    <Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{paddingBottom: 100}}
@@ -445,18 +451,51 @@ export default function AutoBackupsScreen() {
             </VStack>
             <Box className="hidden web:flex">
               <Button
-                className="rounded-xl px-4"
+                className={`rounded-xl px-4 ${primaryButtonClass}`}
                 onPress={() => setShowCreateModal(true)}
               >
-                <ButtonIcon as={Plus} className="text-background-0 mr-1.5" />
+                <ButtonIcon as={Plus} className={`${primaryButtonTextClass} mr-1.5`} />
                 <ButtonText
-                  className="text-background-0"
+                  className={`${primaryButtonTextClass}`}
                   style={{fontFamily: "Inter_600SemiBold"}}
                 >
                   New schedule
                 </ButtonText>
               </Button>
             </Box>
+          </HStack>
+
+          <HStack className="mb-6 gap-2 flex-wrap web:hidden">
+            <Button
+              variant="outline"
+              size="md"
+              onPress={handleRefresh}
+              disabled={loading}
+              className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+            >
+              {loading ? (
+                <ButtonSpinner />
+              ) : (
+                <ButtonIcon
+                  as={RefreshCw}
+                  className="text-typography-700 rounded-xl dark:text-[#E8EBF0]"
+                />
+              )}
+            </Button>
+            <Button
+              size="md"
+              className={`rounded-xl ${primaryButtonClass}`}
+              onPress={() => setShowCreateModal(true)}
+              disabled={loading}
+            >
+              <ButtonIcon as={Plus} className={`${primaryButtonTextClass} mr-1.5`} />
+              <ButtonText
+                className={`${primaryButtonTextClass}`}
+                style={{fontFamily: "Inter_600SemiBold"}}
+              >
+                New schedule
+              </ButtonText>
+            </Button>
           </HStack>
 
           {/* Stats Overview */}
@@ -690,22 +729,6 @@ export default function AutoBackupsScreen() {
         </Box>
       </ScrollView>
 
-      {/* FAB mobile */}
-      <Fab
-        placement="bottom right"
-        size="lg"
-        onPress={() => setShowCreateModal(true)}
-        className="md:hidden"
-      >
-        <FabIcon as={Plus} className="text-background-0" />
-        <FabLabel
-          className="text-background-0"
-          style={{fontFamily: "Inter_600SemiBold"}}
-        >
-          New
-        </FabLabel>
-      </Fab>
-
       {/* Modal create/edit */}
       <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)}>
         <ModalBackdrop className="bg-black/60" />
@@ -885,13 +908,15 @@ export default function AutoBackupsScreen() {
                     </SelectTrigger>
                     <SelectPortal>
                       <SelectBackdropContent />
-                      <SelectContent>
+                      <SelectContent className="max-h-[70vh]">
                         <SelectDragIndicatorWrapper>
                           <SelectDragIndicator />
                         </SelectDragIndicatorWrapper>
-                        {TIME_OPTIONS.map((time) => (
-                          <SelectItem key={time} label={time} value={time} />
-                        ))}
+                        <SelectScrollView className="w-full">
+                          {TIME_OPTIONS.map((time) => (
+                            <SelectItem key={time} label={time} value={time} />
+                          ))}
+                        </SelectScrollView>
                       </SelectContent>
                     </SelectPortal>
                   </Select>
@@ -924,13 +949,15 @@ export default function AutoBackupsScreen() {
                     </SelectTrigger>
                     <SelectPortal>
                       <SelectBackdropContent />
-                      <SelectContent>
+                      <SelectContent className="max-h-[70vh]">
                         <SelectDragIndicatorWrapper>
                           <SelectDragIndicator />
                         </SelectDragIndicatorWrapper>
-                        {TIME_OPTIONS.map((time) => (
-                          <SelectItem key={time} label={time} value={time} />
-                        ))}
+                        <SelectScrollView className="w-full">
+                          {TIME_OPTIONS.map((time) => (
+                            <SelectItem key={time} label={time} value={time} />
+                          ))}
+                        </SelectScrollView>
                       </SelectContent>
                     </SelectPortal>
                   </Select>
@@ -1024,7 +1051,7 @@ export default function AutoBackupsScreen() {
                 </ButtonText>
               </Button>
               <Button
-                className="rounded-xl px-6 py-2.5 bg-typography-900 dark:bg-[#E8EBF0]"
+                className={`rounded-xl px-6 py-2.5 ${primaryButtonClass}`}
                 onPress={handleSubmit}
                 disabled={saving}
               >
@@ -1032,7 +1059,7 @@ export default function AutoBackupsScreen() {
                   <ButtonSpinner />
                 ) : (
                   <ButtonText
-                    className="text-background-0 dark:text-typography-900"
+                    className={`${primaryButtonTextClass}`}
                     style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     {editSchedule ? "Save changes" : "Create"}

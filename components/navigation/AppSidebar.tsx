@@ -11,6 +11,8 @@ import { Text } from "@/components/ui/text";
 import { Box } from "@/components/ui/box";
 import { Pressable } from "@/components/ui/pressable";
 import { Icon } from "@/components/ui/icon";
+import { Platform } from "react-native";
+import { useColorScheme } from "@/components/useColorScheme";
 import {
   Modal,
   ModalBackdrop,
@@ -189,6 +191,10 @@ const THEME_OPTIONS = [
 export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePreference }: AppSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const systemScheme = useColorScheme();
+  const resolvedMode = themePreference === "system" ? (systemScheme === "dark" ? "dark" : "light") : themePreference;
+  const isWeb = Platform.OS === "web";
+  const chevronColor = resolvedMode === "dark" ? "#94A3B8" : "#9AA4B8";
   const [expandedParents, setExpandedParents] = React.useState<Record<string, boolean>>({});
   const [showSettings, setShowSettings] = React.useState(false);
 
@@ -307,9 +313,10 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
               <Icon
                 as={ChevronRight}
                 size="sm"
-                className={`ml-auto text-typography-500 dark:text-[#E8EBF0] transition-transform origin-center ${
-                  isExpanded ? "rotate-45" : ""
+                className={`ml-auto text-typography-500 dark:text-[#94A3B8] transition-transform origin-center ${
+                  isExpanded ? "rotate-90" : ""
                 }`}
+                color={!isWeb ? chevronColor : undefined}
               />
             ) : null}
           </Pressable>

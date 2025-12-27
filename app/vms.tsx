@@ -16,6 +16,7 @@ import { Heading } from '@/components/ui/heading';
 import CreateVmModal from "@/components/modals/CreateVmModal";
 import ImportVmModal from "@/components/modals/ImportVmModal";
 import { ensureHyperHiveWebsocket, subscribeToHyperHiveWebsocket } from "@/services/websocket-client";
+import { useAppTheme } from "@/hooks/useAppTheme";
 import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
@@ -125,6 +126,22 @@ import {
   ChevronDown,
 } from "lucide-react-native";
 
+const usePrimaryButtonStyles = () => {
+  const { resolvedMode } = useAppTheme();
+  const isWeb = Platform.OS === "web";
+  const primaryButtonClass = isWeb
+    ? "bg-typography-900 dark:bg-[#2DD4BF]"
+    : resolvedMode === "dark"
+    ? "bg-[#2DD4BF]"
+    : "bg-typography-900";
+  const primaryButtonTextClass = isWeb
+    ? "text-background-0 dark:text-[#0A1628]"
+    : resolvedMode === "dark"
+    ? "text-[#0A1628]"
+    : "text-background-0";
+  return { primaryButtonClass, primaryButtonTextClass, resolvedMode, isWeb };
+};
+
 // Interfaces TypeScript
 interface VM {
   name: string;
@@ -200,6 +217,25 @@ const mapVirtualMachineToVM = (vm: VirtualMachine): VM => ({
 
 export default function VirtualMachinesScreen() {
   const colorScheme = useColorScheme();
+  const { primaryButtonClass, primaryButtonTextClass, resolvedMode, isWeb } = usePrimaryButtonStyles();
+  const cardIconButtonClass = isWeb
+    ? "p-3 rounded-lg border border-outline-200 bg-background-0 dark:bg-[#0F1A2E] web:hover:border-primary-500 web:hover:bg-primary-50 web:transition-all web:duration-150 disabled:opacity-50"
+    : resolvedMode === "dark"
+    ? "p-3 rounded-lg border border-outline-200 bg-[#0F1A2E] disabled:opacity-50"
+    : "p-3 rounded-lg border border-outline-200 bg-background-0 disabled:opacity-50";
+  const cardDangerButtonClass = isWeb
+    ? "p-3 rounded-lg border border-outline-200 bg-background-0 dark:bg-[#0F1A2E] web:hover:border-red-500 web:hover:bg-red-50 web:transition-all web:duration-150 disabled:opacity-50"
+    : resolvedMode === "dark"
+    ? "p-3 rounded-lg border border-outline-200 bg-[#0F1A2E] disabled:opacity-50"
+    : "p-3 rounded-lg border border-outline-200 bg-background-0 disabled:opacity-50";
+  const cardMenuIconClass = isWeb
+    ? "text-[#9AA4B8] dark:text-[#8A94A8]"
+    : resolvedMode === "dark"
+    ? "text-[#8A94A8]"
+    : "text-[#9AA4B8]";
+  const cardIconColor = resolvedMode === "dark" ? "#E8EBF0" : "#0F172A";
+  const cardMenuIconColor = resolvedMode === "dark" ? "#8A94A8" : "#9AA4B8";
+  const cardDangerIconColor = "#DC2626";
   const [vms, setVms] = React.useState<VM[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [loadingVm, setLoadingVm] = React.useState<string | null>(null);
@@ -380,6 +416,8 @@ export default function VirtualMachinesScreen() {
       }
 
       const normalizedBase = apiBase.replace(/\/+$/, "");
+      const appBaseUrl =
+        normalizedBase.replace(/\/api$/i, "") || normalizedBase;
 
       try {
         if (action === "browser") {
@@ -401,7 +439,7 @@ export default function VirtualMachinesScreen() {
               showToastMessage("Error", "Could not open the console in the browser.", "error");
             }
           } else {
-            await WebBrowser.openBrowserAsync(target);
+            await WebBrowser.openBrowserAsync(appBaseUrl);
           }
           return;
         }
@@ -950,7 +988,7 @@ export default function VirtualMachinesScreen() {
   const refreshControlBackground = colorScheme === "dark" ? "#0E1524" : "#E2E8F0";
 
   return (
-    <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
+    <Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 64 }}
@@ -965,7 +1003,7 @@ export default function VirtualMachinesScreen() {
         }
       >
         <Box className="p-4 pt-16 web:p-10 web:max-w-7xl web:mx-auto web:w-full">
-          <HStack className="justify-between items-start mb-3">
+          <HStack className="justify-between items-start mb-3 flex-col gap-3 web:flex-row web:items-start">
             <VStack className="flex-1">
               <Heading
                 size="2xl"
@@ -978,7 +1016,7 @@ export default function VirtualMachinesScreen() {
                 Complete management of virtual machines distributed across slaves with resource controls and monitoring.
               </Text>
             </VStack>
-            <HStack className="gap-2">
+            <HStack className="gap-2 flex-wrap web:flex-nowrap">
               <Button
                 variant="outline"
                 size="md"
@@ -1012,13 +1050,13 @@ export default function VirtualMachinesScreen() {
               <Button
                 size="md"
                 onPress={handleNewVM}
-                className="rounded-xl bg-typography-900 dark:bg-[#2DD4BF]"
+                className={`rounded-xl ${primaryButtonClass}`}
               >
                 <ButtonIcon
                   as={Plus}
-                  className="text-background-0 dark:text-[#0A1628]"
+                  className={`${primaryButtonTextClass}`}
                 />
-                <ButtonText className="web:inline hidden text-background-0 dark:text-[#0A1628]">
+                <ButtonText className={`web:inline hidden ${primaryButtonTextClass}`}>
                   New VM
                 </ButtonText>
               </Button>
@@ -1242,13 +1280,13 @@ export default function VirtualMachinesScreen() {
                 </Text>
                 <Button
                   onPress={handleNewVM}
-                  className="rounded-lg bg-typography-900 dark:bg-[#2DD4BF]"
+                  className={`rounded-lg ${primaryButtonClass}`}
                 >
                   <ButtonIcon
                     as={Plus}
-                    className="text-background-0 dark:text-[#0A1628]"
+                    className={`${primaryButtonTextClass}`}
                   />
-                  <ButtonText className="text-background-0 dark:text-[#0A1628]">
+                  <ButtonText className={`${primaryButtonTextClass}`}>
                     Create First VM
                   </ButtonText>
                 </Button>
@@ -1392,7 +1430,8 @@ export default function VirtualMachinesScreen() {
                                   >
                                     <MoreVertical
                                       size={16}
-                                      className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                                      className={isWeb ? `${cardMenuIconClass}` : undefined}
+                                      color={!isWeb ? cardMenuIconColor : undefined}
                                     />
                                   </Pressable>
                                 </HStack>
@@ -1579,7 +1618,7 @@ export default function VirtualMachinesScreen() {
                                 {isStopped && (
                                   <Button
                                     size="sm"
-                                    className="flex-1 rounded-lg bg-typography-900 dark:bg-[#2DD4BF] web:hover:brightness-95 web:transition-all web:duration-150"
+                                    className={`flex-1 rounded-lg ${primaryButtonClass} web:hover:brightness-95 web:transition-all web:duration-150`}
                                     onPress={() =>
                                       handleVmAction(vm.name, "start")
                                     }
@@ -1591,10 +1630,10 @@ export default function VirtualMachinesScreen() {
                                       <>
                                         <ButtonIcon
                                           as={Play}
-                                          className="text-background-0 dark:text-[#0A1628]"
+                                          className={`${primaryButtonTextClass}`}
                                         />
                                         <ButtonText
-                                          className="text-background-0 dark:text-[#0A1628]"
+                                          className={`${primaryButtonTextClass}`}
                                           style={{
                                             fontFamily: "Inter_500Medium",
                                           }}
@@ -1608,32 +1647,41 @@ export default function VirtualMachinesScreen() {
                                 {isRunning && (
                                   <>
                                     <Pressable
-                                      className="p-3 rounded-lg border border-outline-200 bg-background-0 dark:bg-[#0F1A2E] web:hover:border-primary-500 web:hover:bg-primary-50 web:transition-all web:duration-150 disabled:opacity-50"
+                                      className={`${cardIconButtonClass}`}
                                       onPress={() => handleVmAction(vm.name, "pause")}
                                       disabled={isLoading}
                                     >
-                                      <Pause className="text-typography-900 dark:text-[#E8EBF0]" />
+                                      <Pause
+                                        className={isWeb ? "text-typography-900 dark:text-[#E8EBF0]" : undefined}
+                                        color={!isWeb ? cardIconColor : undefined}
+                                      />
                                     </Pressable>
                                     <Pressable
-                                      className="p-3 rounded-lg border border-outline-200 bg-background-0 dark:bg-[#0F1A2E] web:hover:border-primary-500 web:hover:bg-primary-50 web:transition-all web:duration-150 disabled:opacity-50"
+                                      className={`${cardIconButtonClass}`}
                                       onPress={() => handleVmAction(vm.name, "restart")}
                                       disabled={isLoading}
                                     >
-                                      <RefreshCcw className="text-typography-900 dark:text-[#E8EBF0]" />
+                                      <RefreshCcw
+                                        className={isWeb ? "text-typography-900 dark:text-[#E8EBF0]" : undefined}
+                                        color={!isWeb ? cardIconColor : undefined}
+                                      />
                                     </Pressable>
                                     <Pressable
-                                      className="p-3 rounded-lg border border-outline-200 bg-background-0 dark:bg-[#0F1A2E] web:hover:border-red-500 web:hover:bg-red-50 web:transition-all web:duration-150 disabled:opacity-50"
+                                      className={`${cardDangerButtonClass}`}
                                       onPress={() => handleVmAction(vm.name, "shutdown")}
                                       disabled={isLoading}
                                     >
-                                      <Square className="text-red-600" />
+                                      <Square
+                                        className={isWeb ? "text-red-600" : undefined}
+                                        color={!isWeb ? cardDangerIconColor : undefined}
+                                      />
                                     </Pressable>
                                   </>
                                 )}
                                 {isPaused && (
                                   <Button
                                     size="sm"
-                                    className="flex-1 rounded-lg bg-typography-900 dark:bg-[#2DD4BF] web:hover:brightness-95 web:transition-all web:duration-150"
+                                    className={`flex-1 rounded-lg ${primaryButtonClass} web:hover:brightness-95 web:transition-all web:duration-150`}
                                     onPress={() =>
                                       handleVmAction(vm.name, "resume")
                                     }
@@ -1645,10 +1693,10 @@ export default function VirtualMachinesScreen() {
                                       <>
                                         <ButtonIcon
                                           as={Play}
-                                          className="text-background-0 dark:text-[#0A1628]"
+                                          className={`${primaryButtonTextClass}`}
                                         />
                                         <ButtonText
-                                          className="text-background-0 dark:text-[#0A1628]"
+                                          className={`${primaryButtonTextClass}`}
                                           style={{
                                             fontFamily: "Inter_500Medium",
                                           }}
@@ -1660,10 +1708,13 @@ export default function VirtualMachinesScreen() {
                                   </Button>
                                 )}
                                 <Pressable
-                                  className="p-3 rounded-lg border border-outline-200 bg-background-0 dark:bg-[#0F1A2E] web:hover:border-primary-500 web:hover:bg-primary-50 web:transition-all web:duration-150"
+                                  className={`${cardIconButtonClass}`}
                                   onPress={() => setDetailsVm(vm)}
                                 >
-                                  <Monitor className="text-typography-900 dark:text-[#E8EBF0]" />
+                                  <Monitor
+                                    className={isWeb ? "text-typography-900 dark:text-[#E8EBF0]" : undefined}
+                                    color={!isWeb ? cardIconColor : undefined}
+                                  />
                                 </Pressable>
                               </HStack>
                             </Pressable>
@@ -1688,14 +1739,14 @@ export default function VirtualMachinesScreen() {
                 <VStack className="gap-2">
                   <HStack className="">
                     <Button
-                      className="rounded-xl px-4 py-2 bg-typography-900 dark:bg-[#2DD4BF]"
+                      className={`rounded-xl px-4 py-2 ${primaryButtonClass}`}
                       onPress={() => {
                         if (!detailsVm) return;
                         setConsoleOptionsVm(detailsVm);
                         setShowConsoleOptions(true);
                       }}
                     >
-                      <ButtonText className="text-background-0 dark:text-[#0A1628]">Open</ButtonText>
+                      <ButtonText className={`${primaryButtonTextClass}`}>Open</ButtonText>
                     </Button>
                   </HStack>
                 </VStack>
@@ -1901,11 +1952,11 @@ export default function VirtualMachinesScreen() {
                       setConfirmAction(null);
                     }
                   }}
-                  className="rounded-xl px-4 py-2 bg-typography-900 dark:bg-[#2DD4BF]"
+                  className={`rounded-xl px-4 py-2 ${primaryButtonClass}`}
                   disabled={Boolean(deletingVm)}
                 >
                   {deletingVm ? <ButtonSpinner className="mr-2" /> : null}
-                  <ButtonText className="text-background-0 dark:text-[#0A1628]">Confirm</ButtonText>
+                  <ButtonText className={`${primaryButtonTextClass}`}>Confirm</ButtonText>
                 </Button>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -1966,6 +2017,8 @@ export default function VirtualMachinesScreen() {
                     {editVm && (
                       <EditVmForm
                         vm={editVm}
+                        primaryButtonClass={primaryButtonClass}
+                        primaryButtonTextClass={primaryButtonTextClass}
                         onCancel={() => setEditVm(null)}
                         onSave={async ({ vcpu, memory, disk, network }) => {
                           try {
@@ -2044,6 +2097,8 @@ export default function VirtualMachinesScreen() {
                     mountOptions={mountOptions}
                     slaveOptions={slaveOptions}
                     loadingOptions={cloneOptionsLoading}
+                    primaryButtonClass={primaryButtonClass}
+                    primaryButtonTextClass={primaryButtonTextClass}
                     onClone={async ({ newName, destMachine, destNfs }) => {
                       try {
                         await cloneVmApi(cloneVm.name, destNfs, destMachine, newName);
@@ -2128,6 +2183,8 @@ export default function VirtualMachinesScreen() {
                         : Object.keys(vmsBySlave)
                     }
                     loading={migratingVm === migrateVm.name}
+                    primaryButtonClass={primaryButtonClass}
+                    primaryButtonTextClass={primaryButtonTextClass}
                     onMigrate={async ({ targetSlave, mode, live, timeout }) => {
                       setMigratingVm(migrateVm.name);
                       try {
@@ -2220,6 +2277,8 @@ export default function VirtualMachinesScreen() {
                     vm={moveDiskVm}
                     mountOptions={mountOptions}
                     loadingOptions={cloneOptionsLoading}
+                    primaryButtonClass={primaryButtonClass}
+                    primaryButtonTextClass={primaryButtonTextClass}
                     onCancel={() => setMoveDiskVm(null)}
                     onMove={async ({ destNfsId, newName }) => {
                       try {
@@ -2287,6 +2346,8 @@ export default function VirtualMachinesScreen() {
                 {changeVncVm && (
                   <ChangeVncPasswordForm
                     vm={changeVncVm}
+                    primaryButtonClass={primaryButtonClass}
+                    primaryButtonTextClass={primaryButtonTextClass}
                     onCancel={() => setChangeVncVm(null)}
                     onSubmit={async (password) => {
                       try {
@@ -2351,6 +2412,8 @@ export default function VirtualMachinesScreen() {
                   <UpdateCpuXmlForm
                     vm={updateCpuVm}
                     slaveOptions={slaveOptions}
+                    primaryButtonClass={primaryButtonClass}
+                    primaryButtonTextClass={primaryButtonTextClass}
                     onCancel={() => setUpdateCpuVm(null)}
                     onUpdate={async ({ machineName, cpuXml }) => {
                       try {
@@ -2428,7 +2491,7 @@ export default function VirtualMachinesScreen() {
                         <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
                       </Button>
                       <Button
-                        className="rounded-md px-4 py-2 bg-typography-900 dark:bg-[#2DD4BF]"
+                        className={`rounded-md px-4 py-2 ${primaryButtonClass}`}
                         onPress={() => {
                           Haptics.notificationAsync(
                             Haptics.NotificationFeedbackType.Success
@@ -2450,7 +2513,7 @@ export default function VirtualMachinesScreen() {
                           setRestoreVm(null);
                         }}
                       >
-                        <ButtonText className="text-background-0 dark:text-[#0A1628]">Restore</ButtonText>
+                        <ButtonText className={`${primaryButtonTextClass}`}>Restore</ButtonText>
                       </Button>
                     </HStack>
                   </VStack>
@@ -2476,34 +2539,34 @@ export default function VirtualMachinesScreen() {
               <ModalBody>
                 <VStack className="gap-3">
                   <Button
-                    className="w-full rounded-md px-4 py-3 bg-typography-900 dark:bg-[#2DD4BF]"
+                    className={`w-full rounded-md px-4 py-3 h-auto min-h-[44px] ${primaryButtonClass}`}
                     onPress={() => {
                       void handleConsoleAction("browser");
                     }}
                   >
-                    <ButtonText className="text-background-0 dark:text-[#0A1628]">
-                      Abrir no Browser
+                    <ButtonText className={`text-xs text-center leading-snug flex-1 web:text-base ${primaryButtonTextClass}`}>
+                      Open in Browser
                     </ButtonText>
                   </Button>
                   <Button
                     variant="outline"
-                    className="w-full rounded-md px-4 py-3 border-typography-900 dark:border-[#E8EBF0]"
+                    className="w-full rounded-md px-4 py-3 h-auto min-h-[44px] border-typography-900 dark:border-[#E8EBF0]"
                     onPress={() => {
                       void handleConsoleAction("sprite");
                     }}
                   >
-                    <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                    <ButtonText className="text-xs text-center leading-snug flex-1 web:text-base text-typography-900 dark:text-[#E8EBF0]">
                       Download Sprite (.vv)
                     </ButtonText>
                   </Button>
                   <Button
                     variant="outline"
-                    className="w-full rounded-md px-4 py-3"
+                    className="w-full rounded-md px-4 py-3 h-auto min-h-[44px]"
                     onPress={() => {
                       void handleConsoleAction("guest");
                     }}
                   >
-                    <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                    <ButtonText className="text-xs text-center leading-snug flex-1 web:text-base text-typography-900 dark:text-[#E8EBF0]">
                       Share Guest
                     </ButtonText>
                   </Button>
@@ -2770,7 +2833,7 @@ export default function VirtualMachinesScreen() {
           }}
         >
           <ActionsheetBackdrop />
-          <ActionsheetContent className="max-h-[90vh]">
+          <ActionsheetContent className="max-h-[90vh] bg-background-0 dark:bg-[#0F1A2E]">
             <ScrollView className="w-full" showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: 20 }}>
               <ActionsheetDragIndicatorWrapper>
                 <ActionsheetDragIndicator />
@@ -2778,12 +2841,14 @@ export default function VirtualMachinesScreen() {
 
               {/* Header */}
               <Box className="p-4 border-b border-outline-100 w-full">
-                <Text className="text-lg font-semibold">{selectedVm?.name}</Text>
+                <Text className="text-lg font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                  {selectedVm?.name}
+                </Text>
               </Box>
 
               {/* Configurações label */}
               <ActionsheetItem isDisabled>
-                <ActionsheetItemText className="text-xs text-typography-500">
+                <ActionsheetItemText className="text-xs text-typography-500 dark:text-typography-400">
                   SETTINGS
                 </ActionsheetItemText>
               </ActionsheetItem>
@@ -2794,7 +2859,7 @@ export default function VirtualMachinesScreen() {
                   setShowActionsheet(false);
                 }}
               >
-                <ActionsheetItemText>
+                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">
                   {(selectedVm?.autoStart ? "✓ " : "") +
                     "Auto-start on boot"}
                 </ActionsheetItemText>
@@ -2803,7 +2868,7 @@ export default function VirtualMachinesScreen() {
               {/* Operações label */}
               <Box className="h-[1px] bg-outline-100 w-full" />
               <ActionsheetItem isDisabled>
-                <ActionsheetItemText className="text-xs text-typography-500">
+                <ActionsheetItemText className="text-xs text-typography-500 dark:text-typography-400">
                   OPERATIONS
                 </ActionsheetItemText>
               </ActionsheetItem>
@@ -2814,8 +2879,8 @@ export default function VirtualMachinesScreen() {
                   setShowActionsheet(false);
                 }}
               >
-                <ActionsheetIcon as={Settings} className="mr-2" />
-                <ActionsheetItemText>Edit Resources</ActionsheetItemText>
+                <ActionsheetIcon as={Settings} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
+                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">Edit Resources</ActionsheetItemText>
               </ActionsheetItem>
               <ActionsheetItem
                 onPress={() => {
@@ -2824,8 +2889,8 @@ export default function VirtualMachinesScreen() {
                   setShowActionsheet(false);
                 }}
               >
-                <ActionsheetIcon as={Cpu} className="mr-2" />
-                <ActionsheetItemText>Update CPU XML</ActionsheetItemText>
+                <ActionsheetIcon as={Cpu} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
+                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">Update CPU XML</ActionsheetItemText>
               </ActionsheetItem>
               <ActionsheetItem
                 onPress={() => {
@@ -2834,8 +2899,8 @@ export default function VirtualMachinesScreen() {
                   setShowActionsheet(false);
                 }}
               >
-                <ActionsheetIcon as={Lock} className="mr-2" />
-                <ActionsheetItemText>Change VNC Password</ActionsheetItemText>
+                <ActionsheetIcon as={Lock} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
+                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">Change VNC Password</ActionsheetItemText>
               </ActionsheetItem>
               <ActionsheetItem
                 onPress={() => {
@@ -2844,14 +2909,14 @@ export default function VirtualMachinesScreen() {
                   setShowActionsheet(false);
                 }}
               >
-                <ActionsheetIcon as={Copy} className="mr-2" />
-                <ActionsheetItemText>Clone VM</ActionsheetItemText>
+                <ActionsheetIcon as={Copy} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
+                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">Clone VM</ActionsheetItemText>
               </ActionsheetItem>
 
               {/* Migração & Disco */}
               <Box className="h-[1px] bg-outline-100 w-full" />
               <ActionsheetItem isDisabled>
-                <ActionsheetItemText className="text-xs text-typography-500">
+                <ActionsheetItemText className="text-xs text-typography-500 dark:text-typography-400">
                   MIGRATION & DISK
                 </ActionsheetItemText>
               </ActionsheetItem>
@@ -2862,8 +2927,8 @@ export default function VirtualMachinesScreen() {
                   setShowActionsheet(false);
                 }}
               >
-                <ActionsheetIcon as={GitBranch} className="mr-2" />
-                <ActionsheetItemText>Migrate VM</ActionsheetItemText>
+                <ActionsheetIcon as={GitBranch} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
+                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">Migrate VM</ActionsheetItemText>
               </ActionsheetItem>
               <ActionsheetItem
                 onPress={() => {
@@ -2872,8 +2937,8 @@ export default function VirtualMachinesScreen() {
                   setShowActionsheet(false);
                 }}
               >
-                <ActionsheetIcon as={HardDrive} className="mr-2" />
-                <ActionsheetItemText>Move Disk</ActionsheetItemText>
+                <ActionsheetIcon as={HardDrive} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
+                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">Move Disk</ActionsheetItemText>
               </ActionsheetItem>
               <ActionsheetItem
                 onPress={() => {
@@ -2883,8 +2948,8 @@ export default function VirtualMachinesScreen() {
                 }}
                 isDisabled={!selectedVm || isExportingSelectedVm}
               >
-                <ActionsheetIcon as={Download} className="mr-2" />
-                <ActionsheetItemText>
+                <ActionsheetIcon as={Download} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
+                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">
                   {isExportingSelectedVm ? "Exporting..." : "Export VM"}
                 </ActionsheetItemText>
               </ActionsheetItem>
@@ -2925,8 +2990,8 @@ export default function VirtualMachinesScreen() {
                   setShowActionsheet(false);
                 }}
               >
-                <ActionsheetIcon as={Disc3} className="mr-2" />
-                <ActionsheetItemText>Remove All ISOs</ActionsheetItemText>
+                <ActionsheetIcon as={Disc3} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
+                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">Remove All ISOs</ActionsheetItemText>
               </ActionsheetItem>
 
               {/* Force Shutdown */}
@@ -2938,8 +3003,8 @@ export default function VirtualMachinesScreen() {
                     setShowActionsheet(false);
                   }}
                 >
-                  <ActionsheetIcon as={Zap} className="mr-2 text-orange-600" />
-                  <ActionsheetItemText className="text-orange-600">
+                  <ActionsheetIcon as={Zap} className="mr-2 text-orange-600 dark:text-orange-400" />
+                  <ActionsheetItemText className="text-orange-600 dark:text-orange-400">
                     Force Shutdown
                   </ActionsheetItemText>
                 </ActionsheetItem>
@@ -2953,8 +3018,8 @@ export default function VirtualMachinesScreen() {
                   setShowActionsheet(false);
                 }}
               >
-                <ActionsheetIcon as={Trash2} className="mr-2 text-red-600" />
-                <ActionsheetItemText className="text-red-600">
+                <ActionsheetIcon as={Trash2} className="mr-2 text-red-600 dark:text-red-400" />
+                <ActionsheetItemText className="text-red-600 dark:text-red-400">
                   Delete VM
                 </ActionsheetItemText>
               </ActionsheetItem>
@@ -2962,9 +3027,9 @@ export default function VirtualMachinesScreen() {
               {/* Cancelar */}
               <ActionsheetItem
                 onPress={() => setShowActionsheet(false)}
-                className="bg-background-100 mt-2"
+                className="mt-2 rounded-md border border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E]"
               >
-                <ActionsheetItemText className="font-semibold">
+                <ActionsheetItemText className="font-semibold text-typography-900 dark:text-[#E8EBF0]">
                   Cancel
                 </ActionsheetItemText>
               </ActionsheetItem>
@@ -3013,10 +3078,14 @@ function EditVmForm({
   vm,
   onCancel,
   onSave,
+  primaryButtonClass,
+  primaryButtonTextClass,
 }: {
   vm: VM;
   onCancel: () => void;
   onSave: (values: { vcpu: number; memory: number; disk: number; network: string }) => Promise<void>;
+  primaryButtonClass: string;
+  primaryButtonTextClass: string;
 }) {
   const [vcpu, setVcpu] = React.useState(vm.DefinedCPUS);
   const [memory, setMemory] = React.useState(vm.DefinedRam);
@@ -3251,12 +3320,12 @@ function EditVmForm({
           </ButtonText>
         </Button>
         <Button
-          className="flex-1 rounded-lg bg-typography-900 dark:bg-[#2DD4BF]"
+          className={`flex-1 rounded-lg ${primaryButtonClass}`}
           disabled={!isValid || saving}
           onPress={handleSubmit}
         >
           {saving ? <ButtonSpinner className="mr-2" /> : null}
-          <ButtonText className="text-background-0 dark:text-[#0A1628]">
+          <ButtonText className={`${primaryButtonTextClass}`}>
             Save changes
           </ButtonText>
         </Button>
@@ -3271,12 +3340,16 @@ function CloneVmForm({
   slaveOptions,
   loadingOptions,
   onClone,
+  primaryButtonClass,
+  primaryButtonTextClass,
 }: {
   vm: VM;
   mountOptions: Mount[];
   slaveOptions: Slave[];
   loadingOptions: boolean;
   onClone: (payload: { newName: string; destNfs: string; destMachine: string }) => Promise<void>;
+  primaryButtonClass: string;
+  primaryButtonTextClass: string;
 }) {
   const [newName, setNewName] = React.useState(vm.name + "-clone");
   const [destMachine, setDestMachine] = React.useState(vm.machineName);
@@ -3423,12 +3496,12 @@ function CloneVmForm({
 
       <HStack className="justify-end gap-2 mt-2">
         <Button
-          className="rounded-md px-4 py-2 bg-typography-900 dark:bg-[#2DD4BF]"
+          className={`rounded-md px-4 py-2 ${primaryButtonClass}`}
           disabled={!isValid || saving}
           onPress={handleSubmit}
         >
           {saving ? <ButtonSpinner className="mr-2" /> : null}
-          <ButtonText className="text-background-0 dark:text-[#0A1628]">Clone</ButtonText>
+          <ButtonText className={`${primaryButtonTextClass}`}>Clone</ButtonText>
         </Button>
       </HStack>
     </VStack>
@@ -3440,6 +3513,8 @@ function MigrateVmForm({
   slaveChoices,
   onMigrate,
   loading,
+  primaryButtonClass,
+  primaryButtonTextClass,
 }: {
   vm: VM;
   slaveChoices: string[];
@@ -3450,6 +3525,8 @@ function MigrateVmForm({
     timeout?: number;
   }) => Promise<void>;
   loading: boolean;
+  primaryButtonClass: string;
+  primaryButtonTextClass: string;
 }) {
   const uniqueChoices = Array.from(new Set(slaveChoices));
   const initial = uniqueChoices.find((s) => s !== vm.machineName) || vm.machineName;
@@ -3546,18 +3623,26 @@ function MigrateVmForm({
           {canHotMigrate ? (
             <Button
               variant={isHot ? "solid" : "outline"}
-              className="flex-1 rounded-md"
+              className={`flex-1 rounded-md h-auto py-2 web:h-10 ${isHot ? primaryButtonClass : "border border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E]"}`}
               onPress={() => setMode("hot")}
             >
-              <ButtonText>{`Hot (VM running)`}</ButtonText>
+              <ButtonText
+                className={`text-xs text-center leading-snug web:text-sm ${isHot ? primaryButtonTextClass : "text-typography-900 dark:text-[#E8EBF0]"}`}
+              >
+                {`Hot (VM running)`}
+              </ButtonText>
             </Button>
           ) : null}
           <Button
             variant={!isHot ? "solid" : "outline"}
-            className="flex-1 rounded-md"
+            className={`flex-1 rounded-md h-auto py-2 web:h-10 ${!isHot ? primaryButtonClass : "border border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E]"}`}
             onPress={() => setMode("cold")}
           >
-            <ButtonText>{`Cold (VM off)`}</ButtonText>
+            <ButtonText
+              className={`text-xs text-center leading-snug web:text-sm ${!isHot ? primaryButtonTextClass : "text-typography-900 dark:text-[#E8EBF0]"}`}
+            >
+              {`Cold (VM off)`}
+            </ButtonText>
           </Button>
         </HStack>
         <FormControlHelper>
@@ -3611,12 +3696,12 @@ function MigrateVmForm({
       )}
       <HStack className="justify-end gap-2 mt-2">
         <Button
-          className="rounded-md px-4 py-2 bg-typography-900 dark:bg-[#2DD4BF]"
+          className={`rounded-md px-4 py-2 ${primaryButtonClass}`}
           onPress={handleSubmit}
           disabled={loading || uniqueChoices.length === 0}
         >
           {loading ? <ButtonSpinner className="mr-2" /> : null}
-          <ButtonText className="text-background-0 dark:text-[#0A1628]">Migrate</ButtonText>
+          <ButtonText className={`${primaryButtonTextClass}`}>Migrate</ButtonText>
         </Button>
       </HStack>
     </VStack>
@@ -3627,10 +3712,14 @@ function ChangeVncPasswordForm({
   vm,
   onCancel,
   onSubmit,
+  primaryButtonClass,
+  primaryButtonTextClass,
 }: {
   vm: VM;
   onCancel: () => void;
   onSubmit: (password: string) => Promise<void>;
+  primaryButtonClass: string;
+  primaryButtonTextClass: string;
 }) {
   const [password, setPassword] = React.useState("");
   const [saving, setSaving] = React.useState(false);
@@ -3695,12 +3784,12 @@ function ChangeVncPasswordForm({
           <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
         </Button>
         <Button
-          className="rounded-md px-4 py-2 bg-typography-900 dark:bg-[#2DD4BF]"
+          className={`rounded-md px-4 py-2 ${primaryButtonClass}`}
           onPress={handleSubmit}
           disabled={saving || !password.trim()}
         >
           {saving ? <ButtonSpinner className="mr-2" /> : null}
-          <ButtonText className="text-background-0 dark:text-[#0A1628]">Update</ButtonText>
+          <ButtonText className={`${primaryButtonTextClass}`}>Update</ButtonText>
         </Button>
       </HStack>
     </VStack>
@@ -3713,12 +3802,16 @@ function MoveDiskForm({
   loadingOptions,
   onCancel,
   onMove,
+  primaryButtonClass,
+  primaryButtonTextClass,
 }: {
   vm: VM;
   mountOptions: Mount[];
   loadingOptions: boolean;
   onCancel: () => void;
   onMove: (payload: { destNfsId: string; newName: string }) => Promise<void>;
+  primaryButtonClass: string;
+  primaryButtonTextClass: string;
 }) {
   const [newName, setNewName] = React.useState(vm.name);
   const [destNfsId, setDestNfsId] = React.useState<string>("");
@@ -3839,12 +3932,12 @@ function MoveDiskForm({
           <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
         </Button>
         <Button
-          className="rounded-xl px-4 py-2 bg-typography-900 dark:bg-[#2DD4BF]"
+          className={`rounded-xl px-4 py-2 ${primaryButtonClass}`}
           disabled={!isValid || saving}
           onPress={handleSubmit}
         >
           {saving ? <ButtonSpinner className="mr-2" /> : null}
-          <ButtonText className="text-background-0 dark:text-[#0A1628]">Move</ButtonText>
+          <ButtonText className={`${primaryButtonTextClass}`}>Move</ButtonText>
         </Button>
       </HStack>
     </VStack>
@@ -3856,11 +3949,15 @@ function UpdateCpuXmlForm({
   slaveOptions,
   onCancel,
   onUpdate,
+  primaryButtonClass,
+  primaryButtonTextClass,
 }: {
   vm: VM;
   slaveOptions: Slave[];
   onCancel: () => void;
   onUpdate: (payload: { machineName: string; cpuXml: string }) => Promise<void>;
+  primaryButtonClass: string;
+  primaryButtonTextClass: string;
 }) {
   const [machineName, setMachineName] = React.useState(vm.machineName);
   const [cpuXml, setCpuXml] = React.useState("");
@@ -4060,12 +4157,12 @@ function UpdateCpuXmlForm({
           <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
         </Button>
         <Button
-          className="rounded-md px-4 py-2 bg-typography-900 dark:bg-[#2DD4BF]"
+          className={`rounded-md px-4 py-2 ${primaryButtonClass}`}
           onPress={handleSubmit}
           disabled={saving}
         >
           {saving ? <ButtonSpinner className="mr-2" /> : null}
-          <ButtonText className="text-background-0 dark:text-[#0A1628]">Update</ButtonText>
+          <ButtonText className={`${primaryButtonTextClass}`}>Update</ButtonText>
         </Button>
       </HStack>
     </VStack>

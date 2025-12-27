@@ -31,6 +31,7 @@ import { Checkbox, CheckboxIndicator, CheckboxIcon, CheckboxLabel } from "@/comp
 import { ScrollView, Platform } from "react-native";
 import { Cpu, X, Copy, Trash2, ChevronDown, Check, Upload } from "lucide-react-native";
 import { Pressable } from "@/components/ui/pressable";
+import { useAppTheme } from "@/hooks/useAppTheme";
 import { useToast, Toast, ToastTitle, ToastDescription } from "@/components/ui/toast";
 import { StableTextInput } from "@/components/ui/stable-text-input";
 import { importVm, listSlaves, Slave, getCpuDisableFeatures } from "@/services/vms-client";
@@ -73,7 +74,12 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const toast = useToast();
+  const { resolvedMode } = useAppTheme();
   const isWeb = Platform.OS === "web";
+  const primaryButtonClass =
+    isWeb ? "bg-typography-900 dark:bg-[#E8EBF0]" : resolvedMode === "dark" ? "bg-[#2DD4BF]" : "bg-typography-900";
+  const primaryButtonTextClass =
+    isWeb ? "text-background-0 dark:text-typography-900" : resolvedMode === "dark" ? "text-[#0A1628]" : "text-background-0";
   const quickMemoryGb = [2, 4, 8, 16, 32, 64];
 
   const availableSlaves = useMemo(
@@ -770,12 +776,12 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
             </Button>
 
             <Button
-              className="flex-1 rounded-lg bg-typography-900 dark:bg-[#E8EBF0]"
+              className={`flex-1 rounded-lg ${primaryButtonClass}`}
               onPress={handleImport}
               disabled={importing || !isWeb}
             >
               {importing ? <ButtonSpinner className="mr-2" /> : null}
-              <ButtonText className="text-background-0 dark:text-typography-900">Import VM</ButtonText>
+              <ButtonText className={`${primaryButtonTextClass}`}>Import VM</ButtonText>
             </Button>
           </HStack>
         </ModalFooter>

@@ -66,6 +66,7 @@ export default function BackupsScreen() {
   const [selectedSlaves, setSelectedSlaves] = React.useState<string[]>([]);
   const [currentSlaveSelect, setCurrentSlaveSelect] = React.useState("");
   const [loadingCPU, setLoadingCPU] = React.useState(false);
+  const [mobileActionBackup, setMobileActionBackup] = React.useState<Backup | null>(null);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<Backup | null>(null);
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
@@ -529,9 +530,10 @@ export default function BackupsScreen() {
 
   const refreshControlTint = colorScheme === "dark" ? "#F8FAFC" : "#0F172A";
   const refreshControlBackground = colorScheme === "dark" ? "#0E1524" : "#E2E8F0";
+  const isWeb = Platform.OS === "web";
 
   return (
-    <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
+    <Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 64 }}
@@ -702,7 +704,7 @@ export default function BackupsScreen() {
                 </Text>
               </VStack>
             </Box>
-          ) : (
+          ) : isWeb ? (
             <VStack className="gap-6">
               {Object.entries(backupsByVm).map(([vmName, vmBackups]) => {
                 const firstBackup = vmBackups[0];
@@ -883,6 +885,64 @@ export default function BackupsScreen() {
                   </Box>
                 );
               })}
+            </VStack>
+          ) : (
+            <VStack className="gap-4">
+              {Object.entries(backupsByVm).map(([vmName, vmBackups]) => (
+                <VStack key={vmName} className="gap-3">
+                  <HStack className="items-center justify-between px-1">
+                    <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                      {vmName}
+                    </Text>
+                    <Text className="text-xs text-typography-500 dark:text-typography-400">
+                      {vmBackups.length} backup{vmBackups.length > 1 ? "s" : ""}
+                    </Text>
+                  </HStack>
+                  <VStack className="gap-2">
+                    {vmBackups.map((backup) => {
+                      const automatic = Boolean(backup.automatic);
+                      return (
+                        <Pressable
+                          key={backup.id}
+                          onPress={() => setMobileActionBackup(backup)}
+                          className="rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4"
+                        >
+                          <HStack className="items-start justify-between">
+                            <VStack className="flex-1 pr-3">
+                              <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                                {backup.vmName}
+                              </Text>
+                              <Text className="text-xs text-typography-600 dark:text-typography-400 mt-1">
+                                {formatDate(backup.backupDate)}
+                              </Text>
+                              <Text className="text-xs text-typography-500 dark:text-typography-400 mt-1">
+                                {backup.machineName}
+                              </Text>
+                            </VStack>
+                            <Badge
+                              size="sm"
+                              variant="outline"
+                              className={`rounded-full ${automatic
+                                ? "bg-[#3b82f619] border-[#3b82f6] dark:bg-[#3b82f625] dark:border-[#60a5fa]"
+                                : "bg-[#ef444419] border-[#ef4444] dark:bg-[#ef444425] dark:border-[#f87171]"
+                                }`}
+                            >
+                              <BadgeText
+                                className={`text-xs ${automatic
+                                  ? "text-[#3b82f6] dark:text-[#60a5fa]"
+                                  : "text-[#ef4444] dark:text-[#f87171]"
+                                  }`}
+                              >
+                                {automatic ? "Automatic" : "Manual"}
+                              </BadgeText>
+                            </Badge>
+                          </HStack>
+                        </Pressable>
+                      );
+                    })}
+                  </VStack>
+                </VStack>
+              ))}
             </VStack>
           )}
         </Box>
@@ -1523,6 +1583,82 @@ export default function BackupsScreen() {
               )}
             </Button>
           </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Modal
+        isOpen={!!mobileActionBackup}
+        onClose={() => setMobileActionBackup(null)}
+      >
+        <ModalBackdrop className="bg-black/60" />
+        <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] shadow-2xl max-w-lg p-6">
+          <ModalHeader className="pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
+            <Heading
+              size="md"
+              className="text-typography-900 dark:text-[#E8EBF0]"
+              style={{ fontFamily: "Inter_700Bold" }}
+            >
+              Backup Actions
+            </Heading>
+            <ModalCloseButton className="text-typography-600 dark:text-typography-400" />
+          </ModalHeader>
+          <ModalBody className="py-4">
+            {mobileActionBackup ? (
+              <VStack className="gap-4">
+                <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0A1628] p-4">
+                  <VStack className="gap-2">
+                    <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                      {mobileActionBackup.vmName}
+                    </Text>
+                    <Text className="text-xs text-typography-600 dark:text-typography-400">
+                      {formatDate(mobileActionBackup.backupDate)}
+                    </Text>
+                    <Text className="text-xs text-typography-500 dark:text-typography-400">
+                      {mobileActionBackup.machineName}
+                    </Text>
+                  </VStack>
+                </Box>
+                <Button
+                  className="rounded-xl bg-typography-900 dark:bg-[#2DD4BF]"
+                  onPress={async () => {
+                    if (!mobileActionBackup) return;
+                    await handleDownload(mobileActionBackup);
+                    setMobileActionBackup(null);
+                  }}
+                >
+                  <ButtonText className="text-background-0 dark:text-[#0A1628]">
+                    Transfer
+                  </ButtonText>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="rounded-xl border-outline-200 dark:border-[#2A3B52]"
+                  onPress={() => {
+                    if (!mobileActionBackup) return;
+                    setRestoreBackup(mobileActionBackup);
+                    setMobileActionBackup(null);
+                  }}
+                >
+                  <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                    Use Backup
+                  </ButtonText>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="rounded-xl border-red-500"
+                  onPress={() => {
+                    if (!mobileActionBackup) return;
+                    handleDelete(mobileActionBackup);
+                    setMobileActionBackup(null);
+                  }}
+                >
+                  <ButtonText className="text-red-600 dark:text-red-400">
+                    Delete
+                  </ButtonText>
+                </Button>
+              </VStack>
+            ) : null}
+          </ModalBody>
         </ModalContent>
       </Modal>
 
