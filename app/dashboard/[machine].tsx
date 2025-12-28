@@ -799,9 +799,11 @@ export default function MachineDetailsScreen() {
 					<ModalHeader>
 						<Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">Loading</Heading>
 					</ModalHeader>
-					<ModalBody className="items-center gap-3 pb-6">
-						<Spinner size="large" color="#3B82F6" />
-						<Text className="text-sm text-typography-600 dark:text-typography-300">Fetching metrics...</Text>
+					<ModalBody className="pb-6">
+						<VStack className="items-center gap-3">
+							<Spinner size="large" color="#3B82F6" />
+							<Text className="text-sm text-typography-600 dark:text-typography-300">Fetching metrics...</Text>
+						</VStack>
 					</ModalBody>
 				</ModalContent>
 			</Modal>

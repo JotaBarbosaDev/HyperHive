@@ -1,5 +1,5 @@
 import React from "react";
-import { RefreshControl, ScrollView, useWindowDimensions } from "react-native";
+import { RefreshControl, ScrollView, useWindowDimensions, Platform, useColorScheme } from "react-native";
 import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";
 import { Heading } from "@/components/ui/heading";
@@ -184,8 +184,11 @@ export default function CertificatesScreen() {
   const [renewingId, setRenewingId] = React.useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<Certificate | null>(null);
   const [deletingId, setDeletingId] = React.useState<number | null>(null);
+  const [selectedCert, setSelectedCert] = React.useState<Certificate | null>(null);
   const { height: screenHeight } = useWindowDimensions();
   const modalBodyMaxHeight = Math.min(screenHeight * 0.7, 720);
+  const isWeb = Platform.OS === "web";
+  const isDarkMode = useColorScheme() === "dark";
 
   const showToast = React.useCallback(
     (title: string, description: string, action: "success" | "error" = "success") => {
@@ -397,7 +400,7 @@ export default function CertificatesScreen() {
                 Click "New Certificate" to issue via Let's Encrypt.
               </Text>
             </Box>
-          ) : (
+          ) : isWeb ? (
             <VStack className="mt-6 gap-4">
               {certs.map((cert) => {
                 const expired = isExpired(cert);
@@ -488,9 +491,161 @@ export default function CertificatesScreen() {
                 );
               })}
             </VStack>
+          ) : (
+            <VStack className="mt-6 gap-3">
+              {certs.map((cert) => {
+                const expired = isExpired(cert);
+                const title = cert.nice_name ?? (cert.domain_names ?? [])[0] ?? "-";
+                return (
+                  <Pressable
+                    key={cert.id}
+                    onPress={() => setSelectedCert(cert)}
+                    className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] p-4 shadow-soft-1"
+                  >
+                    <VStack className="gap-2">
+                      <HStack className="items-center justify-between gap-2">
+                        <HStack className="items-center gap-2 flex-1 flex-wrap">
+                          <Shield size={16} color={expired ? "#ef4444" : isDarkMode ? "#22c55e" : "#16a34a"} />
+                          <Text className="text-typography-900 dark:text-[#E8EBF0] text-sm" style={{ fontFamily: "Inter_700Bold" }}>
+                            {title}
+                          </Text>
+                        </HStack>
+                        <StatusChip label={expired ? "Expired" : "Valid"} action={expired ? "error" : "success"} />
+                      </HStack>
+                      <HStack className="gap-2 flex-wrap">
+                        <StatusChip
+                          label={cert.provider?.toLowerCase() === "letsencrypt" ? "Let's Encrypt" : "Custom"}
+                          action="muted"
+                        />
+                        {cert.meta?.dns_challenge ? (
+                          <StatusChip label="DNS Challenge" action="muted" />
+                        ) : (
+                          <StatusChip label="HTTP Challenge" action="muted" />
+                        )}
+                      </HStack>
+                      <HStack className="items-center gap-2 flex-wrap">
+                        <Calendar color={expired ? "#ef4444" : isDarkMode ? "#E2E8F0" : "#0f172a"} size={14} />
+                        <Text className={`text-xs ${expired ? "text-error-600" : "text-typography-600 dark:text-typography-400"}`}>
+                          Expires {formatDate(resolveExpiry(cert))}
+                        </Text>
+                      </HStack>
+                      <Text className="text-xs text-typography-500 dark:text-typography-400">
+                        Tap for details & actions
+                      </Text>
+                    </VStack>
+                  </Pressable>
+                );
+              })}
+            </VStack>
           )}
         </Box>
       </ScrollView>
+
+      <Modal isOpen={!!selectedCert} onClose={() => setSelectedCert(null)} size="md">
+        <ModalBackdrop className="bg-black/60" />
+        <ModalContent className="max-w-lg w-full rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628] shadow-2xl">
+          <ModalHeader className="flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
+            <VStack className="flex-1">
+              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+                Certificate
+              </Heading>
+              <Text className="text-typography-600 dark:text-typography-400 mt-1">
+                Details and actions for this certificate.
+              </Text>
+            </VStack>
+            <ModalCloseButton className="text-typography-500" />
+          </ModalHeader>
+          <ModalBody className="px-6 pt-4">
+            {selectedCert ? (
+              <VStack className="gap-4">
+                <VStack className="gap-2">
+                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                    Domains
+                  </Text>
+                  <HStack className="flex-wrap gap-2">
+                    {(selectedCert.domain_names ?? []).map((domain) => (
+                      <Badge key={domain} className="rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
+                        <BadgeText className="text-xs text-typography-800 dark:text-typography-200">{domain}</BadgeText>
+                      </Badge>
+                    ))}
+                  </HStack>
+                </VStack>
+                <HStack className="items-center gap-2 flex-wrap">
+                  <StatusChip
+                    label={selectedCert.provider?.toLowerCase() === "letsencrypt" ? "Let's Encrypt" : "Custom"}
+                    action="muted"
+                  />
+                  <StatusChip label={isExpired(selectedCert) ? "Expired" : "Valid"} action={isExpired(selectedCert) ? "error" : "success"} />
+                  {selectedCert.meta?.dns_challenge ? (
+                    <StatusChip label={`DNS Challenge - ${selectedCert.meta?.dns_provider || "provider"}`} action="muted" />
+                  ) : (
+                    <StatusChip label="HTTP Challenge" action="muted" />
+                  )}
+                </HStack>
+                <VStack className="gap-2">
+                  <HStack className="items-center gap-2">
+                    <Calendar color={isExpired(selectedCert) ? "#ef4444" : isDarkMode ? "#E2E8F0" : "#0f172a"} size={16} />
+                    <Text className={`text-sm ${isExpired(selectedCert) ? "text-error-600 font-semibold" : "text-typography-800 dark:text-typography-200"}`}>
+                      Expires: {formatDate(resolveExpiry(selectedCert))}
+                    </Text>
+                  </HStack>
+                  <HStack className="items-center gap-2">
+                    <Calendar color={isDarkMode ? "#E2E8F0" : "#0f172a"} size={16} />
+                    <Text className="text-sm text-typography-700 dark:text-typography-300">
+                      Created: {formatDate(resolveCreated(selectedCert))}
+                    </Text>
+                  </HStack>
+                </VStack>
+                {isExpired(selectedCert) ? (
+                  <HStack className="items-center gap-2">
+                    <AlertTriangle size={16} color="#ef4444" />
+                    <Text className="text-error-600 text-sm font-semibold">
+                      This certificate has expired and needs to be renewed
+                    </Text>
+                  </HStack>
+                ) : null}
+              </VStack>
+            ) : null}
+          </ModalBody>
+          <ModalFooter className="px-6 pb-6 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
+            <HStack className="gap-2 w-full">
+              <Button
+                action="default"
+                variant="outline"
+                size="sm"
+                onPress={() => {
+                  if (!selectedCert) return;
+                  void handleRenew(selectedCert);
+                  setSelectedCert(null);
+                }}
+                isDisabled={selectedCert ? renewingId === selectedCert.id : false}
+                className="flex-1 rounded-xl border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E]"
+              >
+                {selectedCert && renewingId === selectedCert.id ? (
+                  <ButtonSpinner />
+                ) : (
+                  <ButtonIcon as={RefreshCcw} size="sm" className="text-typography-900 dark:text-[#E8EBF0]" />
+                )}
+                <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Renew</ButtonText>
+              </Button>
+              <Button
+                action="negative"
+                variant="solid"
+                size="sm"
+                onPress={() => {
+                  if (!selectedCert) return;
+                  setDeleteTarget(selectedCert);
+                  setSelectedCert(null);
+                }}
+                className="flex-1 rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
+              >
+                <ButtonIcon as={Trash2} size="sm" className="text-background-0 dark:text-[#0A1628]" />
+                <ButtonText className="text-background-0 dark:text-[#0A1628]">Delete</ButtonText>
+              </Button>
+            </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
       <Modal isOpen={modalOpen} onClose={closeModal} size="lg">
         <ModalBackdrop className="bg-black/60" />

@@ -1,5 +1,5 @@
 import React from "react";
-import { RefreshControl, ScrollView, useWindowDimensions } from "react-native";
+import { RefreshControl, ScrollView, useWindowDimensions, Platform } from "react-native";
 import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";
 import { Heading } from "@/components/ui/heading";
@@ -139,6 +139,7 @@ export default function NotFoundHostsScreen() {
   const [modalOpen, setModalOpen] = React.useState(false);
   const [editingHost, setEditingHost] = React.useState<NotFoundHost | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<NotFoundHost | null>(null);
+  const [selectedHost, setSelectedHost] = React.useState<NotFoundHost | null>(null);
   const [form, setForm] = React.useState<NotFoundHostPayload>(DEFAULT_PAYLOAD);
   const [domainsInput, setDomainsInput] = React.useState("");
   const [domainsList, setDomainsList] = React.useState<string[]>([]);
@@ -148,6 +149,7 @@ export default function NotFoundHostsScreen() {
   const { height: screenHeight } = useWindowDimensions();
   const modalBodyMaxHeight = Math.min(screenHeight * 0.55, 520);
   const [formTab, setFormTab] = React.useState<"details" | "ssl">("details");
+  const isWeb = Platform.OS === "web";
 
   const showToast = React.useCallback(
     (title: string, description: string, action: "success" | "error" = "success") => {
@@ -430,7 +432,7 @@ export default function NotFoundHostsScreen() {
             <VStack className="mt-6 gap-4">
               {filteredHosts.map((host) => {
                 const enabled = isHostEnabled(host);
-                return (
+                return isWeb ? (
                   <Box className="bg-background-0 dark:bg-[#0F1A2E] rounded-2xl p-5 border border-outline-100 dark:border-[#2A3B52] shadow-soft-1" key={host.id}>
                     <HStack className="items-start justify-between gap-4 flex-wrap">
                       <HStack className="items-center gap-2 flex-1 flex-wrap">
@@ -527,12 +529,193 @@ export default function NotFoundHostsScreen() {
                       </Box>
                     ) : null}
                   </Box>
+                ) : (
+                  <Pressable
+                    key={host.id}
+                    onPress={() => setSelectedHost(host)}
+                    className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] p-4 shadow-soft-1"
+                  >
+                    <VStack className="gap-2">
+                      <HStack className="items-center justify-between gap-2">
+                        <HStack className="items-center gap-2 flex-1 flex-wrap">
+                          <Box className={`h-2.5 w-2.5 rounded-full ${enabled ? "bg-success-500" : "bg-outline-400"}`} />
+                          <HStack className="flex-wrap">
+                            {(host.domain_names ?? []).map((d, idx) => (
+                              <React.Fragment key={d}>
+                                <Text
+                                  className="text-typography-900 dark:text-[#E8EBF0] text-sm"
+                                  style={{ fontFamily: "Inter_700Bold" }}
+                                >
+                                  {d}
+                                </Text>
+                                {idx < (host.domain_names ?? []).length - 1 ? (
+                                  <Text className="text-typography-900 dark:text-[#E8EBF0] text-sm">{", "}</Text>
+                                ) : null}
+                              </React.Fragment>
+                            ))}
+                          </HStack>
+                        </HStack>
+                        <StatusChip label={enabled ? "Active" : "Inactive"} active={enabled} />
+                      </HStack>
+                      <HStack className="items-center gap-3 flex-wrap">
+                        <HStack className="items-center gap-2">
+                          <AlertTriangle size={16} color="#ef4444" />
+                          <Text className="text-error-600 font-semibold text-xs">404 Not Found</Text>
+                        </HStack>
+                        <HStack className="items-center gap-2">
+                          {host.ssl_forced ? (
+                            <Lock size={16} color="#16a34a" />
+                          ) : (
+                            <ShieldOff size={16} color="#9ca3af" />
+                          )}
+                          <Text
+                            className={`text-xs ${host.ssl_forced ? "text-success-600 dark:text-success-400" : "text-typography-600 dark:text-typography-400"}`}
+                          >
+                            SSL {host.ssl_forced ? "(Forced)" : "(Optional)"}
+                          </Text>
+                        </HStack>
+                      </HStack>
+                      <Text className="text-xs text-typography-500 dark:text-typography-400">
+                        Tap for details & actions
+                      </Text>
+                    </VStack>
+                  </Pressable>
                 );
               })}
             </VStack>
           )}
         </Box>
       </ScrollView>
+
+      <Modal isOpen={!!selectedHost} onClose={() => setSelectedHost(null)} size="md">
+        <ModalBackdrop className="bg-black/60" />
+        <ModalContent className="max-w-lg w-full rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628] shadow-2xl">
+          <ModalHeader className="flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
+            <VStack className="flex-1">
+              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+                404 Host
+              </Heading>
+              <Text className="text-typography-600 dark:text-typography-400 mt-1">
+                Details and actions for this host.
+              </Text>
+            </VStack>
+            <ModalCloseButton className="text-typography-500" />
+          </ModalHeader>
+          <ModalBody className="px-6 pt-4">
+            {selectedHost ? (
+              <VStack className="gap-4">
+                <VStack className="gap-2">
+                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                    Domains
+                  </Text>
+                  <HStack className="flex-wrap">
+                    {(selectedHost.domain_names ?? []).map((d, idx) => (
+                      <React.Fragment key={d}>
+                        <Text className="text-typography-900 dark:text-[#E8EBF0] text-base" style={{ fontFamily: "Inter_600SemiBold" }}>
+                          {d}
+                        </Text>
+                        {idx < (selectedHost.domain_names ?? []).length - 1 ? (
+                          <Text className="text-typography-900 dark:text-[#E8EBF0] text-base">{", "}</Text>
+                        ) : null}
+                      </React.Fragment>
+                    ))}
+                  </HStack>
+                </VStack>
+
+                <HStack className="items-center gap-2 flex-wrap">
+                  <StatusChip label={isHostEnabled(selectedHost) ? "Active" : "Inactive"} active={isHostEnabled(selectedHost)} />
+                  {selectedHost.certificate_id ? <StatusChip label="SSL enabled" /> : null}
+                  {selectedHost.http2_support ? <StatusChip label="HTTP/2" /> : null}
+                  {selectedHost.hsts_enabled ? (
+                    <StatusChip label={`HSTS${selectedHost.hsts_subdomains ? " + Subdomains" : ""}`} />
+                  ) : null}
+                  {selectedHost.meta?.letsencrypt_agree ? <StatusChip label="Let's Encrypt" /> : null}
+                  {selectedHost.meta?.dns_challenge ? <StatusChip label="DNS Challenge" /> : null}
+                </HStack>
+
+                <HStack className="items-center gap-2 flex-wrap">
+                  <AlertTriangle size={16} color="#ef4444" />
+                  <Text className="text-error-600 font-semibold text-sm">404 Not Found</Text>
+                  <HStack className="items-center gap-2">
+                    {selectedHost.ssl_forced ? (
+                      <Lock size={16} color="#16a34a" />
+                    ) : (
+                      <ShieldOff size={16} color="#9ca3af" />
+                    )}
+                    <Text
+                      className={`text-sm ${selectedHost.ssl_forced ? "text-success-600 dark:text-success-400" : "text-typography-600 dark:text-typography-400"}`}
+                    >
+                      SSL {selectedHost.ssl_forced ? "(Forced)" : "(Optional)"}
+                    </Text>
+                  </HStack>
+                </HStack>
+
+                {selectedHost.advanced_config ? (
+                  <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] p-3">
+                    <Text className="text-xs text-typography-500 dark:text-typography-400 mb-2">Advanced config</Text>
+                    <Text className="text-typography-700 dark:text-typography-300 text-xs">
+                      {selectedHost.advanced_config}
+                    </Text>
+                  </Box>
+                ) : null}
+              </VStack>
+            ) : null}
+          </ModalBody>
+          <ModalFooter className="px-6 pb-6 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
+            <HStack className="gap-2 w-full">
+              <Button
+                action="default"
+                variant="outline"
+                size="sm"
+                onPress={() => {
+                  if (!selectedHost) return;
+                  void handleToggle(selectedHost);
+                  setSelectedHost(null);
+                }}
+                isDisabled={selectedHost ? togglingId === selectedHost.id : false}
+                className="flex-1 rounded-xl border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E]"
+              >
+                {selectedHost && togglingId === selectedHost.id ? (
+                  <ButtonSpinner />
+                ) : (
+                  <ButtonIcon as={Power} size="sm" className="text-typography-900 dark:text-[#E8EBF0]" />
+                )}
+                <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                  {selectedHost && isHostEnabled(selectedHost) ? "Disable" : "Enable"}
+                </ButtonText>
+              </Button>
+              <Button
+                action="default"
+                variant="outline"
+                size="sm"
+                onPress={() => {
+                  if (!selectedHost) return;
+                  openEditModal(selectedHost);
+                  setSelectedHost(null);
+                }}
+                className="flex-1 rounded-xl border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E]"
+              >
+                <ButtonIcon as={Pencil} size="sm" className="text-typography-900 dark:text-[#E8EBF0]" />
+                <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Edit</ButtonText>
+              </Button>
+              <Button
+                action="negative"
+                variant="solid"
+                size="sm"
+                onPress={() => {
+                  if (!selectedHost) return;
+                  setDeleteTarget(selectedHost);
+                  setSelectedHost(null);
+                }}
+                className="flex-1 rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
+              >
+                <ButtonIcon as={Trash2} size="sm" className="text-background-0 dark:text-[#0A1628]" />
+                <ButtonText className="text-background-0 dark:text-[#0A1628]">Delete</ButtonText>
+              </Button>
+            </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
       <Modal isOpen={modalOpen} onClose={closeModal} size="lg">
         <ModalBackdrop className="bg-black/60" />

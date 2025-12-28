@@ -67,6 +67,10 @@ const GoAccessStreamButtons: React.FC = () => {
 
 	if (!baseUrl && !getApiBaseUrl()) return null;
 
+	if (Platform.OS !== "web") {
+		return null;
+	}
+
 	if (!pathname || !ALLOWED_PATHS.includes(pathname)) {
 		return null;
 	}
