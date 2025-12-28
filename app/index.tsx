@@ -18,6 +18,7 @@ import {
   FormControlLabelText,
 } from "@/components/ui/form-control";
 import { VStack } from "@/components/ui/vstack";
+import { HStack } from "@/components/ui/hstack";
 import { Heading } from "@/components/ui/heading";
 import { Text } from "@/components/ui/text";
 import { Input, InputField, InputIcon, InputSlot } from "@/components/ui/input";
