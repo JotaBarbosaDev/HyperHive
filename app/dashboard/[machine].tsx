@@ -59,6 +59,11 @@ const bytesToGb = (value?: number) => {
 	return Number((value / 1024 ** 3).toFixed(2));
 };
 
+const mbToGb = (value?: number) => {
+	if (value == null || !Number.isFinite(value)) return 0;
+	return Number((value / 1000).toFixed(2));
+};
+
 const formatPercent = (value?: number) => {
 	if (value == null || !Number.isFinite(value)) return "—";
 	return `${value.toFixed(1)}%`;
@@ -626,7 +631,7 @@ export default function MachineDetailsScreen() {
 							</HStack>
 							<Heading size="xl" className="text-typography-900 dark:text-[#E8EBF0]">{formatPercent(mem?.usedPercent)}</Heading>
 							<Text className="text-sm text-typography-600 dark:text-typography-400">
-								{bytesToGb((mem?.usedMb ?? 0) * 1024 ** 2)} / {bytesToGb((mem?.totalMb ?? 0) * 1024 ** 2)} GB
+								{mbToGb(mem?.usedMb ?? 0)} / {mbToGb(mem?.totalMb ?? 0)} GB
 							</Text>
 						</Box>
 

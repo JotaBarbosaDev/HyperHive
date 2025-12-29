@@ -66,6 +66,11 @@ const bytesToGb = (value?: number) => {
   return Number((value / 1024 ** 3).toFixed(2));
 };
 
+const mbToGb = (value?: number) => {
+  if (value == null || !Number.isFinite(value)) return 0;
+  return Number((value / 1000).toFixed(2));
+};
+
 const formatPercent = (value?: number) => {
   if (value == null || !Number.isFinite(value)) return "—";
   return `${value.toFixed(1)}%`;
@@ -313,7 +318,7 @@ export default function DashboardScreen() {
             {renderStatCard(
               "Memory",
               overallTotals.totalRamMb
-                ? `${bytesToGb(overallTotals.usedRamMb * 1024 ** 2)} / ${bytesToGb(overallTotals.totalRamMb * 1024 ** 2)} GB`
+                ? `${mbToGb(overallTotals.usedRamMb)} / ${mbToGb(overallTotals.totalRamMb)} GB`
                 : "—",
               MemoryStick,
               overallTotals.totalRamMb ? `${formatPercent(overallTotals.ramUsagePercent)} in use` : undefined
@@ -509,8 +514,7 @@ export default function DashboardScreen() {
                           {formatPercent(ramPercent)}
                         </Text>
                         <Text className="text-xs text-typography-500 dark:text-typography-400">
-                          {bytesToGb((snap.mem?.usedMb ?? 0) * 1024 ** 2)} /{" "}
-                          {bytesToGb((snap.mem?.totalMb ?? 0) * 1024 ** 2)} GB
+                          {mbToGb(snap.mem?.usedMb ?? 0)} / {mbToGb(snap.mem?.totalMb ?? 0)} GB
                         </Text>
                       </Box>
 
