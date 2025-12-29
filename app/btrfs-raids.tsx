@@ -1759,7 +1759,7 @@ export default function BtrfsRaidsScreen() {
           </ModalBody>
           <ModalFooter>
             <Button variant="outline" action="default" onPress={closeActionModal}>
-              <ButtonText>Fechar</ButtonText>
+              <ButtonText>Close</ButtonText>
             </Button>
           </ModalFooter>
         </ModalContent>
