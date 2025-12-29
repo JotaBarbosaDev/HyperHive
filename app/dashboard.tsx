@@ -349,7 +349,7 @@ export default function DashboardScreen() {
                 onPress={() => loadSnapshots("refresh")}
                 isDisabled={isLoading || isRefreshing}
               >
-                <ButtonIcon as={RefreshCcw} />
+                <ButtonIcon as={RefreshCcw} className="text-typography-900 dark:text-[#E8EBF0]" />
                 <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Update</ButtonText>
               </Button>
             </HStack>
@@ -381,8 +381,13 @@ export default function DashboardScreen() {
               <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
                 Connected nodes
               </Heading>
-              <Badge size="md" variant="solid" action="muted" className="rounded-full px-3">
-                <BadgeText className="text-sm text-typography-800 dark:text-typography-100">
+              <Badge
+                size="md"
+                variant="solid"
+                action="muted"
+                className="rounded-full px-3 bg-background-100 dark:bg-[#1A2436] border border-outline-200 dark:border-[#243247]"
+              >
+                <BadgeText className="text-sm text-typography-700 dark:text-typography-100">
                   {machines.length} online
                 </BadgeText>
               </Badge>
@@ -420,9 +425,9 @@ export default function DashboardScreen() {
                             <Badge
                               size="sm"
                               variant="outline"
-                              className="border-outline-300 dark:border-[#243247]"
+                              className="border-outline-300 dark:border-[#243247] bg-background-50 dark:bg-[#152136]"
                             >
-                              <BadgeText className="text-xs text-typography-600 dark:text-typography-300">
+                              <BadgeText className="text-xs text-typography-600 dark:text-typography-100">
                                 {formatRelative(lastSeen)} online
                               </BadgeText>
                             </Badge>

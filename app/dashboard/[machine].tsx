@@ -662,9 +662,9 @@ export default function MachineDetailsScreen() {
 							<Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">CPU per core</Heading>
 							<Icon as={ThermometerSun} size="sm" className="text-primary-700 dark:text-[#8AB9FF]" />
 						</HStack>
-						<HStack className="flex-wrap gap-3">
+						<HStack className="flex-wrap gap-3 web:flex-wrap justify-center">
 							{cpu?.cores?.map((core, idx) => (
-								<Box key={idx} className="w-[140px] rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
+								<Box key={idx} className="w-[140px] flex-shrink-0 rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
 									<HStack className="items-center justify-between mb-2">
 										<Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">Core {idx + 1}</Text>
 										<Badge
