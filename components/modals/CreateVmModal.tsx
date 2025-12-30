@@ -66,9 +66,9 @@ export default function CreateVmModal({
   const { resolvedMode } = useAppTheme();
   const isWeb = Platform.OS === "web";
   const primaryButtonClass =
-    isWeb ? "bg-typography-900 dark:bg-[#E8EBF0]" : resolvedMode === "dark" ? "bg-[#2DD4BF]" : "bg-typography-900";
+    isWeb ? "bg-typography-900 dark:bg-[#2DD4BF]" : resolvedMode === "dark" ? "bg-[#2DD4BF]" : "bg-typography-900";
   const primaryButtonTextClass =
-    isWeb ? "text-background-0 dark:text-typography-900" : resolvedMode === "dark" ? "text-[#0A1628]" : "text-background-0";
+    isWeb ? "text-background-0 dark:text-[#0A1628]" : resolvedMode === "dark" ? "text-[#0A1628]" : "text-background-0";
   // Estados básicos da VM
   const [name, setName] = useState("");
   const [slave, setSlave] = useState("");

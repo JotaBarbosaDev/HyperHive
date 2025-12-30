@@ -24,6 +24,34 @@ type WireGuardConfig = {
   network: string;
 };
 
+const isRealDomainHost = (hostname: string) => {
+  const host = hostname.trim().toLowerCase();
+  if (!host || host === "localhost") {
+    return false;
+  }
+  if (!host.includes(".") || !/[a-z]/.test(host)) {
+    return false;
+  }
+  if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host)) {
+    return false;
+  }
+  if (host.includes(":")) {
+    return false;
+  }
+  return true;
+};
+
+const getSuggestedEndpoint = () => {
+  if (Platform.OS !== "web" || typeof window === "undefined") {
+    return "";
+  }
+  const hostname = window.location.hostname;
+  if (!hostname || !isRealDomainHost(hostname)) {
+    return "";
+  }
+  return `${hostname}:51512`;
+};
+
 const localPeerBefore = `[Peer]
 PublicKey = Qx7k9Lm2vP4n...
 Endpoint = domain.com:51512
@@ -81,6 +109,7 @@ export default function WireGuardScreen() {
   const [formPeerName, setFormPeerName] = React.useState("");
   const [formPeerEndpoint, setFormPeerEndpoint] = React.useState("");
   const [formPeerKeepalive, setFormPeerKeepalive] = React.useState("25");
+  const suggestedEndpoint = React.useMemo(() => getSuggestedEndpoint(), []);
 
   const downloadConfigFile = React.useCallback(async (configText: string) => {
     const filename = "wg0.conf";
@@ -131,6 +160,12 @@ export default function WireGuardScreen() {
       network: firstPeer?.client_ip ?? "Waiting for peers",
     };
   }, [vpnReady, peers, formPeerEndpoint]);
+
+  React.useEffect(() => {
+    if (showAddPeerModal && suggestedEndpoint && !formPeerEndpoint.trim()) {
+      setFormPeerEndpoint(suggestedEndpoint);
+    }
+  }, [showAddPeerModal, suggestedEndpoint, formPeerEndpoint]);
 
   const copyToClipboard = async (text: string, label: string) => {
     await Clipboard.setStringAsync(text);
@@ -781,7 +816,7 @@ export default function WireGuardScreen() {
                   className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]"
                 >
                   <InputField
-                    placeholder="e.g.: yourdomain.com:51512"
+                    placeholder={suggestedEndpoint || "e.g.: yourdomain.com:51512"}
                     value={formPeerEndpoint}
                     onChangeText={setFormPeerEndpoint}
                     className="text-typography-900 dark:text-[#E8EBF0]"

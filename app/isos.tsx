@@ -1413,15 +1413,15 @@ function IsoCard({ iso, onDelete, isDeleting }: IsoCardProps) {
               >
                 Available on
               </Text>
-              <HStack className="flex-wrap gap-2">
+              <HStack className="flex-wrap gap-2 web:flex-wrap">
                 {iso.availableOn.map((host) => (
                   <Badge
                     key={`${iso.id}-${host}`}
                     action="muted"
                     variant="outline"
-                    className="rounded-full border px-3"
+                    className="rounded-full border px-3 max-w-full min-w-0 shrink"
                   >
-                    <BadgeText className="text-xs font-semibold text-typography-700 dark:text-typography-200">
+                    <BadgeText className="text-xs font-semibold text-typography-700 dark:text-typography-200 whitespace-normal break-normal">
                       {host}
                     </BadgeText>
                   </Badge>
