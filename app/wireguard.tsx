@@ -41,6 +41,21 @@ const isRealDomainHost = (hostname: string) => {
   return true;
 };
 
+const getApexDomain = (hostname: string) => {
+  const host = hostname.trim().toLowerCase().replace(/\.$/, "");
+  const parts = host.split(".").filter(Boolean);
+  if (parts.length <= 2) {
+    return host;
+  }
+  const last = parts[parts.length - 1];
+  const secondLast = parts[parts.length - 2];
+  const commonSecondLevel = new Set(["co", "com", "net", "org", "gov", "edu"]);
+  if (last.length === 2 && commonSecondLevel.has(secondLast) && parts.length >= 3) {
+    return parts.slice(-3).join(".");
+  }
+  return parts.slice(-2).join(".");
+};
+
 const getSuggestedEndpoint = () => {
   if (Platform.OS !== "web" || typeof window === "undefined") {
     return "";
@@ -49,7 +64,8 @@ const getSuggestedEndpoint = () => {
   if (!hostname || !isRealDomainHost(hostname)) {
     return "";
   }
-  return `${hostname}:51512`;
+  const apexDomain = getApexDomain(hostname);
+  return apexDomain ? `${apexDomain}:51512` : "";
 };
 
 const localPeerBefore = `[Peer]
