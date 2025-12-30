@@ -672,7 +672,7 @@ function RootLayoutNav() {
                 <ModalBody>
                   <Box className="bg-background-100 dark:bg-[#111827] rounded-md p-3">
                     <Text className="font-mono text-sm text-typography-900 dark:text-[#E2E8F0]">
-                      {apiErrorModal?.details || "Erro desconhecido."}
+                      {apiErrorModal?.details || "Unknown error."}
                     </Text>
                   </Box>
                 </ModalBody>

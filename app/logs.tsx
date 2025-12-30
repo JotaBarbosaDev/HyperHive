@@ -345,11 +345,11 @@ export default function LogsScreen() {
   const handleRegisterNotifications = React.useCallback(async () => {
     const baseUrl = getApiBaseUrl();
     if (!baseUrl) {
-      Alert.alert("API não configurada", "Defina a API base para abrir o registo de notificações.");
+      Alert.alert("API not configured", "Set the API base URL to open the notification log.");
       return;
     }
     if (!token) {
-      Alert.alert("Token indisponível", "Inicie sessão novamente para gerar o link de registo.");
+      Alert.alert("Token unavailable", "Sign in again to generate the registration link.");
       return;
     }
     const normalizedBase = baseUrl.replace(/\/+$/, "");
@@ -359,7 +359,7 @@ export default function LogsScreen() {
         if (typeof window !== "undefined" && typeof window.open === "function") {
           window.open(url, "_blank", "noopener,noreferrer");
         } else {
-          throw new Error("Navegador indisponível para abrir nova aba");
+          throw new Error("Browser unavailable to open a new tab");
         }
       } else {
         await Linking.openURL(url);
@@ -367,7 +367,7 @@ export default function LogsScreen() {
     } catch (err) {
       console.warn("Failed to open notification registration URL", err);
       const message = err instanceof Error ? err.message : String(err);
-      Alert.alert("Erro ao abrir link", message);
+      Alert.alert("Failed to open link", message);
     }
   }, [token]);
 

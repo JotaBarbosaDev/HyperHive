@@ -1569,7 +1569,7 @@ export default function BtrfsRaidsScreen() {
                     onPress={() => {
                       if (!raidModal?.uuid) return;
                       if (!mountPoint.trim()) {
-                        showToast("Mount point required", "Informe onde montar o volume.", "error");
+                        showToast("Mount point required", "Specify where to mount the volume.", "error");
                         return;
                       }
                       performAction("mount", () => mountRaid(selectedMachine, { uuid: raidModal.uuid, mount_point: mountPoint, compression }), false).finally(closeActionModal);
@@ -1727,7 +1727,7 @@ export default function BtrfsRaidsScreen() {
                     onPress={() => {
                       if (!raidModal?.uuid) return;
                       if (!autoMountPoint.trim()) {
-                        showToast("Mount point required", "Defina o caminho para auto-mount.", "error");
+                        showToast("Mount point required", "Set the path for auto-mount.", "error");
                         return;
                       }
                       performAction("auto-mount", () => createAutomaticMount(selectedMachine, { uuid: raidModal.uuid, mount_point: autoMountPoint, compression: autoCompression }), false).finally(closeActionModal);

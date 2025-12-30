@@ -189,7 +189,7 @@ export default function DashboardScreen() {
         const results = await Promise.all(snapshotPromises);
         setSnapshots(results);
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Não foi possível carregar o dashboard.";
+        const message = err instanceof Error ? err.message : "Unable to load the dashboard.";
         if (showLoading) {
           setError(message);
         }
@@ -266,9 +266,7 @@ export default function DashboardScreen() {
         </Text>
         <Box className="w-9 h-9 rounded-xl bg-primary-50/70 dark:bg-[#12213A] items-center justify-center shrink-0">
           <Icon
-            as={icon}
-            size={20}
-            strokeWidth={1.5}
+            as={(props) => React.createElement(icon, { ...props, strokeWidth: 1.5 })}
             className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80 flex-none"
           />
         </Box>
@@ -369,7 +367,7 @@ export default function DashboardScreen() {
                 <Text className="text-sm text-typography-600 dark:text-typography-400">
                   {overallTotals.diskTotals.total
                     ? `${formatGbCompact(overallTotals.diskTotals.used)} used of ${formatGbCompact(overallTotals.diskTotals.total)}`
-                    : "Sem dados de disco ainda."}
+                    : "No disk data yet."}
                 </Text>
                 <Box className="h-2 rounded-full bg-background-100 dark:bg-[#132032] overflow-hidden">
                   <Box
@@ -552,10 +550,10 @@ export default function DashboardScreen() {
                         <Text className="text-lg font-semibold text-typography-900 dark:text-[#E8EBF0]">
                           {averageCpuTemp(snap.cpu)
                             ? `${averageCpuTemp(snap.cpu).toFixed(
-                                1
-                              )}ºC avg / ${maxCpuTemp(snap.cpu).toFixed(
-                                1
-                              )}ºC max`
+                              1
+                            )}ºC avg / ${maxCpuTemp(snap.cpu).toFixed(
+                              1
+                            )}ºC max`
                             : "—"}
                         </Text>
                         <Text className="text-xs text-typography-500 dark:text-typography-400">

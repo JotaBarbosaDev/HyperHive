@@ -277,11 +277,11 @@ export default function BtrfsAutomaticMountsScreen() {
   const handleCreate = async () => {
     if (!selectedMachine) return;
     if (!formRaid) {
-      showToast("UUID requerido", "Selecione ou informe o RAID.", "error");
+      showToast("UUID required", "Select or enter the RAID.", "error");
       return;
     }
     if (!formMountPoint.trim()) {
-      showToast("Mount point requerido", "Informe o caminho para montar.", "error");
+      showToast("Mount point required", "Enter the mount path.", "error");
       return;
     }
     setSaving(true);
@@ -341,7 +341,7 @@ export default function BtrfsAutomaticMountsScreen() {
             BTRFS Auto-Mounts
           </Heading>
           <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
-            Regras que montam automaticamente RAIDs BTRFS ao iniciar a maquina.
+            Rules that automatically mount BTRFS RAIDs when the machine starts.
           </Text>
 
           <HStack className="mt-6 items-center justify-between flex-wrap gap-3">

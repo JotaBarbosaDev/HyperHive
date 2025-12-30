@@ -1552,7 +1552,7 @@ export default function VirtualMachinesScreen() {
                                       className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                                       style={{ fontFamily: "Inter_400Regular" }}
                                     >
-                                      Disco
+                                      Disk
                                     </Text>
                                     <Text
                                       className="text-xs text-typography-900 dark:text-[#E8EBF0]"

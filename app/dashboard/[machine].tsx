@@ -273,7 +273,6 @@ export default function MachineDetailsScreen() {
 					setDiskHistory(diskHist ?? []);
 					setNetworkHistory(netHist ?? []);
 				} else {
-					// Soft update: apenas métricas atuais, sem histórico
 					const [uptimeRes, cpuRes, memRes, diskRes, netRes] = await Promise.all([
 						getMachineUptime(machineName),
 						getCpuInfo(machineName),

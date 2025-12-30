@@ -49,7 +49,7 @@ const GoAccessStreamButtons: React.FC = () => {
 	const openPath = async (pathSuffix: string) => {
 		const base = baseUrl ?? getApiBaseUrl();
 		if (!base) {
-			Alert.alert("API base URL não definida");
+			Alert.alert("API base URL is not configured");
 			return;
 		}
 		const url = `${base}${pathSuffix.startsWith("/") ? pathSuffix : `/${pathSuffix}`}`;
@@ -61,7 +61,7 @@ const GoAccessStreamButtons: React.FC = () => {
 			}
 		} catch (err) {
 			console.warn("Failed to open URL", err);
-			Alert.alert("Falha ao abrir o link", String(err));
+			Alert.alert("Failed to open link", String(err));
 		}
 	};
 
