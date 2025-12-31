@@ -75,6 +75,8 @@ export default function AutoBackupsScreen() {
     isWeb ? "bg-typography-900 dark:bg-[#2DD4BF]" : resolvedMode === "dark" ? "bg-[#2DD4BF]" : "bg-typography-900";
   const primaryButtonTextClass =
     isWeb ? "text-background-0 dark:text-[#0A1628]" : resolvedMode === "dark" ? "text-[#0A1628]" : "text-background-0";
+  const statsIconMutedColor = isWeb ? undefined : resolvedMode === "dark" ? "#8A94A8" : "#9AA4B8";
+  const statsIconAccentColor = isWeb ? undefined : resolvedMode === "dark" ? "#5EEAD4" : "#2DD4BF";
   const toast = useToast();
   const [schedules, setSchedules] = React.useState<AutoBackup[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -505,6 +507,7 @@ export default function AutoBackupsScreen() {
                 <Calendar
                   size={16}
                   className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                  color={statsIconMutedColor}
                 />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
@@ -526,6 +529,7 @@ export default function AutoBackupsScreen() {
                 <Database
                   size={16}
                   className="text-[#2DD4BF] dark:text-[#5EEAD4]"
+                  color={statsIconAccentColor}
                 />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
@@ -547,6 +551,7 @@ export default function AutoBackupsScreen() {
                 <TrendingUp
                   size={16}
                   className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                  color={statsIconMutedColor}
                 />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
@@ -568,6 +573,7 @@ export default function AutoBackupsScreen() {
                 <Clock
                   size={16}
                   className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                  color={statsIconMutedColor}
                 />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"

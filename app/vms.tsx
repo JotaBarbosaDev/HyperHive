@@ -236,6 +236,9 @@ export default function VirtualMachinesScreen() {
   const cardIconColor = resolvedMode === "dark" ? "#E8EBF0" : "#0F172A";
   const cardMenuIconColor = resolvedMode === "dark" ? "#8A94A8" : "#9AA4B8";
   const cardDangerIconColor = "#DC2626";
+  const statsIconMutedColor = isWeb ? undefined : resolvedMode === "dark" ? "#8A94A8" : "#9AA4B8";
+  const statsIconAccentColor = isWeb ? undefined : resolvedMode === "dark" ? "#5EEAD4" : "#2DD4BF";
+  const statsIconWarningColor = isWeb ? undefined : resolvedMode === "dark" ? "#FCD34D" : "#FBBF24";
   const [vms, setVms] = React.useState<VM[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [loadingVm, setLoadingVm] = React.useState<string | null>(null);
@@ -1033,20 +1036,22 @@ export default function VirtualMachinesScreen() {
                   />
                 )}
               </Button>
-              <Button
-                variant="outline"
-                size="md"
-                onPress={() => setOpenImport(true)}
-                className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
-              >
-                <ButtonIcon
-                  as={Upload}
-                  className="text-typography-700 dark:text-[#E8EBF0]"
-                />
-                <ButtonText className="web:inline hidden text-typography-900 dark:text-[#E8EBF0]">
-                  Import VM
-                </ButtonText>
-              </Button>
+              {Platform.OS === "web" ? (
+                <Button
+                  variant="outline"
+                  size="md"
+                  onPress={() => setOpenImport(true)}
+                  className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                >
+                  <ButtonIcon
+                    as={Upload}
+                    className="text-typography-700 dark:text-[#E8EBF0]"
+                  />
+                  <ButtonText className="web:inline hidden text-typography-900 dark:text-[#E8EBF0]">
+                    Import VM
+                  </ButtonText>
+                </Button>
+              ) : null}
               <Button
                 size="md"
                 onPress={handleNewVM}
@@ -1067,7 +1072,11 @@ export default function VirtualMachinesScreen() {
           <HStack className="mb-6 mt-6 gap-4 flex-wrap web:grid web:grid-cols-6">
             <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
               <HStack className="items-center gap-2 mb-2">
-                <Server size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
+                <Server
+                  size={16}
+                  className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                  color={statsIconMutedColor}
+                />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                   style={{ fontFamily: "Inter_500Medium" }}
@@ -1085,7 +1094,11 @@ export default function VirtualMachinesScreen() {
 
             <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
               <HStack className="items-center gap-2 mb-2">
-                <Play size={16} className="text-[#2DD4BF] dark:text-[#5EEAD4]" />
+                <Play
+                  size={16}
+                  className="text-[#2DD4BF] dark:text-[#5EEAD4]"
+                  color={statsIconAccentColor}
+                />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                   style={{ fontFamily: "Inter_500Medium" }}
@@ -1103,7 +1116,11 @@ export default function VirtualMachinesScreen() {
 
             <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
               <HStack className="items-center gap-2 mb-2">
-                <Square size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
+                <Square
+                  size={16}
+                  className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                  color={statsIconMutedColor}
+                />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                   style={{ fontFamily: "Inter_500Medium" }}
@@ -1121,7 +1138,11 @@ export default function VirtualMachinesScreen() {
 
             <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
               <HStack className="items-center gap-2 mb-2">
-                <Pause size={16} className="text-[#FBBF24] dark:text-[#FCD34D]" />
+                <Pause
+                  size={16}
+                  className="text-[#FBBF24] dark:text-[#FCD34D]"
+                  color={statsIconWarningColor}
+                />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                   style={{ fontFamily: "Inter_500Medium" }}
@@ -1139,7 +1160,11 @@ export default function VirtualMachinesScreen() {
 
             <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
               <HStack className="items-center gap-2 mb-2">
-                <Cpu size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
+                <Cpu
+                  size={16}
+                  className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                  color={statsIconMutedColor}
+                />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                   style={{ fontFamily: "Inter_500Medium" }}
@@ -1157,7 +1182,11 @@ export default function VirtualMachinesScreen() {
 
             <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
               <HStack className="items-center gap-2 mb-2">
-                <MemoryStick size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
+                <MemoryStick
+                  size={16}
+                  className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                  color={statsIconMutedColor}
+                />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                   style={{ fontFamily: "Inter_500Medium" }}
@@ -2939,19 +2968,6 @@ export default function VirtualMachinesScreen() {
               >
                 <ActionsheetIcon as={HardDrive} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
                 <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">Move Disk</ActionsheetItemText>
-              </ActionsheetItem>
-              <ActionsheetItem
-                onPress={() => {
-                  if (!selectedVm || isExportingSelectedVm) return;
-                  setShowActionsheet(false);
-                  void handleExportVm(selectedVm);
-                }}
-                isDisabled={!selectedVm || isExportingSelectedVm}
-              >
-                <ActionsheetIcon as={Download} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
-                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">
-                  {isExportingSelectedVm ? "Exporting..." : "Export VM"}
-                </ActionsheetItemText>
               </ActionsheetItem>
 
               {/* Remove All ISOs */}

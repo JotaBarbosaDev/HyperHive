@@ -229,29 +229,29 @@ export default function RootLayout() {
       return;
     }
 
-    const hideSystemUi = async () => {
+    const showSystemUi = async () => {
       try {
-        await NavigationBar.setPositionAsync("absolute");
-        await NavigationBar.setBehaviorAsync("overlay-swipe");
-        await NavigationBar.setVisibilityAsync("hidden");
+        await NavigationBar.setPositionAsync("relative");
+        await NavigationBar.setBehaviorAsync("inset-swipe");
+        await NavigationBar.setVisibilityAsync("visible");
         setStatusBarHidden(true, "fade");
       } catch (navError) {
         console.warn("Failed to configure Android system UI", navError);
       }
     };
 
-    hideSystemUi();
+    showSystemUi();
 
     const subscription = AppState.addEventListener("change", (status) => {
       if (status === "active") {
-        hideSystemUi();
+        showSystemUi();
       }
     });
 
     const visibilitySubscription = NavigationBar.addVisibilityListener(
       ({ visibility }) => {
-        if (visibility !== "hidden") {
-          hideSystemUi();
+        if (visibility !== "visible") {
+          showSystemUi();
         }
       }
     );

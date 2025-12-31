@@ -249,8 +249,10 @@ export default function BackupsScreen() {
   }, [showToastMessage]);
 
   const refreshBackups = React.useCallback(
-    async (showMessage = false) => {
-      setIsRefreshing(true);
+    async (showMessage = false, silent = false) => {
+      if (!silent) {
+        setIsRefreshing(true);
+      }
       try {
         const data = await listBackups();
         const mapped = Array.isArray(data) ? data.map(mapBackup) : [];
@@ -263,7 +265,9 @@ export default function BackupsScreen() {
         const message = err instanceof Error ? err.message : "Unable to load backups.";
         showToastMessage(message, "error");
       } finally {
-        setIsRefreshing(false);
+        if (!silent) {
+          setIsRefreshing(false);
+        }
       }
     },
     [mapBackup, showToastMessage]
@@ -273,6 +277,13 @@ export default function BackupsScreen() {
     refreshBackups();
     loadOptions();
   }, [refreshBackups, loadOptions]);
+
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      refreshBackups(false, true);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [refreshBackups]);
 
   React.useEffect(() => {
     if (!restoreBackup) return;
@@ -531,6 +542,8 @@ export default function BackupsScreen() {
   const refreshControlTint = colorScheme === "dark" ? "#F8FAFC" : "#0F172A";
   const refreshControlBackground = colorScheme === "dark" ? "#0E1524" : "#E2E8F0";
   const isWeb = Platform.OS === "web";
+  const statsIconMutedColor = isWeb ? undefined : colorScheme === "dark" ? "#8A94A8" : "#9AA4B8";
+  const statsIconAccentColor = isWeb ? undefined : colorScheme === "dark" ? "#5EEAD4" : "#2DD4BF";
 
   return (
     <Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
@@ -563,7 +576,11 @@ export default function BackupsScreen() {
           <HStack className="mb-6 gap-4 flex-wrap web:grid web:grid-cols-4">
             <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
               <HStack className="items-center gap-2 mb-2">
-                <HardDrive size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
+                <HardDrive
+                  size={16}
+                  className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                  color={statsIconMutedColor}
+                />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                   style={{ fontFamily: "Inter_500Medium" }}
@@ -581,7 +598,11 @@ export default function BackupsScreen() {
 
             <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
               <HStack className="items-center gap-2 mb-2">
-                <Database size={16} className="text-[#2DD4BF] dark:text-[#5EEAD4]" />
+                <Database
+                  size={16}
+                  className="text-[#2DD4BF] dark:text-[#5EEAD4]"
+                  color={statsIconAccentColor}
+                />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                   style={{ fontFamily: "Inter_500Medium" }}
@@ -599,7 +620,11 @@ export default function BackupsScreen() {
 
             <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
               <HStack className="items-center gap-2 mb-2">
-                <HardDrive size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
+                <HardDrive
+                  size={16}
+                  className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                  color={statsIconMutedColor}
+                />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                   style={{ fontFamily: "Inter_500Medium" }}
@@ -617,7 +642,11 @@ export default function BackupsScreen() {
 
             <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
               <HStack className="items-center gap-2 mb-2">
-                <Calendar size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
+                <Calendar
+                  size={16}
+                  className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                  color={statsIconMutedColor}
+                />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                   style={{ fontFamily: "Inter_500Medium" }}
@@ -1618,18 +1647,6 @@ export default function BackupsScreen() {
                     </Text>
                   </VStack>
                 </Box>
-                <Button
-                  className="rounded-xl bg-typography-900 dark:bg-[#2DD4BF]"
-                  onPress={async () => {
-                    if (!mobileActionBackup) return;
-                    await handleDownload(mobileActionBackup);
-                    setMobileActionBackup(null);
-                  }}
-                >
-                  <ButtonText className="text-background-0 dark:text-[#0A1628]">
-                    Transfer
-                  </ButtonText>
-                </Button>
                 <Button
                   variant="outline"
                   className="rounded-xl border-outline-200 dark:border-[#2A3B52]"
