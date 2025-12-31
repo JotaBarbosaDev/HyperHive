@@ -19,7 +19,7 @@ import {
   SelectDragIndicator,
   SelectBackdrop,
 } from "@/components/ui/select";
-import { ChevronDownIcon } from "@/components/ui/icon";
+import { ChevronDownIcon, Icon } from "@/components/ui/icon";
 import { Pressable } from "@/components/ui/pressable";
 import { Divider } from "@/components/ui/divider";
 import { Modal, ModalBackdrop, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton } from "@/components/ui/modal";
@@ -615,7 +615,7 @@ export default function BtrfsRaidsScreen() {
                 onPress={() => loadData("refresh")}
                 className="rounded-xl border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E] h-10"
               >
-                <ButtonIcon as={RefreshCcw} size="sm" />
+                <ButtonIcon as={RefreshCcw} size="sm" className="text-typography-900 dark:text-[#E8EBF0]" />
                 <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Refresh</ButtonText>
               </Button>
             </HStack>
@@ -653,7 +653,7 @@ export default function BtrfsRaidsScreen() {
                 <HStack className="items-center justify-between px-4 py-3">
                   <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base">Free Disks</Text>
                   <HStack className="items-center gap-2">
-                    <HardDrive size={18} className="text-typography-900 dark:text-[#E8EBF0]" />
+                    <Icon as={HardDrive} size={18} className="text-typography-900 dark:text-[#E8EBF0]" />
                     <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm">{(Array.isArray(freeDisks) ? freeDisks.length : 0)} disks</Text>
                   </HStack>
                 </HStack>
@@ -754,7 +754,7 @@ export default function BtrfsRaidsScreen() {
                                 })}
                               </HStack>
                             </VStack>
-                            <ArrowRight size={18} className="text-typography-500 dark:text-[#9AA4B8]" />
+                            <Icon as={ArrowRight} size={18} className="text-typography-500 dark:text-[#9AA4B8]" />
                           </HStack>
                         </Pressable>
                       );
@@ -1166,7 +1166,7 @@ export default function BtrfsRaidsScreen() {
                       >
                         <HStack className="items-center gap-3 mb-2">
                           <Box className="h-10 w-10 rounded-lg bg-background-100 dark:bg-[#132038] items-center justify-center flex">
-                            <Power size={20} className="text-typography-900 dark:text-[#E8EBF0]" />
+                            <Icon as={Power} size={20} className="text-typography-900 dark:text-[#E8EBF0]" />
                           </Box>
                         </HStack>
                         <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold mb-1">Mount / Unmount</Text>
@@ -1178,7 +1178,7 @@ export default function BtrfsRaidsScreen() {
                       >
                         <HStack className="items-center gap-3 mb-2">
                           <Box className="h-10 w-10 rounded-lg bg-background-100 dark:bg-[#132038] items-center justify-center flex">
-                            <Plus size={20} className="text-typography-900 dark:text-[#E8EBF0]" />
+                            <Icon as={Plus} size={20} className="text-typography-900 dark:text-[#E8EBF0]" />
                           </Box>
                         </HStack>
                         <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold mb-1">Auto-mount</Text>
@@ -1197,7 +1197,7 @@ export default function BtrfsRaidsScreen() {
                       >
                         <HStack className="items-center gap-3 mb-2">
                           <Box className="h-10 w-10 rounded-lg bg-background-100 dark:bg-[#132038] items-center justify-center flex">
-                            <Plus size={20} className="text-typography-900 dark:text-[#E8EBF0]" />
+                            <Icon as={Plus} size={20} className="text-typography-900 dark:text-[#E8EBF0]" />
                           </Box>
                         </HStack>
                         <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold mb-1">Add Disk</Text>
@@ -1209,7 +1209,7 @@ export default function BtrfsRaidsScreen() {
                       >
                         <HStack className="items-center gap-3 mb-2">
                           <Box className="h-10 w-10 rounded-lg bg-background-100 dark:bg-[#132038] items-center justify-center flex">
-                            <Trash2 size={20} className="text-typography-900 dark:text-[#E8EBF0]" />
+                            <Icon as={Trash2} size={20} className="text-typography-900 dark:text-[#E8EBF0]" />
                           </Box>
                         </HStack>
                         <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold mb-1">Remove Disk</Text>
@@ -1221,7 +1221,7 @@ export default function BtrfsRaidsScreen() {
                       >
                         <HStack className="items-center gap-3 mb-2">
                           <Box className="h-10 w-10 rounded-lg bg-background-100 dark:bg-[#132038] items-center justify-center flex">
-                            <RefreshCcw size={20} className="text-typography-900 dark:text-[#E8EBF0]" />
+                            <Icon as={RefreshCcw} size={20} className="text-typography-900 dark:text-[#E8EBF0]" />
                           </Box>
                         </HStack>
                         <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold mb-1">Replace Disk</Text>
@@ -1240,7 +1240,7 @@ export default function BtrfsRaidsScreen() {
                       >
                         <HStack className="items-center gap-3 mb-2">
                           <Box className="h-10 w-10 rounded-lg bg-background-100 dark:bg-[#132038] items-center justify-center flex">
-                            <RefreshCcw size={20} className="text-typography-900 dark:text-[#E8EBF0]" />
+                            <Icon as={RefreshCcw} size={20} className="text-typography-900 dark:text-[#E8EBF0]" />
                           </Box>
                         </HStack>
                         <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold mb-1">Change Level</Text>
@@ -1252,7 +1252,7 @@ export default function BtrfsRaidsScreen() {
                       >
                         <HStack className="items-center gap-3 mb-2">
                           <Box className="h-10 w-10 rounded-lg bg-background-100 dark:bg-[#132038] items-center justify-center flex">
-                            <ArrowRight size={20} className="text-typography-900 dark:text-[#E8EBF0]" />
+                            <Icon as={ArrowRight} size={20} className="text-typography-900 dark:text-[#E8EBF0]" />
                           </Box>
                         </HStack>
                         <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold mb-1">Auto-Mounts Page</Text>
@@ -1356,7 +1356,7 @@ export default function BtrfsRaidsScreen() {
                       }
                       isDisabled={savingAction !== null}
                     >
-                      {savingAction === "balance" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
+                      {savingAction === "balance" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" className="text-typography-900 dark:text-[#E8EBF0]" />}
                       <ButtonText>Start Balance</ButtonText>
                     </Button>
                   </VStack>
@@ -1493,7 +1493,7 @@ export default function BtrfsRaidsScreen() {
                       }
                       isDisabled={savingAction !== null}
                     >
-                      <ButtonIcon as={RefreshCcw} size="sm" />
+                      <ButtonIcon as={RefreshCcw} size="sm" className="text-typography-900 dark:text-[#E8EBF0]" />
                       <ButtonText>Start Scrub</ButtonText>
                     </Button>
                     <Button
@@ -1507,7 +1507,7 @@ export default function BtrfsRaidsScreen() {
                       }
                       isDisabled={savingAction !== null}
                     >
-                      <ButtonIcon as={RefreshCcw} size="sm" />
+                      <ButtonIcon as={RefreshCcw} size="sm" className="text-typography-900 dark:text-[#E8EBF0]" />
                       <ButtonText>Defragment</ButtonText>
                     </Button>
                   </HStack>
@@ -1660,7 +1660,7 @@ export default function BtrfsRaidsScreen() {
                   }
                   isDisabled={savingAction !== null}
                 >
-                  {savingAction === "replace disk" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
+                  {savingAction === "replace disk" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" className="text-typography-900 dark:text-[#E8EBF0]" />}
                   <ButtonText>Replace Disk</ButtonText>
                 </Button>
               </VStack>
@@ -1706,7 +1706,7 @@ export default function BtrfsRaidsScreen() {
                   }}
                   isDisabled={savingAction !== null}
                 >
-                  {savingAction === "change level" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
+                  {savingAction === "change level" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" className="text-typography-900 dark:text-[#E8EBF0]" />}
                   <ButtonText>Change Level</ButtonText>
                 </Button>
               </VStack>

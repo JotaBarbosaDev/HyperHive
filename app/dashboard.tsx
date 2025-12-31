@@ -41,6 +41,9 @@ type MachineSnapshot = {
   disk?: DiskInfo | null;
 };
 
+const ICON_SIZE_SM = 16;
+const ICON_SIZE_MD = 18;
+
 const formatBytes = (value?: number) => {
   if (value == null || !Number.isFinite(value)) return "—";
   const units = ["B", "KB", "MB", "GB", "TB", "PB"];
@@ -267,6 +270,7 @@ export default function DashboardScreen() {
         <Box className="w-9 h-9 rounded-xl bg-primary-50/70 dark:bg-[#12213A] items-center justify-center shrink-0">
           <Icon
             as={(props) => React.createElement(icon, { ...props, strokeWidth: 1.5 })}
+            size={ICON_SIZE_MD}
             className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80 flex-none"
           />
         </Box>
@@ -333,7 +337,7 @@ export default function DashboardScreen() {
             <HStack className="items-center justify-between mb-4">
               <HStack className="items-center gap-3">
                 <Box className="w-10 h-10 rounded-xl bg-primary-50/70 dark:bg-[#12213A] items-center justify-center">
-                  <Icon as={HardDrive} size="md" className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80" />
+                  <Icon as={HardDrive} size={ICON_SIZE_MD} className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80" />
                 </Box>
                 <VStack className="gap-1">
                   <Text className="text-xs font-semibold uppercase text-typography-500 dark:text-typography-300 tracking-[0.08em]">
@@ -416,7 +420,7 @@ export default function DashboardScreen() {
                         <Box className="w-11 h-11 rounded-xl bg-primary-50/70 dark:bg-[#12213A] items-center justify-center">
                           <Icon
                             as={Server}
-                            size="md"
+                            size={ICON_SIZE_MD}
                             className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80"
                           />
                         </Box>
@@ -438,7 +442,7 @@ export default function DashboardScreen() {
                           <HStack className="items-center gap-2">
                             <Icon
                               as={LinkIcon}
-                              size="sm"
+                              size={ICON_SIZE_SM}
                               className="text-typography-500 dark:text-typography-400"
                             />
                             <Text className="text-sm text-typography-600 dark:text-typography-400">
@@ -448,7 +452,7 @@ export default function DashboardScreen() {
                           <HStack className="items-center gap-2">
                             <Icon
                               as={Clock3}
-                              size="sm"
+                              size={ICON_SIZE_SM}
                               className="text-typography-500 dark:text-typography-400"
                             />
                             <Text className="text-sm text-typography-600 dark:text-typography-400">
@@ -485,7 +489,7 @@ export default function DashboardScreen() {
                           </Text>
                           <Icon
                             as={Activity}
-                            size="sm"
+                            size={ICON_SIZE_SM}
                             className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80"
                           />
                         </HStack>
@@ -504,7 +508,7 @@ export default function DashboardScreen() {
                           </Text>
                           <Icon
                             as={MemoryStick}
-                            size="sm"
+                            size={ICON_SIZE_SM}
                             className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80"
                           />
                         </HStack>
@@ -523,7 +527,7 @@ export default function DashboardScreen() {
                           </Text>
                           <Icon
                             as={HardDrive}
-                            size="sm"
+                            size={ICON_SIZE_SM}
                             className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80"
                           />
                         </HStack>
@@ -543,7 +547,7 @@ export default function DashboardScreen() {
                           </Text>
                           <Icon
                             as={ThermometerSun}
-                            size="sm"
+                            size={ICON_SIZE_SM}
                             className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80"
                           />
                         </HStack>
