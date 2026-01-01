@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Box } from "@/components/ui/box";
+import { Image } from "@/components/ui/image";
 import {
   FormControl,
   FormControlError,
@@ -24,13 +25,12 @@ import { Text } from "@/components/ui/text";
 import { Input, InputField, InputIcon, InputSlot } from "@/components/ui/input";
 import { Button, ButtonSpinner, ButtonText } from "@/components/ui/button";
 import { AlertCircleIcon, EyeIcon, EyeOffIcon } from "@/components/ui/icon";
-import Logo from "@/assets/icons/Logo";
 import { normalizeApiBaseUrl, setApiBaseUrl } from "@/config/apiConfig";
 import { login, listMachines } from "@/services/hyperhive";
 import { ApiError, getAuthToken, setAuthToken } from "@/services/api-client";
 import { loadApiBaseUrl, saveApiBaseUrl, saveAuthToken } from "@/services/auth-storage";
 
-
+const APP_ICON = require("../assets/images/android-chrome-192x192.png");
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -393,7 +393,15 @@ export default function LoginScreen() {
             {/* Logo */}
             <Box className="items-center mb-8 web:mb-10">
               <Box className="mb-4 web:mb-6">
-                <Logo />
+                <Box className="h-20 w-20 web:h-24 web:w-24 items-center justify-center rounded-2xl bg-[#0E1524] shadow-soft-3">
+                  <Image
+                    source={APP_ICON}
+                    alt="HyperHive logo"
+                    resizeMode="contain"
+                    size="none"
+                    className="h-12 w-12 web:h-14 web:w-14"
+                  />
+                </Box>
               </Box>
               <Heading
                 size="2xl"

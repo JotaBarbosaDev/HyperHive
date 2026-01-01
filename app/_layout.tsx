@@ -67,6 +67,7 @@ export {
 SplashScreen.preventAutoHideAsync();
 
 const APP_TITLE = "HyperHive";
+const APP_CORNER_ICON = require("../assets/images/android-chrome-192x192.png");
 
 const ROUTE_TITLE_MAP: Record<string, string> = {
   "/": "Login",
@@ -600,6 +601,22 @@ function RootLayoutNav() {
                           Menu
                         </ButtonText>
                       </Button>
+                    </Box>
+                  )}
+                  {pathname !== "/" && (
+                    <Box
+                      className="absolute top-3 right-3 web:top-5 web:right-5 z-20"
+                      pointerEvents="none"
+                    >
+                      <Box className="h-9 w-9 web:h-10 web:w-10 items-center justify-center rounded-xl bg-[#0E1524]/95 border border-outline-100 dark:border-[#2A3B52] shadow-soft-1">
+                        <Image
+                          source={APP_CORNER_ICON}
+                          alt="HyperHive"
+                          resizeMode="contain"
+                          size="none"
+                          className="h-5 w-5 web:h-6 web:w-6"
+                        />
+                      </Box>
                     </Box>
                   )}
                   <GoAccessStreamButtons />
