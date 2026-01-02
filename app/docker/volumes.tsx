@@ -262,7 +262,7 @@ export default function DockerVolumesScreen() {
 	);
 
 	return (
-		<Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
+		<Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
 			<Box className="p-4 pt-16 web:p-10 web:max-w-7xl web:mx-auto web:w-full gap-4">
 				<Heading
 					size="2xl"

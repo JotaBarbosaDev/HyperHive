@@ -9,8 +9,11 @@ import {
 import { Button, ButtonIcon, ButtonText } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { Box } from "@/components/ui/box";
+import { VStack } from "@/components/ui/vstack";
 import { Pressable } from "@/components/ui/pressable";
 import { Icon } from "@/components/ui/icon";
+import { Platform, ScrollView, LayoutAnimation, UIManager, Animated, Easing } from "react-native";
+import { useColorScheme } from "@/components/useColorScheme";
 import {
   Modal,
   ModalBackdrop,
@@ -189,8 +192,20 @@ const THEME_OPTIONS = [
 export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePreference }: AppSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const systemScheme = useColorScheme();
+  const resolvedMode = themePreference === "system" ? (systemScheme === "dark" ? "dark" : "light") : themePreference;
+  const isWeb = Platform.OS === "web";
+  const chevronMuted = resolvedMode === "dark" ? "#94A3B8" : "#9AA4B8";
+  const chevronActive = resolvedMode === "dark" ? "#E8EBF0" : "#0F172A";
+  const chevronAnims = React.useRef<Record<string, Animated.Value>>({});
   const [expandedParents, setExpandedParents] = React.useState<Record<string, boolean>>({});
   const [showSettings, setShowSettings] = React.useState(false);
+
+  React.useEffect(() => {
+    if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }, []);
 
   const handleLogout = React.useCallback(async () => {
     onClose();
@@ -231,12 +246,31 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
     return item.children?.some((child) => isItemActive(child)) ?? false;
   };
 
-  const toggleParent = React.useCallback((key: string) => {
-    setExpandedParents((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+  const getChevronAnim = React.useCallback((key: string, initial: number) => {
+    if (!chevronAnims.current[key]) {
+      chevronAnims.current[key] = new Animated.Value(initial);
+    }
+    return chevronAnims.current[key];
   }, []);
+
+  const toggleParent = React.useCallback((key: string) => {
+    setExpandedParents((prev) => {
+      const current = prev[key] ? 1 : 0;
+      const next = prev[key] ? 0 : 1;
+      const anim = getChevronAnim(key, current);
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      Animated.timing(anim, {
+        toValue: next,
+        duration: 180,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+      return {
+        ...prev,
+        [key]: !prev[key],
+      };
+    });
+  }, [getChevronAnim]);
 
   const renderMenuItems = (items: MenuItem[], level = 0): React.ReactNode => {
     return items.map((item) => {
@@ -303,15 +337,22 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
             >
               {displayLabel}
             </Text>
-            {hasChildren ? (
-              <Icon
-                as={ChevronRight}
-                size="sm"
-                className={`ml-auto text-typography-500 dark:text-[#E8EBF0] transition-transform origin-center ${
-                  isExpanded ? "rotate-45" : ""
-                }`}
-              />
-            ) : null}
+            {hasChildren ? (() => {
+              const anim = getChevronAnim(itemKey, isExpanded ? 1 : 0);
+              const rotate = anim.interpolate({
+                inputRange: [0, 1],
+                outputRange: ["0deg", "90deg"],
+              });
+              return (
+                <Animated.View style={{ marginLeft: "auto", transform: [{ rotate }] }}>
+                  <Icon
+                    as={ChevronRight}
+                    size="sm"
+                    color={isActive ? chevronActive : chevronMuted}
+                  />
+                </Animated.View>
+              );
+            })() : null}
           </Pressable>
           {hasChildren && isExpanded ? (
             <Box className="mt-1">
@@ -327,39 +368,44 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
     <Drawer isOpen={isOpen} onClose={onClose} anchor="left" size="full">
       <DrawerBackdrop className="bg-background-950/50 dark:bg-black/70" />
       <DrawerContent className="w-[280px] max-w-[90%] md:w-[340px] bg-background-0 dark:bg-[#0E1524]">
-        <DrawerBody contentContainerClassName="gap-1 px-3 py-2">
-          {renderMenuItems(MENU_ITEMS)}
+        <DrawerBody className="flex-1 px-3 py-2">
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+            <VStack className="gap-1">
+              {renderMenuItems(MENU_ITEMS)}
+            </VStack>
+
+            <VStack className="mt-4 px-1 pb-2 gap-3">
+              <Button
+                className="w-full gap-2 h-12 rounded-xl"
+                variant="outline"
+                action="secondary"
+                onPress={() => setShowSettings(true)}
+              >
+                <ButtonIcon
+                  as={Settings}
+                  className="text-typography-700 dark:text-[#f0e8e8]"
+                />
+                <ButtonText className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                  Settings
+                </ButtonText>
+              </Button>
+              <Button
+                className="w-full gap-2 h-12 rounded-xl"
+                variant="outline"
+                action="secondary"
+                onPress={handleLogout}
+              >
+                <ButtonIcon
+                  as={LogOut}
+                  className="text-typography-700 dark:text-[#E8EBF0]"
+                />
+                <ButtonText className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                  Logout
+                </ButtonText>
+              </Button>
+            </VStack>
+          </ScrollView>
         </DrawerBody>
-        <DrawerFooter className="px-4 pb-6 flex-col">
-          <Button
-            className="w-full gap-2 h-12 rounded-xl mb-3"
-            variant="outline"
-            action="secondary"
-            onPress={() => setShowSettings(true)}
-          >
-            <ButtonIcon
-              as={Settings}
-              className="text-typography-700 dark:text-[#f0e8e8]"
-            />
-            <ButtonText className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
-              Settings
-            </ButtonText>
-          </Button>
-          <Button
-            className="w-full gap-2 h-12 rounded-xl"
-            variant="outline"
-            action="secondary"
-            onPress={handleLogout}
-          >
-            <ButtonIcon
-              as={LogOut}
-              className="text-typography-700 dark:text-[#E8EBF0]"
-            />
-            <ButtonText className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
-              Logout
-            </ButtonText>
-          </Button>
-        </DrawerFooter>
       </DrawerContent>
 
       <Modal

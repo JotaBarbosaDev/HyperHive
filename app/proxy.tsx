@@ -1,5 +1,5 @@
 import React from "react";
-import { RefreshControl, ScrollView, useWindowDimensions } from "react-native";
+import { RefreshControl, ScrollView, useWindowDimensions, Platform, useColorScheme } from "react-native";
 import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";
 import { Heading } from "@/components/ui/heading";
@@ -113,7 +113,7 @@ const isEnabled = (host: ProxyHost) => host.enabled !== false;
 
 const StatusChip = ({ label, action = "muted" }: { label: string; action?: "muted" | "info" | "success" | "error" }) => (
   <Badge className="rounded-full px-3 py-1" size="sm" action={action} variant="solid">
-    <BadgeText className={`text-xs ${action === "muted" ? "text-typography-800" : ""}`}>{label}</BadgeText>
+    <BadgeText className={`text-xs ${action === "muted" ? "text-typography-800 dark:text-typography-200" : ""}`}>{label}</BadgeText>
   </Badge>
 );
 
@@ -140,6 +140,7 @@ export default function ProxyHostsScreen() {
   const [togglingId, setTogglingId] = React.useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<ProxyHost | null>(null);
   const [deletingId, setDeletingId] = React.useState<number | null>(null);
+  const [selectedHost, setSelectedHost] = React.useState<ProxyHost | null>(null);
   const [setupModalOpen, setSetupModalOpen] = React.useState(false);
   const [setupDomain, setSetupDomain] = React.useState("");
   const [setupCertificateId, setSetupCertificateId] = React.useState<number>(0);
@@ -147,6 +148,8 @@ export default function ProxyHostsScreen() {
   const { height: screenHeight } = useWindowDimensions();
   const modalBodyMaxHeight = Math.min(screenHeight * 0.55, 520);
   const [formTab, setFormTab] = React.useState<"details" | "locations" | "ssl">("details");
+  const isWeb = Platform.OS === "web";
+  const isDarkMode = useColorScheme() === "dark";
 
   const showToast = React.useCallback(
     (title: string, description: string, action: "success" | "error" = "success") => {
@@ -396,7 +399,7 @@ export default function ProxyHostsScreen() {
   const renderLoading = () => (
     <VStack className="gap-3 mt-6">
       {[1, 2].map((idx) => (
-        <Box key={idx} className="p-5 rounded-2xl bg-background-0 shadow-soft-1 border border-background-100">
+        <Box className="p-5 rounded-2xl bg-background-0 dark:bg-[#0F1A2E] shadow-soft-1 border border-outline-100 dark:border-[#2A3B52]" key={idx}>
           <Skeleton className="h-5 w-2/3 mb-3" />
           <SkeletonText className="w-1/2" />
           <HStack className="gap-2 mt-4">
@@ -409,7 +412,7 @@ export default function ProxyHostsScreen() {
   );
 
   return (
-    <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
+    <Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
@@ -439,11 +442,14 @@ export default function ProxyHostsScreen() {
                   <Pressable
                     key={tab.key}
                     onPress={() => setFilter(tab.key)}
-                    className={`px-4 py-2 rounded-full border ${active ? "bg-typography-900 border-typography-900" : "bg-background-0 border-background-200"
-                      }`}
+                    className={`px-4 py-2 rounded-full border ${
+                      active
+                        ? "bg-typography-900 border-typography-900 dark:bg-[#2DD4BF] dark:border-[#2DD4BF]"
+                        : "bg-background-0 border-outline-200 dark:bg-[#0F1A2E] dark:border-[#243247]"
+                    }`}
                   >
                     <Text
-                      className={`text-sm ${active ? "text-background-0" : "text-typography-700"}`}
+                      className={`text-sm ${active ? "text-background-0 dark:text-[#0A1628]" : "text-typography-700 dark:text-typography-400"}`}
                       style={{ fontFamily: active ? "Inter_700Bold" : "Inter_500Medium" }}
                     >
                       {tab.label}
@@ -459,18 +465,24 @@ export default function ProxyHostsScreen() {
                   variant="solid"
                   size="md"
                   onPress={openSetupModal}
-                  className="rounded-xl px-5"
+                  className="rounded-xl px-5 bg-typography-900 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
                 >
-                  <ButtonIcon as={Shield} size="sm" />
-                  <ButtonText>Setup FrontEnd Page</ButtonText>
+                  <ButtonIcon as={Shield} size="sm" className="text-background-0 dark:text-[#0A1628]" />
+                  <ButtonText className="text-background-0 dark:text-[#0A1628]">Setup FrontEnd Page</ButtonText>
                 </Button>
                 <Text className="text-typography-600 text-xs max-w-xs">
                   Configure this to ensure the application front-end is fully available.
                 </Text>
               </HStack>
-              <Button action="primary" variant="solid" size="md" onPress={openCreateModal} className="rounded-xl px-5">
-                <ButtonIcon as={Plus} size="sm" />
-                <ButtonText>Add Proxy Host</ButtonText>
+              <Button
+                action="primary"
+                variant="solid"
+                size="md"
+                onPress={openCreateModal}
+                className="rounded-xl px-5 bg-typography-900 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+              >
+                <ButtonIcon as={Plus} size="sm" className="text-background-0 dark:text-[#0A1628]" />
+                <ButtonText className="text-background-0 dark:text-[#0A1628]">Add Proxy Host</ButtonText>
               </Button>
             </HStack>
           </HStack>
@@ -478,21 +490,18 @@ export default function ProxyHostsScreen() {
           {loading ? (
             renderLoading()
           ) : filteredHosts.length === 0 ? (
-            <Box className="mt-10 p-6 border border-dashed border-background-300 rounded-2xl bg-background-0 items-center">
+            <Box className="mt-10 p-6 border border-dashed border-outline-200 dark:border-[#2A3B52] rounded-2xl bg-background-0 dark:bg-[#0A1628] items-center">
               <Text className="text-typography-700 font-semibold text-base">No proxies found</Text>
               <Text className="text-typography-500 text-sm mt-1 text-center">
                 Click "Add Proxy Host" to create the first reverse proxy host.
               </Text>
             </Box>
-          ) : (
+          ) : isWeb ? (
             <VStack className="mt-6 gap-4">
               {filteredHosts.map((host) => {
                 const enabled = isEnabled(host);
                 return (
-                  <Box
-                    key={host.id}
-                    className="bg-background-0 rounded-2xl p-5 border border-background-100 shadow-soft-1"
-                  >
+                  <Box className="bg-background-0 dark:bg-[#0F1A2E] rounded-2xl p-5 border border-outline-100 dark:border-[#2A3B52] shadow-soft-1" key={host.id}>
                     <HStack className="items-start justify-between gap-4 flex-wrap">
                       <VStack className="gap-2 flex-1">
                         <HStack className="items-center gap-2 flex-wrap">
@@ -543,7 +552,7 @@ export default function ProxyHostsScreen() {
                           size="sm"
                           onPress={() => handleToggle(host)}
                           isDisabled={togglingId === host.id}
-                          className="border-background-300 rounded-xl"
+                          className="border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E] rounded-xl"
                         >
                           {togglingId === host.id ? <ButtonSpinner /> : <ButtonIcon as={Power} size="sm" />}
                           <ButtonText className="text-typography-900">{enabled ? "Disable" : "Enable"}</ButtonText>
@@ -553,7 +562,7 @@ export default function ProxyHostsScreen() {
                           variant="outline"
                           size="sm"
                           onPress={() => openEditModal(host)}
-                          className="border-background-300 px-3 rounded-xl"
+                          className="border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E] px-3 rounded-xl"
                         >
                           <ButtonIcon as={Pencil} size="sm" />
                         </Button>
@@ -572,9 +581,164 @@ export default function ProxyHostsScreen() {
                 );
               })}
             </VStack>
+          ) : (
+            <VStack className="mt-6 gap-3">
+              {filteredHosts.map((host) => {
+                const enabled = isEnabled(host);
+                return (
+                  <Pressable
+                    key={host.id}
+                    onPress={() => setSelectedHost(host)}
+                    className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] p-4 shadow-soft-1"
+                  >
+                    <VStack className="gap-2">
+                      <HStack className="items-center justify-between gap-2">
+                        <HStack className="items-center gap-2 flex-1 flex-wrap">
+                          <Box className={`h-2.5 w-2.5 rounded-full ${enabled ? "bg-success-500" : "bg-outline-400"}`} />
+                          <HStack className="flex-wrap">
+                            {(host.domain_names ?? []).map((d, idx) => (
+                              <React.Fragment key={d}>
+                                <Text className="text-typography-900 dark:text-[#E8EBF0] text-sm" style={{ fontFamily: "Inter_700Bold" }}>
+                                  {d}
+                                </Text>
+                                {idx < (host.domain_names ?? []).length - 1 ? (
+                                  <Text className="text-typography-900 dark:text-[#E8EBF0] text-sm">{", "}</Text>
+                                ) : null}
+                              </React.Fragment>
+                            ))}
+                          </HStack>
+                        </HStack>
+                        <StatusChip label={enabled ? "Active" : "Inactive"} action={enabled ? "success" : "muted"} />
+                      </HStack>
+                      <HStack className="items-center gap-2 flex-wrap">
+                        <Globe size={16} color={isDarkMode ? "#E2E8F0" : "#0f172a"} />
+                        <Text className="text-typography-700 dark:text-typography-300 text-sm">
+                          {host.forward_scheme}://{host.forward_host}:{host.forward_port}
+                        </Text>
+                      </HStack>
+                      <HStack className="gap-2 flex-wrap">
+                        {host.certificate_id ? <StatusChip label="Certificate" /> : null}
+                        {host.block_exploits ? <StatusChip label="Block Exploits" /> : null}
+                        {host.allow_websocket_upgrade ? <StatusChip label="WebSockets" /> : null}
+                      </HStack>
+                      <Text className="text-xs text-typography-500 dark:text-typography-400">
+                        Tap for details & actions
+                      </Text>
+                    </VStack>
+                  </Pressable>
+                );
+              })}
+            </VStack>
           )}
         </Box>
       </ScrollView>
+
+      <Modal isOpen={!!selectedHost} onClose={() => setSelectedHost(null)} size="md">
+        <ModalBackdrop className="bg-black/60" />
+        <ModalContent className="max-w-lg w-full rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628] shadow-2xl">
+          <ModalHeader className="flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
+            <VStack className="flex-1">
+              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+                Proxy Host
+              </Heading>
+              <Text className="text-typography-600 dark:text-typography-400 mt-1">
+                Details and actions for this host.
+              </Text>
+            </VStack>
+            <ModalCloseButton className="text-typography-500" />
+          </ModalHeader>
+          <ModalBody className="px-6 pt-4">
+            {selectedHost ? (
+              <VStack className="gap-4">
+                <VStack className="gap-2">
+                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                    Domains
+                  </Text>
+                  <HStack className="flex-wrap">
+                    {(selectedHost.domain_names ?? []).map((d, idx) => (
+                      <React.Fragment key={d}>
+                        <Text className="text-typography-900 dark:text-[#E8EBF0] text-base" style={{ fontFamily: "Inter_600SemiBold" }}>
+                          {d}
+                        </Text>
+                        {idx < (selectedHost.domain_names ?? []).length - 1 ? (
+                          <Text className="text-typography-900 dark:text-[#E8EBF0] text-base">{", "}</Text>
+                        ) : null}
+                      </React.Fragment>
+                    ))}
+                  </HStack>
+                </VStack>
+                <HStack className="items-center gap-2">
+                  <Globe size={16} color={isDarkMode ? "#E2E8F0" : "#0f172a"} />
+                  <Text className="text-typography-700 dark:text-typography-300 text-sm">
+                    {selectedHost.forward_scheme}://{selectedHost.forward_host}:{selectedHost.forward_port}
+                  </Text>
+                </HStack>
+                <HStack className="gap-2 flex-wrap">
+                  {selectedHost.certificate_id ? <StatusChip label="Certificate" /> : null}
+                  {selectedHost.block_exploits ? <StatusChip label="Block Exploits" /> : null}
+                  {selectedHost.allow_websocket_upgrade ? <StatusChip label="WebSockets" /> : null}
+                  {selectedHost.hsts_enabled ? <StatusChip label="HSTS" /> : null}
+                  <StatusChip label={selectedHost.ssl_forced ? "SSL Forced" : "SSL Optional"} action={selectedHost.ssl_forced ? "success" : "muted"} />
+                  <StatusChip label={isEnabled(selectedHost) ? "Active" : "Inactive"} action={isEnabled(selectedHost) ? "success" : "muted"} />
+                </HStack>
+              </VStack>
+            ) : null}
+          </ModalBody>
+          <ModalFooter className="px-6 pb-6 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
+            <HStack className="gap-2 w-full">
+              <Button
+                action="default"
+                variant="outline"
+                size="sm"
+                onPress={() => {
+                  if (!selectedHost) return;
+                  void handleToggle(selectedHost);
+                  setSelectedHost(null);
+                }}
+                isDisabled={selectedHost ? togglingId === selectedHost.id : false}
+                className="flex-1 rounded-xl border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E]"
+              >
+                {selectedHost && togglingId === selectedHost.id ? (
+                  <ButtonSpinner />
+                ) : (
+                  <ButtonIcon as={Power} size="sm" className="text-typography-900 dark:text-[#E8EBF0]" />
+                )}
+                <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                  {selectedHost && isEnabled(selectedHost) ? "Disable" : "Enable"}
+                </ButtonText>
+              </Button>
+              <Button
+                action="default"
+                variant="outline"
+                size="sm"
+                onPress={() => {
+                  if (!selectedHost) return;
+                  openEditModal(selectedHost);
+                  setSelectedHost(null);
+                }}
+                className="flex-1 rounded-xl border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E]"
+              >
+                <ButtonIcon as={Pencil} size="sm" className="text-typography-900 dark:text-[#E8EBF0]" />
+                <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Edit</ButtonText>
+              </Button>
+              <Button
+                action="negative"
+                variant="solid"
+                size="sm"
+                onPress={() => {
+                  if (!selectedHost) return;
+                  setDeleteTarget(selectedHost);
+                  setSelectedHost(null);
+                }}
+                className="flex-1 rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
+              >
+                <ButtonIcon as={Trash2} size="sm" className="text-background-0 dark:text-[#0A1628]" />
+                <ButtonText className="text-background-0 dark:text-[#0A1628]">Delete</ButtonText>
+              </Button>
+            </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
       <Modal isOpen={setupModalOpen} onClose={() => setSetupModalOpen(false)} size="md">
         <ModalBackdrop className="bg-black/60" />
@@ -664,9 +828,14 @@ export default function ProxyHostsScreen() {
               <Button className="rounded-xl" variant="outline" action="default" onPress={() => setSetupModalOpen(false)} isDisabled={setupSaving}>
                 <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
               </Button>
-              <Button className="rounded-xl" action="primary" onPress={handleSetupSave} isDisabled={setupSaving}>
-                {setupSaving ? <ButtonSpinner /> : <ButtonIcon as={Shield} size="sm" />}
-                <ButtonText>Confirm Setup</ButtonText>
+              <Button
+                className="rounded-xl bg-typography-900 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+                action="primary"
+                onPress={handleSetupSave}
+                isDisabled={setupSaving}
+              >
+                {setupSaving ? <ButtonSpinner /> : <ButtonIcon as={Shield} size="sm" className="text-background-0 dark:text-[#0A1628]" />}
+                <ButtonText className="text-background-0 dark:text-[#0A1628]">Confirm Setup</ButtonText>
               </Button>
             </HStack>
           </ModalFooter>
@@ -706,11 +875,14 @@ export default function ProxyHostsScreen() {
                       <Pressable
                         key={tab.key}
                         onPress={() => setFormTab(tab.key as typeof formTab)}
-                        className={`px-4 py-2 rounded-full border ${active ? "bg-typography-900 border-typography-900" : "bg-background-50 border-outline-200"
-                          }`}
+                        className={`px-4 py-2 rounded-full border ${
+                          active
+                            ? "bg-typography-900 border-typography-900 dark:bg-[#2DD4BF] dark:border-[#2DD4BF]"
+                            : "bg-background-50 border-outline-200 dark:bg-[#0E1524] dark:border-[#243247]"
+                        }`}
                       >
                         <Text
-                          className={`text-sm ${active ? "text-background-0" : "text-typography-700"}`}
+                          className={`text-sm ${active ? "text-background-0 dark:text-[#0A1628]" : "text-typography-700 dark:text-typography-400"}`}
                           style={{ fontFamily: active ? "Inter_700Bold" : "Inter_500Medium" }}
                         >
                           {tab.label}
@@ -741,7 +913,7 @@ export default function ProxyHostsScreen() {
                       {domainsList.length > 0 ? (
                         <HStack className="gap-2 mt-2 flex-wrap">
                           {domainsList.map((d, idx) => (
-                            <Box key={`${d}-${idx}`} className="px-3 py-1 rounded-full bg-background-50 border border-background-100 items-center flex-row">
+                            <Box className="px-3 py-1 rounded-full bg-background-50 dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52] items-center flex-row" key={`${d}-${idx}`}>
                               <Text className="mr-2 text-typography-900">{d}</Text>
                               <Pressable onPress={() => removeDomain(idx)} className="px-1">
                                 <X size={14} color="#6b7280" />
@@ -831,7 +1003,7 @@ export default function ProxyHostsScreen() {
                       <Text className="text-typography-600 text-sm">No locations defined.</Text>
                     ) : (
                       locations.map((loc, idx) => (
-                        <Box key={`${loc.path}-${idx}`} className="p-3 rounded-xl border border-background-200 bg-background-50 gap-3">
+                        <Box className="p-3 rounded-xl border border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] gap-3" key={`${loc.path}-${idx}`}>
                           <FormControl>
                             <FormControlLabel>
                               <FormControlLabelText>Path</FormControlLabelText>
@@ -1001,9 +1173,16 @@ export default function ProxyHostsScreen() {
               <Button className="rounded-xl" variant="outline" action="default" onPress={closeModal} isDisabled={saving}>
                 <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
               </Button>
-              <Button className="rounded-xl" action="primary" onPress={handleSave} isDisabled={saving}>
-                {saving ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
-                <ButtonText>{editingHost ? "Save changes" : "Create proxy"}</ButtonText>
+              <Button
+                className="rounded-xl bg-typography-900 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+                action="primary"
+                onPress={handleSave}
+                isDisabled={saving}
+              >
+                {saving ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" className="text-background-0 dark:text-[#0A1628]" />}
+                <ButtonText className="text-background-0 dark:text-[#0A1628]">
+                  {editingHost ? "Save changes" : "Create proxy"}
+                </ButtonText>
               </Button>
             </HStack>
           </ModalFooter>

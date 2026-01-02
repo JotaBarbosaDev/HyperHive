@@ -1,5 +1,5 @@
 import React from "react";
-import { ScrollView, RefreshControl, useColorScheme, Alert, Platform } from "react-native";
+import { ScrollView, RefreshControl, useColorScheme, Platform } from "react-native";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import * as Clipboard from "expo-clipboard";
@@ -12,9 +12,9 @@ import { Button, ButtonText, ButtonIcon, ButtonSpinner } from "@/components/ui/b
 import { Input, InputField } from "@/components/ui/input";
 import { Modal, ModalBackdrop, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton } from "@/components/ui/modal";
 import { Toast, ToastTitle, useToast } from "@/components/ui/toast";
-import { Fab, FabIcon } from "@/components/ui/fab";
 import { Shield, Copy, Plus, Trash2, Info } from "lucide-react-native";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useAppTheme } from "@/hooks/useAppTheme";
 import { useWireguard } from "@/hooks/useWireguard";
 import { WireguardPeer } from "@/types/wireguard";
 
@@ -22,6 +22,50 @@ type WireGuardConfig = {
   endpoint: string;
   publicKey: string;
   network: string;
+};
+
+const isRealDomainHost = (hostname: string) => {
+  const host = hostname.trim().toLowerCase();
+  if (!host || host === "localhost") {
+    return false;
+  }
+  if (!host.includes(".") || !/[a-z]/.test(host)) {
+    return false;
+  }
+  if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host)) {
+    return false;
+  }
+  if (host.includes(":")) {
+    return false;
+  }
+  return true;
+};
+
+const getApexDomain = (hostname: string) => {
+  const host = hostname.trim().toLowerCase().replace(/\.$/, "");
+  const parts = host.split(".").filter(Boolean);
+  if (parts.length <= 2) {
+    return host;
+  }
+  const last = parts[parts.length - 1];
+  const secondLast = parts[parts.length - 2];
+  const commonSecondLevel = new Set(["co", "com", "net", "org", "gov", "edu"]);
+  if (last.length === 2 && commonSecondLevel.has(secondLast) && parts.length >= 3) {
+    return parts.slice(-3).join(".");
+  }
+  return parts.slice(-2).join(".");
+};
+
+const getSuggestedEndpoint = () => {
+  if (Platform.OS !== "web" || typeof window === "undefined") {
+    return "";
+  }
+  const hostname = window.location.hostname;
+  if (!hostname || !isRealDomainHost(hostname)) {
+    return "";
+  }
+  const apexDomain = getApexDomain(hostname);
+  return apexDomain ? `${apexDomain}:51512` : "";
 };
 
 const localPeerBefore = `[Peer]
@@ -57,6 +101,7 @@ const buildEndpointLabel = (peer?: WireguardPeer, fallbackEndpoint?: string) => 
 
 export default function WireGuardScreen() {
   const colorScheme = useColorScheme();
+  const { resolvedMode } = useAppTheme();
   const toast = useToast();
   const { token, isChecking } = useAuthGuard();
   const {
@@ -73,12 +118,14 @@ export default function WireGuardScreen() {
   const [creatingVpn, setCreatingVpn] = React.useState(false);
   const [creatingPeer, setCreatingPeer] = React.useState(false);
   const [deletingPeerId, setDeletingPeerId] = React.useState<number | string | null>(null);
+  const [confirmDeletePeer, setConfirmDeletePeer] = React.useState<WireguardPeer | null>(null);
   const [showCreateVpnModal, setShowCreateVpnModal] = React.useState(false);
   const [showAddPeerModal, setShowAddPeerModal] = React.useState(false);
   const [showLocalConnectModal, setShowLocalConnectModal] = React.useState(false);
   const [formPeerName, setFormPeerName] = React.useState("");
   const [formPeerEndpoint, setFormPeerEndpoint] = React.useState("");
   const [formPeerKeepalive, setFormPeerKeepalive] = React.useState("25");
+  const suggestedEndpoint = React.useMemo(() => getSuggestedEndpoint(), []);
 
   const downloadConfigFile = React.useCallback(async (configText: string) => {
     const filename = "wg0.conf";
@@ -130,6 +177,12 @@ export default function WireGuardScreen() {
     };
   }, [vpnReady, peers, formPeerEndpoint]);
 
+  React.useEffect(() => {
+    if (showAddPeerModal && suggestedEndpoint && !formPeerEndpoint.trim()) {
+      setFormPeerEndpoint(suggestedEndpoint);
+    }
+  }, [showAddPeerModal, suggestedEndpoint, formPeerEndpoint]);
+
   const copyToClipboard = async (text: string, label: string) => {
     await Clipboard.setStringAsync(text);
     toast.show({
@@ -169,6 +222,7 @@ export default function WireGuardScreen() {
             </Toast>
           ),
         });
+        return true;
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unable to remove the peer.";
         toast.show({
@@ -183,6 +237,7 @@ export default function WireGuardScreen() {
             </Toast>
           ),
         });
+        return false;
       } finally {
         setDeletingPeerId(null);
       }
@@ -296,26 +351,22 @@ export default function WireGuardScreen() {
   };
 
   const handleDeletePeer = (peer: WireguardPeer) => {
-    const confirmMessage = `Are you sure you want to remove peer "${peer.name}"?`;
+    setConfirmDeletePeer(peer);
+  };
 
-    if (Platform.OS === "web") {
-      const confirmed = typeof window !== "undefined" ? window.confirm(confirmMessage) : true;
-      if (confirmed) {
-        void deletePeer(peer);
-      }
+  const handleCloseDeleteModal = () => {
+    if (deletingPeerId) {
       return;
     }
+    setConfirmDeletePeer(null);
+  };
 
-    Alert.alert("Confirm Deletion", confirmMessage, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Remove",
-        style: "destructive",
-        onPress: () => {
-          void deletePeer(peer);
-        },
-      },
-    ]);
+  const handleConfirmDelete = async () => {
+    if (!confirmDeletePeer || deletingPeerId) return;
+    const didDelete = await deletePeer(confirmDeletePeer);
+    if (didDelete) {
+      setConfirmDeletePeer(null);
+    }
   };
 
   const handleRefresh = async () => {
@@ -326,12 +377,17 @@ export default function WireGuardScreen() {
     return null;
   }
 
+  const isWeb = Platform.OS === "web";
   const isDarkMode = colorScheme === "dark";
   const refreshControlTint = colorScheme === "dark" ? "#F8FAFC" : "#0F172A";
   const refreshControlBackground = colorScheme === "dark" ? "#0E1524" : "#E2E8F0";
+  const primaryButtonClass =
+    isWeb ? "bg-typography-900 dark:bg-[#2DD4BF]" : resolvedMode === "dark" ? "bg-[#2DD4BF]" : "bg-typography-900";
+  const primaryButtonTextClass =
+    isWeb ? "text-background-0 dark:text-[#0A1628]" : resolvedMode === "dark" ? "text-[#0A1628]" : "text-background-0";
 
   return (
-    <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
+    <Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
@@ -411,14 +467,11 @@ export default function WireGuardScreen() {
                   </Text>
                   <Button
                     size="lg"
-                    className="rounded-xl bg-typography-900 dark:bg-[#E8EBF0] mt-4"
+                    className={`rounded-xl mt-4 ${primaryButtonClass}`}
                     onPress={() => setShowCreateVpnModal(true)}
                   >
-                    <ButtonIcon as={Plus} className="text-background-0 dark:text-typography-900" />
-                    <ButtonText
-                      className="text-background-0 dark:text-typography-900"
-                      style={{ fontFamily: "Inter_600SemiBold" }}
-                    >
+                    <ButtonIcon as={Plus} className={primaryButtonTextClass} />
+                    <ButtonText className={primaryButtonTextClass} style={{ fontFamily: "Inter_600SemiBold" }}>
                       Create VPN
                     </ButtonText>
                   </Button>
@@ -433,7 +486,7 @@ export default function WireGuardScreen() {
               <Box className="rounded-2xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] overflow-hidden web:shadow-md dark:web:shadow-none">
                 {/* Header */}
                 <Box className="border-b border-outline-100 dark:border-[#2A3B52] p-6">
-                  <HStack className="justify-between items-center">
+                  <HStack className="justify-between items-start gap-4 flex-col web:flex-row web:items-center">
                     <Heading
                       size="lg"
                       className="text-typography-900 dark:text-[#E8EBF0]"
@@ -441,19 +494,16 @@ export default function WireGuardScreen() {
                     >
                       Peers ({peers.length})
                     </Heading>
-                    <Box className="hidden web:flex">
-                      <Button
-                        size="md"
-                        className="rounded-xl bg-typography-900 dark:bg-[#0A1628] dark:border dark:border-[#2A3B52]"
-                        style={isDarkMode ? { backgroundColor: "#0A1628", borderColor: "#2A3B52" } : undefined}
-                        onPress={() => setShowAddPeerModal(true)}
-                      >
-                        <ButtonIcon as={Plus} className="text-background-0 dark:text-[#E8EBF0]" />
-                        <ButtonText className="text-background-0 dark:text-[#E8EBF0]">
-                          Add Peer
-                        </ButtonText>
-                      </Button>
-                    </Box>
+                    <Button
+                      size="md"
+                      className={`rounded-xl w-full web:w-auto ${primaryButtonClass}`}
+                      onPress={() => setShowAddPeerModal(true)}
+                    >
+                      <ButtonIcon as={Plus} className={primaryButtonTextClass} />
+                      <ButtonText className={primaryButtonTextClass} style={{ fontFamily: "Inter_600SemiBold" }}>
+                        Add Peer
+                      </ButtonText>
+                    </Button>
                   </HStack>
                 </Box>
 
@@ -467,7 +517,7 @@ export default function WireGuardScreen() {
                       No peers configured
                     </Text>
                   </Box>
-                ) : (
+                ) : isWeb ? (
                   <Box className="overflow-x-auto">
                     <Box className="min-w-[900px]">
                       {/* Table Header */}
@@ -570,25 +620,82 @@ export default function WireGuardScreen() {
                       ))}
                     </Box>
                   </Box>
+                ) : (
+                  <VStack className="gap-4 p-4">
+                    {peers.map((peer) => (
+                      <Box
+                        key={peer.id}
+                        className="rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0A1628] p-4"
+                      >
+                        <VStack className="gap-3">
+                          <HStack className="items-start justify-between gap-3">
+                            <VStack className="gap-1 flex-1">
+                              <Text
+                                className="text-base text-typography-900 dark:text-[#E8EBF0]"
+                                style={{ fontFamily: "Inter_600SemiBold" }}
+                              >
+                                {peer.name}
+                              </Text>
+                              <Text className="text-xs text-typography-500 dark:text-typography-400">
+                                {peer.client_ip?.split("/")[0] ?? "—"}
+                              </Text>
+                            </VStack>
+                            <Button
+                              variant="outline"
+                              size="xs"
+                              className="rounded-xl border-red-500"
+                              onPress={() => handleDeletePeer(peer)}
+                              isDisabled={deletingPeerId === peer.id}
+                            >
+                              {deletingPeerId === peer.id ? (
+                                <ButtonSpinner className="text-red-500" />
+                              ) : (
+                                <>
+                                  <ButtonIcon as={Trash2} size="xs" className="text-red-500" />
+                                  <ButtonText className="text-red-500 text-xs">Delete</ButtonText>
+                                </>
+                              )}
+                            </Button>
+                          </HStack>
+                          <VStack className="gap-2">
+                            <Text className="text-xs text-typography-500 dark:text-typography-400">Public key</Text>
+                            <HStack className="items-center gap-2">
+                              <Text
+                                className="flex-1 text-sm text-typography-700 dark:text-typography-300"
+                                numberOfLines={2}
+                              >
+                                {truncateMiddle(peer.public_key, 36)}
+                              </Text>
+                              <Button
+                                variant="outline"
+                                size="xs"
+                                className="rounded-xl"
+                                onPress={() => copyToClipboard(peer.public_key, "Public Key")}
+                              >
+                                <ButtonIcon
+                                  as={Copy}
+                                  size="xs"
+                                  className="text-typography-700 dark:text-typography-300"
+                                />
+                              </Button>
+                            </HStack>
+                          </VStack>
+                          <VStack className="gap-1">
+                            <Text className="text-xs text-typography-500 dark:text-typography-400">Allowed IPs</Text>
+                            <Text className="text-sm text-typography-700 dark:text-typography-300">
+                              {formatAllowedIps(peer)}
+                            </Text>
+                          </VStack>
+                        </VStack>
+                      </Box>
+                    ))}
+                  </VStack>
                 )}
               </Box>
             </VStack>
           )}
         </Box>
       </ScrollView>
-
-      {/* FAB - Mobile only - Adicionar Peer */}
-      {Platform.OS !== "web" && vpnConfig && (
-        <Fab
-          size="lg"
-          placement="bottom right"
-          className="bg-typography-900 dark:bg-[#0A1628] shadow-lg"
-          style={isDarkMode ? { backgroundColor: "#0A1628" } : undefined}
-          onPress={() => setShowAddPeerModal(true)}
-        >
-          <FabIcon as={Plus} className="text-background-0 dark:text-[#E8EBF0]" />
-        </Fab>
-      )}
 
       {/* Modal: Create VPN */}
       <Modal isOpen={showCreateVpnModal} onClose={() => setShowCreateVpnModal(false)}>
@@ -640,15 +747,15 @@ export default function WireGuardScreen() {
                 </ButtonText>
               </Button>
               <Button
-                className="rounded-xl px-6 py-2.5 bg-typography-900 dark:bg-[#E8EBF0]"
+                className={`rounded-xl px-6 py-2.5 ${primaryButtonClass}`}
                 onPress={handleCreateVpn}
                 isDisabled={creatingVpn}
               >
                 {creatingVpn ? (
-                  <ButtonSpinner className="text-background-0 dark:text-typography-900" />
+                  <ButtonSpinner className={primaryButtonTextClass} />
                 ) : null}
                 <ButtonText
-                  className="text-background-0 dark:text-typography-900"
+                  className={primaryButtonTextClass}
                   style={{ fontFamily: "Inter_600SemiBold" }}
                 >
                   {creatingVpn ? "Creating..." : "Create"}
@@ -725,7 +832,7 @@ export default function WireGuardScreen() {
                   className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]"
                 >
                   <InputField
-                    placeholder="e.g.: yourdomain.com:51512"
+                    placeholder={suggestedEndpoint || "e.g.: yourdomain.com:51512"}
                     value={formPeerEndpoint}
                     onChangeText={setFormPeerEndpoint}
                     className="text-typography-900 dark:text-[#E8EBF0]"
@@ -765,33 +872,96 @@ export default function WireGuardScreen() {
             <HStack className="justify-end gap-3 w-full">
               <Button
                 variant="outline"
-                className="rounded-xl px-6 py-2.5 border-outline-200 dark:border-[#2A3B52]"
+                className="rounded-xl px-6 py-2.5 border-outline-200 dark:border-[#2A3B52] items-center justify-center"
                 onPress={() => setShowAddPeerModal(false)}
               >
                 <ButtonText
-                  className="text-typography-700 dark:text-[#E8EBF0]"
+                  className="text-typography-700 dark:text-[#E8EBF0] text-center"
                   style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Cancel
                 </ButtonText>
               </Button>
               <Button
-                className="rounded-xl px-6 py-2.5 bg-typography-900 dark:bg-[#0A1628] dark:border dark:border-[#2A3B52]"
-                style={isDarkMode ? { backgroundColor: "#0A1628", borderColor: "#2A3B52" } : undefined}
+                className={`rounded-xl px-6 py-2.5 items-center justify-center ${primaryButtonClass}`}
                 onPress={handleAddPeer}
                 isDisabled={creatingPeer}
               >
                 {creatingPeer ? (
-                  <ButtonSpinner className="text-background-0 dark:text-[#E8EBF0]" />
+                  <ButtonSpinner className={primaryButtonTextClass} />
                 ) : null}
                 <ButtonText
-                  className="text-background-0 dark:text-[#E8EBF0]"
+                  className={`${primaryButtonTextClass} text-center`}
                   style={{ fontFamily: "Inter_600SemiBold" }}
                 >
                   {creatingPeer ? "Adding..." : "Add"}
                 </ButtonText>
               </Button>
             </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Modal: Confirm delete peer */}
+      <Modal isOpen={!!confirmDeletePeer} onClose={handleCloseDeleteModal} size="md">
+        <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+        <ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-5">
+          <ModalHeader className="flex-row items-center gap-3 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
+            <Box className="h-10 w-10 rounded-2xl bg-error-500/10 dark:bg-error-900/20 items-center justify-center">
+              <Trash2 size={18} className="text-error-600 dark:text-error-400" />
+            </Box>
+            <VStack className="flex-1">
+              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+                Delete peer?
+              </Heading>
+              <Text className="text-sm text-typography-600 dark:text-typography-400">
+                This removes the peer permanently.
+              </Text>
+            </VStack>
+            <ModalCloseButton onPress={handleCloseDeleteModal} />
+          </ModalHeader>
+          <ModalBody className="pt-5">
+            {confirmDeletePeer ? (
+              <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] p-4">
+                <VStack className="gap-2">
+                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                    Peer
+                  </Text>
+                  <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                    {confirmDeletePeer.name}
+                  </Text>
+                  <Text className="text-sm text-typography-600 dark:text-typography-400">
+                    IP: {confirmDeletePeer.client_ip?.split("/")[0] ?? "—"}
+                  </Text>
+                  <Text className="text-sm text-typography-600 dark:text-typography-400">
+                    Allowed IPs: {formatAllowedIps(confirmDeletePeer)}
+                  </Text>
+                </VStack>
+              </Box>
+            ) : null}
+          </ModalBody>
+          <ModalFooter className="flex-row gap-3 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
+            <Button
+              variant="outline"
+              action="secondary"
+              className="flex-1 rounded-xl"
+              onPress={handleCloseDeleteModal}
+              isDisabled={Boolean(deletingPeerId)}
+            >
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
+            </Button>
+            <Button
+              action="negative"
+              className="flex-1 rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
+              onPress={handleConfirmDelete}
+              isDisabled={Boolean(deletingPeerId)}
+            >
+              {deletingPeerId ? (
+                <ButtonSpinner />
+              ) : (
+                <ButtonText className="text-background-0 dark:text-[#0A1628]">Delete</ButtonText>
+              )}
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

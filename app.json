@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/images/android-chrome-512x512.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff" 
+      "backgroundColor": "#0E1524"
     },
     "ios": {
       "supportsTablet": true
@@ -19,7 +19,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/android-chrome-512x512.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0E1524"
       },
       "edgeToEdgeEnabled": true,
       "softwareKeyboardLayoutMode": "resize"
@@ -31,11 +31,21 @@
     "web": {
       "bundler": "metro",
       "output": "single",
-      "favicon": "./assets/images/android-chrome-512x512.png",
+      "favicon": "./assets/images/favicon.png",
       "manifest": {
         "name": "HyperHive",
         "short_name": "HyperHive",
         "icons": [
+          {
+            "src": "./assets/images/favicon-16x16.png",
+            "sizes": "16x16",
+            "type": "image/png"
+          },
+          {
+            "src": "./assets/images/favicon-32x32.png",
+            "sizes": "32x32",
+            "type": "image/png"
+          },
           {
             "src": "./assets/images/android-chrome-192x192.png",
             "sizes": "192x192",

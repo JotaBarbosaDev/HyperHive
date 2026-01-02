@@ -24,6 +24,7 @@ import { Badge, BadgeText } from "@/components/ui/badge";
 import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
 import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
 import { ChevronDownIcon } from "@/components/ui/icon";
+import { DirectoryPickerModal } from "@/components/modals/DirectoryPickerModal";
 import {
   Modal,
   ModalBackdrop,
@@ -33,9 +34,10 @@ import {
   ModalFooter,
   ModalCloseButton,
 } from "@/components/ui/modal";
+import { DirectoryListing } from "@/types/directory";
 import { Machine } from "@/types/machine";
 import { AutomaticMount, BtrfsRaid } from "@/types/btrfs";
-import { listMachines } from "@/services/hyperhive";
+import { listDirectory, listMachines } from "@/services/hyperhive";
 import { createAutomaticMount, deleteAutomaticMount, listAutomaticMounts, listRaids } from "@/services/btrfs";
 import { COMPRESSION_OPTIONS } from "@/constants/btrfs";
 import { RefreshCcw, Plus, Trash2 } from "lucide-react-native";
@@ -54,6 +56,27 @@ const getRaidLabel = (uuid: string | undefined, raids: BtrfsRaid[]) => {
   return raid.mount_point || raid.name || raid.label || uuid;
 };
 
+const computeNextPath = (current: string, selection: string) => {
+  if (!selection) return current;
+  if (selection.startsWith("/")) {
+    return selection.replace(/\/{2,}/g, "/") || "/";
+  }
+  const sanitized = selection.replace(/^\/+|\/+$/g, "");
+  if (!sanitized) return current;
+  const base = current === "/" ? "" : current.replace(/\/+$/g, "");
+  return `${base}/${sanitized}`.replace(/\/{2,}/g, "/");
+};
+
+const normalizePathInput = (input: string) => {
+  const sanitized = input.trim();
+  if (sanitized.length === 0) {
+    return "/";
+  }
+  return sanitized.startsWith("/")
+    ? sanitized.replace(/\/{2,}/g, "/")
+    : `/${sanitized}`.replace(/\/{2,}/g, "/");
+};
+
 export default function BtrfsAutomaticMountsScreen() {
   const toast = useToast();
   const [machines, setMachines] = React.useState<Machine[]>([]);
@@ -69,6 +92,30 @@ export default function BtrfsAutomaticMountsScreen() {
   const [saving, setSaving] = React.useState(false);
   const [removingId, setRemovingId] = React.useState<number | null>(null);
   const [createModal, setCreateModal] = React.useState(false);
+  const [dirListing, setDirListing] = React.useState<DirectoryListing | null>(null);
+  const [dirError, setDirError] = React.useState<string | null>(null);
+  const [selectedDirectory, setSelectedDirectory] = React.useState<string | null>(null);
+  const [isDirModalOpen, setIsDirModalOpen] = React.useState(false);
+  const [isFetchingDir, setIsFetchingDir] = React.useState(false);
+  const modalBackdropClass = "bg-background-950/60 dark:bg-black/70";
+  const modalShellClass = "w-full rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]";
+  const modalHeaderClass = "flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#1E2F47]";
+  const modalBodyClass = "px-6 pt-5 pb-6 max-h-[70vh] overflow-y-auto";
+  const modalFooterClass = "gap-3 px-6 pt-4 pb-6 border-t border-outline-100 dark:border-[#1E2F47]";
+  const cardShellClass = "rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E] shadow-soft-1";
+  const softCardShellClass = "rounded-xl border border-outline-100 bg-background-50 dark:border-[#1E2F47] dark:bg-[#132038]";
+  const outlineButtonClass = "border-outline-200 rounded-xl dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]";
+  const outlineButtonTextClass = "text-typography-900 dark:text-[#E8EBF0]";
+  const outlineButtonIconClass = "text-typography-900 dark:text-[#E8EBF0]";
+  const dangerOutlineTextClass = "text-error-600 dark:text-error-400";
+  const dangerOutlineIconClass = "text-error-600 dark:text-error-400";
+  const neutralBadgeClass = "rounded-full px-3 py-1 border border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]";
+  const neutralBadgeTextClass = "text-xs text-typography-800 dark:text-[#E8EBF0]";
+  const selectTriggerClass = "rounded-xl border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]";
+  const selectInputClass = "text-typography-900 dark:text-[#E8EBF0] placeholder:text-typography-500 dark:placeholder:text-[#9AA4B8]";
+  const selectIconClass = "text-typography-700 dark:text-[#9AA4B8]";
+  const inputShellClass = "rounded-xl border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]";
+  const dividerClass = "opacity-60 border-outline-100 dark:border-[#1E2F47]";
 
   const showToast = React.useCallback(
     (title: string, description: string, action: "success" | "error" = "success") => {
@@ -136,14 +183,105 @@ export default function BtrfsAutomaticMountsScreen() {
     }
   }, [selectedMachine, loadData]);
 
+  React.useEffect(() => {
+    setDirListing(null);
+    setSelectedDirectory(null);
+    setDirError(null);
+  }, [selectedMachine]);
+
+  React.useEffect(() => {
+    if (createModal) return;
+    setIsDirModalOpen(false);
+    setSelectedDirectory(null);
+    setDirListing(null);
+    setDirError(null);
+    setIsFetchingDir(false);
+  }, [createModal]);
+
+  const directories = React.useMemo(
+    () =>
+      Array.isArray(dirListing?.directories)
+        ? (dirListing?.directories as string[])
+        : [],
+    [dirListing]
+  );
+
+  const handleDirectoryFetch = React.useCallback(
+    async (customPath?: string) => {
+      if (!selectedMachine.trim()) {
+        setDirError("Select a machine before listing folders.");
+        return undefined;
+      }
+
+      const normalizedPath = normalizePathInput(customPath ?? formMountPoint);
+
+      setDirError(null);
+      setDirListing(null);
+      setIsFetchingDir(true);
+      setSelectedDirectory(null);
+
+      try {
+        const data = await listDirectory(selectedMachine.trim(), normalizedPath);
+        setDirListing(data);
+        setFormMountPoint(normalizedPath);
+        return data;
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : "Error loading directory contents.";
+        setDirError(message);
+        setDirListing(null);
+        return undefined;
+      } finally {
+        setIsFetchingDir(false);
+      }
+    },
+    [formMountPoint, selectedMachine]
+  );
+
+  const handleOpenDirectoryModal = React.useCallback(async () => {
+    if (!selectedMachine.trim()) {
+      setDirError("Select a machine before listing folders.");
+      return;
+    }
+    setDirError(null);
+    const hasCachedDirectories = dirListing && Array.isArray(dirListing.directories);
+    const result = hasCachedDirectories ? dirListing : await handleDirectoryFetch();
+    if (!result) {
+      return;
+    }
+    setSelectedDirectory(null);
+    setIsDirModalOpen(true);
+  }, [dirListing, handleDirectoryFetch, selectedMachine]);
+
+  const handleDirectoryAdd = React.useCallback(async () => {
+    if (!selectedDirectory) return;
+    const nextPath = computeNextPath(normalizePathInput(formMountPoint), selectedDirectory);
+    await handleDirectoryFetch(nextPath);
+    setSelectedDirectory(null);
+  }, [formMountPoint, handleDirectoryFetch, selectedDirectory]);
+
+  const handleDirectoryCancel = React.useCallback(() => {
+    setIsDirModalOpen(false);
+    setSelectedDirectory(null);
+    setDirListing(null);
+    setDirError(null);
+  }, []);
+
+  const handleDirectoryOk = React.useCallback(() => {
+    setIsDirModalOpen(false);
+    setSelectedDirectory(null);
+  }, []);
+
   const handleCreate = async () => {
     if (!selectedMachine) return;
     if (!formRaid) {
-      showToast("UUID requerido", "Selecione ou informe o RAID.", "error");
+      showToast("UUID required", "Select or enter the RAID.", "error");
       return;
     }
     if (!formMountPoint.trim()) {
-      showToast("Mount point requerido", "Informe o caminho para montar.", "error");
+      showToast("Mount point required", "Enter the mount path.", "error");
       return;
     }
     setSaving(true);
@@ -155,6 +293,10 @@ export default function BtrfsAutomaticMountsScreen() {
       });
       showToast("Auto-mount created", "Rule added successfully.");
       setFormMountPoint("");
+      setDirListing(null);
+      setSelectedDirectory(null);
+      setDirError(null);
+      setIsDirModalOpen(false);
       await loadData("refresh");
     } catch (err) {
       console.error("Failed to create auto-mount", err);
@@ -179,7 +321,7 @@ export default function BtrfsAutomaticMountsScreen() {
   };
 
   return (
-    <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
+    <Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{paddingBottom: 32}}
@@ -199,7 +341,7 @@ export default function BtrfsAutomaticMountsScreen() {
             BTRFS Auto-Mounts
           </Heading>
           <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
-            Regras que montam automaticamente RAIDs BTRFS ao iniciar a maquina.
+            Rules that automatically mount BTRFS RAIDs when the machine starts.
           </Text>
 
           <HStack className="mt-6 items-center justify-between flex-wrap gap-3">
@@ -208,9 +350,9 @@ export default function BtrfsAutomaticMountsScreen() {
                 selectedValue={selectedMachine}
                 onValueChange={(val) => setSelectedMachine(val)}
               >
-                <SelectTrigger className="min-w-[180px] rounded-xl border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] px-3 py-2">
-                  <SelectInput placeholder="Machine" value={selectedMachine} />
-                  <SelectIcon as={ChevronDownIcon} />
+                <SelectTrigger className={`${selectTriggerClass} min-w-[180px] pr-2`}>
+                  <SelectInput placeholder="Machine" value={selectedMachine} className={selectInputClass} />
+                  <SelectIcon as={ChevronDownIcon} className={selectIconClass} />
                 </SelectTrigger>
                 <SelectPortal>
                   <SelectBackdrop />
@@ -233,17 +375,17 @@ export default function BtrfsAutomaticMountsScreen() {
                 action="default"
                 size="sm"
                 onPress={() => loadData("refresh")}
-                className="border-outline-200 rounded-xl dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628] h-10"
+                className={`${outlineButtonClass} h-10`}
               >
-                <ButtonIcon as={RefreshCcw} size="sm" />
-                <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                <ButtonIcon as={RefreshCcw} size="sm" className={outlineButtonIconClass} />
+                <ButtonText className={outlineButtonTextClass}>
                   Refresh
                 </ButtonText>
               </Button>
             </HStack>
             <Button
               action="primary"
-              className="h-10 px-5 rounded-xl dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+              className="h-10 px-5 rounded-xl"
               onPress={() => setCreateModal(true)}
             >
               <ButtonIcon as={Plus} size="sm" />
@@ -253,22 +395,22 @@ export default function BtrfsAutomaticMountsScreen() {
             </Button>
           </HStack>
 
-          <Box className="mt-6 rounded-2xl bg-background-0 border border-background-200 shadow-soft-1">
+          <Box className={`mt-6 ${cardShellClass}`}>
             <HStack className="items-center justify-between px-4 py-3">
-              <Text className="text-typography-900 font-semibold text-base">
+              <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base">
                 Rules
               </Text>
-              <Text className="text-typography-700 text-sm">
+              <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm">
                 {autoMounts.length} items
               </Text>
             </HStack>
-            <Divider />
+            <Divider className={dividerClass} />
             {loading ? (
               <VStack className="gap-3 p-4">
                 {[1, 2].map((i) => (
                   <Box
                     key={i}
-                    className="p-3 rounded-xl border border-background-100"
+                    className={`p-3 ${softCardShellClass}`}
                   >
                     <Skeleton className="h-5 w-1/2 mb-2" />
                     <SkeletonText className="w-1/3" />
@@ -277,46 +419,46 @@ export default function BtrfsAutomaticMountsScreen() {
               </VStack>
             ) : autoMounts.length === 0 ? (
               <Box className="p-4">
-                <Text className="text-typography-600 text-sm">
+                <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">
                   No rules configured.
                 </Text>
               </Box>
             ) : (
-              <VStack className="divide-y divide-background-200">
+              <VStack className="divide-y divide-outline-100 dark:divide-[#1E2F47]">
                 {autoMounts.map((rule) => (
                   <Box key={rule.id} className="px-4 py-3">
                     <HStack className="justify-between items-start gap-3 flex-wrap">
                       <VStack className="gap-1">
-                        <Text className="text-typography-900 font-semibold">
+                        <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold">
                           {rule.mount_point}
                         </Text>
-                        <Text className="text-typography-700 text-sm">
+                        <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm">
                           RAID:{" "}
                           {getRaidLabel(rule.uuid || rule.raid_uuid, raids)}
                         </Text>
-                        <Text className="text-typography-600 text-sm">
+                        <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">
                           UUID: {rule.uuid || rule.raid_uuid}
                         </Text>
                         <HStack className="gap-2 mt-1 flex-wrap">
                           <Badge
-                            className="rounded-full px-3 py-1"
+                            className={neutralBadgeClass}
                             size="sm"
                             action="muted"
-                            variant="solid"
+                            variant="outline"
                           >
-                            <BadgeText className="text-xs text-typography-800">
+                            <BadgeText className={neutralBadgeTextClass}>
                               Compression:{" "}
                               {getCompressionLabel(rule.compression)}
                             </BadgeText>
                           </Badge>
                           {rule.machine_name ? (
                             <Badge
-                              className="rounded-full px-3 py-1"
+                              className={neutralBadgeClass}
                               size="sm"
                               action="muted"
-                              variant="solid"
+                              variant="outline"
                             >
-                              <BadgeText className="text-xs text-typography-800">
+                              <BadgeText className={neutralBadgeTextClass}>
                                 {rule.machine_name}
                               </BadgeText>
                             </Badge>
@@ -325,16 +467,17 @@ export default function BtrfsAutomaticMountsScreen() {
                       </VStack>
                       <Button
                         action="negative"
-                        className="bg-error-600 rounded-xl hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
+                        variant="outline"
                         onPress={() => handleRemove(rule.id)}
                         isDisabled={removingId !== null}
+                        className={outlineButtonClass}
                       >
                         {removingId === rule.id ? (
                           <ButtonSpinner />
                         ) : (
-                          <ButtonIcon as={Trash2} size="sm" />
+                          <ButtonIcon as={Trash2} size="sm" className={dangerOutlineIconClass} />
                         )}
-                        <ButtonText className="text-background-0 dark:text-[#0A1628]">
+                        <ButtonText className={dangerOutlineTextClass}>
                           Remove
                         </ButtonText>
                       </Button>
@@ -352,23 +495,24 @@ export default function BtrfsAutomaticMountsScreen() {
         onClose={() => setCreateModal(false)}
         size="lg"
       >
-        <ModalBackdrop />
-        <ModalContent className="max-w-2xl">
-          <ModalHeader className="flex-row items-start justify-between">
-            <Heading size="md" className="text-typography-900">
+        <ModalBackdrop className={modalBackdropClass} />
+        <ModalContent className={`max-w-2xl max-h-[90vh] ${modalShellClass}`}>
+          <ModalHeader className={modalHeaderClass}>
+            <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
               New Auto-mount
             </Heading>
-            <ModalCloseButton />
+            <ModalCloseButton className="text-typography-500 dark:text-[#9AA4B8]" />
           </ModalHeader>
-          <ModalBody className="gap-4">
+          <ModalBody className={`${modalBodyClass} gap-4`}>
             <VStack className="gap-3">
               <Select selectedValue={formRaid} onValueChange={setFormRaid}>
-                <SelectTrigger>
+                <SelectTrigger className={selectTriggerClass}>
                   <SelectInput
                     placeholder="Select RAID"
                     value={getRaidLabel(formRaid, raids)}
+                    className={selectInputClass}
                   />
-                  <SelectIcon as={ChevronDownIcon} />
+                  <SelectIcon as={ChevronDownIcon} className={selectIconClass} />
                 </SelectTrigger>
                 <SelectPortal>
                   <SelectBackdrop />
@@ -386,23 +530,56 @@ export default function BtrfsAutomaticMountsScreen() {
                   </SelectContent>
                 </SelectPortal>
               </Select>
-              <Input>
+              <Input className={inputShellClass}>
                 <InputField
                   value={formMountPoint}
-                  onChangeText={setFormMountPoint}
+                  onChangeText={(text) => {
+                    setFormMountPoint(text);
+                    setDirError(null);
+                    setDirListing(null);
+                    setSelectedDirectory(null);
+                  }}
                   placeholder="/mnt/raid"
+                  className={selectInputClass}
                 />
               </Input>
+              <Button
+                variant="outline"
+                action="default"
+                size="sm"
+                className={`${outlineButtonClass} self-start`}
+                onPress={handleOpenDirectoryModal}
+                isDisabled={!selectedMachine.trim() || isFetchingDir}
+              >
+                {isFetchingDir ? (
+                  <>
+                    <ButtonSpinner size="small" />
+                    <ButtonText className={`${outlineButtonTextClass} ml-2 text-sm`}>
+                      Loading directories...
+                    </ButtonText>
+                  </>
+                ) : (
+                  <ButtonText className={`${outlineButtonTextClass} text-sm`}>
+                    Browse directories
+                  </ButtonText>
+                )}
+              </Button>
+              {dirError ? (
+                <Text className="text-error-700 dark:text-error-400 text-xs">
+                  {dirError}
+                </Text>
+              ) : null}
               <Select
                 selectedValue={formCompression}
                 onValueChange={setFormCompression}
               >
-                <SelectTrigger>
+                <SelectTrigger className={selectTriggerClass}>
                   <SelectInput
                     placeholder="Compression"
                     value={getCompressionLabel(formCompression)}
+                    className={selectInputClass}
                   />
-                  <SelectIcon as={ChevronDownIcon} />
+                  <SelectIcon as={ChevronDownIcon} className={selectIconClass} />
                 </SelectTrigger>
                 <SelectPortal>
                   <SelectBackdrop />
@@ -422,15 +599,15 @@ export default function BtrfsAutomaticMountsScreen() {
               </Select>
             </VStack>
           </ModalBody>
-          <ModalFooter className="gap-3">
+          <ModalFooter className={modalFooterClass}>
             <Button
               variant="outline"
               action="default"
               onPress={() => setCreateModal(false)}
               isDisabled={saving}
-              className="border-outline-200 rounded-xl dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]"
+              className={outlineButtonClass}
             >
-              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+              <ButtonText className={outlineButtonTextClass}>
                 Cancel
               </ButtonText>
             </Button>
@@ -446,6 +623,16 @@ export default function BtrfsAutomaticMountsScreen() {
           </ModalFooter>
         </ModalContent>
       </Modal>
+      <DirectoryPickerModal
+        isOpen={isDirModalOpen}
+        directories={directories}
+        selectedDirectory={selectedDirectory}
+        onSelect={setSelectedDirectory}
+        onCancel={handleDirectoryCancel}
+        onOk={handleDirectoryOk}
+        onConfirm={handleDirectoryAdd}
+        isLoading={isFetchingDir}
+      />
     </Box>
   );
 }

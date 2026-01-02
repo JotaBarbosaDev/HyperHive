@@ -73,6 +73,22 @@ export default function SpaScreen() {
   const [allowLoading, setAllowLoading] = React.useState(false);
   const [allowError, setAllowError] = React.useState<string | null>(null);
   const [allowCountdown, setAllowCountdown] = React.useState<SpaAllowResponse | null>(null);
+  const modalBackdropClass = "bg-background-950/60 dark:bg-black/70";
+  const modalShellClass = "w-full rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]";
+  const modalHeaderClass = "flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#1E2F47]";
+  const modalBodyClass = "px-6 pt-5 pb-6 max-h-[70vh] overflow-y-auto";
+  const modalFooterClass = "gap-3 px-6 pt-4 pb-6 border-t border-outline-100 dark:border-[#1E2F47]";
+  const alertBodyClass = "px-6 pt-4 pb-6 gap-2";
+  const alertFooterClass = "gap-2 px-6 pt-4 pb-6 border-t border-outline-100 dark:border-[#1E2F47]";
+  const cardShellClass = "rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E] shadow-soft-1";
+  const softCardShellClass = "rounded-xl border border-outline-100 bg-background-50 dark:border-[#1E2F47] dark:bg-[#132038]";
+  const outlineButtonClass = "border-outline-200 rounded-xl dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]";
+  const outlineButtonTextClass = "text-typography-900 dark:text-[#E8EBF0]";
+  const outlineButtonIconClass = "text-typography-900 dark:text-[#E8EBF0]";
+  const dangerOutlineTextClass = "text-error-600 dark:text-error-400";
+  const dangerOutlineIconClass = "text-error-600 dark:text-error-400";
+  const inputShellClass = "rounded-xl border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]";
+  const inputFieldClass = "text-typography-900 dark:text-[#E8EBF0] placeholder:text-typography-500 dark:placeholder:text-[#9AA4B8]";
 
   const showToast = React.useCallback(
     (title: string, description: string, action: "success" | "error" = "success") => {
@@ -237,7 +253,7 @@ export default function SpaScreen() {
   }, [allowTarget, allowCountdown?.allows?.length]);
 
   return (
-    <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
+    <Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
@@ -258,11 +274,10 @@ export default function SpaScreen() {
           </VStack>
 
           <VStack space="lg">
-
-            <Box className="rounded-2xl bg-background-0 border border-background-100 shadow-soft-1 p-4 md:p-5 gap-5">
+            <Box className={`p-4 md:p-5 gap-5 ${cardShellClass}`}>
               <VStack space="sm">
-                <Heading size="lg" className="text-typography-900">New port</Heading>
-                <Text size="sm" className="text-typography-500">
+                <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">New port</Heading>
+                <Text size="sm" className="text-typography-600 dark:text-[#9AA4B8]">
                   Choose a port and set a password to open access while the token remains valid.
                 </Text>
               </VStack>
@@ -270,24 +285,26 @@ export default function SpaScreen() {
               <VStack space="md">
                 <HStack className="gap-3 flex-wrap">
                   <Box className="flex-1 min-w-[180px]">
-                    <Text size="xs" className="mb-2 text-typography-500">Port</Text>
-                    <Input size="md" variant="rounded" isDisabled={saving}>
+                    <Text size="xs" className="mb-2 text-typography-700 dark:text-[#9AA4B8]">Port</Text>
+                    <Input size="md" isDisabled={saving} className={inputShellClass}>
                       <InputField
                         keyboardType="numeric"
                         placeholder="25565"
                         value={portInput}
                         onChangeText={setPortInput}
+                        className={inputFieldClass}
                       />
                     </Input>
                   </Box>
                   <Box className="flex-1 min-w-[200px]">
-                    <Text size="xs" className="mb-2 text-typography-500">Password</Text>
-                    <Input size="md" variant="rounded" isDisabled={saving}>
+                    <Text size="xs" className="mb-2 text-typography-700 dark:text-[#9AA4B8]">Password</Text>
+                    <Input size="md" isDisabled={saving} className={inputShellClass}>
                       <InputField
                         secureTextEntry
                         placeholder="SPA password"
                         value={password}
                         onChangeText={setPassword}
+                        className={inputFieldClass}
                       />
                     </Input>
                   </Box>
@@ -295,24 +312,24 @@ export default function SpaScreen() {
                 <HStack className="items-center gap-3 flex-wrap">
                   <Button
                     action="primary"
-                    className="rounded-xl px-5 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+                    className="rounded-xl px-5"
                     onPress={handleCreate}
                     isDisabled={saving}
                   >
                     {saving ? <ButtonSpinner /> : <ButtonIcon as={Plus} className="mr-1" />}
                     <ButtonText style={{ fontFamily: "Inter_600SemiBold" }}>{saving ? "Saving..." : "Create port"}</ButtonText>
                   </Button>
-                  <Text size="xs" className="text-typography-500">
+                  <Text size="xs" className="text-typography-600 dark:text-[#9AA4B8]">
                     Once created, you can copy the link to share access.
                   </Text>
                 </HStack>
               </VStack>
             </Box>
 
-            <Box className="rounded-2xl bg-background-0 border border-background-100 shadow-soft-1 p-4 md:p-5 gap-4">
+            <Box className={`p-4 md:p-5 gap-4 ${cardShellClass}`}>
               <HStack className="items-center justify-between flex-wrap gap-3">
-                <Heading size="lg" className="text-typography-900">Configured ports</Heading>
-                {loading ? <Text size="sm" className="text-typography-500">Loading...</Text> : null}
+                <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">Configured ports</Heading>
+                {loading ? <Text size="sm" className="text-typography-600 dark:text-[#9AA4B8]">Loading...</Text> : null}
               </HStack>
 
               {loading ? (
@@ -320,47 +337,49 @@ export default function SpaScreen() {
                   {[1, 2, 3].map((item) => (
                     <Box
                       key={item}
-                      className="h-16 rounded-2xl bg-background-50 border border-background-100"
+                      className={`h-16 ${softCardShellClass}`}
                     />
                   ))}
                 </VStack>
               ) : ports.length === 0 ? (
-                <Box className="border border-dashed border-background-100 rounded-2xl p-6 bg-background-50 gap-2">
-                  <Heading size="sm" className="text-typography-900">No SPA ports</Heading>
-                  <Text size="sm" className="text-typography-600">Create a port to generate an access link.</Text>
+                <Box className={`border border-dashed p-6 gap-2 ${softCardShellClass}`}>
+                  <Heading size="sm" className="text-typography-900 dark:text-[#E8EBF0]">No SPA ports</Heading>
+                  <Text size="sm" className="text-typography-600 dark:text-[#9AA4B8]">Create a port to generate an access link.</Text>
                 </Box>
               ) : (
                 <VStack space="md" className="mt-1">
                   {ports.map((item) => (
                     <Pressable
                       key={item.port}
-                      className="rounded-2xl active:opacity-80"
+                      className="rounded-xl active:opacity-80"
                       onPress={() => setAllowTarget(item)}
                     >
-                      <HStack className="items-center justify-between bg-background-50 border border-background-100 rounded-2xl px-4 py-3">
+                      <HStack className={`items-center justify-between px-4 py-3 ${softCardShellClass}`}>
                         <VStack space="xs">
-                          <Heading size="sm" className="text-typography-900">Port {item.port}</Heading>
-                          <Text size="xs" className="text-typography-600">Created at {formatDate(item.created_at)}</Text>
-                          <Text size="xs" className="text-typography-500">Tap to view allow list</Text>
+                          <Heading size="sm" className="text-typography-900 dark:text-[#E8EBF0]">Port {item.port}</Heading>
+                          <Text size="xs" className="text-typography-600 dark:text-[#9AA4B8]">Created at {formatDate(item.created_at)}</Text>
+                          <Text size="xs" className="text-typography-600 dark:text-[#9AA4B8]">Tap to view allow list</Text>
                         </VStack>
                         <HStack space="sm" className="items-center">
                           <Button
                             variant="outline"
+                            action="default"
                             size="sm"
-                            className="rounded-xl"
+                            className={outlineButtonClass}
                             onPress={() => copyAccessLink(item.port)}
                           >
-                            <ButtonIcon as={Copy} />
-                            <ButtonText>Copy link</ButtonText>
+                            <ButtonIcon as={Copy} className={outlineButtonIconClass} />
+                            <ButtonText className={outlineButtonTextClass}>Copy link</ButtonText>
                           </Button>
                           <Button
                             action="negative"
+                            variant="outline"
                             size="sm"
-                            className="rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
+                            className={outlineButtonClass}
                             onPress={() => setDeleteTarget(item)}
                           >
-                            {deletingPort === item.port ? <ButtonSpinner /> : <ButtonIcon as={Trash2} />}
-                            <ButtonText className="text-background-0 dark:text-[#0A1628]">Remove</ButtonText>
+                            {deletingPort === item.port ? <ButtonSpinner /> : <ButtonIcon as={Trash2} className={dangerOutlineIconClass} />}
+                            <ButtonText className={dangerOutlineTextClass}>Remove</ButtonText>
                           </Button>
                         </HStack>
                       </HStack>
@@ -373,78 +392,82 @@ export default function SpaScreen() {
         </Box>
 
         <AlertDialog isOpen={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)}>
-          <AlertDialogBackdrop />
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <Text className="font-semibold text-lg">Remove port</Text>
-              <AlertDialogCloseButton />
+          <AlertDialogBackdrop className={modalBackdropClass} />
+          <AlertDialogContent className={`max-w-lg ${modalShellClass}`}>
+            <AlertDialogHeader className={modalHeaderClass}>
+              <Text className="font-semibold text-lg text-typography-900 dark:text-[#E8EBF0]">Remove port</Text>
+              <AlertDialogCloseButton className="text-typography-500 dark:text-[#9AA4B8]" />
             </AlertDialogHeader>
-            <AlertDialogBody className="gap-2">
-              <Text size="sm">Confirm removing port {deleteTarget?.port}? Access will be revoked.</Text>
+            <AlertDialogBody className={alertBodyClass}>
+              <Text size="sm" className="text-typography-700 dark:text-[#9AA4B8]">
+                Confirm removing port {deleteTarget?.port}? Access will be revoked.
+              </Text>
             </AlertDialogBody>
-            <AlertDialogFooter className="gap-2">
+            <AlertDialogFooter className={alertFooterClass}>
               <Button
                 variant="outline"
-                className="flex-1 rounded-xl"
+                action="default"
+                className={`flex-1 ${outlineButtonClass}`}
                 onPress={() => setDeleteTarget(null)}
               >
-                <ButtonText>Cancel</ButtonText>
+                <ButtonText className={outlineButtonTextClass}>Cancel</ButtonText>
               </Button>
               <Button
                 action="negative"
-                className="flex-1 rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
+                variant="outline"
+                className={`flex-1 ${outlineButtonClass}`}
                 onPress={confirmDelete}
                 isDisabled={deletingPort !== null}
               >
-                {deletingPort ? <ButtonSpinner /> : <ButtonIcon as={Trash2} />}
-                <ButtonText className="text-background-0 dark:text-[#0A1628]">Remove</ButtonText>
+                {deletingPort ? <ButtonSpinner /> : <ButtonIcon as={Trash2} className={dangerOutlineIconClass} />}
+                <ButtonText className={dangerOutlineTextClass}>Remove</ButtonText>
               </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
         <Modal isOpen={Boolean(allowTarget)} onClose={() => setAllowTarget(null)}>
-          <ModalBackdrop />
-          <ModalContent>
-            <ModalHeader>
+          <ModalBackdrop className={modalBackdropClass} />
+          <ModalContent className={`max-w-2xl max-h-[90vh] ${modalShellClass}`}>
+            <ModalHeader className={modalHeaderClass}>
               <VStack space="xs">
-                <Heading size="md" className="text-typography-900">
+                <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
                   SPA allow list
                 </Heading>
               </VStack>
-              <ModalCloseButton />
+              <ModalCloseButton className="text-typography-500 dark:text-[#9AA4B8]" />
             </ModalHeader>
-            <ModalBody className="gap-3">
+            <ModalBody className={`${modalBodyClass} gap-3`}>
               {allowLoading ? (
                 <HStack className="items-center gap-2">
                   <ButtonSpinner />
-                  <Text size="sm" className="text-typography-500">Loading allow list...</Text>
+                  <Text size="sm" className="text-typography-600 dark:text-[#9AA4B8]">Loading allow list...</Text>
                 </HStack>
               ) : allowError ? (
-                <Text size="sm" className="text-typography-600">{allowError}</Text>
+                <Text size="sm" className="text-typography-600 dark:text-[#9AA4B8]">{allowError}</Text>
               ) : allowCountdown?.allows?.length ? (
                 <VStack space="sm">
                   {allowCountdown.allows.map((entry) => (
                     <HStack
                       key={`${entry.ip}-${entry.remaining_seconds}`}
-                      className="items-center justify-between bg-background-50 border border-background-100 rounded-xl px-3 py-2"
+                      className={`items-center justify-between px-3 py-2 ${softCardShellClass}`}
                     >
-                      <Text size="sm" className="text-typography-900">{entry.ip}</Text>
-                      <Text size="sm" className="text-typography-600">
+                      <Text size="sm" className="text-typography-900 dark:text-[#E8EBF0]">{entry.ip}</Text>
+                      <Text size="sm" className="text-typography-600 dark:text-[#9AA4B8]">
                         {formatRemainingSeconds(entry.remaining_seconds)}
                       </Text>
                     </HStack>
                   ))}
                 </VStack>
               ) : (
-                <Text size="sm" className="text-typography-500">
+                <Text size="sm" className="text-typography-600 dark:text-[#9AA4B8]">
                   No active allows for this port.
                 </Text>
               )}
             </ModalBody>
-            <ModalFooter>
-              <Button variant="outline" className="rounded-xl" onPress={() => setAllowTarget(null)}>
-                <ButtonText>Close</ButtonText>
+            <ModalFooter className={modalFooterClass}>
+              <Button variant="outline" action="default" className={outlineButtonClass} onPress={() => setAllowTarget(null)}>
+                <ButtonText className={outlineButtonTextClass}>Close</ButtonText>
               </Button>
             </ModalFooter>
           </ModalContent>

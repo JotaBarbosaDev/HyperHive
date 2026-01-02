@@ -1,5 +1,5 @@
 import React from "react";
-import { ScrollView, RefreshControl, useColorScheme, Alert } from "react-native";
+import { ScrollView, RefreshControl, useColorScheme, Platform } from "react-native";
 import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";
 import { Heading } from "@/components/ui/heading";
@@ -9,12 +9,12 @@ import { Button, ButtonText, ButtonIcon, ButtonSpinner } from "@/components/ui/b
 import { Badge, BadgeText } from "@/components/ui/badge";
 import { Input, InputField } from "@/components/ui/input";
 import { Modal, ModalBackdrop, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton } from "@/components/ui/modal";
-import { Select, SelectTrigger, SelectInput, SelectItem, SelectIcon, SelectPortal, SelectBackdrop as SelectBackdropContent, SelectContent, SelectDragIndicator, SelectDragIndicatorWrapper } from "@/components/ui/select";
+import { Select, SelectTrigger, SelectInput, SelectItem, SelectIcon, SelectPortal, SelectBackdrop as SelectBackdropContent, SelectContent, SelectDragIndicator, SelectDragIndicatorWrapper, SelectScrollView } from "@/components/ui/select";
 import { Checkbox, CheckboxIndicator, CheckboxIcon, CheckboxLabel } from "@/components/ui/checkbox";
 import { ChevronDownIcon } from "@/components/ui/icon";
 import { Toast, ToastTitle, useToast } from "@/components/ui/toast";
-import { Fab, FabIcon, FabLabel } from "@/components/ui/fab";
 import { Calendar, Database, TrendingUp, RefreshCw, Trash2, Edit, Power, PowerOff, Plus, Clock, Check, Info } from "lucide-react-native";
+import { useAppTheme } from "@/hooks/useAppTheme";
 
 import {
   listAutoBackups,
@@ -69,6 +69,14 @@ const TIME_OPTIONS = [
 
 export default function AutoBackupsScreen() {
   const colorScheme = useColorScheme();
+  const { resolvedMode } = useAppTheme();
+  const isWeb = Platform.OS === "web";
+  const primaryButtonClass =
+    isWeb ? "bg-typography-900 dark:bg-[#2DD4BF]" : resolvedMode === "dark" ? "bg-[#2DD4BF]" : "bg-typography-900";
+  const primaryButtonTextClass =
+    isWeb ? "text-background-0 dark:text-[#0A1628]" : resolvedMode === "dark" ? "text-[#0A1628]" : "text-background-0";
+  const statsIconMutedColor = isWeb ? undefined : resolvedMode === "dark" ? "#8A94A8" : "#9AA4B8";
+  const statsIconAccentColor = isWeb ? undefined : resolvedMode === "dark" ? "#5EEAD4" : "#2DD4BF";
   const toast = useToast();
   const [schedules, setSchedules] = React.useState<AutoBackup[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -78,6 +86,9 @@ export default function AutoBackupsScreen() {
   const [vmOptions, setVmOptions] = React.useState<VirtualMachine[]>([]);
   const [loadingOptions, setLoadingOptions] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const [confirmDelete, setConfirmDelete] = React.useState<AutoBackup | null>(null);
+  const [deleteError, setDeleteError] = React.useState<string | null>(null);
+  const [deletingScheduleId, setDeletingScheduleId] = React.useState<string | null>(null);
 
   // Form state
   const [formVm, setFormVm] = React.useState("");
@@ -285,29 +296,34 @@ export default function AutoBackupsScreen() {
 
   const handleRefresh = () => refreshSchedules(true);
 
+  const deleteSchedule = async (schedule: AutoBackup) => {
+    if (deletingScheduleId) return;
+    setDeleteError(null);
+    setDeletingScheduleId(schedule.id);
+    try {
+      await deleteAutoBackup(schedule.id);
+      setSchedules((prev) => prev.filter((s) => s.id !== schedule.id));
+      showToastMessage("Schedule deleted");
+      setConfirmDelete(null);
+    } catch (err) {
+      console.error("Error deleting auto-backup", err);
+      const message = err instanceof Error ? err.message : "Failed to delete schedule.";
+      setDeleteError(message);
+      showToastMessage(message, "error");
+    } finally {
+      setDeletingScheduleId(null);
+    }
+  };
+
   const handleDelete = (schedule: AutoBackup) => {
-    Alert.alert(
-      "Delete schedule",
-      `Delete auto-backup for ${schedule.vmName}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteAutoBackup(schedule.id);
-              setSchedules((prev) => prev.filter((s) => s.id !== schedule.id));
-              showToastMessage("Schedule deleted");
-            } catch (err) {
-              console.error("Error deleting auto-backup", err);
-              const message = err instanceof Error ? err.message : "Failed to delete schedule.";
-              showToastMessage(message, "error");
-            }
-          },
-        },
-      ]
-    );
+    setDeleteError(null);
+    setConfirmDelete(schedule);
+  };
+
+  const handleCloseDeleteModal = () => {
+    if (deletingScheduleId) return;
+    setConfirmDelete(null);
+    setDeleteError(null);
   };
 
   const openEdit = (schedule: AutoBackup) => {
@@ -406,7 +422,7 @@ export default function AutoBackupsScreen() {
   const refreshControlBackground = colorScheme === "dark" ? "#0E1524" : "#E2E8F0";
 
   return (
-    <Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
+    <Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{paddingBottom: 100}}
@@ -437,18 +453,51 @@ export default function AutoBackupsScreen() {
             </VStack>
             <Box className="hidden web:flex">
               <Button
-                className="rounded-xl px-4"
+                className={`rounded-xl px-4 ${primaryButtonClass}`}
                 onPress={() => setShowCreateModal(true)}
               >
-                <ButtonIcon as={Plus} className="text-background-0 mr-1.5" />
+                <ButtonIcon as={Plus} className={`${primaryButtonTextClass} mr-1.5`} />
                 <ButtonText
-                  className="text-background-0"
+                  className={`${primaryButtonTextClass}`}
                   style={{fontFamily: "Inter_600SemiBold"}}
                 >
                   New schedule
                 </ButtonText>
               </Button>
             </Box>
+          </HStack>
+
+          <HStack className="mb-6 gap-2 flex-wrap web:hidden">
+            <Button
+              variant="outline"
+              size="md"
+              onPress={handleRefresh}
+              disabled={loading}
+              className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+            >
+              {loading ? (
+                <ButtonSpinner />
+              ) : (
+                <ButtonIcon
+                  as={RefreshCw}
+                  className="text-typography-700 rounded-xl dark:text-[#E8EBF0]"
+                />
+              )}
+            </Button>
+            <Button
+              size="md"
+              className={`rounded-xl ${primaryButtonClass}`}
+              onPress={() => setShowCreateModal(true)}
+              disabled={loading}
+            >
+              <ButtonIcon as={Plus} className={`${primaryButtonTextClass} mr-1.5`} />
+              <ButtonText
+                className={`${primaryButtonTextClass}`}
+                style={{fontFamily: "Inter_600SemiBold"}}
+              >
+                New schedule
+              </ButtonText>
+            </Button>
           </HStack>
 
           {/* Stats Overview */}
@@ -458,6 +507,7 @@ export default function AutoBackupsScreen() {
                 <Calendar
                   size={16}
                   className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                  color={statsIconMutedColor}
                 />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
@@ -479,6 +529,7 @@ export default function AutoBackupsScreen() {
                 <Database
                   size={16}
                   className="text-[#2DD4BF] dark:text-[#5EEAD4]"
+                  color={statsIconAccentColor}
                 />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
@@ -500,6 +551,7 @@ export default function AutoBackupsScreen() {
                 <TrendingUp
                   size={16}
                   className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                  color={statsIconMutedColor}
                 />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
@@ -521,6 +573,7 @@ export default function AutoBackupsScreen() {
                 <Clock
                   size={16}
                   className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                  color={statsIconMutedColor}
                 />
                 <Text
                   className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
@@ -681,22 +734,6 @@ export default function AutoBackupsScreen() {
           )}
         </Box>
       </ScrollView>
-
-      {/* FAB mobile */}
-      <Fab
-        placement="bottom right"
-        size="lg"
-        onPress={() => setShowCreateModal(true)}
-        className="md:hidden"
-      >
-        <FabIcon as={Plus} className="text-background-0" />
-        <FabLabel
-          className="text-background-0"
-          style={{fontFamily: "Inter_600SemiBold"}}
-        >
-          New
-        </FabLabel>
-      </Fab>
 
       {/* Modal create/edit */}
       <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)}>
@@ -877,13 +914,15 @@ export default function AutoBackupsScreen() {
                     </SelectTrigger>
                     <SelectPortal>
                       <SelectBackdropContent />
-                      <SelectContent>
+                      <SelectContent className="max-h-[70vh]">
                         <SelectDragIndicatorWrapper>
                           <SelectDragIndicator />
                         </SelectDragIndicatorWrapper>
-                        {TIME_OPTIONS.map((time) => (
-                          <SelectItem key={time} label={time} value={time} />
-                        ))}
+                        <SelectScrollView className="w-full">
+                          {TIME_OPTIONS.map((time) => (
+                            <SelectItem key={time} label={time} value={time} />
+                          ))}
+                        </SelectScrollView>
                       </SelectContent>
                     </SelectPortal>
                   </Select>
@@ -916,13 +955,15 @@ export default function AutoBackupsScreen() {
                     </SelectTrigger>
                     <SelectPortal>
                       <SelectBackdropContent />
-                      <SelectContent>
+                      <SelectContent className="max-h-[70vh]">
                         <SelectDragIndicatorWrapper>
                           <SelectDragIndicator />
                         </SelectDragIndicatorWrapper>
-                        {TIME_OPTIONS.map((time) => (
-                          <SelectItem key={time} label={time} value={time} />
-                        ))}
+                        <SelectScrollView className="w-full">
+                          {TIME_OPTIONS.map((time) => (
+                            <SelectItem key={time} label={time} value={time} />
+                          ))}
+                        </SelectScrollView>
                       </SelectContent>
                     </SelectPortal>
                   </Select>
@@ -1016,7 +1057,7 @@ export default function AutoBackupsScreen() {
                 </ButtonText>
               </Button>
               <Button
-                className="rounded-xl px-6 py-2.5 bg-typography-900 dark:bg-[#E8EBF0]"
+                className={`rounded-xl px-6 py-2.5 ${primaryButtonClass}`}
                 onPress={handleSubmit}
                 disabled={saving}
               >
@@ -1024,7 +1065,7 @@ export default function AutoBackupsScreen() {
                   <ButtonSpinner />
                 ) : (
                   <ButtonText
-                    className="text-background-0 dark:text-typography-900"
+                    className={`${primaryButtonTextClass}`}
                     style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     {editSchedule ? "Save changes" : "Create"}
@@ -1032,6 +1073,94 @@ export default function AutoBackupsScreen() {
                 )}
               </Button>
             </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      <Modal isOpen={!!confirmDelete} onClose={handleCloseDeleteModal} size="md">
+        <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+        <ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-5">
+          <ModalHeader className="flex-row items-center gap-3 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
+            <Box className="h-10 w-10 rounded-2xl bg-error-500/10 dark:bg-error-900/20 items-center justify-center">
+              <Trash2 size={18} className="text-error-600 dark:text-error-400" />
+            </Box>
+            <VStack className="flex-1">
+              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+                Delete auto-backup?
+              </Heading>
+              <Text className="text-sm text-typography-600 dark:text-typography-400">
+                This removes the schedule permanently.
+              </Text>
+            </VStack>
+            <ModalCloseButton onPress={handleCloseDeleteModal} />
+          </ModalHeader>
+          <ModalBody className="pt-5">
+            <VStack className="gap-4">
+              {confirmDelete ? (
+                <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] p-4">
+                  <VStack className="gap-2">
+                    <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                      Schedule
+                    </Text>
+                    <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                      {confirmDelete.vmName}
+                    </Text>
+                    <HStack className="flex-wrap gap-2">
+                      <Badge action="muted" variant="outline" className="rounded-full border px-3">
+                        <BadgeText className="text-xs text-typography-700 dark:text-typography-200">
+                          {getFrequencyLabel(confirmDelete.frequencyDays)}
+                        </BadgeText>
+                      </Badge>
+                      <Badge action="muted" variant="outline" className="rounded-full border px-3">
+                        <BadgeText className="text-xs text-typography-700 dark:text-typography-200">
+                          {getNfsName(confirmDelete.nfsShareId)}
+                        </BadgeText>
+                      </Badge>
+                      <Badge action="muted" variant="outline" className="rounded-full border px-3">
+                        <BadgeText className="text-xs text-typography-700 dark:text-typography-200">
+                          {confirmDelete.minTime || "00:00"} - {confirmDelete.maxTime || "23:59"}
+                        </BadgeText>
+                      </Badge>
+                      <Badge action="muted" variant="outline" className="rounded-full border px-3">
+                        <BadgeText className="text-xs text-typography-700 dark:text-typography-200">
+                          Retain {confirmDelete.retention}
+                        </BadgeText>
+                      </Badge>
+                    </HStack>
+                  </VStack>
+                </Box>
+              ) : null}
+              {deleteError ? (
+                <Box className="rounded-xl border border-error-300 dark:border-error-700 bg-error-50 dark:bg-error-900/20 px-4 py-3">
+                  <Text className="text-sm text-error-700 dark:text-error-200">{deleteError}</Text>
+                </Box>
+              ) : null}
+            </VStack>
+          </ModalBody>
+          <ModalFooter className="flex-row gap-3 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
+            <Button
+              variant="outline"
+              action="secondary"
+              className="flex-1 rounded-xl"
+              onPress={handleCloseDeleteModal}
+              isDisabled={Boolean(deletingScheduleId)}
+            >
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
+            </Button>
+            <Button
+              action="negative"
+              className="flex-1 rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
+              onPress={() => {
+                if (!confirmDelete) return;
+                void deleteSchedule(confirmDelete);
+              }}
+              isDisabled={Boolean(deletingScheduleId)}
+            >
+              {deletingScheduleId ? (
+                <ButtonSpinner />
+              ) : (
+                <ButtonText className="text-background-0 dark:text-[#0A1628]">Delete</ButtonText>
+              )}
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

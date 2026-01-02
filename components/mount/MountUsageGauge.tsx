@@ -2,7 +2,7 @@ import React from "react";
 import Svg, { G, Path } from "react-native-svg";
 import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";
-import { useColorScheme } from "@/components/useColorScheme";
+import { useAppTheme } from "@/hooks/useAppTheme";
 
 export type MountUsageGaugeProps = {
   usagePercent: number;
@@ -17,15 +17,27 @@ export function MountUsageGauge({
   totalGB,
   freeGB,
 }: MountUsageGaugeProps) {
-  const colorScheme = useColorScheme();
+  const { resolvedMode } = useAppTheme();
+  const isDark = resolvedMode === "dark";
   const safePercent = Number.isFinite(usagePercent)
     ? Math.max(0, Math.min(100, Number(usagePercent.toFixed(2))))
     : 0;
   const mobileGaugeCircumference = Math.PI * 70;
   const desktopGaugeCircumference = Math.PI * 80;
-  const outlineStroke = colorScheme === "dark" ? "#2A3B52" : "rgb(221, 220, 219)";
+  const outlineStroke = isDark ? "#334155" : "#E2E8F0";
+  const outlineOpacity = isDark ? 0.55 : 0.25;
   const progressColor =
-    safePercent >= 90 ? "#EF4444" : safePercent >= 50 ? "#FBBF24" : "#333333";
+    isDark
+      ? safePercent >= 90
+        ? "#F87171"
+        : safePercent >= 50
+          ? "#FCD34D"
+          : "#5EEAD4"
+      : safePercent >= 90
+        ? "#EF4444"
+        : safePercent >= 50
+          ? "#FBBF24"
+          : "#0F172A";
 
   const formatCapacity = (gb: number) => {
     if (!Number.isFinite(gb)) return "0.00 GB";
@@ -47,7 +59,7 @@ export function MountUsageGauge({
               fill="none"
               stroke={outlineStroke}
               strokeWidth={9}
-              opacity={colorScheme === "dark" ? 0.4 : 0.1}
+              opacity={outlineOpacity}
             />
             <Path
               d="M -70 0 A 70 70 0 0 1 70 0"
@@ -72,7 +84,7 @@ export function MountUsageGauge({
               fill="none"
               stroke={outlineStroke}
               strokeWidth={10}
-              opacity={colorScheme === "dark" ? 0.4 : 0.3}
+              opacity={outlineOpacity}
             />
             <Path
               d="M -80 0 A 80 80 0 0 1 80 0"

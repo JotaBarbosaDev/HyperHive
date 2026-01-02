@@ -33,6 +33,7 @@ import { Badge, BadgeText } from "@/components/ui/badge";
 import { ScrollView, Platform } from "react-native";
 import { Cpu, X, Copy, Trash2, ChevronDown, Check, ChevronDownIcon } from "lucide-react-native";
 import { Pressable } from "@/components/ui/pressable";
+import { useAppTheme } from "@/hooks/useAppTheme";
 import { useToast, Toast, ToastTitle, ToastDescription } from "@/components/ui/toast";
 import { createVm, listIsos, listSlaves, IsoApiResponse, Slave, getCpuDisableFeatures } from "@/services/vms-client";
 import { listMounts } from "@/services/hyperhive";
@@ -62,6 +63,12 @@ export default function CreateVmModal({
   setShowModal,
   onSuccess,
 }: CreateVmModalProps) {
+  const { resolvedMode } = useAppTheme();
+  const isWeb = Platform.OS === "web";
+  const primaryButtonClass =
+    isWeb ? "bg-typography-900 dark:bg-[#2DD4BF]" : resolvedMode === "dark" ? "bg-[#2DD4BF]" : "bg-typography-900";
+  const primaryButtonTextClass =
+    isWeb ? "text-background-0 dark:text-[#0A1628]" : resolvedMode === "dark" ? "text-[#0A1628]" : "text-background-0";
   // Estados básicos da VM
   const [name, setName] = useState("");
   const [slave, setSlave] = useState("");
@@ -994,12 +1001,12 @@ export default function CreateVmModal({
             </Button>
 
             <Button
-              className="flex-1 rounded-lg bg-typography-900 dark:bg-[#E8EBF0]"
+              className={`flex-1 rounded-lg ${primaryButtonClass}`}
               onPress={handleCreate}
               disabled={creating}
             >
               {creating ? <ButtonSpinner className="mr-2" /> : null}
-              <ButtonText className="text-background-0 dark:text-typography-900">
+              <ButtonText className={`${primaryButtonTextClass}`}>
                 Create VM
               </ButtonText>
             </Button>

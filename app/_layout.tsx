@@ -55,6 +55,7 @@ import {
   ModalHeader,
 } from "@/components/ui/modal";
 import { VmProgressToastListener } from "@/components/VmProgressToastListener";
+import { NewSlaveCountToastListener } from "@/components/NewSlaveCountToastListener";
 import { SocketErrorModalListener } from "@/components/SocketErrorModalListener";
 import Snowfall from "react-snowfall";
 
@@ -66,6 +67,7 @@ export {
 SplashScreen.preventAutoHideAsync();
 
 const APP_TITLE = "HyperHive";
+const APP_CORNER_ICON = require("../assets/images/android-chrome-192x192.png");
 
 const ROUTE_TITLE_MAP: Record<string, string> = {
   "/": "Login",
@@ -228,29 +230,29 @@ export default function RootLayout() {
       return;
     }
 
-    const hideSystemUi = async () => {
+    const showSystemUi = async () => {
       try {
-        await NavigationBar.setPositionAsync("absolute");
-        await NavigationBar.setBehaviorAsync("overlay-swipe");
-        await NavigationBar.setVisibilityAsync("hidden");
+        await NavigationBar.setPositionAsync("relative");
+        await NavigationBar.setBehaviorAsync("inset-swipe");
+        await NavigationBar.setVisibilityAsync("visible");
         setStatusBarHidden(true, "fade");
       } catch (navError) {
         console.warn("Failed to configure Android system UI", navError);
       }
     };
 
-    hideSystemUi();
+    showSystemUi();
 
     const subscription = AppState.addEventListener("change", (status) => {
       if (status === "active") {
-        hideSystemUi();
+        showSystemUi();
       }
     });
 
     const visibilitySubscription = NavigationBar.addVisibilityListener(
       ({ visibility }) => {
-        if (visibility !== "hidden") {
-          hideSystemUi();
+        if (visibility !== "visible") {
+          showSystemUi();
         }
       }
     );
@@ -550,6 +552,7 @@ function RootLayoutNav() {
             >
               <SelectedMachineProvider>
                 <VmProgressToastListener />
+                <NewSlaveCountToastListener />
                 <SocketErrorModalListener />
                 <Box className="flex-1">
                   {apiBaseMismatch && (
@@ -578,7 +581,11 @@ function RootLayoutNav() {
                   )}
                   {pathname !== "/" && (
                     <Box
+<<<<<<< HEAD
                       className="absolute top-3 left-3 web:top-3 web:left-5 z-20"
+=======
+                      className="absolute top-3 left-3 web:top-5 web:left-5 z-20"
+>>>>>>> 6e3866193c14d3722fe4f28988b5d7c948b1f64c
                       pointerEvents="box-none"
                     >
                       <Button
@@ -598,6 +605,22 @@ function RootLayoutNav() {
                           Menu
                         </ButtonText>
                       </Button>
+                    </Box>
+                  )}
+                  {pathname !== "/" && (
+                    <Box
+                      className="absolute top-3 right-3 web:top-5 web:right-5 z-20"
+                      pointerEvents="none"
+                    >
+                      <Box className="h-9 w-9 web:h-10 web:w-10 items-center justify-center rounded-xl bg-[#0E1524]/95 border border-outline-100 dark:border-[#2A3B52] shadow-soft-1">
+                        <Image
+                          source={APP_CORNER_ICON}
+                          alt="HyperHive"
+                          resizeMode="contain"
+                          size="none"
+                          className="h-5 w-5 web:h-6 web:w-6"
+                        />
+                      </Box>
                     </Box>
                   )}
                   <GoAccessStreamButtons />
@@ -670,7 +693,7 @@ function RootLayoutNav() {
                 <ModalBody>
                   <Box className="bg-background-100 dark:bg-[#111827] rounded-md p-3">
                     <Text className="font-mono text-sm text-typography-900 dark:text-[#E2E8F0]">
-                      {apiErrorModal?.details || "Erro desconhecido."}
+                      {apiErrorModal?.details || "Unknown error."}
                     </Text>
                   </Box>
                 </ModalBody>

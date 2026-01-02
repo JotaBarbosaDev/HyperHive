@@ -6,7 +6,7 @@ const baseStyle = isWeb
   : '';
 
 export const hstackStyle = tva({
-  base: `flex-row ${baseStyle}`,
+  base: `flex-row flex-wrap web:flex-nowrap ${baseStyle}`,
   variants: {
     space: {
       'xs': 'gap-1',

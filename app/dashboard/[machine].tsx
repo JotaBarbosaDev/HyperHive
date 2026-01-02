@@ -1,5 +1,6 @@
 import React from "react";
-import { Dimensions, RefreshControl, ScrollView, useColorScheme } from "react-native";
+import { Dimensions, LayoutChangeEvent, RefreshControl, ScrollView, useColorScheme } from "react-native";
+import Svg, { Circle, G } from "react-native-svg";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { VictoryAxis, VictoryChart, VictoryLine, VictoryTheme, VictoryTooltip, createContainer } from "victory-native";
 import { Box } from "@/components/ui/box";
@@ -10,6 +11,7 @@ import { VStack } from "@/components/ui/vstack";
 import { Badge, BadgeText } from "@/components/ui/badge";
 import { Button, ButtonIcon, ButtonText } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { Pressable } from "@/components/ui/pressable";
 import { Modal, ModalBackdrop, ModalBody, ModalContent, ModalHeader } from "@/components/ui/modal";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
@@ -27,7 +29,14 @@ import {
 } from "@/services/hyperhive";
 import { CpuInfo, DiskInfo, HistoryEntry, MemInfo, NetworkInfo, UptimeInfo } from "@/types/metrics";
 import { Machine } from "@/types/machine";
-import { ArrowLeft, BarChart3, Clock3, Cpu, HardDrive, MemoryStick, Network, SignalHigh, ThermometerSun } from "lucide-react-native";
+import { ArrowLeft, BarChart3, ChevronDown, Clock3, Cpu, HardDrive, MemoryStick, Network, SignalHigh, ThermometerSun } from "lucide-react-native";
+
+const ICON_SIZE_SM = 16;
+const ICON_SIZE_MD = 18;
+const GAUGE_SIZE = 88;
+const GAUGE_STROKE = 8;
+const CPU_CORE_CARD_WIDTH = 140;
+const CPU_CORE_CARD_GAP = 12;
 
 const formatBytes = (value?: number) => {
 	if (value == null || !Number.isFinite(value)) return "—";
@@ -59,9 +68,72 @@ const bytesToGb = (value?: number) => {
 	return Number((value / 1024 ** 3).toFixed(2));
 };
 
+const mbToGb = (value?: number) => {
+	if (value == null || !Number.isFinite(value)) return 0;
+	return Number((value / 1000).toFixed(2));
+};
+
 const formatPercent = (value?: number) => {
 	if (value == null || !Number.isFinite(value)) return "—";
 	return `${value.toFixed(1)}%`;
+};
+
+type PercentGaugeProps = {
+	value?: number;
+	isDark: boolean;
+	size?: number;
+	strokeWidth?: number;
+};
+
+const getGaugeColor = (value: number, isDark: boolean) => {
+	if (value >= 85) return isDark ? "#F87171" : "#EF4444";
+	if (value >= 60) return isDark ? "#FCD34D" : "#F59E0B";
+	return isDark ? "#5EEAD4" : "#0F172A";
+};
+
+const PercentGauge = ({ value, isDark, size = GAUGE_SIZE, strokeWidth = GAUGE_STROKE }: PercentGaugeProps) => {
+	const hasValue = typeof value === "number" && Number.isFinite(value);
+	const safeValue = hasValue ? Math.max(0, Math.min(100, value)) : 0;
+	const radius = (size - strokeWidth) / 2;
+	const circumference = 2 * Math.PI * radius;
+	const dashOffset = circumference - (safeValue / 100) * circumference;
+	const trackColor = isDark ? "#1F2A3C" : "#E2E8F0";
+	const progressColor = getGaugeColor(safeValue, isDark);
+	const label = hasValue ? formatPercent(safeValue) : "—";
+
+	return (
+		<Box className="items-center justify-center" style={{ width: size, height: size }}>
+			<Svg width={size} height={size}>
+				<G rotation="-90" origin={`${size / 2}, ${size / 2}`}>
+					<Circle
+						cx={size / 2}
+						cy={size / 2}
+						r={radius}
+						fill="none"
+						stroke={trackColor}
+						strokeWidth={strokeWidth}
+						opacity={isDark ? 0.55 : 0.4}
+					/>
+					<Circle
+						cx={size / 2}
+						cy={size / 2}
+						r={radius}
+						fill="none"
+						stroke={progressColor}
+						strokeWidth={strokeWidth}
+						strokeDasharray={`${circumference} ${circumference}`}
+						strokeDashoffset={dashOffset}
+						strokeLinecap="round"
+					/>
+				</G>
+			</Svg>
+			<Box className="absolute items-center justify-center">
+				<Text className="text-lg web:text-xl font-semibold text-typography-900 dark:text-[#E8EBF0]">
+					{label}
+				</Text>
+			</Box>
+		</Box>
+	);
 };
 
 const computeDiskTotals = (info?: DiskInfo) => {
@@ -224,6 +296,8 @@ export default function MachineDetailsScreen() {
 	const [isLoading, setIsLoading] = React.useState(false);
 	const [isRefreshing, setIsRefreshing] = React.useState(false);
 	const [error, setError] = React.useState<string | null>(null);
+	const [cpuCoresWidth, setCpuCoresWidth] = React.useState<number | null>(null);
+	const [isCpuCoresExpanded, setIsCpuCoresExpanded] = React.useState(false);
 
 	const selectedRange = React.useMemo(() => RANGE_OPTIONS.find((r) => r.key === rangeKey) ?? RANGE_OPTIONS[0], [rangeKey]);
 
@@ -268,7 +342,6 @@ export default function MachineDetailsScreen() {
 					setDiskHistory(diskHist ?? []);
 					setNetworkHistory(netHist ?? []);
 				} else {
-					// Soft update: apenas métricas atuais, sem histórico
 					const [uptimeRes, cpuRes, memRes, diskRes, netRes] = await Promise.all([
 						getMachineUptime(machineName),
 						getCpuInfo(machineName),
@@ -353,6 +426,18 @@ export default function MachineDetailsScreen() {
 	const cpuAvg = React.useMemo(() => averageCpuUsage(cpu), [cpu]);
 	const tempAvg = React.useMemo(() => averageCpuTemp(cpu), [cpu]);
 	const tempMax = React.useMemo(() => maxCpuTemp(cpu), [cpu]);
+	const ramPercent = mem?.usedPercent;
+	const diskPercent = diskTotals.total ? (diskTotals.used / diskTotals.total) * 100 : undefined;
+	const cpuCores = cpu?.cores ?? [];
+	const cpuRowCapacity = React.useMemo(() => {
+		const fallbackWidth = Math.max(0, chartWidth - 32);
+		const measuredWidth = cpuCoresWidth ?? 0;
+		const width = Math.max(fallbackWidth, measuredWidth);
+		const cardSpan = CPU_CORE_CARD_WIDTH + CPU_CORE_CARD_GAP;
+		return Math.max(1, Math.floor((width + CPU_CORE_CARD_GAP) / cardSpan));
+	}, [cpuCoresWidth, chartWidth]);
+	const hasHiddenCpuCores = cpuCores.length > cpuRowCapacity;
+	const visibleCpuCores = isCpuCoresExpanded ? cpuCores : cpuCores.slice(0, cpuRowCapacity);
 
 	const historySeries = React.useMemo(() => {
 		return {
@@ -378,6 +463,11 @@ export default function MachineDetailsScreen() {
 	}, [cpuHistory, memHistory, diskHistory, networkHistory]);
 
 	const isDark = colorScheme === "dark";
+	const handleCpuCoresLayout = React.useCallback((event: LayoutChangeEvent) => {
+		const width = event.nativeEvent.layout.width;
+		if (!Number.isFinite(width) || width <= 0) return;
+		setCpuCoresWidth((prev) => (prev === width ? prev : width));
+	}, []);
 
 	const renderHistoryChart = React.useCallback(
 		(title: string, data: { x: Date; y: number }[], color: string, unit?: string) => {
@@ -551,14 +641,14 @@ export default function MachineDetailsScreen() {
 
 	if (!machineName) {
 		return (
-			<Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0 items-center justify-center">
+			<Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0 items-center justify-center">
 				<Text className="text-typography-600 dark:text-typography-300">No machine selected.</Text>
 			</Box>
 		);
 	}
 
 	return (
-		<Box className="flex-1 bg-background-50 dark:bg-[#070D19] web:bg-background-0">
+		<Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
 			<ScrollView showsVerticalScrollIndicator={false} refreshControl={refreshControl} contentContainerStyle={{ paddingBottom: 36 }}>
 				<Box className="p-4 pt-14 web:p-10 web:max-w-7xl web:mx-auto web:w-full">
 					<HStack className="items-center justify-between mb-4">
@@ -609,9 +699,11 @@ export default function MachineDetailsScreen() {
 								<Text className="text-xs font-semibold uppercase text-typography-500 dark:text-typography-300 tracking-[0.08em]">
 									CPU
 								</Text>
-								<Icon as={Cpu} size="md" className="text-primary-700 dark:text-[#8AB9FF]" />
+								<Icon as={Cpu} size={ICON_SIZE_MD} className="text-primary-700 dark:text-[#8AB9FF]" />
 							</HStack>
-							<Heading size="xl" className="text-typography-900 dark:text-[#E8EBF0]">{formatPercent(cpuAvg)}</Heading>
+							<Box className="items-center my-2">
+								<PercentGauge value={cpuAvg} isDark={isDark} />
+							</Box>
 							<Text className="text-sm text-typography-600 dark:text-typography-400">
 								{cpu?.cores?.length ?? 0} cores • Avg temp {tempAvg ? `${tempAvg.toFixed(1)}ºC` : "—"} • Max {tempMax ? `${tempMax.toFixed(1)}ºC` : "—"}
 							</Text>
@@ -622,11 +714,13 @@ export default function MachineDetailsScreen() {
 								<Text className="text-xs font-semibold uppercase text-typography-500 dark:text-typography-300 tracking-[0.08em]">
 									RAM
 								</Text>
-								<Icon as={MemoryStick} size="md" className="text-primary-700 dark:text-[#8AB9FF]" />
+								<Icon as={MemoryStick} size={ICON_SIZE_MD} className="text-primary-700 dark:text-[#8AB9FF]" />
 							</HStack>
-							<Heading size="xl" className="text-typography-900 dark:text-[#E8EBF0]">{formatPercent(mem?.usedPercent)}</Heading>
+							<Box className="items-center my-2">
+								<PercentGauge value={ramPercent} isDark={isDark} />
+							</Box>
 							<Text className="text-sm text-typography-600 dark:text-typography-400">
-								{bytesToGb((mem?.usedMb ?? 0) * 1024 ** 2)} / {bytesToGb((mem?.totalMb ?? 0) * 1024 ** 2)} GB
+								{mbToGb(mem?.usedMb ?? 0)} / {mbToGb(mem?.totalMb ?? 0)} GB
 							</Text>
 						</Box>
 
@@ -635,11 +729,11 @@ export default function MachineDetailsScreen() {
 								<Text className="text-xs font-semibold uppercase text-typography-500 dark:text-typography-300 tracking-[0.08em]">
 									Disk
 								</Text>
-								<Icon as={HardDrive} size="md" className="text-primary-700 dark:text-[#8AB9FF]" />
+								<Icon as={HardDrive} size={ICON_SIZE_MD} className="text-primary-700 dark:text-[#8AB9FF]" />
 							</HStack>
-							<Heading size="xl" className="text-typography-900 dark:text-[#E8EBF0]">
-								{diskTotals.total ? `${((diskTotals.used / diskTotals.total) * 100).toFixed(1)}%` : "—"}
-							</Heading>
+							<Box className="items-center my-2">
+								<PercentGauge value={diskPercent} isDark={isDark} />
+							</Box>
 							<Text className="text-sm text-typography-600 dark:text-typography-400">
 								{formatBytes(diskTotals.used)} / {formatBytes(diskTotals.total)}
 							</Text>
@@ -650,7 +744,7 @@ export default function MachineDetailsScreen() {
 								<Text className="text-xs font-semibold uppercase text-typography-500 dark:text-typography-300 tracking-[0.08em]">
 									Uptime
 								</Text>
-								<Icon as={Clock3} size="md" className="text-primary-700 dark:text-[#8AB9FF]" />
+								<Icon as={Clock3} size={ICON_SIZE_MD} className="text-primary-700 dark:text-[#8AB9FF]" />
 							</HStack>
 							<Heading size="xl" className="text-typography-900 dark:text-[#E8EBF0]">{parseUptime(uptime?.uptime)}</Heading>
 							<Text className="text-sm text-typography-600 dark:text-typography-400">Online since {formatRelative((machine as any)?.EntryTime)}</Text>
@@ -660,11 +754,14 @@ export default function MachineDetailsScreen() {
 					<Box className="mt-6 rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
 						<HStack className="items-center justify-between mb-3">
 							<Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">CPU per core</Heading>
-							<Icon as={ThermometerSun} size="sm" className="text-primary-700 dark:text-[#8AB9FF]" />
+							<Icon as={ThermometerSun} size={ICON_SIZE_SM} className="text-primary-700 dark:text-[#8AB9FF]" />
 						</HStack>
-						<HStack className="flex-wrap gap-3">
-							{cpu?.cores?.map((core, idx) => (
-								<Box key={idx} className="w-[140px] rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
+						<HStack
+							className="w-full flex-wrap gap-3 web:flex-wrap justify-center"
+							onLayout={handleCpuCoresLayout}
+						>
+							{visibleCpuCores.map((core, idx) => (
+								<Box key={idx} className="w-[140px] flex-shrink-0 rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
 									<HStack className="items-center justify-between mb-2">
 										<Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">Core {idx + 1}</Text>
 										<Badge
@@ -685,14 +782,35 @@ export default function MachineDetailsScreen() {
 									<Text className="text-xs text-typography-500 dark:text-typography-300">Temp: {core.temp ? `${core.temp}ºC` : "—"}</Text>
 								</Box>
 							))}
-							{!cpu?.cores?.length ? <Text className="text-sm text-typography-600 dark:text-typography-400">No CPU data.</Text> : null}
+							{!cpuCores.length ? <Text className="text-sm text-typography-600 dark:text-typography-400">No CPU data.</Text> : null}
 						</HStack>
+						{hasHiddenCpuCores ? (
+							<Pressable
+								className="mt-3"
+								onPress={() => setIsCpuCoresExpanded((prev) => !prev)}
+								accessibilityRole="button"
+							>
+								<Box className="rounded-full bg-background-50/60 dark:bg-[#0E1A2B]/70 px-4 py-2 shadow-soft-2">
+									<HStack className="items-center justify-center gap-2">
+										<Text className="text-[10px] font-semibold uppercase tracking-[0.24em] text-typography-600 dark:text-typography-300">
+											{isCpuCoresExpanded ? "Show less" : "Show more"}
+										</Text>
+										<Icon
+											as={ChevronDown}
+											size={ICON_SIZE_SM}
+											className="text-typography-600 dark:text-typography-300"
+											style={{ transform: [{ rotate: isCpuCoresExpanded ? "180deg" : "0deg" }] }}
+										/>
+									</HStack>
+								</Box>
+							</Pressable>
+						) : null}
 					</Box>
 
 					<Box className="mt-6 rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
 						<HStack className="items-center justify-between mb-3">
 							<Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">Disks</Heading>
-							<Icon as={BarChart3} size="sm" className="text-primary-700 dark:text-[#8AB9FF]" />
+							<Icon as={BarChart3} size={ICON_SIZE_SM} className="text-primary-700 dark:text-[#8AB9FF]" />
 						</HStack>
 						<VStack className="gap-3">
 							{disk?.disks?.map((d) => {
@@ -727,7 +845,7 @@ export default function MachineDetailsScreen() {
 					<Box className="mt-6 rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
 						<HStack className="items-center justify-between mb-3">
 							<Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">Network</Heading>
-							<Icon as={Network} size="sm" className="text-primary-700 dark:text-[#8AB9FF]" />
+							<Icon as={Network} size={ICON_SIZE_SM} className="text-primary-700 dark:text-[#8AB9FF]" />
 						</HStack>
 						<VStack className="gap-2">
 							{network?.stats?.slice(0, 4).map((stat) => {
@@ -741,7 +859,7 @@ export default function MachineDetailsScreen() {
 											<Text className="text-xs text-typography-500 dark:text-typography-300">{stat.packetsRecv} rx / {stat.packetsSent} tx</Text>
 										</VStack>
 										<HStack className="items-center gap-2">
-											<Icon as={SignalHigh} size="sm" className="text-primary-700 dark:text-[#8AB9FF]" />
+											<Icon as={SignalHigh} size={ICON_SIZE_SM} className="text-primary-700 dark:text-[#8AB9FF]" />
 											<Text className="text-sm text-typography-600 dark:text-typography-300">{formatBytes(sent + recv)} ({totalMb.toFixed(1)} MB)</Text>
 										</HStack>
 									</HStack>
@@ -799,9 +917,11 @@ export default function MachineDetailsScreen() {
 					<ModalHeader>
 						<Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">Loading</Heading>
 					</ModalHeader>
-					<ModalBody className="items-center gap-3 pb-6">
-						<Spinner size="large" color="#3B82F6" />
-						<Text className="text-sm text-typography-600 dark:text-typography-300">Fetching metrics...</Text>
+					<ModalBody className="pb-6">
+						<VStack className="items-center gap-3">
+							<Spinner size="large" color="#3B82F6" />
+							<Text className="text-sm text-typography-600 dark:text-typography-300">Fetching metrics...</Text>
+						</VStack>
 					</ModalBody>
 				</ModalContent>
 			</Modal>

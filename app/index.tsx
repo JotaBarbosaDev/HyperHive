@@ -1,6 +1,4 @@
 import React from "react";
-import * as SecureStore from "expo-secure-store";
-import { API_BASE_URL_STORAGE_KEY } from "@/services/auth-storage";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -11,6 +9,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Box } from "@/components/ui/box";
+import { Image } from "@/components/ui/image";
 import {
   FormControl,
   FormControlError,
@@ -20,25 +19,23 @@ import {
   FormControlLabelText,
 } from "@/components/ui/form-control";
 import { VStack } from "@/components/ui/vstack";
+import { HStack } from "@/components/ui/hstack";
 import { Heading } from "@/components/ui/heading";
 import { Text } from "@/components/ui/text";
 import { Input, InputField, InputIcon, InputSlot } from "@/components/ui/input";
 import { Button, ButtonSpinner, ButtonText } from "@/components/ui/button";
 import { AlertCircleIcon, EyeIcon, EyeOffIcon } from "@/components/ui/icon";
-import Logo from "@/assets/icons/Logo";
-import { getApiBaseUrl, normalizeApiBaseUrl, setApiBaseUrl } from "@/config/apiConfig";
+import { normalizeApiBaseUrl, setApiBaseUrl } from "@/config/apiConfig";
 import { login, listMachines } from "@/services/hyperhive";
 import { ApiError, getAuthToken, setAuthToken } from "@/services/api-client";
 import { loadApiBaseUrl, saveApiBaseUrl, saveAuthToken } from "@/services/auth-storage";
-import * as WebBrowser from "expo-web-browser";
 
-
+const APP_ICON = require("../assets/images/android-chrome-192x192.png");
 
 export default function LoginScreen() {
   const router = useRouter();
   const [showPassword, setShowPassword] = React.useState(false);
   const [baseUrl, setBaseUrl] = React.useState("");
-  const [baseUrlInputRef, setBaseUrlInputRef] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
@@ -58,18 +55,6 @@ export default function LoginScreen() {
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
-  };
-
-  const getBrowserUrlFromApiBase = (baseUrl: string) => {
-    try {
-      const normalized = baseUrl.replace(/\/+$/, "");
-      if (normalized.toLowerCase().endsWith("/api")) {
-        return normalized.slice(0, -4) || normalized;
-      }
-      return normalized;
-    } catch {
-      return null;
-    }
   };
 
   React.useEffect(() => {
@@ -166,12 +151,6 @@ export default function LoginScreen() {
 
       setAuthToken(token);
       await Promise.all([saveAuthToken(token), saveApiBaseUrl(normalizedBaseUrl)]);
-      if (!isWeb) {
-        const targetUrl = getBrowserUrlFromApiBase(normalizedBaseUrl);
-        if (targetUrl) {
-          void WebBrowser.openBrowserAsync(targetUrl);
-        }
-      }
       router.replace("/dashboard");
     } catch (err) {
       let message = "Error signing in. Please try again.";
@@ -369,7 +348,7 @@ export default function LoginScreen() {
       </FormControl>
 
       <Button
-        className="mt-2 h-12 rounded-xl web:h-14"
+        className="mt-2 h-12 rounded-xl web:h-14 w-full items-center justify-center"
         onPress={() => {
           if (isWeb) {
             if (formRef.current?.requestSubmit) {
@@ -385,14 +364,14 @@ export default function LoginScreen() {
         isDisabled={isLoading}
       >
         {isLoading ? (
-          <>
+          <HStack className="items-center justify-center gap-2">
             <ButtonSpinner />
-            <ButtonText className="text-base font-semibold ml-2 web:text-lg">
+            <ButtonText className="text-base font-semibold web:text-lg text-center flex-shrink-0">
               Signing in...
             </ButtonText>
-          </>
+          </HStack>
         ) : (
-          <ButtonText className="text-base font-semibold web:text-lg">
+          <ButtonText className="text-base font-semibold web:text-lg text-center flex-shrink-0">
             Sign in
           </ButtonText>
         )}
@@ -414,7 +393,15 @@ export default function LoginScreen() {
             {/* Logo */}
             <Box className="items-center mb-8 web:mb-10">
               <Box className="mb-4 web:mb-6">
-                <Logo />
+                <Box className="h-20 w-20 web:h-24 web:w-24 items-center justify-center rounded-2xl bg-[#0E1524] shadow-soft-3">
+                  <Image
+                    source={APP_ICON}
+                    alt="HyperHive logo"
+                    resizeMode="contain"
+                    size="none"
+                    className="h-12 w-12 web:h-14 web:w-14"
+                  />
+                </Box>
               </Box>
               <Heading
                 size="2xl"
