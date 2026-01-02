@@ -20,7 +20,15 @@ import {
   SelectDragIndicator,
   SelectDragIndicatorWrapper,
 } from "@/components/ui/select";
-import {Switch} from "@/components/ui/switch";
+import {
+  Modal,
+  ModalBackdrop,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+} from "@/components/ui/modal";
 import {Toast, ToastTitle, useToast} from "@/components/ui/toast";
 import {Spinner} from "@/components/ui/spinner";
 import {useAuthGuard} from "@/hooks/useAuthGuard";
@@ -174,7 +182,10 @@ export default function UpdatesScreen() {
   const [selectedMachine, setSelectedMachine] = React.useState<string | null>(null);
   const [loadingMachines, setLoadingMachines] = React.useState(false);
   const [runningUpdate, setRunningUpdate] = React.useState<string | null>(null);
-  const [rebootAfter, setRebootAfter] = React.useState(true);
+  const [pendingUpdate, setPendingUpdate] = React.useState<{pkgName: string | null} | null>(null);
+  const [pendingReboot, setPendingReboot] = React.useState<boolean | null>(null);
+  const [showRestartPrompt, setShowRestartPrompt] = React.useState(false);
+  const [showConfirmPrompt, setShowConfirmPrompt] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
 
   const {updates, isLoading, isRefreshing, error, refresh} = useUpdates({
@@ -243,7 +254,7 @@ export default function UpdatesScreen() {
     });
   };
 
-  const handleRunUpdate = async (pkgName?: string) => {
+  const handleRunUpdate = async (pkgName?: string, reboot = false) => {
     if (!selectedMachine) {
       return;
     }
@@ -255,7 +266,7 @@ export default function UpdatesScreen() {
     try {
       await performMachineUpdate(selectedMachine, {
         pkgName: pkgName ?? "",
-        reboot: rebootAfter,
+        reboot,
       });
       toast.show({
         placement: "top",
@@ -290,6 +301,44 @@ export default function UpdatesScreen() {
     } finally {
       setRunningUpdate(null);
     }
+  };
+
+  const handleOpenUpdatePrompt = (pkgName?: string) => {
+    if (!selectedMachine || runningUpdate) {
+      return;
+    }
+    setPendingUpdate({pkgName: pkgName ?? null});
+    setPendingReboot(null);
+    setShowConfirmPrompt(false);
+    setShowRestartPrompt(true);
+  };
+
+  const handleCloseRestartPrompt = () => {
+    setShowRestartPrompt(false);
+    setPendingUpdate(null);
+    setPendingReboot(null);
+  };
+
+  const handleRestartChoice = (shouldReboot: boolean) => {
+    setPendingReboot(shouldReboot);
+    setShowRestartPrompt(false);
+    setShowConfirmPrompt(true);
+  };
+
+  const handleCloseConfirmPrompt = () => {
+    setShowConfirmPrompt(false);
+    setPendingUpdate(null);
+    setPendingReboot(null);
+  };
+
+  const handleConfirmUpdate = async () => {
+    if (!pendingUpdate || pendingReboot === null) {
+      return;
+    }
+    setShowConfirmPrompt(false);
+    await handleRunUpdate(pendingUpdate.pkgName ?? undefined, pendingReboot);
+    setPendingUpdate(null);
+    setPendingReboot(null);
   };
 
   const filteredUpdates = React.useMemo(() => {
@@ -396,7 +445,7 @@ export default function UpdatesScreen() {
                 variant="solid"
                 action="primary"
                 className="rounded-xl px-5"
-                onPress={() => handleRunUpdate()}
+                onPress={() => handleOpenUpdatePrompt()}
                 isDisabled={!selectedMachine || totalPending === 0}
               >
                 {isUpdatingAll ? (
@@ -428,20 +477,6 @@ export default function UpdatesScreen() {
                   />
                 </Input>
               </Box>
-              <HStack className="items-center gap-3 px-4 py-3 rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
-                <VStack className="gap-1">
-                  <Text className="text-typography-600 dark:text-typography-400 text-xs">
-                    Reboot after updating
-                  </Text>
-                  <HStack className="items-center gap-2">
-                    <Power size={16} className="text-typography-400" />
-                    <Text className="text-typography-900 dark:text-[#E8EBF0] text-sm">
-                      {rebootAfter ? "Enabled" : "Disabled"}
-                    </Text>
-                  </HStack>
-                </VStack>
-                <Switch value={rebootAfter} onValueChange={setRebootAfter} />
-              </HStack>
             </HStack>
           </VStack>
 
@@ -505,7 +540,7 @@ export default function UpdatesScreen() {
                     <UpdateCard
                       key={update.id}
                       update={update}
-                      onUpdate={handleRunUpdate}
+                      onUpdate={handleOpenUpdatePrompt}
                       isUpdating={runningUpdate === update.name || isUpdatingAll}
                     />
                   ))
@@ -535,6 +570,104 @@ export default function UpdatesScreen() {
           ) : null}
         </Box>
       </ScrollView>
+      <Modal isOpen={showRestartPrompt} onClose={handleCloseRestartPrompt} size="md">
+        <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+        <ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-5">
+          <ModalHeader className="flex-row items-center gap-3 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
+            <Box className="h-10 w-10 rounded-2xl bg-[#F97316]/10 dark:bg-[#FDBA74]/15 items-center justify-center">
+              <Power size={18} className="text-[#F97316] dark:text-[#FDBA74]" />
+            </Box>
+            <VStack className="flex-1">
+              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+                Restart after Update?
+              </Heading>
+              <Text className="text-sm text-typography-600 dark:text-typography-400">
+                Choose whether this machine should restart once the update finishes.
+              </Text>
+            </VStack>
+            <ModalCloseButton onPress={handleCloseRestartPrompt} />
+          </ModalHeader>
+          <ModalBody className="pt-5">
+            <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] p-4">
+              <VStack className="gap-2">
+                <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                  Update target
+                </Text>
+                <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                  {pendingUpdate?.pkgName ?? "All pending updates"}
+                </Text>
+              </VStack>
+            </Box>
+          </ModalBody>
+          <ModalFooter className="flex-row gap-3 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
+            <Button
+              variant="outline"
+              action="secondary"
+              className="flex-1 rounded-xl"
+              onPress={() => handleRestartChoice(false)}
+            >
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">No</ButtonText>
+            </Button>
+            <Button action="primary" className="flex-1 rounded-xl" onPress={() => handleRestartChoice(true)}>
+              <ButtonText className="text-background-0 dark:text-[#0A1628]">Yes</ButtonText>
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      <Modal isOpen={showConfirmPrompt} onClose={handleCloseConfirmPrompt} size="md">
+        <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+        <ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-5">
+          <ModalHeader className="flex-row items-center gap-3 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
+            <Box className="h-10 w-10 rounded-2xl bg-[#38BDF8]/15 dark:bg-[#0EA5E9]/20 items-center justify-center">
+              <ArrowUpCircle size={18} className="text-[#0284C7] dark:text-[#38BDF8]" />
+            </Box>
+            <VStack className="flex-1">
+              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+                Are you sure you want to update?
+              </Heading>
+              <Text className="text-sm text-typography-600 dark:text-typography-400">
+                This will start the update job immediately.
+              </Text>
+            </VStack>
+            <ModalCloseButton onPress={handleCloseConfirmPrompt} />
+          </ModalHeader>
+          <ModalBody className="pt-5">
+            <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] p-4">
+              <VStack className="gap-3">
+                <VStack className="gap-1">
+                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                    Update target
+                  </Text>
+                  <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                    {pendingUpdate?.pkgName ?? "All pending updates"}
+                  </Text>
+                </VStack>
+                <VStack className="gap-1">
+                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                    Restart after update
+                  </Text>
+                  <Text className="text-sm text-typography-700 dark:text-typography-300">
+                    {pendingReboot ? "Yes" : "No"}
+                  </Text>
+                </VStack>
+              </VStack>
+            </Box>
+          </ModalBody>
+          <ModalFooter className="flex-row gap-3 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
+            <Button
+              variant="outline"
+              action="secondary"
+              className="flex-1 rounded-xl"
+              onPress={handleCloseConfirmPrompt}
+            >
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
+            </Button>
+            <Button action="primary" className="flex-1 rounded-xl" onPress={handleConfirmUpdate}>
+              <ButtonText className="text-background-0 dark:text-[#0A1628]">Update</ButtonText>
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 }

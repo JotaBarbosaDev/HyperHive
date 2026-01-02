@@ -9,6 +9,16 @@ import { HStack } from "@/components/ui/hstack";
 import { Badge, BadgeText } from "@/components/ui/badge";
 import { Button, ButtonIcon, ButtonText } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import {
+  Modal,
+  ModalBackdrop,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+} from "@/components/ui/modal";
+import { Toast, ToastTitle, useToast } from "@/components/ui/toast";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useMachines } from "@/hooks/useMachines";
 import { useSelectedMachine } from "@/hooks/useSelectedMachine";
@@ -17,6 +27,8 @@ import {
   getDiskInfo,
   getMachineUptime,
   getMemInfo,
+  restartMachine,
+  shutdownMachine,
 } from "@/services/hyperhive";
 import { CpuInfo, DiskInfo, MemInfo, UptimeInfo } from "@/types/metrics";
 import { Machine } from "@/types/machine";
@@ -28,7 +40,9 @@ import {
   HardDrive,
   Link as LinkIcon,
   MemoryStick,
+  Power,
   RefreshCcw,
+  RotateCcw,
   Server,
   ThermometerSun,
 } from "lucide-react-native";
@@ -147,6 +161,7 @@ const maxCpuTemp = (cpu?: CpuInfo | null) => {
 export default function DashboardScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
+  const toast = useToast();
   const { token, isChecking } = useAuthGuard();
   const { machines, isLoading: isLoadingMachines } = useMachines(token);
   const { selectedMachine, setSelectedMachine } = useSelectedMachine();
@@ -154,6 +169,17 @@ export default function DashboardScreen() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [pendingPowerAction, setPendingPowerAction] = React.useState<{
+    machineName: string;
+    action: "restart" | "shutdown";
+  } | null>(null);
+  const [pendingPowerNow, setPendingPowerNow] = React.useState<boolean | null>(null);
+  const [showPowerNowPrompt, setShowPowerNowPrompt] = React.useState(false);
+  const [showPowerConfirmPrompt, setShowPowerConfirmPrompt] = React.useState(false);
+  const [powerActioning, setPowerActioning] = React.useState<{
+    machineName: string;
+    action: "restart" | "shutdown";
+  } | null>(null);
 
   React.useEffect(() => {
     if (!selectedMachine && machines.length > 0) {
@@ -255,6 +281,79 @@ export default function DashboardScreen() {
       progressBackgroundColor={colorScheme === "dark" ? "#0E1524" : "#E2E8F0"}
     />
   );
+
+  const showPowerToast = React.useCallback(
+    (message: string, action: "success" | "error") => {
+      toast.show({
+        placement: "top",
+        render: ({ id }) => (
+          <Toast
+            nativeID={"toast-" + id}
+            className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+            action={action}
+          >
+            <ToastTitle size="sm">{message}</ToastTitle>
+          </Toast>
+        ),
+      });
+    },
+    [toast]
+  );
+
+  const openPowerPrompt = (machineName: string, action: "restart" | "shutdown") => {
+    if (powerActioning) {
+      return;
+    }
+    setPendingPowerAction({ machineName, action });
+    setPendingPowerNow(null);
+    setShowPowerConfirmPrompt(false);
+    setShowPowerNowPrompt(true);
+  };
+
+  const closePowerNowPrompt = () => {
+    setShowPowerNowPrompt(false);
+    setPendingPowerAction(null);
+    setPendingPowerNow(null);
+  };
+
+  const handlePowerNowChoice = (now: boolean) => {
+    setPendingPowerNow(now);
+    setShowPowerNowPrompt(false);
+    setShowPowerConfirmPrompt(true);
+  };
+
+  const closePowerConfirmPrompt = () => {
+    setShowPowerConfirmPrompt(false);
+    setPendingPowerAction(null);
+    setPendingPowerNow(null);
+  };
+
+  const handleConfirmPowerAction = async () => {
+    if (!pendingPowerAction || pendingPowerNow === null) {
+      return;
+    }
+    const { machineName, action } = pendingPowerAction;
+    setShowPowerConfirmPrompt(false);
+    setPowerActioning({ machineName, action });
+    try {
+      if (action === "restart") {
+        await restartMachine(machineName, pendingPowerNow);
+      } else {
+        await shutdownMachine(machineName, pendingPowerNow);
+      }
+      showPowerToast(
+        action === "restart" ? "Restart request sent" : "Shutdown request sent",
+        "success"
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : `Unable to ${action} machine.`;
+      showPowerToast(message, "error");
+    } finally {
+      setPowerActioning(null);
+      setPendingPowerAction(null);
+      setPendingPowerNow(null);
+    }
+  };
 
   const renderStatCard = (
     title: string,
@@ -409,6 +508,7 @@ export default function DashboardScreen() {
                 const lastSeen = (snap.machine as any).LastSeen;
                 const entryTime = (snap.machine as any).EntryTime;
                 const addr = (snap.machine as any).Addr ?? "";
+                const isPowerActioning = powerActioning?.machineName === snap.machine.MachineName;
 
                 return (
                   <Box
@@ -462,23 +562,47 @@ export default function DashboardScreen() {
                           </HStack>
                         </VStack>
                       </HStack>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        action="default"
-                        className="rounded-xl border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E]"
-                        onPress={() =>
-                          router.push(
-                            `/dashboard/${encodeURIComponent(
-                              snap.machine.MachineName
-                            )}` as any
-                          )
-                        }
-                      >
-                        <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
-                          View details
-                        </ButtonText>
-                      </Button>
+                      <HStack className="items-center gap-2 flex-wrap justify-end">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          action="secondary"
+                          className="rounded-xl border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E]"
+                          onPress={() => openPowerPrompt(snap.machine.MachineName, "restart")}
+                          isDisabled={isPowerActioning}
+                        >
+                          <ButtonIcon as={RotateCcw} className="text-typography-900 dark:text-[#E8EBF0]" />
+                          <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Restart</ButtonText>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          action="negative"
+                          className="rounded-xl border-error-300 dark:border-error-700 bg-background-0 dark:bg-[#0F1A2E]"
+                          onPress={() => openPowerPrompt(snap.machine.MachineName, "shutdown")}
+                          isDisabled={isPowerActioning}
+                        >
+                          <ButtonIcon as={Power} className="text-error-600 dark:text-error-400" />
+                          <ButtonText className="text-error-700 dark:text-error-200">Shutdown</ButtonText>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          action="default"
+                          className="rounded-xl border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E]"
+                          onPress={() =>
+                            router.push(
+                              `/dashboard/${encodeURIComponent(
+                                snap.machine.MachineName
+                              )}` as any
+                            )
+                          }
+                        >
+                          <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                            View details
+                          </ButtonText>
+                        </Button>
+                      </HStack>
                     </HStack>
 
                     <HStack className="mt-4 gap-3 flex-wrap">
@@ -580,6 +704,136 @@ export default function DashboardScreen() {
           </Box>
         </Box>
       </ScrollView>
+      <Modal isOpen={showPowerNowPrompt} onClose={closePowerNowPrompt} size="md">
+        <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+        <ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-5">
+          <ModalHeader className="flex-row items-center gap-3 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
+            <Box
+              className={`h-10 w-10 rounded-2xl items-center justify-center ${
+                pendingPowerAction?.action === "shutdown"
+                  ? "bg-error-500/10 dark:bg-error-900/20"
+                  : "bg-primary-500/10 dark:bg-[#0F766E]/20"
+              }`}
+            >
+              {pendingPowerAction?.action === "shutdown" ? (
+                <Power size={18} className="text-error-600 dark:text-error-400" />
+              ) : (
+                <RotateCcw size={18} className="text-[#0F766E] dark:text-[#5EEAD4]" />
+              )}
+            </Box>
+            <VStack className="flex-1">
+              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+                {pendingPowerAction?.action === "shutdown" ? "Shutdown now?" : "Restart now?"}
+              </Heading>
+              <Text className="text-sm text-typography-600 dark:text-typography-400">
+                Choose whether this action should run immediately.
+              </Text>
+            </VStack>
+            <ModalCloseButton onPress={closePowerNowPrompt} />
+          </ModalHeader>
+          <ModalBody className="pt-5">
+            <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] p-4">
+              <VStack className="gap-2">
+                <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                  Machine
+                </Text>
+                <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                  {pendingPowerAction?.machineName ?? "—"}
+                </Text>
+              </VStack>
+            </Box>
+          </ModalBody>
+          <ModalFooter className="flex-row gap-3 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
+            <Button
+              variant="outline"
+              action="secondary"
+              className="flex-1 rounded-xl"
+              onPress={() => handlePowerNowChoice(false)}
+            >
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Not now</ButtonText>
+            </Button>
+            <Button
+              action={pendingPowerAction?.action === "shutdown" ? "negative" : "primary"}
+              className="flex-1 rounded-xl"
+              onPress={() => handlePowerNowChoice(true)}
+            >
+              <ButtonText className="text-background-0 dark:text-[#0A1628]">Now</ButtonText>
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      <Modal isOpen={showPowerConfirmPrompt} onClose={closePowerConfirmPrompt} size="md">
+        <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+        <ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-5">
+          <ModalHeader className="flex-row items-center gap-3 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
+            <Box
+              className={`h-10 w-10 rounded-2xl items-center justify-center ${
+                pendingPowerAction?.action === "shutdown"
+                  ? "bg-error-500/10 dark:bg-error-900/20"
+                  : "bg-primary-500/10 dark:bg-[#0F766E]/20"
+              }`}
+            >
+              {pendingPowerAction?.action === "shutdown" ? (
+                <Power size={18} className="text-error-600 dark:text-error-400" />
+              ) : (
+                <RotateCcw size={18} className="text-[#0F766E] dark:text-[#5EEAD4]" />
+              )}
+            </Box>
+            <VStack className="flex-1">
+              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+                {pendingPowerAction?.action === "shutdown"
+                  ? "Are you sure you want to shut down?"
+                  : "Are you sure you want to restart?"}
+              </Heading>
+              <Text className="text-sm text-typography-600 dark:text-typography-400">
+                This will send the request immediately.
+              </Text>
+            </VStack>
+            <ModalCloseButton onPress={closePowerConfirmPrompt} />
+          </ModalHeader>
+          <ModalBody className="pt-5">
+            <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] p-4">
+              <VStack className="gap-3">
+                <VStack className="gap-1">
+                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                    Machine
+                  </Text>
+                  <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                    {pendingPowerAction?.machineName ?? "—"}
+                  </Text>
+                </VStack>
+                <VStack className="gap-1">
+                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                    Run now
+                  </Text>
+                  <Text className="text-sm text-typography-700 dark:text-typography-300">
+                    {pendingPowerNow ? "Yes" : "No"}
+                  </Text>
+                </VStack>
+              </VStack>
+            </Box>
+          </ModalBody>
+          <ModalFooter className="flex-row gap-3 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
+            <Button
+              variant="outline"
+              action="secondary"
+              className="flex-1 rounded-xl"
+              onPress={closePowerConfirmPrompt}
+            >
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
+            </Button>
+            <Button
+              action={pendingPowerAction?.action === "shutdown" ? "negative" : "primary"}
+              className="flex-1 rounded-xl"
+              onPress={handleConfirmPowerAction}
+            >
+              <ButtonText className="text-background-0 dark:text-[#0A1628]">
+                {pendingPowerAction?.action === "shutdown" ? "Shutdown" : "Restart"}
+              </ButtonText>
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 }

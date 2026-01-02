@@ -308,3 +308,27 @@ export async function performMachineUpdate(
     },
   });
 }
+
+export async function restartMachine(machineName: string, now: boolean = false): Promise<unknown> {
+  const authToken = await resolveToken();
+  const encodedMachine = encodeURIComponent(machineName);
+  return apiFetch<unknown>(`/extra/restart/${encodedMachine}`, {
+    method: "POST",
+    token: authToken,
+    body: {
+      now: Boolean(now),
+    },
+  });
+}
+
+export async function shutdownMachine(machineName: string, now: boolean = false): Promise<unknown> {
+  const authToken = await resolveToken();
+  const encodedMachine = encodeURIComponent(machineName);
+  return apiFetch<unknown>(`/extra/shutdown/${encodedMachine}`, {
+    method: "POST",
+    token: authToken,
+    body: {
+      now: Boolean(now),
+    },
+  });
+}
