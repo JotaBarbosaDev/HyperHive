@@ -108,6 +108,7 @@ export type RaidStatus = {
   version?: string;
   fsUuid?: string;
   fsLabel?: string;
+  replaceStatus?: string | number;
   totalDevices?: number;
   deviceStats?: RaidDeviceStatus[];
   [key: string]: unknown;

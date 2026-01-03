@@ -57,6 +57,7 @@ import {
 import { VmProgressToastListener } from "@/components/VmProgressToastListener";
 import { NewSlaveCountToastListener } from "@/components/NewSlaveCountToastListener";
 import { SocketErrorModalListener } from "@/components/SocketErrorModalListener";
+import { SocketNotificationModalListener } from "@/components/SocketNotificationModalListener";
 import Snowfall from "react-snowfall";
 
 export {
@@ -554,6 +555,7 @@ function RootLayoutNav() {
                 <VmProgressToastListener />
                 <NewSlaveCountToastListener />
                 <SocketErrorModalListener />
+                <SocketNotificationModalListener />
                 <Box className="flex-1">
                   {apiBaseMismatch && (
                     <Box

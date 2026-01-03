@@ -160,13 +160,14 @@ export default function BtrfsRaidsScreen() {
   const [balanceDataUsage, setBalanceDataUsage] = React.useState("100");
   const [balanceMetadataUsage, setBalanceMetadataUsage] = React.useState("100");
   const [balanceForce, setBalanceForce] = React.useState(false);
-  const [balanceConvert, setBalanceConvert] = React.useState(true);
   const [autoMountPoint, setAutoMountPoint] = React.useState("");
   const [autoCompression, setAutoCompression] = React.useState(DEFAULT_COMPRESSION);
 
   const [savingAction, setSavingAction] = React.useState<string | null>(null);
   const [deleteRaidTarget, setDeleteRaidTarget] = React.useState<BtrfsRaid | null>(null);
   const [actionModal, setActionModal] = React.useState<null | RaidTab | "mount" | "unmount" | "addDisk" | "removeDisk" | "replaceDisk" | "changeLevel" | "autoMount">(null);
+  const [removeDiskNoticeOpen, setRemoveDiskNoticeOpen] = React.useState(false);
+  const [changeLevelNoticeOpen, setChangeLevelNoticeOpen] = React.useState(false);
 
   const raidLevelOption = getRaidLevelOption(raidLevel);
   const raidLevelMinDisks = getRaidMinDisks(raidLevel);
@@ -306,9 +307,9 @@ export default function BtrfsRaidsScreen() {
   };
 
   const triggerLongRunningAction = React.useCallback(
-    (label: string, action: () => Promise<unknown>, onAfterSuccess?: () => Promise<void> | void) => {
+    (label: string, action: () => Promise<unknown>, onAfterSuccess?: () => Promise<void> | void, description?: string) => {
       const prettyLabel = label.charAt(0).toUpperCase() + label.slice(1);
-      showToast(`${prettyLabel} requested`, "Monitor progress in the scrub tab.");
+      showToast(`${prettyLabel} requested`, description ?? "Monitor progress in the scrub tab.");
       action()
         .then(async () => {
           if (onAfterSuccess) {
@@ -367,6 +368,27 @@ export default function BtrfsRaidsScreen() {
     },
     [raidModal?.uuid, selectedMachine]
   );
+
+  const refreshRaidModal = React.useCallback(async () => {
+    if (!selectedMachine || !raidModal?.uuid) return;
+    try {
+      const [raidList, status] = await Promise.all([
+        listRaids(selectedMachine).catch(() => null),
+        getRaidStatus(selectedMachine, raidModal.uuid).catch(() => null),
+      ]);
+      if (Array.isArray(raidList)) {
+        const updated = raidList.find((raid) => raid.uuid === raidModal.uuid);
+        if (updated) {
+          setRaidModal((prev) => (prev ? { ...prev, ...updated } : prev));
+        }
+      }
+      if (status) {
+        setRaidStatus(status);
+      }
+    } catch (err) {
+      console.warn("Failed to refresh raid modal data", err);
+    }
+  }, [raidModal?.uuid, selectedMachine]);
 
   const getAutoMountForRaid = (uuid?: string) => {
     if (!uuid) return null;
@@ -456,6 +478,13 @@ export default function BtrfsRaidsScreen() {
     }
     return () => stopScrubPolling();
   }, [raidModal?.uuid, raidTab, selectedMachine, refreshScrubStats]);
+
+  React.useEffect(() => {
+    if (!raidModal?.uuid || !selectedMachine) return;
+    refreshRaidModal();
+    const id = setInterval(refreshRaidModal, 5000);
+    return () => clearInterval(id);
+  }, [raidModal?.uuid, refreshRaidModal, selectedMachine]);
 
   const StatsRow = ({ label, value }: { label: string; value?: React.ReactNode }) => (
     <HStack className="justify-between py-1.5 items-center">
@@ -905,9 +934,9 @@ export default function BtrfsRaidsScreen() {
             <Button className="border-outline-200 rounded-xl dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]" variant="outline" action="default" onPress={() => setCreateModal(false)} isDisabled={creatingRaid}>
               <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
             </Button>
-            <Button action="primary" onPress={handleCreateRaid} isDisabled={creatingRaid} className="rounded-xl bg-typography-900 dark:bg-[#2DD4BF]">
-              {creatingRaid ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" className="text-background-0 dark:text-[#0A1628]" />}
-              <ButtonText className="text-background-0 dark:text-[#0A1628]">Create RAID</ButtonText>
+            <Button action="primary" onPress={handleCreateRaid} isDisabled={creatingRaid} className="rounded-xl dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]">
+              {creatingRaid ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
+              <ButtonText>Create RAID</ButtonText>
             </Button>
           </ModalFooter>
         </ModalContent>
@@ -1054,6 +1083,12 @@ export default function BtrfsRaidsScreen() {
                         value={raidStatus.totalDevices ?? raidStatus.deviceStats?.length ?? "—"}
                       />
                     </VStack>
+                    {raidStatus.replaceStatus ? (
+                      <Box className={softCardClass}>
+                        <Text className="text-typography-800 dark:text-[#E8EBF0] font-medium text-sm">Replace Status</Text>
+                        <Text className="text-typography-700 dark:text-[#9AA4B8] text-xs mt-2">{raidStatus.replaceStatus}</Text>
+                      </Box>
+                    ) : null}
                     {Array.isArray(raidStatus.deviceStats) && raidStatus.deviceStats.length > 0 ? (
                       <VStack className="gap-3">
                         <Text className="text-typography-800 dark:text-[#E8EBF0] font-medium text-sm">Devices Health</Text>
@@ -1324,22 +1359,12 @@ export default function BtrfsRaidsScreen() {
                         </VStack>
                         <Switch value={balanceForce} onValueChange={setBalanceForce} />
                       </Pressable>
-                      <Pressable
-                        onPress={() => setBalanceConvert(!balanceConvert)}
-                        className="flex-row items-center justify-between p-3 rounded-xl border border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]"
-                      >
-                        <VStack className="flex-1">
-                          <Text className="text-typography-900 dark:text-[#E8EBF0] font-medium">Convert to Current RAID</Text>
-                          <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs">Apply current RAID level during balance</Text>
-                        </VStack>
-                        <Switch value={balanceConvert} onValueChange={setBalanceConvert} />
-                      </Pressable>
                     </VStack>
 
                     <Button
                       action="primary"
                       size="lg"
-                      className="rounded-xl"
+                      className="rounded-xl dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
                       onPress={() =>
                         raidModal?.uuid &&
                         performAction("balance", () =>
@@ -1350,13 +1375,13 @@ export default function BtrfsRaidsScreen() {
                               metadataUsageMax: numberFromInput(balanceMetadataUsage),
                             },
                             force: balanceForce,
-                            convertToCurrentRaid: balanceConvert,
+                            convertToCurrentRaid: true,
                           })
                         )
                       }
                       isDisabled={savingAction !== null}
                     >
-                      {savingAction === "balance" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" className="text-typography-900 dark:text-[#E8EBF0]" />}
+                      {savingAction === "balance" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
                       <ButtonText>Start Balance</ButtonText>
                     </Button>
                   </VStack>
@@ -1364,36 +1389,40 @@ export default function BtrfsRaidsScreen() {
 
                 {/* Balance Controls */}
                 <Box className={`${sectionCardClass} mt-4`}>
-                  <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base mb-3">Controls</Text>
-                  <HStack className="gap-2 flex-wrap">
+                  <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base mb-3">Balance Controls</Text>
+                  <HStack className="gap-3 flex-wrap">
                     <Button
                       action="default"
                       variant="outline"
-                      className="flex-1 min-w-[100px] rounded-xl"
+                      size="md"
+                      className="flex-1 min-w-[110px] rounded-xl border-outline-200 dark:border-[#243247]"
                       onPress={() => raidModal?.uuid && performAction("pause balance", () => pauseBalance(selectedMachine, raidModal.uuid))}
                       isDisabled={savingAction !== null}
                     >
                       {savingAction === "pause balance" ? <ButtonSpinner /> : null}
-                      <ButtonText>Pause</ButtonText>
+                      <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Pause</ButtonText>
                     </Button>
                     <Button
                       action="default"
                       variant="outline"
-                      className="flex-1 min-w-[100px] rounded-xl"
+                      size="md"
+                      className="flex-1 min-w-[110px] rounded-xl border-outline-200 dark:border-[#243247]"
                       onPress={() => raidModal?.uuid && performAction("resume balance", () => resumeBalance(selectedMachine, raidModal.uuid))}
                       isDisabled={savingAction !== null}
                     >
                       {savingAction === "resume balance" ? <ButtonSpinner /> : null}
-                      <ButtonText>Resume</ButtonText>
+                      <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Resume</ButtonText>
                     </Button>
                     <Button
                       action="negative"
-                      className="flex-1 min-w-[100px] rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
+                      variant="outline"
+                      size="md"
+                      className="flex-1 min-w-[110px] rounded-xl"
                       onPress={() => raidModal?.uuid && performAction("cancel balance", () => cancelBalance(selectedMachine, raidModal.uuid))}
                       isDisabled={savingAction !== null || !isBalanceRunning(raidStatus)}
                     >
                       {savingAction === "cancel balance" ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
-                      <ButtonText className="text-background-0 dark:text-[#0A1628]">Cancel</ButtonText>
+                      <ButtonText className="text-error-600 dark:text-error-400">Cancel</ButtonText>
                     </Button>
                   </HStack>
                 </Box>
@@ -1419,8 +1448,8 @@ export default function BtrfsRaidsScreen() {
                                   : `${scrubStats.percentDone || 0}%`}
                               </Text>
                             </VStack>
-                            <Box className={`h-12 w-12 rounded-full ${Number(scrubStats.percentDone) === 100 ? "bg-success-500" : "bg-primary-500"} items-center justify-center flex`}>
-                              <Text className="text-white font-bold text-sm">{Number(scrubStats.percentDone).toFixed(0)}%</Text>
+                            <Box className={`h-12 w-12 rounded-full ${Number(scrubStats.percentDone) === 100 ? "bg-success-500 dark:bg-success-600" : "bg-primary-500 dark:bg-[#2DD4BF]"} items-center justify-center flex`}>
+                              <Text className="text-white dark:text-[#0A1628] font-bold text-sm">{Number(scrubStats.percentDone).toFixed(0)}%</Text>
                             </Box>
                           </HStack>
                           <Progress value={Number(scrubStats.percentDone) || 0} className="bg-background-200 dark:bg-background-300 h-3 rounded-full">
@@ -1484,7 +1513,7 @@ export default function BtrfsRaidsScreen() {
                     <Button
                       action="primary"
                       size="lg"
-                      className="flex-1 min-w-[140px] rounded-xl"
+                      className="flex-1 min-w-[140px] rounded-xl dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
                       onPress={() =>
                         raidModal?.uuid &&
                         triggerLongRunningAction("scrub", () => scrubRaid(selectedMachine, raidModal.uuid), () =>
@@ -1493,22 +1522,27 @@ export default function BtrfsRaidsScreen() {
                       }
                       isDisabled={savingAction !== null}
                     >
-                      <ButtonIcon as={RefreshCcw} size="sm" className="text-typography-900 dark:text-[#E8EBF0]" />
+                      <ButtonIcon as={RefreshCcw} size="sm" />
                       <ButtonText>Start Scrub</ButtonText>
                     </Button>
                     <Button
                       action="default"
                       variant="outline"
                       size="lg"
-                      className="flex-1 min-w-[140px] rounded-xl"
+                      className="flex-1 min-w-[140px] rounded-xl border-outline-200 dark:border-[#243247]"
                       onPress={() =>
                         raidModal?.uuid &&
-                        triggerLongRunningAction("defragmentation", () => defragmentRaid(selectedMachine, raidModal.uuid))
+                        triggerLongRunningAction(
+                          "defragmentation",
+                          () => defragmentRaid(selectedMachine, raidModal.uuid),
+                          undefined,
+                          "There is no percentage for defragmentation. Use the CLI command to check if it is still running."
+                        )
                       }
                       isDisabled={savingAction !== null}
                     >
                       <ButtonIcon as={RefreshCcw} size="sm" className="text-typography-900 dark:text-[#E8EBF0]" />
-                      <ButtonText>Defragment</ButtonText>
+                      <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Defragment</ButtonText>
                     </Button>
                   </HStack>
                   <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs mt-3">Scrub checks data integrity, while defragmentation optimizes file layout for better performance</Text>
@@ -1523,13 +1557,13 @@ export default function BtrfsRaidsScreen() {
           <ModalFooter className="gap-3 flex-wrap px-6 pt-4 pb-6 border-t border-outline-100 dark:border-[#1E2F47]">
             <Button
               action="negative"
-              className="rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
+              className="rounded-xl"
               onPress={() => setDeleteRaidTarget(raidModal)}
             >
               <ButtonIcon as={Trash2} size="sm" />
-              <ButtonText className="text-background-0 dark:text-[#0A1628]">Remove RAID</ButtonText>
+              <ButtonText>Remove RAID</ButtonText>
             </Button>
-            <Button action="primary" className="rounded-xl" onPress={() => setRaidModal(null)}>
+            <Button action="primary" className="rounded-xl dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]" onPress={() => setRaidModal(null)}>
               <ButtonText>Close</ButtonText>
             </Button>
           </ModalFooter>
@@ -1537,164 +1571,288 @@ export default function BtrfsRaidsScreen() {
       </Modal>
 
       <Modal isOpen={actionModal !== null} onClose={closeActionModal} size="lg">
-        <ModalBackdrop />
-        <ModalContent className="max-w-2xl">
-          <ModalHeader className="flex-row items-start justify-between">
-            <Heading size="md" className="text-typography-900">
-              {actionModal === "mount" ? "Mount / Unmount" : null}
-              {actionModal === "addDisk" ? "Add Disk" : null}
-              {actionModal === "removeDisk" ? "Remove Disk" : null}
-              {actionModal === "replaceDisk" ? "Replace Disk" : null}
-              {actionModal === "changeLevel" ? "Change RAID Level" : null}
-              {actionModal === "autoMount" ? "Auto-mount" : null}
-            </Heading>
-            <ModalCloseButton />
+        <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+        <ModalContent className="max-w-3xl rounded-2xl border border-outline-100 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] shadow-soft-2">
+          <ModalHeader className="flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#1E2F47]">
+            <VStack className="flex-1 gap-1">
+              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+                {actionModal === "mount" ? "Mount / Unmount RAID" : null}
+                {actionModal === "addDisk" ? "Add Disk to RAID" : null}
+                {actionModal === "removeDisk" ? "Remove Disk from RAID" : null}
+                {actionModal === "replaceDisk" ? "Replace Disk" : null}
+                {actionModal === "changeLevel" ? "Change RAID Level" : null}
+                {actionModal === "autoMount" ? "Configure Auto-mount" : null}
+              </Heading>
+            </VStack>
+            <ModalCloseButton className="text-typography-500" />
           </ModalHeader>
-          <ModalBody className="gap-3">
+          <ModalBody className="gap-5 px-6 pt-5 pb-6 max-h-[70vh] overflow-y-auto">
             {actionModal === "mount" ? (
-              <VStack className="gap-3">
-                <HStack className="gap-3 flex-wrap">
-                  <Input className="flex-1">
-                    <InputField
-                      value={mountPoint}
-                      onChangeText={setMountPoint}
-                      placeholder="Mount point"
-                    />
-                  </Input>
-                  <CompressionSelect value={compression} onChange={setCompression} />
-                </HStack>
-                <HStack className="gap-3">
-                  <Button
-                    action="primary"
-                    onPress={() => {
-                      if (!raidModal?.uuid) return;
-                      if (!mountPoint.trim()) {
-                        showToast("Mount point required", "Specify where to mount the volume.", "error");
-                        return;
+              <VStack className="gap-5">
+                <Box className={`${sectionCardClass}`}>
+                  <VStack className="gap-4">
+                    <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base">Mount</Text>
+                    <FormControl>
+                      <FormControlLabel>
+                        <FormControlLabelText className="text-typography-800 dark:text-[#E8EBF0] font-medium">Mount Point</FormControlLabelText>
+                      </FormControlLabel>
+                      <Input className="rounded-xl border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]">
+                        <InputField
+                          value={mountPoint}
+                          onChangeText={setMountPoint}
+                          placeholder="e.g., /mnt/raid-storage"
+                          className="text-typography-900 dark:text-[#E8EBF0]"
+                        />
+                      </Input>
+                    </FormControl>
+                    <FormControl>
+                      <FormControlLabel>
+                        <FormControlLabelText className="text-typography-800 dark:text-[#E8EBF0] font-medium">Compression</FormControlLabelText>
+                      </FormControlLabel>
+                      <CompressionSelect value={compression} onChange={setCompression} />
+                    </FormControl>
+                    <Button
+                      action="primary"
+                      size="lg"
+                      className="rounded-xl dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+                      onPress={() => {
+                        if (!raidModal?.uuid) return;
+                        if (!mountPoint.trim()) {
+                          showToast("Mount point required", "Specify where to mount the volume.", "error");
+                          return;
+                        }
+                        performAction("mount", () => mountRaid(selectedMachine, { uuid: raidModal.uuid, mount_point: mountPoint, compression }), false).finally(closeActionModal);
+                      }}
+                      isDisabled={savingAction !== null}
+                    >
+                      {savingAction === "mount" ? <ButtonSpinner /> : <ButtonIcon as={Power} size="sm" />}
+                      <ButtonText>Mount RAID</ButtonText>
+                    </Button>
+                  </VStack>
+                </Box>
+
+                <Box className={`${sectionCardClass}`}>
+                  <VStack className="gap-4">
+                    <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base">Unmount</Text>
+                    <Pressable
+                      onPress={() => setForceUnmount(!forceUnmount)}
+                      className="flex-row items-center justify-between p-3 rounded-xl border border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]"
+                    >
+                      <Text className="text-typography-900 dark:text-[#E8EBF0] font-medium">Force Unmount</Text>
+                      <Switch value={forceUnmount} onValueChange={setForceUnmount} />
+                    </Pressable>
+                    <Button
+                      action="default"
+                      variant="outline"
+                      size="lg"
+                      className="rounded-xl border-outline-200 dark:border-[#243247]"
+                      onPress={() =>
+                        raidModal?.uuid &&
+                        performAction("unmount", () => unmountRaid(selectedMachine, { uuid: raidModal.uuid, force: forceUnmount }), false).finally(closeActionModal)
                       }
-                      performAction("mount", () => mountRaid(selectedMachine, { uuid: raidModal.uuid, mount_point: mountPoint, compression }), false).finally(closeActionModal);
-                    }}
-                    isDisabled={savingAction !== null}
-                  >
-                    {savingAction === "mount" ? <ButtonSpinner /> : <ButtonIcon as={Power} size="sm" />}
-                    <ButtonText>Mount</ButtonText>
-                  </Button>
-                  <HStack className="gap-2 items-center">
-                    <Switch value={forceUnmount} onValueChange={setForceUnmount} />
-                    <Text className="text-typography-800">Force</Text>
-                  </HStack>
-                  <Button
-                    action="default"
-                    variant="outline"
-                    onPress={() =>
-                      raidModal?.uuid &&
-                      performAction("unmount", () => unmountRaid(selectedMachine, { uuid: raidModal.uuid, force: forceUnmount }), false).finally(closeActionModal)
-                    }
-                    isDisabled={savingAction !== null}
-                  >
-                    {savingAction === "unmount" ? <ButtonSpinner /> : <ButtonIcon as={Power} size="sm" />}
-                    <ButtonText>Unmount</ButtonText>
-                  </Button>
-                </HStack>
+                      isDisabled={savingAction !== null}
+                    >
+                      {savingAction === "unmount" ? <ButtonSpinner /> : <ButtonIcon as={Power} size="sm" />}
+                      <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Unmount RAID</ButtonText>
+                    </Button>
+                  </VStack>
+                </Box>
               </VStack>
             ) : null}
 
             {actionModal === "addDisk" ? (
-              <VStack className="gap-3">
-                <Input>
-                  <InputField value={addDiskValue} onChangeText={setAddDiskValue} placeholder="/dev/sdx" />
-                </Input>
-                <QuickPills options={freeDiskNames.slice(0, 8)} onSelect={setAddDiskValue} />
+              <VStack className="gap-5">
+                <Box className={`${sectionCardClass}`}>
+                  <VStack className="gap-4">
+                    <FormControl isRequired>
+                      <FormControlLabel>
+                        <FormControlLabelText className="text-typography-800 dark:text-[#E8EBF0] font-medium">Disk Path</FormControlLabelText>
+                      </FormControlLabel>
+                      <Input className="rounded-xl border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]">
+                        <InputField
+                          value={addDiskValue}
+                          onChangeText={setAddDiskValue}
+                          placeholder="e.g., /dev/sdb"
+                          className="text-typography-900 dark:text-[#E8EBF0] font-mono"
+                        />
+                      </Input>
+                    </FormControl>
+                    {freeDiskNames.length > 0 ? (
+                      <VStack className="gap-2">
+                        <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm font-medium">Available Disks</Text>
+                        <QuickPills options={freeDiskNames.slice(0, 8)} onSelect={setAddDiskValue} />
+                        {freeDiskNames.length > 8 ? (
+                          <Text className="text-typography-500 dark:text-[#9AA4B8] text-xs">+{freeDiskNames.length - 8} more disks available</Text>
+                        ) : null}
+                      </VStack>
+                    ) : (
+                      <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">No free disks available.</Text>
+                    )}
+                  </VStack>
+                </Box>
                 <Button
                   action="primary"
+                  size="lg"
+                  className="rounded-xl dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
                   onPress={() =>
                     raidModal?.uuid &&
                     performAction("add disk", () => addDiskRaid(selectedMachine, { uuid: raidModal.uuid, disk: addDiskValue }), false).finally(closeActionModal)
                   }
-                  isDisabled={savingAction !== null}
+                  isDisabled={savingAction !== null || !addDiskValue.trim()}
                 >
                   {savingAction === "add disk" ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
-                  <ButtonText>Add Disk</ButtonText>
+                  <ButtonText>Add Disk to RAID</ButtonText>
                 </Button>
               </VStack>
             ) : null}
 
             {actionModal === "removeDisk" ? (
-              <VStack className="gap-3">
-                <Input>
-                  <InputField value={removeDiskValue} onChangeText={setRemoveDiskValue} placeholder="/dev/sdx" />
-                </Input>
-                <QuickPills options={raidDeviceNames} onSelect={setRemoveDiskValue} />
+              <VStack className="gap-5">
+                <Box className={`${sectionCardClass}`}>
+                  <VStack className="gap-4">
+                    <FormControl isRequired>
+                      <FormControlLabel>
+                        <FormControlLabelText className="text-typography-800 dark:text-[#E8EBF0] font-medium">Disk Path</FormControlLabelText>
+                      </FormControlLabel>
+                      <Input className="rounded-xl border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]">
+                        <InputField
+                          value={removeDiskValue}
+                          onChangeText={setRemoveDiskValue}
+                          placeholder="e.g., /dev/sdb"
+                          className="text-typography-900 dark:text-[#E8EBF0] font-mono"
+                        />
+                      </Input>
+                    </FormControl>
+                    {raidDeviceNames.length > 0 ? (
+                      <VStack className="gap-2">
+                        <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm font-medium">Current Devices</Text>
+                        <QuickPills options={raidDeviceNames} onSelect={setRemoveDiskValue} />
+                      </VStack>
+                    ) : null}
+                  </VStack>
+                </Box>
                 <Button
                   action="negative"
-                  className="rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
-                  onPress={() =>
-                    raidModal?.uuid &&
-                    performAction("remove disk", () => removeDiskRaid(selectedMachine, { uuid: raidModal.uuid, disk: removeDiskValue }), false).finally(closeActionModal)
-                  }
-                  isDisabled={savingAction !== null}
+                  size="lg"
+                  className="rounded-xl"
+                  onPress={() => setRemoveDiskNoticeOpen(true)}
+                  isDisabled={savingAction !== null || !removeDiskValue.trim()}
                 >
                   {savingAction === "remove disk" ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
-                  <ButtonText className="text-background-0 dark:text-[#0A1628]">Remove Disk</ButtonText>
+                  <ButtonText>Remove Disk from RAID</ButtonText>
                 </Button>
               </VStack>
             ) : null}
 
             {actionModal === "replaceDisk" ? (
-              <VStack className="gap-3">
-                <HStack className="gap-3 flex-wrap">
-                  <Input className="flex-1">
-                    <InputField value={replaceOld} onChangeText={setReplaceOld} placeholder="Old disk" />
-                  </Input>
-                  <Input className="flex-1">
-                    <InputField value={replaceNew} onChangeText={setReplaceNew} placeholder="New disk" />
-                  </Input>
-                </HStack>
-                <QuickPills options={raidDeviceNames} onSelect={setReplaceOld} />
-                <QuickPills options={freeDiskNames.slice(0, 8)} onSelect={setReplaceNew} />
+              <VStack className="gap-5">
+                <Box className={`${sectionCardClass}`}>
+                  <VStack className="gap-4">
+                    <FormControl isRequired>
+                      <FormControlLabel>
+                        <FormControlLabelText className="text-typography-800 dark:text-[#E8EBF0] font-medium">Old Disk</FormControlLabelText>
+                      </FormControlLabel>
+                      <Input className="rounded-xl border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]">
+                        <InputField
+                          value={replaceOld}
+                          onChangeText={setReplaceOld}
+                          placeholder="e.g., /dev/sdb"
+                          className="text-typography-900 dark:text-[#E8EBF0] font-mono"
+                        />
+                      </Input>
+                    </FormControl>
+                    {raidDeviceNames.length > 0 ? (
+                      <VStack className="gap-2">
+                        <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm font-medium">Current Devices</Text>
+                        <QuickPills options={raidDeviceNames} onSelect={setReplaceOld} />
+                      </VStack>
+                    ) : null}
+                    <FormControl isRequired>
+                      <FormControlLabel>
+                        <FormControlLabelText className="text-typography-800 dark:text-[#E8EBF0] font-medium">New Disk</FormControlLabelText>
+                      </FormControlLabel>
+                      <Input className="rounded-xl border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]">
+                        <InputField
+                          value={replaceNew}
+                          onChangeText={setReplaceNew}
+                          placeholder="e.g., /dev/sdc"
+                          className="text-typography-900 dark:text-[#E8EBF0] font-mono"
+                        />
+                      </Input>
+                    </FormControl>
+                    {freeDiskNames.length > 0 ? (
+                      <VStack className="gap-2">
+                        <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm font-medium">Available Disks</Text>
+                        <QuickPills options={freeDiskNames.slice(0, 8)} onSelect={setReplaceNew} />
+                        {freeDiskNames.length > 8 ? (
+                          <Text className="text-typography-500 dark:text-[#9AA4B8] text-xs">+{freeDiskNames.length - 8} more available</Text>
+                        ) : null}
+                      </VStack>
+                    ) : (
+                      <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">No free disks available.</Text>
+                    )}
+                  </VStack>
+                </Box>
                 <Button
                   action="primary"
+                  size="lg"
+                  className="rounded-xl dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
                   onPress={() =>
                     raidModal?.uuid &&
                     performAction("replace disk", () => replaceDiskRaid(selectedMachine, { uuid: raidModal.uuid, old_disk: replaceOld, new_disk: replaceNew }), false).finally(closeActionModal)
                   }
-                  isDisabled={savingAction !== null}
+                  isDisabled={savingAction !== null || !replaceOld.trim() || !replaceNew.trim()}
                 >
-                  {savingAction === "replace disk" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" className="text-typography-900 dark:text-[#E8EBF0]" />}
+                  {savingAction === "replace disk" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
                   <ButtonText>Replace Disk</ButtonText>
                 </Button>
               </VStack>
             ) : null}
 
             {actionModal === "changeLevel" ? (
-              <VStack className="gap-3">
-                <Select selectedValue={newRaidLevel} onValueChange={setNewRaidLevel}>
-                  <SelectTrigger>
-                    <SelectInput
-                      placeholder="raid1"
-                      value={RAID_LEVEL_OPTIONS.find((opt) => opt.value === newRaidLevel)?.label ?? newRaidLevel}
-                    />
-                    <SelectIcon as={ChevronDownIcon} />
-                  </SelectTrigger>
-                  <SelectPortal>
-                    <SelectBackdrop />
-                    <SelectContent>
-                      <SelectDragIndicatorWrapper>
-                        <SelectDragIndicator />
-                      </SelectDragIndicatorWrapper>
-                      {RAID_LEVEL_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value} label={opt.label} />
-                      ))}
-                    </SelectContent>
-                  </SelectPortal>
-                </Select>
-                {typeof newRaidMinDisks === "number" ? (
-                  <Text className="text-typography-600 text-xs">
-                    {`Min disks for ${newRaidLabel}: ${newRaidMinDisks}. Current: ${raidDeviceCount ?? "n/a"}.`}
-                  </Text>
-                ) : null}
+              <VStack className="gap-5">
+                <Box className={`${sectionCardClass}`}>
+                  <VStack className="gap-4">
+                    <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm">
+                      Current level: {raidModal?.raid_level?.toUpperCase() || "—"}
+                    </Text>
+                    <FormControl isRequired>
+                      <FormControlLabel>
+                        <FormControlLabelText className="text-typography-800 dark:text-[#E8EBF0] font-medium">New RAID Level</FormControlLabelText>
+                      </FormControlLabel>
+                      <Select selectedValue={newRaidLevel} onValueChange={setNewRaidLevel}>
+                        <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]">
+                          <SelectInput
+                            placeholder="Select RAID level"
+                            value={RAID_LEVEL_OPTIONS.find((opt) => opt.value === newRaidLevel)?.label ?? newRaidLevel}
+                            className="text-typography-900 dark:text-[#E8EBF0]"
+                          />
+                          <SelectIcon as={ChevronDownIcon} />
+                        </SelectTrigger>
+                        <SelectPortal>
+                          <SelectBackdrop />
+                          <SelectContent className="bg-background-0 dark:bg-[#0F1A2E] border border-outline-100 dark:border-[#1E2F47] rounded-2xl">
+                            <SelectDragIndicatorWrapper>
+                              <SelectDragIndicator />
+                            </SelectDragIndicatorWrapper>
+                            {RAID_LEVEL_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value} label={opt.label} />
+                            ))}
+                          </SelectContent>
+                        </SelectPortal>
+                      </Select>
+                    </FormControl>
+                    {typeof newRaidMinDisks === "number" ? (
+                      <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm">
+                        Minimum required: {newRaidMinDisks} disk{newRaidMinDisks === 1 ? "" : "s"}
+                      </Text>
+                    ) : null}
+                  </VStack>
+                </Box>
                 <Button
                   action="primary"
+                  size="lg"
+                  className="rounded-xl dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
                   onPress={() => {
                     if (!raidModal?.uuid) return;
                     if (typeof newRaidMinDisks === "number" && typeof raidDeviceCount === "number" && raidDeviceCount < newRaidMinDisks) {
@@ -1702,28 +1860,51 @@ export default function BtrfsRaidsScreen() {
                       showToast("Not enough disks", `Requires at least ${newRaidMinDisks} ${diskLabel} for ${newRaidLabel}. Current: ${raidDeviceCount}.`, "error");
                       return;
                     }
-                    performAction("change level", () => changeRaidLevel(selectedMachine, { uuid: raidModal.uuid, new_raid_level: newRaidLevel }), false).finally(closeActionModal);
+                    setChangeLevelNoticeOpen(true);
                   }}
                   isDisabled={savingAction !== null}
                 >
-                  {savingAction === "change level" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" className="text-typography-900 dark:text-[#E8EBF0]" />}
-                  <ButtonText>Change Level</ButtonText>
+                  {savingAction === "change level" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
+                  <ButtonText>Change RAID Level</ButtonText>
                 </Button>
               </VStack>
             ) : null}
 
             {actionModal === "autoMount" ? (
-              <VStack className="gap-3">
-                <Text className="text-typography-700 text-sm">Quick auto-mount setup (full control on the dedicated page).</Text>
-                <HStack className="gap-3 flex-wrap">
-                  <Input className="flex-1">
-                    <InputField value={autoMountPoint} onChangeText={setAutoMountPoint} placeholder="/mnt/raid" />
-                  </Input>
-                  <CompressionSelect value={autoCompression} onChange={setAutoCompression} />
-                </HStack>
-                <HStack className="gap-2 flex-wrap">
+              <VStack className="gap-5">
+                {currentAutoMount?.id ? (
+                  <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm">Auto-mount is enabled for this RAID.</Text>
+                ) : null}
+
+                <Box className={`${sectionCardClass}`}>
+                  <VStack className="gap-4">
+                    <FormControl isRequired>
+                      <FormControlLabel>
+                        <FormControlLabelText className="text-typography-800 dark:text-[#E8EBF0] font-medium">Mount Point</FormControlLabelText>
+                      </FormControlLabel>
+                      <Input className="rounded-xl border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]">
+                        <InputField
+                          value={autoMountPoint}
+                          onChangeText={setAutoMountPoint}
+                          placeholder="e.g., /mnt/raid-storage"
+                          className="text-typography-900 dark:text-[#E8EBF0]"
+                        />
+                      </Input>
+                    </FormControl>
+                    <FormControl>
+                      <FormControlLabel>
+                        <FormControlLabelText className="text-typography-800 dark:text-[#E8EBF0] font-medium">Compression</FormControlLabelText>
+                      </FormControlLabel>
+                      <CompressionSelect value={autoCompression} onChange={setAutoCompression} />
+                    </FormControl>
+                  </VStack>
+                </Box>
+
+                <VStack className="gap-3">
                   <Button
                     action="primary"
+                    size="lg"
+                    className="rounded-xl dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
                     onPress={() => {
                       if (!raidModal?.uuid) return;
                       if (!autoMountPoint.trim()) {
@@ -1740,26 +1921,40 @@ export default function BtrfsRaidsScreen() {
                   {currentAutoMount?.id ? (
                     <Button
                       action="negative"
-                      className="rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
+                      size="lg"
+                      className="rounded-xl"
                       onPress={() =>
                         performAction("remove auto-mount", () => deleteAutomaticMount(currentAutoMount.id), false).finally(closeActionModal)
                       }
                       isDisabled={savingAction !== null}
                     >
                       {savingAction === "remove auto-mount" ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
-                      <ButtonText className="text-background-0 dark:text-[#0A1628]">Remove Auto-mount</ButtonText>
+                      <ButtonText>Remove Auto-mount</ButtonText>
                     </Button>
                   ) : null}
-                  <Button variant="outline" action="default" onPress={() => { closeActionModal(); router.push("/btrfs-automatic-mounts"); }}>
-                    <ButtonText>Open Auto-Mounts page</ButtonText>
+                  <Button
+                    variant="outline"
+                    action="default"
+                    size="md"
+                    className="rounded-xl border-outline-200 dark:border-[#243247]"
+                    onPress={() => { closeActionModal(); router.push("/btrfs-automatic-mounts"); }}
+                  >
+                    <ButtonIcon as={ArrowRight} size="sm" />
+                    <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Open Auto-Mounts Page</ButtonText>
                   </Button>
-                </HStack>
+                </VStack>
               </VStack>
             ) : null}
           </ModalBody>
-          <ModalFooter>
-            <Button variant="outline" action="default" onPress={closeActionModal}>
-              <ButtonText>Close</ButtonText>
+          <ModalFooter className="px-6 pt-4 pb-6 border-t border-outline-100 dark:border-[#1E2F47]">
+            <Button
+              variant="outline"
+              action="default"
+              size="md"
+              className="rounded-xl border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]"
+              onPress={closeActionModal}
+            >
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Close</ButtonText>
             </Button>
           </ModalFooter>
         </ModalContent>
@@ -1774,10 +1969,17 @@ export default function BtrfsRaidsScreen() {
             </Heading>
           </AlertDialogHeader>
           <AlertDialogBody>
-            <Text className="text-typography-700">
-              This action will delete RAID{" "}
-              <Text className="font-semibold">{deleteRaidTarget?.uuid}</Text>. Do you want to continue?
-            </Text>
+            <Box className="p-4 rounded-xl bg-error-50 dark:bg-error-900/20 border border-error-200 dark:border-error-800/30">
+              <HStack className="gap-3 items-start">
+                <Icon as={Trash2} size={20} className="text-error-600 dark:text-error-500 mt-0.5" />
+                <VStack className="flex-1">
+                  <Text className="text-error-900 dark:text-error-300 font-semibold text-sm">Destructive action</Text>
+                  <Text className="text-error-800 dark:text-error-400 text-xs mt-1">
+                    This will permanently delete RAID <Text className="font-semibold">{deleteRaidTarget?.uuid}</Text>. Data loss is likely and cannot be undone.
+                  </Text>
+                </VStack>
+              </HStack>
+            </Box>
           </AlertDialogBody>
           <AlertDialogFooter className="gap-3">
             <Button variant="outline" action="default" onPress={() => setDeleteRaidTarget(null)} isDisabled={savingAction !== null}>
@@ -1785,7 +1987,7 @@ export default function BtrfsRaidsScreen() {
             </Button>
             <Button
               action="negative"
-              className="rounded-xl bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
+              className="rounded-xl"
               onPress={() =>
                 deleteRaidTarget?.uuid &&
                 performAction("remove RAID", () => removeRaid(selectedMachine, deleteRaidTarget.uuid)).then(() => {
@@ -1796,10 +1998,125 @@ export default function BtrfsRaidsScreen() {
               isDisabled={savingAction !== null}
             >
               {savingAction === "remove RAID" ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
-              <ButtonText className="text-background-0 dark:text-[#0A1628]">Remove</ButtonText>
+              <ButtonText>Remove</ButtonText>
             </Button>
           </AlertDialogFooter>
           <AlertDialogCloseButton />
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog isOpen={removeDiskNoticeOpen} onClose={() => setRemoveDiskNoticeOpen(false)}>
+        <AlertDialogBackdrop className="bg-background-950/60 dark:bg-black/70" />
+        <AlertDialogContent className="rounded-2xl border border-outline-100 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]">
+          <AlertDialogHeader className="px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#1E2F47]">
+            <VStack className="gap-1">
+              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+                Disk Removal Progress
+              </Heading>
+              <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">Important information about disk removal</Text>
+            </VStack>
+          </AlertDialogHeader>
+          <AlertDialogBody className="px-6 py-5">
+            <Box className="p-4 rounded-xl bg-background-50 dark:bg-[#132038] border border-outline-200 dark:border-[#243247]">
+              <HStack className="gap-3 items-start">
+                <Box className="h-10 w-10 rounded-xl bg-background-100 dark:bg-[#1E2F47] items-center justify-center flex shrink-0">
+                  <Icon as={RefreshCcw} size={20} className="text-typography-900 dark:text-[#2DD4BF]" />
+                </Box>
+                <VStack className="flex-1 gap-2">
+                  <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-sm">No Percentage Available</Text>
+                  <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm leading-relaxed">
+                    There is no percentage indicator for disk removal. Please monitor the RAID details tab and track the disk size decreasing. The closer it gets to 0, the closer the removal is to completion.
+                  </Text>
+                  <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs mt-1">💡 Tip: Refresh the details tab periodically to check progress</Text>
+                </VStack>
+              </HStack>
+            </Box>
+          </AlertDialogBody>
+          <AlertDialogFooter className="gap-3 px-6 pb-6 pt-4 border-t border-outline-100 dark:border-[#1E2F47]">
+            <Button
+              variant="outline"
+              action="default"
+              size="md"
+              className="rounded-xl border-outline-200 dark:border-[#243247]"
+              onPress={() => setRemoveDiskNoticeOpen(false)}
+              isDisabled={savingAction !== null}
+            >
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
+            </Button>
+            <Button
+              action="negative"
+              size="md"
+              className="rounded-xl"
+              onPress={() => {
+                if (!raidModal?.uuid) return;
+                setRemoveDiskNoticeOpen(false);
+                performAction("remove disk", () => removeDiskRaid(selectedMachine, { uuid: raidModal.uuid, disk: removeDiskValue }), false)
+                  .finally(closeActionModal);
+              }}
+              isDisabled={savingAction !== null || !removeDiskValue.trim()}
+            >
+              {savingAction === "remove disk" ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
+              <ButtonText>Start Removal</ButtonText>
+            </Button>
+          </AlertDialogFooter>
+          <AlertDialogCloseButton className="text-typography-500" />
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog isOpen={changeLevelNoticeOpen} onClose={() => setChangeLevelNoticeOpen(false)}>
+        <AlertDialogBackdrop className="bg-background-950/60 dark:bg-black/70" />
+        <AlertDialogContent className="rounded-2xl border border-outline-100 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]">
+          <AlertDialogHeader className="px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#1E2F47]">
+            <VStack className="gap-1">
+              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+                RAID level change starts a balance
+              </Heading>
+              <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">Balance will run automatically</Text>
+            </VStack>
+          </AlertDialogHeader>
+          <AlertDialogBody className="px-6 py-5">
+            <Box className="p-4 rounded-xl bg-background-50 dark:bg-[#132038] border border-outline-200 dark:border-[#243247]">
+              <HStack className="gap-3 items-start">
+                <Box className="h-10 w-10 rounded-xl bg-background-100 dark:bg-[#1E2F47] items-center justify-center flex shrink-0">
+                  <Icon as={RefreshCcw} size={20} className="text-typography-900 dark:text-[#2DD4BF]" />
+                </Box>
+                <VStack className="flex-1 gap-2">
+                  <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-sm">Balance required</Text>
+                  <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm leading-relaxed">
+                    Changing the RAID level will start a balance automatically. The change is complete only after the balance finishes.
+                  </Text>
+                </VStack>
+              </HStack>
+            </Box>
+          </AlertDialogBody>
+          <AlertDialogFooter className="gap-3 px-6 pb-6 pt-4 border-t border-outline-100 dark:border-[#1E2F47]">
+            <Button
+              variant="outline"
+              action="default"
+              size="md"
+              className="rounded-xl border-outline-200 dark:border-[#243247]"
+              onPress={() => setChangeLevelNoticeOpen(false)}
+              isDisabled={savingAction !== null}
+            >
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
+            </Button>
+            <Button
+              action="primary"
+              size="md"
+              className="rounded-xl"
+              onPress={() => {
+                if (!raidModal?.uuid) return;
+                setChangeLevelNoticeOpen(false);
+                performAction("change level", () => changeRaidLevel(selectedMachine, { uuid: raidModal.uuid, new_raid_level: newRaidLevel }), false)
+                  .finally(closeActionModal);
+              }}
+              isDisabled={savingAction !== null}
+            >
+              {savingAction === "change level" ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
+              <ButtonText>Start Change</ButtonText>
+            </Button>
+          </AlertDialogFooter>
+          <AlertDialogCloseButton className="text-typography-500" />
         </AlertDialogContent>
       </AlertDialog>
     </Box>

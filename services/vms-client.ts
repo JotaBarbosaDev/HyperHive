@@ -211,6 +211,16 @@ export async function setVmAutostart(vmName: string, autoStart: boolean) {
   });
 }
 
+export async function setVmLive(vmName: string, enable: boolean) {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  await apiFetch<void>(`/virsh/vmlive/${encodedVmName}`, {
+    method: "POST",
+    token: authToken,
+    body: { enable },
+  });
+}
+
 export async function cloneVm(
   vmName: string,
   destNfs: string,

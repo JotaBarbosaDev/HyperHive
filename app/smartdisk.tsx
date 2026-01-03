@@ -95,7 +95,7 @@ const STATUS_ACTION: Record<string, "success" | "warning" | "error"> = {
   failed: "error",
   fail: "error",
 };
-const POLL_INTERVAL = 60_000;
+const POLL_INTERVAL = 10_000;
 
 const normalizeDevicePath = (dev?: string | null): string | null => {
   if (!dev) return null;

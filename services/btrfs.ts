@@ -198,6 +198,7 @@ const normalizeRaidStatus = (status: any): RaidStatus => {
     version: (status as any)?.version ?? (status as any)?.Version,
     fsUuid: (status as any)?.fsUuid ?? (status as any)?.fs_uuid ?? (status as any)?.FsUuid,
     fsLabel: (status as any)?.fsLabel ?? (status as any)?.fs_label ?? (status as any)?.FsLabel,
+    replaceStatus: (status as any)?.replaceStatus ?? (status as any)?.replace_status ?? (status as any)?.ReplaceStatus,
     totalDevices: toNumber((status as any)?.totalDevices ?? (status as any)?.TotalDevices),
     deviceStats: rawStats.map(normalizeRaidDeviceStatus),
   };

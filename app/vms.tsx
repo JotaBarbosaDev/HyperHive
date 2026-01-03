@@ -76,6 +76,7 @@ import {
   changeVncPassword,
   removeAllIsos,
   setVmAutostart,
+  setVmLive,
   getCpuDisableFeatures,
   updateCpuXml,
   getVmExportUrl,
@@ -259,6 +260,8 @@ export default function VirtualMachinesScreen() {
   const [pendingVmNames, setPendingVmNames] = React.useState<Set<string>>(new Set());
   const autostartDesiredRef = React.useRef<Map<string, boolean>>(new Map());
   const autostartInFlightRef = React.useRef<Set<string>>(new Set());
+  const vmLiveDesiredRef = React.useRef<Map<string, boolean>>(new Map());
+  const vmLiveInFlightRef = React.useRef<Set<string>>(new Set());
   const [mountOptions, setMountOptions] = React.useState<Mount[]>([]);
   const [slaveOptions, setSlaveOptions] = React.useState<Slave[]>([]);
   const [cloneOptionsLoading, setCloneOptionsLoading] = React.useState(false);
@@ -979,6 +982,65 @@ export default function VirtualMachinesScreen() {
         });
       } finally {
         autostartInFlightRef.current.delete(vmName);
+      }
+    })();
+  };
+
+  const handleToggleVmLive = (vm: VM, checked: boolean) => {
+    const vmName = vm.name;
+    const previousValue = vm.isLive;
+    const updateLocalVmLive = (value: boolean) => {
+      setVms((prev) => prev.map((v) => v.name === vmName ? { ...v, isLive: value } : v));
+      setSelectedVm((prev) => (prev?.name === vmName ? { ...prev, isLive: value } : prev));
+      setDetailsVm((prev) => (prev?.name === vmName ? { ...prev, isLive: value } : prev));
+    };
+
+    updateLocalVmLive(checked);
+    Haptics.selectionAsync();
+
+    vmLiveDesiredRef.current.set(vmName, checked);
+    if (vmLiveInFlightRef.current.has(vmName)) {
+      return;
+    }
+
+    vmLiveInFlightRef.current.add(vmName);
+    void (async () => {
+      let lastApplied: boolean | undefined;
+      try {
+        while (true) {
+          const desired = vmLiveDesiredRef.current.get(vmName);
+          if (desired === undefined) {
+            break;
+          }
+          vmLiveDesiredRef.current.delete(vmName);
+          if (lastApplied !== undefined && desired === lastApplied) {
+            continue;
+          }
+          await setVmLive(vmName, desired);
+          lastApplied = desired;
+        }
+
+        if (lastApplied !== undefined) {
+          showToastMessage(`Live VM ${lastApplied ? "enabled" : "disabled"}`);
+          void fetchAndSetVms().catch((error) => {
+            console.warn("Error refreshing VMs after live update:", error);
+          });
+        }
+      } catch (error) {
+        console.error("Error updating live VM:", error);
+        vmLiveDesiredRef.current.delete(vmName);
+        const fallbackValue = lastApplied ?? previousValue;
+        updateLocalVmLive(fallbackValue);
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to update live VM.";
+        showToastMessage("Live VM update failed", message, "error");
+        void fetchAndSetVms().catch((err) => {
+          console.warn("Error refreshing VMs after live update failure:", err);
+        });
+      } finally {
+        vmLiveInFlightRef.current.delete(vmName);
       }
     })();
   };
@@ -2658,6 +2720,23 @@ export default function VirtualMachinesScreen() {
                     </Text>
                   </HStack>
                 </Pressable>
+                <Pressable
+                  onPress={() => {
+                    if (!selectedVm) return;
+                    handleToggleVmLive(selectedVm, !selectedVm.isLive);
+                    setShowActionsheet(false);
+                  }}
+                  className="px-3 py-3 hover:bg-background-50 dark:hover:bg-[#1E2F47] rounded-md"
+                >
+                  <HStack className="items-center gap-2">
+                    {selectedVm?.isLive && (
+                      <Check size={16} className="text-typography-900 dark:text-[#E8EBF0]" />
+                    )}
+                    <Text className="text-typography-900 dark:text-[#E8EBF0]">
+                      Live VM
+                    </Text>
+                  </HStack>
+                </Pressable>
 
                 <Divider className="my-2" />
 
@@ -2891,6 +2970,17 @@ export default function VirtualMachinesScreen() {
                 <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">
                   {(selectedVm?.autoStart ? "✓ " : "") +
                     "Auto-start on boot"}
+                </ActionsheetItemText>
+              </ActionsheetItem>
+              <ActionsheetItem
+                onPress={() => {
+                  if (!selectedVm) return;
+                  handleToggleVmLive(selectedVm, !selectedVm.isLive);
+                  setShowActionsheet(false);
+                }}
+              >
+                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">
+                  {(selectedVm?.isLive ? "✓ " : "") + "Live VM"}
                 </ActionsheetItemText>
               </ActionsheetItem>
 
