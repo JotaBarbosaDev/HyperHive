@@ -583,11 +583,7 @@ function RootLayoutNav() {
                   )}
                   {pathname !== "/" && (
                     <Box
-<<<<<<< HEAD
-                      className="absolute top-3 left-3 web:top-3 web:left-5 z-20"
-=======
                       className="absolute top-3 left-3 web:top-5 web:left-5 z-20"
->>>>>>> 6e3866193c14d3722fe4f28988b5d7c948b1f64c
                       pointerEvents="box-none"
                     >
                       <Button
