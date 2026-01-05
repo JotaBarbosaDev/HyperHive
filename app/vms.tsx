@@ -3202,7 +3202,17 @@ function EditVmForm({
 
   const quickMemoriesGb = [2, 4, 8, 16, 32, 64];
   const quickDisksGb = [20, 50, 100, 200, 500];
-  const isValid = vcpu > 0 && memory > 0 && disk > 0 && network.trim().length > 0;
+  const minDiskGb = vm.diskSizeGB;
+  const diskError =
+    disk > 0 && disk < minDiskGb
+      ? `Disk size can't be less than current size (${minDiskGb} GB).`
+      : null;
+  const isValid =
+    vcpu > 0 &&
+    memory > 0 &&
+    disk > 0 &&
+    !diskError &&
+    network.trim().length > 0;
   const formatMemoryLabel = (mb: number) =>
     mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb} MB`;
 
@@ -3320,14 +3330,24 @@ function EditVmForm({
                 className="text-typography-900 dark:text-[#E8EBF0]"
               />
             </Input>
+            {diskError && (
+              <Text className="text-xs text-error-600 dark:text-error-400">
+                {diskError}
+              </Text>
+            )}
             <HStack className="gap-2 flex-wrap">
               {quickDisksGb.map((gb) => (
                 <Pressable
                   key={`disk-${gb}`}
-                  onPress={() => setDisk(gb)}
+                  onPress={() => {
+                    if (gb < minDiskGb) return;
+                    setDisk(gb);
+                  }}
                   className={`px-3 py-2 rounded-full border ${disk === gb
                       ? "border-primary-500 bg-primary-50/20"
-                      : "border-outline-200 bg-background-0"
+                      : gb < minDiskGb
+                        ? "border-outline-100 bg-background-0 opacity-40"
+                        : "border-outline-200 bg-background-0"
                     }`}
                 >
                   <Text className="text-xs font-medium text-typography-700">

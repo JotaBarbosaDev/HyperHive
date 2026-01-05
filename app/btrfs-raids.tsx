@@ -682,7 +682,7 @@ export default function BtrfsRaidsScreen() {
                 <HStack className="items-center justify-between px-4 py-3">
                   <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base">Free Disks</Text>
                   <HStack className="items-center gap-2">
-                    <Icon as={HardDrive} size={18} className="text-typography-900 dark:text-[#E8EBF0]" />
+                    <Icon as={HardDrive} size="sm" className="text-typography-900 dark:text-[#E8EBF0]" />
                     <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm">{(Array.isArray(freeDisks) ? freeDisks.length : 0)} disks</Text>
                   </HStack>
                 </HStack>
@@ -783,7 +783,7 @@ export default function BtrfsRaidsScreen() {
                                 })}
                               </HStack>
                             </VStack>
-                            <Icon as={ArrowRight} size={18} className="text-typography-500 dark:text-[#9AA4B8]" />
+                            <Icon as={ArrowRight} size="sm" className="text-typography-500 dark:text-[#9AA4B8]" />
                           </HStack>
                         </Pressable>
                       );
@@ -1201,7 +1201,7 @@ export default function BtrfsRaidsScreen() {
                       >
                         <HStack className="items-center gap-3 mb-2">
                           <Box className="h-10 w-10 rounded-lg bg-background-100 dark:bg-[#132038] items-center justify-center flex">
-                            <Icon as={Power} size={20} className="text-typography-900 dark:text-[#E8EBF0]" />
+                            <Icon as={Power} size="md" className="text-typography-900 dark:text-[#E8EBF0]" />
                           </Box>
                         </HStack>
                         <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold mb-1">Mount / Unmount</Text>
@@ -1213,7 +1213,7 @@ export default function BtrfsRaidsScreen() {
                       >
                         <HStack className="items-center gap-3 mb-2">
                           <Box className="h-10 w-10 rounded-lg bg-background-100 dark:bg-[#132038] items-center justify-center flex">
-                            <Icon as={Plus} size={20} className="text-typography-900 dark:text-[#E8EBF0]" />
+                            <Icon as={Plus} size="md" className="text-typography-900 dark:text-[#E8EBF0]" />
                           </Box>
                         </HStack>
                         <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold mb-1">Auto-mount</Text>
@@ -1232,7 +1232,7 @@ export default function BtrfsRaidsScreen() {
                       >
                         <HStack className="items-center gap-3 mb-2">
                           <Box className="h-10 w-10 rounded-lg bg-background-100 dark:bg-[#132038] items-center justify-center flex">
-                            <Icon as={Plus} size={20} className="text-typography-900 dark:text-[#E8EBF0]" />
+                            <Icon as={Plus} size="md" className="text-typography-900 dark:text-[#E8EBF0]" />
                           </Box>
                         </HStack>
                         <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold mb-1">Add Disk</Text>
@@ -1244,7 +1244,7 @@ export default function BtrfsRaidsScreen() {
                       >
                         <HStack className="items-center gap-3 mb-2">
                           <Box className="h-10 w-10 rounded-lg bg-background-100 dark:bg-[#132038] items-center justify-center flex">
-                            <Icon as={Trash2} size={20} className="text-typography-900 dark:text-[#E8EBF0]" />
+                            <Icon as={Trash2} size="md" className="text-typography-900 dark:text-[#E8EBF0]" />
                           </Box>
                         </HStack>
                         <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold mb-1">Remove Disk</Text>
@@ -1256,7 +1256,7 @@ export default function BtrfsRaidsScreen() {
                       >
                         <HStack className="items-center gap-3 mb-2">
                           <Box className="h-10 w-10 rounded-lg bg-background-100 dark:bg-[#132038] items-center justify-center flex">
-                            <Icon as={RefreshCcw} size={20} className="text-typography-900 dark:text-[#E8EBF0]" />
+                            <Icon as={RefreshCcw} size="md" className="text-typography-900 dark:text-[#E8EBF0]" />
                           </Box>
                         </HStack>
                         <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold mb-1">Replace Disk</Text>
@@ -1275,7 +1275,7 @@ export default function BtrfsRaidsScreen() {
                       >
                         <HStack className="items-center gap-3 mb-2">
                           <Box className="h-10 w-10 rounded-lg bg-background-100 dark:bg-[#132038] items-center justify-center flex">
-                            <Icon as={RefreshCcw} size={20} className="text-typography-900 dark:text-[#E8EBF0]" />
+                            <Icon as={RefreshCcw} size="md" className="text-typography-900 dark:text-[#E8EBF0]" />
                           </Box>
                         </HStack>
                         <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold mb-1">Change Level</Text>
@@ -1287,7 +1287,7 @@ export default function BtrfsRaidsScreen() {
                       >
                         <HStack className="items-center gap-3 mb-2">
                           <Box className="h-10 w-10 rounded-lg bg-background-100 dark:bg-[#132038] items-center justify-center flex">
-                            <Icon as={ArrowRight} size={20} className="text-typography-900 dark:text-[#E8EBF0]" />
+                            <Icon as={ArrowRight} size="md" className="text-typography-900 dark:text-[#E8EBF0]" />
                           </Box>
                         </HStack>
                         <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold mb-1">Auto-Mounts Page</Text>
@@ -1961,47 +1961,80 @@ export default function BtrfsRaidsScreen() {
       </Modal>
 
       <AlertDialog isOpen={Boolean(deleteRaidTarget)} onClose={() => setDeleteRaidTarget(null)}>
-        <AlertDialogBackdrop />
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <Heading size="md" className="text-typography-900">
+        <AlertDialogBackdrop className="bg-background-950/50 dark:bg-black/70" />
+        <AlertDialogContent className="max-w-[320px] items-center web:max-w-[440px] web:items-stretch web:p-7 dark:bg-[#0E1524] rounded-2xl border border-outline-100 dark:border-[#2A3B52]">
+          <AlertDialogHeader className="pt-2">
+            <Box className="w-[64px] h-[64px] rounded-full bg-background-error dark:bg-[#EF444425] items-center justify-center web:mx-auto web:w-[72px] web:h-[72px] border-2 border-error-200 dark:border-error-800">
+              <Icon
+                as={Trash2}
+                className="stroke-error-600 dark:stroke-[#F87171]"
+                size="xl"
+              />
+            </Box>
+          </AlertDialogHeader>
+          <AlertDialogBody className="mt-4 mb-6 web:mt-6 web:mb-8">
+            <Heading
+              size="md"
+              className="text-typography-950 dark:text-[#E8EBF0] mb-3 text-center web:text-2xl"
+              style={{ fontFamily: "Inter_700Bold" }}
+            >
               Remove RAID?
             </Heading>
-          </AlertDialogHeader>
-          <AlertDialogBody>
-            <Box className="p-4 rounded-xl bg-error-50 dark:bg-error-900/20 border border-error-200 dark:border-error-800/30">
-              <HStack className="gap-3 items-start">
-                <Icon as={Trash2} size={20} className="text-error-600 dark:text-error-500 mt-0.5" />
-                <VStack className="flex-1">
-                  <Text className="text-error-900 dark:text-error-300 font-semibold text-sm">Destructive action</Text>
-                  <Text className="text-error-800 dark:text-error-400 text-xs mt-1">
-                    This will permanently delete RAID <Text className="font-semibold">{deleteRaidTarget?.uuid}</Text>. Data loss is likely and cannot be undone.
-                  </Text>
-                </VStack>
-              </HStack>
-            </Box>
+            <Text className="text-typography-500 dark:text-[#8A94A8] text-center text-sm web:text-base leading-relaxed">
+              This will permanently delete RAID <Text className="font-semibold dark:text-[#E8EBF0]">{deleteRaidTarget?.uuid}</Text>. Data loss is likely and cannot be undone.
+            </Text>
           </AlertDialogBody>
-          <AlertDialogFooter className="gap-3">
-            <Button variant="outline" action="default" onPress={() => setDeleteRaidTarget(null)} isDisabled={savingAction !== null}>
-              <ButtonText>Cancel</ButtonText>
-            </Button>
+          <AlertDialogFooter className="w-full web:gap-4 gap-3">
             <Button
-              action="negative"
-              className="rounded-xl"
-              onPress={() =>
-                deleteRaidTarget?.uuid &&
-                performAction("remove RAID", () => removeRaid(selectedMachine, deleteRaidTarget.uuid)).then(() => {
-                  setDeleteRaidTarget(null);
-                  setRaidModal(null);
-                })
-              }
+              variant="outline"
+              action="secondary"
+              size="md"
+              onPress={() => setDeleteRaidTarget(null)}
               isDisabled={savingAction !== null}
+              className="flex-grow web:flex-grow-0 web:w-1/2 web:px-6 h-11 web:h-12 rounded-xl dark:border-[#2A3B52] dark:bg-transparent dark:hover:bg-[#1A2637]"
             >
-              {savingAction === "remove RAID" ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
-              <ButtonText>Remove</ButtonText>
+              <ButtonText
+                className="web:text-base dark:text-[#E8EBF0] font-semibold"
+                style={{ fontFamily: "Inter_600SemiBold" }}
+              >
+                Cancel
+              </ButtonText>
             </Button>
+            {savingAction !== "remove RAID" ? (
+              <Button
+                action="negative"
+                size="md"
+                className="flex-grow web:flex-grow-0 web:w-1/2 web:px-6 h-11 web:h-12 rounded-xl dark:bg-[#EF4444] dark:hover:bg-[#F87171] dark:active:bg-[#DC2626]"
+                onPress={() =>
+                  deleteRaidTarget?.uuid &&
+                  performAction("remove RAID", () => removeRaid(selectedMachine, deleteRaidTarget.uuid)).then(() => {
+                    setDeleteRaidTarget(null);
+                    setRaidModal(null);
+                  })
+                }
+              >
+                <ButtonText
+                  className="web:text-base font-semibold"
+                  style={{ fontFamily: "Inter_600SemiBold" }}
+                >
+                  Remove
+                </ButtonText>
+              </Button>
+            ) : (
+              <Button
+                className="p-3 web:w-1/2 h-11 web:h-12 rounded-xl dark:bg-[#2A3B52]"
+                isDisabled
+              >
+                <ButtonSpinner color="gray" />
+                <ButtonText
+                  className="font-semibold text-sm ml-2 web:text-base dark:text-[#E8EBF0]"
+                  style={{ fontFamily: "Inter_600SemiBold" }}
+                >
+                  Removing...
+                </ButtonText>
+              </Button>
+            )}
           </AlertDialogFooter>
-          <AlertDialogCloseButton />
         </AlertDialogContent>
       </AlertDialog>
 
@@ -2020,7 +2053,7 @@ export default function BtrfsRaidsScreen() {
             <Box className="p-4 rounded-xl bg-background-50 dark:bg-[#132038] border border-outline-200 dark:border-[#243247]">
               <HStack className="gap-3 items-start">
                 <Box className="h-10 w-10 rounded-xl bg-background-100 dark:bg-[#1E2F47] items-center justify-center flex shrink-0">
-                  <Icon as={RefreshCcw} size={20} className="text-typography-900 dark:text-[#2DD4BF]" />
+                  <Icon as={RefreshCcw} size="md" className="text-typography-900 dark:text-[#2DD4BF]" />
                 </Box>
                 <VStack className="flex-1 gap-2">
                   <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-sm">No Percentage Available</Text>
@@ -2078,7 +2111,7 @@ export default function BtrfsRaidsScreen() {
             <Box className="p-4 rounded-xl bg-background-50 dark:bg-[#132038] border border-outline-200 dark:border-[#243247]">
               <HStack className="gap-3 items-start">
                 <Box className="h-10 w-10 rounded-xl bg-background-100 dark:bg-[#1E2F47] items-center justify-center flex shrink-0">
-                  <Icon as={RefreshCcw} size={20} className="text-typography-900 dark:text-[#2DD4BF]" />
+                  <Icon as={RefreshCcw} size="md" className="text-typography-900 dark:text-[#2DD4BF]" />
                 </Box>
                 <VStack className="flex-1 gap-2">
                   <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-sm">Balance required</Text>

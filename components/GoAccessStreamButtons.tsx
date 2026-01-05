@@ -76,7 +76,7 @@ const GoAccessStreamButtons: React.FC = () => {
 	}
 
 	return (
-		<Box className="absolute top-3 right-3 web:top-5 web:right-5 z-20 flex-row gap-2" pointerEvents="box-none">
+		<Box className="absolute top-3 right-14 web:top-5 web:right-16 z-10 flex-row gap-2" pointerEvents="box-none">
 			<Button size="sm" variant="outline" action="secondary" onPress={() => openPath("/goaccess")}>
 				<ButtonIcon as={ExternalLink} />
 				<ButtonText>Open GoAccess</ButtonText>

@@ -476,8 +476,8 @@ export default function SmartDiskScreen() {
       action === "full"
         ? `Run FULL WIPE realloc on ${detailDevice}? This is destructive.`
         : action === "non"
-        ? `Run non-destructive realloc on ${detailDevice}?`
-        : `Cancel realloc on ${detailDevice}?`;
+          ? `Run non-destructive realloc on ${detailDevice}?`
+          : `Cancel realloc on ${detailDevice}?`;
     if (confirmations > 0) {
       confirmAndRun(`realloc-${action}-${detailDevice}`, message, confirmations, () => handleReallocAction(action));
     } else {
@@ -642,7 +642,7 @@ export default function SmartDiskScreen() {
     <Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{paddingBottom: 32}}
+        contentContainerStyle={{ paddingBottom: 32 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -654,7 +654,7 @@ export default function SmartDiskScreen() {
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
-            style={{fontFamily: "Inter_700Bold"}}
+            style={{ fontFamily: "Inter_700Bold" }}
           >
             SMART Tests
           </Heading>
@@ -962,33 +962,33 @@ export default function SmartDiskScreen() {
           <ModalBody className={modalBodyScrollClass}>
             <Box className={modalTabsClass}>
               <HStack className="gap-2 flex-wrap">
-              {(["info", "selftest", "realloc"] as DetailTab[]).map((tab) => {
-                const active = detailTab === tab;
-                return (
-                <Pressable
-                  key={tab}
-                  onPress={() => setDetailTab(tab)}
-                  className={`px-4 py-2 rounded-full border transition-all ${active
-                    ? "border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]"
-                    : "border-transparent"
-                  }`}
-                >
-                  <Text
-                    className={`text-sm font-semibold ${active
-                      ? "text-typography-900 dark:text-[#E8EBF0]"
-                      : "text-typography-600 dark:text-[#9AA4B8]"
-                    }`}
-                  >
-                    {tab === "info"
-                      ? "Information"
-                      : tab === "selftest"
-                      ? "Self-test"
-                      : "Realloc"}
-                  </Text>
-                </Pressable>
-              );
-            })}
-            </HStack>
+                {(["info", "selftest", "realloc"] as DetailTab[]).map((tab) => {
+                  const active = detailTab === tab;
+                  return (
+                    <Pressable
+                      key={tab}
+                      onPress={() => setDetailTab(tab)}
+                      className={`px-4 py-2 rounded-full border transition-all ${active
+                        ? "border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]"
+                        : "border-transparent"
+                        }`}
+                    >
+                      <Text
+                        className={`text-sm font-semibold ${active
+                          ? "text-typography-900 dark:text-[#E8EBF0]"
+                          : "text-typography-600 dark:text-[#9AA4B8]"
+                          }`}
+                      >
+                        {tab === "info"
+                          ? "Information"
+                          : tab === "selftest"
+                            ? "Self-test"
+                            : "Realloc"}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </HStack>
             </Box>
 
             {detailLoading ? (
@@ -1072,7 +1072,7 @@ export default function SmartDiskScreen() {
                     Self-test History
                   </Text>
                   {detailDisk?.testsHistory &&
-                  detailDisk.testsHistory.length > 0 ? (
+                    detailDisk.testsHistory.length > 0 ? (
                     <VStack className="gap-2">
                       {detailDisk.testsHistory.map((t, idx) => (
                         <Box
@@ -1105,7 +1105,7 @@ export default function SmartDiskScreen() {
                     Progress
                   </Text>
                   {detailProgress &&
-                  detailProgress.status?.toLowerCase?.() !== "idle" ? (
+                    detailProgress.status?.toLowerCase?.() !== "idle" ? (
                     <>
                       <HStack className="justify-between items-center mb-1">
                         <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm">
@@ -1315,7 +1315,7 @@ export default function SmartDiskScreen() {
               <Select
                 selectedValue={scheduleForm.device}
                 onValueChange={(val) =>
-                  setScheduleForm((prev) => ({...prev, device: val}))
+                  setScheduleForm((prev) => ({ ...prev, device: val }))
                 }
               >
                 <SelectTrigger className={selectTriggerClass}>
@@ -1356,7 +1356,7 @@ export default function SmartDiskScreen() {
               <Select
                 selectedValue={scheduleForm.type}
                 onValueChange={(val) =>
-                  setScheduleForm((prev) => ({...prev, type: val}))
+                  setScheduleForm((prev) => ({ ...prev, type: val }))
                 }
               >
                 <SelectTrigger className={selectTriggerClass}>
@@ -1388,13 +1388,13 @@ export default function SmartDiskScreen() {
               <Select
                 selectedValue={String(scheduleForm.week_day)}
                 onValueChange={(val) =>
-                  setScheduleForm((prev) => ({...prev, week_day: Number(val)}))
+                  setScheduleForm((prev) => ({ ...prev, week_day: Number(val) }))
                 }
               >
                 <SelectTrigger className={selectTriggerClass}>
                   <SelectInput
                     placeholder="Day"
-                    value={String(scheduleForm.week_day)}
+                    value={scheduleForm.week_day !== undefined ? WEEK_DAYS[scheduleForm.week_day] : ""}
                     className={selectInputClass}
                   />
                   <SelectIcon as={ChevronDown} className={selectIconClass} />
@@ -1420,13 +1420,13 @@ export default function SmartDiskScreen() {
               <Select
                 selectedValue={String(scheduleForm.hour)}
                 onValueChange={(val) =>
-                  setScheduleForm((prev) => ({...prev, hour: Number(val)}))
+                  setScheduleForm((prev) => ({ ...prev, hour: Number(val) }))
                 }
               >
                 <SelectTrigger className={selectTriggerClass}>
                   <SelectInput
                     placeholder="Hour"
-                    value={String(scheduleForm.hour)}
+                    value={scheduleForm.hour !== undefined ? HOURS.find(h => h.value === scheduleForm.hour)?.label : ""}
                     className={selectInputClass}
                   />
                   <SelectIcon as={ChevronDown} className={selectIconClass} />
@@ -1453,7 +1453,7 @@ export default function SmartDiskScreen() {
               <Switch
                 value={scheduleForm.active}
                 onValueChange={(val) =>
-                  setScheduleForm((prev) => ({...prev, active: val}))
+                  setScheduleForm((prev) => ({ ...prev, active: val }))
                 }
               />
               <Text className="text-typography-800 dark:text-[#E8EBF0]">Active</Text>
@@ -1547,7 +1547,7 @@ export default function SmartDiskScreen() {
                 if (!confirmState) return;
                 if (confirmState.remaining > 1) {
                   setConfirmState((prev) =>
-                    prev ? {...prev, remaining: prev.remaining - 1} : prev
+                    prev ? { ...prev, remaining: prev.remaining - 1 } : prev
                   );
                   return;
                 }

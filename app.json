@@ -31,7 +31,7 @@
     "web": {
       "bundler": "metro",
       "output": "single",
-      "favicon": "./assets/images/favicon.png",
+      "favicon": "./assets/images/favicon-32x32.png",
       "manifest": {
         "name": "HyperHive",
         "short_name": "HyperHive",
