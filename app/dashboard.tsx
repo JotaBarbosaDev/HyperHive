@@ -165,6 +165,16 @@ export default function DashboardScreen() {
   const { token, isChecking } = useAuthGuard();
   const { machines, isLoading: isLoadingMachines } = useMachines(token);
   const { selectedMachine, setSelectedMachine } = useSelectedMachine();
+  const sortedMachines = React.useMemo(
+    () =>
+      [...machines].sort((a, b) =>
+        a.MachineName.localeCompare(b.MachineName, undefined, {
+          sensitivity: "base",
+          numeric: true,
+        })
+      ),
+    [machines]
+  );
   const [snapshots, setSnapshots] = React.useState<MachineSnapshot[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
@@ -182,14 +192,14 @@ export default function DashboardScreen() {
   } | null>(null);
 
   React.useEffect(() => {
-    if (!selectedMachine && machines.length > 0) {
-      setSelectedMachine(machines[0].MachineName);
+    if (!selectedMachine && sortedMachines.length > 0) {
+      setSelectedMachine(sortedMachines[0].MachineName);
     }
-  }, [machines, selectedMachine, setSelectedMachine]);
+  }, [sortedMachines, selectedMachine, setSelectedMachine]);
 
   const loadSnapshots = React.useCallback(
     async (mode: "initial" | "refresh" = "initial", showLoading: boolean = true) => {
-      if (!machines.length) {
+      if (!sortedMachines.length) {
         setSnapshots([]);
         return;
       }
@@ -201,7 +211,7 @@ export default function DashboardScreen() {
         isRefresh ? setIsRefreshing(true) : setIsLoading(true);
       }
       try {
-        const snapshotPromises = machines.map((machine) =>
+        const snapshotPromises = sortedMachines.map((machine) =>
           Promise.all([
             getMachineUptime(machine.MachineName),
             getCpuInfo(machine.MachineName),
@@ -228,7 +238,7 @@ export default function DashboardScreen() {
         }
       }
     },
-    [machines]
+    [sortedMachines]
   );
 
   React.useEffect(() => {
@@ -239,14 +249,14 @@ export default function DashboardScreen() {
 
   // Soft update a cada 5 segundos
   React.useEffect(() => {
-    if (!isChecking && !isLoadingMachines && machines.length > 0) {
+    if (!isChecking && !isLoadingMachines && sortedMachines.length > 0) {
       const interval = setInterval(() => {
         loadSnapshots("refresh", false);
       }, 5000);
 
       return () => clearInterval(interval);
     }
-  }, [isChecking, isLoadingMachines, machines.length, loadSnapshots]);
+  }, [isChecking, isLoadingMachines, sortedMachines.length, loadSnapshots]);
 
   const overallTotals = React.useMemo(() => {
     const totalCores = snapshots.reduce((acc, snap) => acc + (snap.cpu?.cores?.length ?? 0), 0);

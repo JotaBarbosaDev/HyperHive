@@ -784,12 +784,6 @@ export default function BackupsScreen() {
                             AUTOMATIC
                           </Text>
                           <Text
-                            className="flex-1 text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                            style={{ fontFamily: "Inter_600SemiBold" }}
-                          >
-                            LIVE
-                          </Text>
-                          <Text
                             className="flex-1 text-xs text-[#9AA4B8] dark:text-[#8A94A8] text-right"
                             style={{ fontFamily: "Inter_600SemiBold" }}
                           >
@@ -800,7 +794,6 @@ export default function BackupsScreen() {
                         {/* Table Rows */}
                         {vmBackups.map((backup, index) => {
                           const automatic = Boolean(backup.automatic);
-                          const live = Boolean(backup.live);
 
                           return (
                             <HStack
@@ -839,26 +832,6 @@ export default function BackupsScreen() {
                                     style={{ fontFamily: "Inter_500Medium" }}
                                   >
                                     {automatic ? "Automatic" : "Manual"}
-                                  </BadgeText>
-                                </Badge>
-                              </Box>
-                              <Box className="flex-1">
-                                <Badge
-                                  size="sm"
-                                  variant="outline"
-                                  className={`rounded-full w-fit ${live
-                                    ? "bg-[#22c55e19] border-[#22c55e] dark:bg-[#22c55e25] dark:border-[#4ade80]"
-                                    : "bg-[#9AA4B819] border-[#9AA4B8] dark:bg-[#9AA4B825] dark:border-[#94a3b8]"
-                                    }`}
-                                >
-                                  <BadgeText
-                                    className={`text-xs ${live
-                                      ? "text-[#22c55e] dark:text-[#4ade80]"
-                                      : "text-[#475569] dark:text-[#cbd5e1]"
-                                      }`}
-                                    style={{ fontFamily: "Inter_500Medium" }}
-                                  >
-                                    {live ? "Live" : "Cold"}
                                   </BadgeText>
                                 </Badge>
                               </Box>

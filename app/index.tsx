@@ -47,6 +47,7 @@ export default function LoginScreen() {
   const passwordInputRef = React.useRef<TextInput | null>(null);
   const formRef = React.useRef<HTMLFormElement | null>(null);
   const isWeb = Platform.OS === "web";
+  const currentYear = new Date().getFullYear();
 
   const togglePasswordVisibility = React.useCallback(() => {
     setShowPassword((prev) => !prev);
@@ -434,7 +435,7 @@ export default function LoginScreen() {
 
             {/* Footer */}
             <Text className="text-typography-500 dark:text-typography-400 text-xs text-center mt-6 web:text-sm">
-              © 2025 HyperHive. All rights reserved.
+              © {currentYear} HyperHive. All rights reserved.
             </Text>
           </Box>
         </Box>

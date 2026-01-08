@@ -82,6 +82,7 @@ import {
   getVmExportUrl,
 } from "@/services/vms-client";
 import { listMounts, getCpuInfo, getMemInfo } from "@/services/hyperhive";
+import { createBackup } from "@/services/backups";
 import { Mount } from "@/types/mount";
 import { ApiError } from "@/services/api-client";
 import { apiFetch } from "@/services/api-client";
@@ -120,6 +121,7 @@ import {
   RefreshCcw,
   AlertCircle,
   Disc3,
+  Database,
   Download,
   Upload,
   Lock,
@@ -247,13 +249,20 @@ export default function VirtualMachinesScreen() {
   const [detailsVm, setDetailsVm] = React.useState<VM | null>(null);
   const [showActionsheet, setShowActionsheet] = React.useState(false);
   const [selectedVm, setSelectedVm] = React.useState<VM | null>(null);
-  const [confirmAction, setConfirmAction] = React.useState<null | { type: "delete" | "force-shutdown"; vm: VM }>(null);
+  const [confirmAction, setConfirmAction] = React.useState<
+    | null
+    | {
+        type: "delete" | "force-shutdown" | "shutdown" | "restart" | "pause";
+        vm: VM;
+      }
+  >(null);
   const [openCreate, setOpenCreate] = React.useState(false);
   const [openImport, setOpenImport] = React.useState(false);
   const [editVm, setEditVm] = React.useState<VM | null>(null);
   const [cloneVm, setCloneVm] = React.useState<VM | null>(null);
   const [migrateVm, setMigrateVm] = React.useState<VM | null>(null);
   const [moveDiskVm, setMoveDiskVm] = React.useState<VM | null>(null);
+  const [backupVm, setBackupVm] = React.useState<VM | null>(null);
   const [updateCpuVm, setUpdateCpuVm] = React.useState<VM | null>(null);
   const [restoreVm, setRestoreVm] = React.useState<VM | null>(null);
   const [changeVncVm, setChangeVncVm] = React.useState<VM | null>(null);
@@ -404,6 +413,29 @@ export default function VirtualMachinesScreen() {
     [showToastMessage]
   );
 
+  const handleOpenBackup = React.useCallback(
+    (vm: VM) => {
+      if (cloneOptionsLoading) {
+        showToastMessage(
+          "Loading NFS shares",
+          "Please wait a moment and try again.",
+          "error"
+        );
+        return;
+      }
+      if (mountOptions.length === 0) {
+        showToastMessage(
+          "No NFS shares found",
+          "Create an NFS mount before starting a backup.",
+          "error"
+        );
+        return;
+      }
+      setBackupVm(vm);
+    },
+    [cloneOptionsLoading, mountOptions.length, showToastMessage]
+  );
+
   const handleConsoleAction = React.useCallback(
     async (action: "browser" | "sprite" | "guest") => {
       const vm = consoleOptionsVm;
@@ -433,8 +465,10 @@ export default function VirtualMachinesScreen() {
           if (Platform.OS === "web") {
             const webWindow = globalThis.window;
             if (webWindow) {
-              const opened = webWindow.open(target, "_blank", "noopener,noreferrer");
-              if (!opened) {
+              const opened = webWindow.open(target, "_blank");
+              if (opened) {
+                opened.opener = null;
+              } else {
                 showToastMessage(
                   "Error",
                   "Could not open the new console tab.",
@@ -724,10 +758,22 @@ export default function VirtualMachinesScreen() {
     };
   }, [machinesMissingResources]);
 
-  // Agrupar VMs por slave
   const vmsBySlave = React.useMemo(() => {
     const grouped: Record<string, VM[]> = {};
-    vms.forEach((vm) => {
+    const sorted = [...vms].sort((a, b) => {
+      const machineCompare = a.machineName.localeCompare(b.machineName, undefined, {
+        sensitivity: "base",
+        numeric: true,
+      });
+      if (machineCompare !== 0) {
+        return machineCompare;
+      }
+      return a.name.localeCompare(b.name, undefined, {
+        sensitivity: "base",
+        numeric: true,
+      });
+    });
+    sorted.forEach((vm) => {
       if (!grouped[vm.machineName]) {
         grouped[vm.machineName] = [];
       }
@@ -735,6 +781,12 @@ export default function VirtualMachinesScreen() {
     });
     return grouped;
   }, [vms]);
+
+  const vmsBySlaveEntries = React.useMemo(() => {
+    return Object.keys(vmsBySlave)
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base", numeric: true }))
+      .map((slaveName) => [slaveName, vmsBySlave[slaveName]] as const);
+  }, [vmsBySlave]);
 
   const formatMemory = (mb: number) => {
     return mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb} MB`;
@@ -1388,7 +1440,7 @@ export default function VirtualMachinesScreen() {
               {pendingVmNames.size > 0 && (
                 <VmSkeletonGrid count={Math.min(6, Math.max(1, pendingVmNames.size))} />
               )}
-              {Object.entries(vmsBySlave).map(([slaveName, slaveVms]) => {
+              {vmsBySlaveEntries.map(([slaveName, slaveVms]) => {
                 const slaveRunning = slaveVms.filter(
                   (vm) => vm.state === VmState.RUNNING
                 ).length;
@@ -1739,7 +1791,9 @@ export default function VirtualMachinesScreen() {
                                   <>
                                     <Pressable
                                       className={`${cardIconButtonClass}`}
-                                      onPress={() => handleVmAction(vm.name, "pause")}
+                                      onPress={() =>
+                                        setConfirmAction({ type: "pause", vm })
+                                      }
                                       disabled={isLoading}
                                     >
                                       <Pause
@@ -1749,7 +1803,9 @@ export default function VirtualMachinesScreen() {
                                     </Pressable>
                                     <Pressable
                                       className={`${cardIconButtonClass}`}
-                                      onPress={() => handleVmAction(vm.name, "restart")}
+                                      onPress={() =>
+                                        setConfirmAction({ type: "restart", vm })
+                                      }
                                       disabled={isLoading}
                                     >
                                       <RefreshCcw
@@ -1759,7 +1815,9 @@ export default function VirtualMachinesScreen() {
                                     </Pressable>
                                     <Pressable
                                       className={`${cardDangerButtonClass}`}
-                                      onPress={() => handleVmAction(vm.name, "shutdown")}
+                                      onPress={() =>
+                                        setConfirmAction({ type: "shutdown", vm })
+                                      }
                                       disabled={isLoading}
                                     >
                                       <Square
@@ -1973,22 +2031,28 @@ export default function VirtualMachinesScreen() {
             isOpen={!!confirmAction}
             onClose={() => setConfirmAction(null)}
           >
-            <AlertDialogBackdrop />
-            <AlertDialogContent>
-              <AlertDialogHeader>
+            <AlertDialogBackdrop className="bg-background-950/60 dark:bg-black/70" />
+            <AlertDialogContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] shadow-soft-2">
+              <AlertDialogHeader className="border-b border-outline-100 dark:border-[#2A3B52]">
                 <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
                   Confirmation
                 </Heading>
                 <AlertDialogCloseButton />
               </AlertDialogHeader>
-              <AlertDialogBody>
+              <AlertDialogBody className="py-4">
                 <Text className="text-typography-700 dark:text-typography-300">
                   {confirmAction?.type === "delete"
                     ? `Are you sure you want to delete VM ${confirmAction?.vm.name}?`
-                    : `Force shutdown of ${confirmAction?.vm.name}?`}
+                    : confirmAction?.type === "force-shutdown"
+                      ? `Force shutdown of ${confirmAction?.vm.name}?`
+                      : confirmAction?.type === "shutdown"
+                        ? `Shutdown ${confirmAction?.vm.name}?`
+                        : confirmAction?.type === "restart"
+                          ? `Restart ${confirmAction?.vm.name}?`
+                          : `Pause ${confirmAction?.vm.name}?`}
                 </Text>
               </AlertDialogBody>
-              <AlertDialogFooter>
+              <AlertDialogFooter className="border-t border-outline-100 dark:border-[#2A3B52] pt-3">
                 <Button
                   variant="outline"
                   onPress={() => setConfirmAction(null)}
@@ -2039,7 +2103,15 @@ export default function VirtualMachinesScreen() {
                         setDeletingVm(null);
                       }
                     } else {
-                      await handleVmAction(confirmAction.vm.name, "force-shutdown");
+                      const action =
+                        confirmAction.type === "force-shutdown"
+                          ? "force-shutdown"
+                          : confirmAction.type === "shutdown"
+                            ? "shutdown"
+                            : confirmAction.type === "restart"
+                              ? "restart"
+                              : "pause";
+                      await handleVmAction(confirmAction.vm.name, action);
                       setConfirmAction(null);
                     }
                   }}
@@ -2420,6 +2492,59 @@ export default function VirtualMachinesScreen() {
                   </Button>
                 </HStack>
               </ModalFooter>
+            </ModalContent>
+          </Modal>
+
+          {/* Modal: Backup VM */}
+          <Modal isOpen={!!backupVm} onClose={() => setBackupVm(null)}>
+            <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+            <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] shadow-soft-2">
+              <ModalHeader className="border-b border-outline-100 dark:border-[#2A3B52]">
+                <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
+                  Backup VM
+                </Heading>
+                <ModalCloseButton />
+              </ModalHeader>
+              <ModalBody>
+                {backupVm && (
+                  <BackupVmForm
+                    vm={backupVm}
+                    mountOptions={mountOptions}
+                    loadingOptions={cloneOptionsLoading}
+                    primaryButtonClass={primaryButtonClass}
+                    primaryButtonTextClass={primaryButtonTextClass}
+                    onCancel={() => setBackupVm(null)}
+                    onCreate={async ({ destNfsId }) => {
+                      const nfsId = Number(destNfsId);
+                      if (!Number.isFinite(nfsId)) {
+                        throw new Error("Select a valid NFS target.");
+                      }
+                      try {
+                        await createBackup(backupVm.name, nfsId);
+                        setBackupVm(null);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        showToastMessage(
+                          "Backup started",
+                          `Backup for ${backupVm.name} started.`
+                        );
+                      } catch (error) {
+                        console.error("Error creating backup:", error);
+                        const message =
+                          error instanceof ApiError && typeof error.data === "string"
+                            ? error.data
+                            : error instanceof Error
+                              ? error.message
+                              : "Failed to start backup.";
+                        showToastMessage("Error starting backup", message, "error");
+                        if (error instanceof ApiError) {
+                          throw new Error(message);
+                        }
+                        throw error instanceof Error ? error : new Error(message);
+                      }
+                    }}
+                  />
+                )}
+              </ModalBody>
             </ModalContent>
           </Modal>
 
@@ -2831,6 +2956,19 @@ export default function VirtualMachinesScreen() {
                 </Pressable>
                 <Pressable
                   onPress={() => {
+                    if (!selectedVm) return;
+                    handleOpenBackup(selectedVm);
+                    setShowActionsheet(false);
+                  }}
+                  className="px-3 py-3 hover:bg-background-50 dark:hover:bg-[#1E2F47] rounded-md"
+                >
+                  <HStack className="items-center gap-3">
+                    <Database size={18} className="text-typography-700 dark:text-[#E8EBF0]" />
+                    <Text className="text-typography-900 dark:text-[#E8EBF0]">Backup VM</Text>
+                  </HStack>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
                     if (!selectedVm || isExportingSelectedVm) return;
                     void handleExportVm(selectedVm);
                     setShowActionsheet(false);
@@ -3058,6 +3196,16 @@ export default function VirtualMachinesScreen() {
               >
                 <ActionsheetIcon as={HardDrive} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
                 <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">Move Disk</ActionsheetItemText>
+              </ActionsheetItem>
+              <ActionsheetItem
+                onPress={() => {
+                  if (!selectedVm) return;
+                  handleOpenBackup(selectedVm);
+                  setShowActionsheet(false);
+                }}
+              >
+                <ActionsheetIcon as={Database} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
+                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">Backup VM</ActionsheetItemText>
               </ActionsheetItem>
 
               {/* Remove All ISOs */}
@@ -4064,6 +4212,155 @@ function MoveDiskForm({
         >
           {saving ? <ButtonSpinner className="mr-2" /> : null}
           <ButtonText className={`${primaryButtonTextClass}`}>Move</ButtonText>
+        </Button>
+      </HStack>
+    </VStack>
+  );
+}
+
+function BackupVmForm({
+  vm,
+  mountOptions,
+  loadingOptions,
+  onCancel,
+  onCreate,
+  primaryButtonClass,
+  primaryButtonTextClass,
+}: {
+  vm: VM;
+  mountOptions: Mount[];
+  loadingOptions: boolean;
+  onCancel: () => void;
+  onCreate: (payload: { destNfsId: string }) => Promise<void>;
+  primaryButtonClass: string;
+  primaryButtonTextClass: string;
+}) {
+  const [destNfsId, setDestNfsId] = React.useState<string>("");
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const preferredNfsId = React.useMemo(() => {
+    const diskPath = vm.diskPath?.toLowerCase() ?? "";
+    if (!diskPath) {
+      return "";
+    }
+    const match = mountOptions.find(({ NfsShare }) => {
+      const folderPath = (NfsShare.FolderPath ?? "").toLowerCase();
+      const target = (NfsShare.Target ?? "").toLowerCase();
+      const source = (NfsShare.Source ?? "").toLowerCase();
+      if (target && diskPath.startsWith(target)) {
+        return true;
+      }
+      if (folderPath && diskPath.includes(folderPath)) {
+        return true;
+      }
+      if (source && diskPath.includes(source)) {
+        return true;
+      }
+      return false;
+    });
+    return match ? String(match.NfsShare.Id) : "";
+  }, [vm.diskPath, mountOptions]);
+
+  const selectedNfsLabel = React.useMemo(() => {
+    const current = mountOptions.find((mount) => String(mount.NfsShare.Id) === destNfsId);
+    return current ? `${current.NfsShare.Name} (${current.NfsShare.MachineName})` : undefined;
+  }, [destNfsId, mountOptions]);
+
+  React.useEffect(() => {
+    setDestNfsId("");
+  }, [vm.name]);
+
+  React.useEffect(() => {
+    if (!destNfsId) {
+      if (preferredNfsId) {
+        setDestNfsId(preferredNfsId);
+        return;
+      }
+      if (mountOptions.length > 0) {
+        setDestNfsId(String(mountOptions[0].NfsShare.Id));
+      }
+    }
+  }, [destNfsId, preferredNfsId, mountOptions]);
+
+  const isValid = Boolean(destNfsId);
+
+  const handleSubmit = async () => {
+    if (!isValid || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await onCreate({ destNfsId });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error creating backup.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <VStack className="gap-4">
+      <Text className="text-typography-700 dark:text-typography-300">
+        Create a backup for <Text className="font-semibold">{vm.name}</Text>.
+      </Text>
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText className="text-sm font-semibold text-typography-800">
+            Destination NFS
+          </FormControlLabelText>
+        </FormControlLabel>
+        <Select
+          selectedValue={destNfsId}
+          onValueChange={setDestNfsId}
+          isDisabled={loadingOptions || mountOptions.length === 0}
+        >
+          <SelectTrigger>
+            <SelectInput
+              placeholder={loadingOptions ? "Loading..." : "Select"}
+              value={selectedNfsLabel}
+            />
+            <SelectIcon />
+          </SelectTrigger>
+          <SelectPortal>
+            <SelectBackdrop />
+            <SelectContent>
+              <SelectDragIndicatorWrapper>
+                <SelectDragIndicator />
+              </SelectDragIndicatorWrapper>
+              {mountOptions.length === 0 ? (
+                <SelectItem
+                  label={loadingOptions ? "Loading..." : "No NFS found"}
+                  value=""
+                  isDisabled
+                />
+              ) : (
+                mountOptions.map((m) => (
+                  <SelectItem
+                    key={m.NfsShare.Id}
+                    label={`${m.NfsShare.Name} (${m.NfsShare.MachineName})`}
+                    value={String(m.NfsShare.Id)}
+                  />
+                ))
+              )}
+            </SelectContent>
+          </SelectPortal>
+        </Select>
+      </FormControl>
+
+      {error && <Text className="text-sm text-error-600 dark:text-error-400">{error}</Text>}
+
+      <HStack className="justify-end gap-2 mt-2">
+        <Button variant="outline" className="rounded-xl px-4 py-2" onPress={onCancel} disabled={saving}>
+          <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
+        </Button>
+        <Button
+          className={`rounded-xl px-4 py-2 ${primaryButtonClass}`}
+          disabled={!isValid || saving}
+          onPress={handleSubmit}
+        >
+          {saving ? <ButtonSpinner className="mr-2" /> : null}
+          <ButtonText className={`${primaryButtonTextClass}`}>Start Backup</ButtonText>
         </Button>
       </HStack>
     </VStack>
