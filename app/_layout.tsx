@@ -148,6 +148,18 @@ const resolveWebTitle = (path: string) => {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
+const isSnowSeason = (now = new Date()) => {
+  const month = now.getMonth(); // 0 = Jan, 11 = Dec (local server timezone)
+  const day = now.getDate();
+  if (month === 11) {
+    return day >= 1;
+  }
+  if (month === 0) {
+    return day <= 10;
+  }
+  return false;
+};
+
 const sanitizeRequestPath = (path?: string) => {
   if (!path) {
     return "Request";
@@ -287,6 +299,7 @@ function RootLayoutNav() {
   const [apiErrorModal, setApiErrorModal] = React.useState<
     { status?: number; path?: string; details: string } | null
   >(null);
+  const shouldShowSnow = React.useMemo(() => isSnowSeason(), []);
   const isSigningOutRef = React.useRef(false);
   const isWeb = Platform.OS === "web";
   const { height: screenHeight } = useWindowDimensions();
@@ -390,17 +403,17 @@ function RootLayoutNav() {
         return;
       }
       console.error("[API ERROR]", result.method, result.path, result.status, result.error);
-      if(result.status === 401){
+      if (result.status === 401) {
         console.warn("Unauthorized!");
         return;
-      }else{
+      } else {
         setApiErrorModal({
-        status: result.status,
-        path: result.path,
-        details: getLiteralApiErrorMessage(result.errorText, result.error),
-      });
+          status: result.status,
+          path: result.path,
+          details: getLiteralApiErrorMessage(result.errorText, result.error),
+        });
       }
-      
+
     });
     return unsubscribe;
   }, []);
@@ -532,7 +545,7 @@ function RootLayoutNav() {
           value={resolvedMode === "dark" ? DarkTheme : DefaultTheme}
         >
           <SafeAreaView
-            style={{flex: 1, backgroundColor: statusBarBackground}}
+            style={{ flex: 1, backgroundColor: statusBarBackground }}
             edges={["top", "right", "bottom", "left"]}
           >
             <StatusBar
@@ -642,7 +655,7 @@ function RootLayoutNav() {
                 />
               </Button>
             )}
-            
+
             {pathname !== "/" && (
               <AppSidebar
                 isOpen={showSidebar}
@@ -766,7 +779,7 @@ function RootLayoutNav() {
                 </ModalFooter>
               </ModalContent>
             </Modal>
-            {Platform.OS === "web" && (
+            {Platform.OS === "web" && shouldShowSnow && (
               <Snowfall
                 style={{
                   position: "fixed",
