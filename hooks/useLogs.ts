@@ -49,22 +49,115 @@ const parseTimestampMs = (value: unknown): number => {
   return parsed;
 };
 
+const parseJsonLogString = (rawLog: string): Record<string, unknown> | null => {
+  const trimmed = rawLog.trim();
+  if (!trimmed) return null;
+  if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+};
+
+const toContentString = (value: unknown): string => {
+  if (typeof value === "string") return value;
+  if (value === null || value === undefined) return "";
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+    return String(value);
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+};
+
+const getMachineNameFromRecord = (record: Record<string, unknown>): string => {
+  const candidate =
+    typeof record.machine_name === "string"
+      ? record.machine_name
+      : typeof record.machineName === "string"
+        ? record.machineName
+        : typeof record.machine === "string"
+          ? record.machine
+          : typeof record.host === "string"
+            ? record.host
+            : "";
+  return candidate;
+};
+
+const extractPayloadFromValue = (
+  value: unknown,
+  depth: number = 0
+): { machineName?: string; content?: unknown; rawContent?: string } => {
+  if (depth > 2) {
+    return {
+      content: value,
+      rawContent: typeof value === "string" ? value : undefined,
+    };
+  }
+  if (typeof value === "string") {
+    const parsed = parseJsonLogString(value);
+    if (parsed) {
+      const nested = extractPayloadFromValue(parsed, depth + 1);
+      return {
+        machineName: nested.machineName || getMachineNameFromRecord(parsed),
+        content:
+          nested.content ?? parsed.content ?? parsed.context ?? parsed.message ?? parsed.msg ?? value,
+        rawContent: value,
+      };
+    }
+    return { content: value, rawContent: value };
+  }
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const machineName = getMachineNameFromRecord(record);
+    const content = record.content ?? record.context ?? record.message ?? record.msg;
+    if (content !== undefined) {
+      const nested = extractPayloadFromValue(content, depth + 1);
+      return {
+        machineName: machineName || nested.machineName,
+        content: nested.content ?? content,
+        rawContent: nested.rawContent ?? (typeof content === "string" ? content : undefined),
+      };
+    }
+    return { machineName, content: value };
+  }
+  return { content: value, rawContent: toContentString(value) };
+};
+
 // Função para normalizar os dados recebidos da API
 const normalizeLogEntry = (rawLog: any, index: number): LogEntry => {
   // Se rawLog for uma string ou algo primitivo, converter para objeto
-  const logObj = typeof rawLog === "object" && rawLog !== null ? rawLog : {content: String(rawLog)};
-  
+  const parsedLog =
+    typeof rawLog === "string" ? parseJsonLogString(rawLog) : null;
+  const logObj =
+    typeof rawLog === "object" && rawLog !== null ? rawLog : parsedLog ?? { content: String(rawLog) };
+
   // Extrair conteúdo da mensagem
-  const content = logObj.content || logObj.message || logObj.msg || String(logObj);
-  
+  const contentCandidate = logObj.content || logObj.context || logObj.message || logObj.msg || rawLog;
+  const payload = extractPayloadFromValue(contentCandidate);
+  const messageRaw = toContentString(payload.content ?? contentCandidate);
+  const machineHint = getMachineNameFromRecord(logObj).trim();
+  const payloadMachine = (payload.machineName ?? "").trim();
+  const machine =
+    machineHint || payloadMachine || extractMachineFromContent(messageRaw);
+
   return {
     id: String(logObj.id || logObj._id || `log-${index}-${Date.now()}`),
     timestamp: logObj.ts || logObj.timestamp || logObj.time || logObj.date || new Date().toISOString(),
     timestampMs: parseTimestampMs(logObj.ts || logObj.timestamp || logObj.time || logObj.date || Date.now()),
     level: normalizeLogLevel(logObj.level || logObj.severity),
-    machine: extractMachineFromContent(content),
-    message: cleanMessageContent(content),
-    rawContent: typeof content === "string" ? content : undefined,
+    machine,
+    message: cleanMessageContent(messageRaw),
+    rawContent: payload.rawContent ?? (typeof contentCandidate === "string" ? contentCandidate : undefined),
     raw: rawLog,
   };
 };
@@ -153,7 +246,7 @@ const buildLogEntryFromRecord = (record: Record<string, unknown>): LogEntry | nu
   if (type !== "logs") {
     return null;
   }
-  const contentCandidate = record.data ?? record.message ?? record.content;
+  const contentCandidate = record.data ?? record.message ?? record.content ?? record.context;
   if (typeof contentCandidate !== "string" || !contentCandidate.trim()) {
     return null;
   }
