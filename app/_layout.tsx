@@ -283,13 +283,23 @@ function RootLayoutNav() {
   const pathname = usePathname();
   const router = useRouter();
   const systemColorScheme = useColorScheme();
+  const [webSystemTheme, setWebSystemTheme] = React.useState<"dark" | "light" | null>(null);
   const [apiBaseUrlState, setApiBaseUrlState] = React.useState<string | null>(
     () => getApiBaseUrl() ?? null
   );
   const [themePreference, setThemePreference] = React.useState<ThemePreference>("system");
+
+  // For web, use webSystemTheme if available, otherwise fall back to systemColorScheme
+  const effectiveSystemScheme = React.useMemo(() => {
+    if (Platform.OS === "web" && webSystemTheme) {
+      return webSystemTheme;
+    }
+    return systemColorScheme === "dark" ? "dark" : "light";
+  }, [webSystemTheme, systemColorScheme]);
+
   const resolvedMode = React.useMemo(
-    () => (themePreference === "system" ? (systemColorScheme === "dark" ? "dark" : "light") : themePreference),
-    [systemColorScheme, themePreference]
+    () => (themePreference === "system" ? effectiveSystemScheme : themePreference),
+    [effectiveSystemScheme, themePreference]
   );
   const statusBarStyle = resolvedMode === "dark" ? "light" : "dark";
   const statusBarBackground = resolvedMode === "dark" ? "#070D19" : "#F8FAFC";
@@ -307,6 +317,29 @@ function RootLayoutNav() {
 
   const handleCloseApiErrorModal = React.useCallback(() => {
     setApiErrorModal(null);
+  }, []);
+
+  // Listen to system theme changes on web
+  React.useEffect(() => {
+    if (Platform.OS !== "web" || typeof window === "undefined") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+    // Set initial value
+    setWebSystemTheme(mediaQuery.matches ? "dark" : "light");
+
+    // Listen for changes
+    const handleChange = (e: MediaQueryListEvent) => {
+      setWebSystemTheme(e.matches ? "dark" : "light");
+    };
+
+    mediaQuery.addEventListener("change", handleChange);
+
+    return () => {
+      mediaQuery.removeEventListener("change", handleChange);
+    };
   }, []);
 
   React.useEffect(() => {
