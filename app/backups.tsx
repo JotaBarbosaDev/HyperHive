@@ -375,6 +375,13 @@ export default function BackupsScreen() {
     }).format(date);
   };
 
+  const formatSizeGb = (value: number | null | undefined): string => {
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      return "N/A";
+    }
+    return `${value.toFixed(1)} GB`;
+  };
+
   const getNfsName = (id: number | null | undefined): string => {
     if (id == null) return "N/A";
     return nfsShares[id] || `NFS #${id}`;
@@ -737,6 +744,11 @@ export default function BackupsScreen() {
             <VStack className="gap-6">
               {Object.entries(backupsByVm).map(([vmName, vmBackups]) => {
                 const firstBackup = vmBackups[0];
+                const vmTotalSize = vmBackups.reduce(
+                  (sum, backup) =>
+                    sum + (typeof backup.size === "number" && Number.isFinite(backup.size) ? backup.size : 0),
+                  0
+                );
                 return (
                   <Box
                     key={vmName}
@@ -757,12 +769,13 @@ export default function BackupsScreen() {
                       >
                         {getNfsName(firstBackup?.nfsShareId ?? null)} • {vmBackups.length} backup
                         {vmBackups.length > 1 ? "s" : ""}
+                        {vmTotalSize > 0 ? ` • ${formatSizeGb(vmTotalSize)} total` : ""}
                       </Text>
                     </Box>
 
                     {/* Table */}
                     <Box className="overflow-x-auto">
-                      <Box className="min-w-[800px]">
+                      <Box className="min-w-[900px]">
                         {/* Table Header */}
                         <HStack className="bg-background-50 dark:bg-[#0A1628] px-4 py-3 border-b border-outline-100 dark:border-[#1E2F47]">
                           <Text
@@ -781,7 +794,19 @@ export default function BackupsScreen() {
                             className="flex-1 text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                             style={{ fontFamily: "Inter_600SemiBold" }}
                           >
+                            SIZE
+                          </Text>
+                          <Text
+                            className="flex-1 text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
+                            style={{ fontFamily: "Inter_600SemiBold" }}
+                          >
                             AUTOMATIC
+                          </Text>
+                          <Text
+                            className="flex-1 text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
+                            style={{ fontFamily: "Inter_600SemiBold" }}
+                          >
+                            WORKING
                           </Text>
                           <Text
                             className="flex-1 text-xs text-[#9AA4B8] dark:text-[#8A94A8] text-right"
@@ -794,6 +819,7 @@ export default function BackupsScreen() {
                         {/* Table Rows */}
                         {vmBackups.map((backup, index) => {
                           const automatic = Boolean(backup.automatic);
+                          const working = Boolean(backup.live);
 
                           return (
                             <HStack
@@ -815,6 +841,12 @@ export default function BackupsScreen() {
                               >
                                 {getNfsName(backup.nfsShareId)}
                               </Text>
+                              <Text
+                                className="flex-1 text-sm text-typography-600 dark:text-typography-400"
+                                style={{ fontFamily: "Inter_400Regular" }}
+                              >
+                                {formatSizeGb(backup.size)}
+                              </Text>
                               <Box className="flex-1">
                                 <Badge
                                   size="sm"
@@ -832,6 +864,26 @@ export default function BackupsScreen() {
                                     style={{ fontFamily: "Inter_500Medium" }}
                                   >
                                     {automatic ? "Automatic" : "Manual"}
+                                  </BadgeText>
+                                </Badge>
+                              </Box>
+                              <Box className="flex-1">
+                                <Badge
+                                  size="sm"
+                                  variant="outline"
+                                  className={`rounded-full w-fit ${working
+                                    ? "bg-[#22c55e19] border-[#22c55e] dark:bg-[#22c55e25] dark:border-[#4ade80]"
+                                    : "bg-[#f9731619] border-[#f97316] dark:bg-[#f9731625] dark:border-[#fb923c]"
+                                    }`}
+                                >
+                                  <BadgeText
+                                    className={`text-xs ${working
+                                      ? "text-[#22c55e] dark:text-[#4ade80]"
+                                      : "text-[#f97316] dark:text-[#fb923c]"
+                                      }`}
+                                    style={{ fontFamily: "Inter_500Medium" }}
+                                  >
+                                    {working ? "Live" : "Offline"}
                                   </BadgeText>
                                 </Badge>
                               </Box>
@@ -892,17 +944,29 @@ export default function BackupsScreen() {
             <VStack className="gap-4">
               {Object.entries(backupsByVm).map(([vmName, vmBackups]) => (
                 <VStack key={vmName} className="gap-3">
+                  {(() => {
+                    const vmTotalSize = vmBackups.reduce(
+                      (sum, backup) =>
+                        sum +
+                        (typeof backup.size === "number" && Number.isFinite(backup.size) ? backup.size : 0),
+                      0
+                    );
+                    return (
                   <HStack className="items-center justify-between px-1">
                     <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
                       {vmName}
                     </Text>
                     <Text className="text-xs text-typography-500 dark:text-typography-400">
                       {vmBackups.length} backup{vmBackups.length > 1 ? "s" : ""}
+                      {vmTotalSize > 0 ? ` • ${formatSizeGb(vmTotalSize)}` : ""}
                     </Text>
                   </HStack>
+                    );
+                  })()}
                   <VStack className="gap-2">
                     {vmBackups.map((backup) => {
                       const automatic = Boolean(backup.automatic);
+                      const working = Boolean(backup.live);
                       return (
                         <Pressable
                           key={backup.id}
@@ -919,6 +983,12 @@ export default function BackupsScreen() {
                               </Text>
                               <Text className="text-xs text-typography-500 dark:text-typography-400 mt-1">
                                 {backup.machineName}
+                              </Text>
+                              <Text className="text-xs text-typography-500 dark:text-typography-400 mt-1">
+                                Size: {formatSizeGb(backup.size)}
+                              </Text>
+                              <Text className="text-xs text-typography-500 dark:text-typography-400 mt-1">
+                                Working: {working ? "Live" : "Offline"}
                               </Text>
                             </VStack>
                             <Badge
