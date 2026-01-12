@@ -118,6 +118,74 @@ const makeStyles = (theme: Theme) =>
       color: theme.text,
       backgroundColor: theme.cardAlt,
     },
+    dropdownButton: {
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: Platform.OS === "ios" ? 12 : 10,
+      backgroundColor: theme.cardAlt,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    dropdownButtonText: {
+      color: theme.text,
+      fontWeight: "600",
+    },
+    dropdownButtonMeta: {
+      color: theme.muted,
+      fontSize: 12,
+    },
+    dropdownPanel: {
+      marginTop: 8,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 10,
+      backgroundColor: theme.cardAlt,
+      padding: 8,
+    },
+    dropdownScroll: {
+      maxHeight: 180,
+    },
+    dropdownEmpty: {
+      color: theme.muted,
+      textAlign: "center",
+      paddingVertical: 6,
+    },
+    checkboxList: {
+      paddingVertical: 2,
+    },
+    checkboxRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 6,
+    },
+    checkboxBox: {
+      width: 18,
+      height: 18,
+      borderRadius: 4,
+      borderWidth: 1,
+      borderColor: theme.border,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 8,
+      backgroundColor: theme.card,
+    },
+    checkboxBoxChecked: {
+      borderColor: theme.accent,
+    },
+    checkboxIndicator: {
+      width: 10,
+      height: 10,
+      borderRadius: 2,
+      backgroundColor: theme.accent,
+    },
+    checkboxLabel: {
+      color: theme.text,
+      fontSize: 13,
+      flex: 1,
+    },
     smallInput: {
       width: 120,
     },
@@ -284,7 +352,7 @@ export default function LogsScreen() {
       text: isDark ? "#E8EBF0" : "#0F172A",
       muted: isDark ? "#9AA4B8" : "#475569",
       subtle: isDark ? "#0B1424" : "#F1F5F9",
-      accent: "#070D19", //2563EB
+      accent: isDark ? "#2563EB" : "#070D19",
       accentText: "#FFFFFF",
     }),
     [isDark]
@@ -295,7 +363,8 @@ export default function LogsScreen() {
   const [limitInput, setLimitInput] = React.useState("100");
   const [limit, setLimit] = React.useState(5000);
   const [apiLevel, setApiLevel] = React.useState<string>("all");
-  const [machineFilter, setMachineFilter] = React.useState<string>("all");
+  const [machinePickerOpen, setMachinePickerOpen] = React.useState(false);
+  const [selectedMachines, setSelectedMachines] = React.useState<Record<string, boolean>>({});
   const [showInfo, setShowInfo] = React.useState(false);
   const [showDebug, setShowDebug] = React.useState(false);
   const [selected, setSelected] = React.useState<LogEntry | null>(null);
@@ -308,11 +377,101 @@ export default function LogsScreen() {
     level: levelNumber,
   });
 
+  const machineOptions = React.useMemo(() => {
+    const names = new Set<string>();
+    logs.forEach((log) => {
+      if (log.machine) {
+        names.add(log.machine);
+      }
+    });
+    const list = Array.from(names);
+    if (list.length === 0) {
+      return [];
+    }
+    list.sort((a, b) => a.localeCompare(b, "pt-PT"));
+    const systemLabel = "Sistema";
+    return list.includes(systemLabel)
+      ? [systemLabel, ...list.filter((name) => name !== systemLabel)]
+      : list;
+  }, [logs]);
+
+  React.useEffect(() => {
+    if (machineOptions.length === 0) {
+      return;
+    }
+    setSelectedMachines((prev) => {
+      const prevKeys = Object.keys(prev);
+      if (prevKeys.length === 0) {
+        const initialSelection: Record<string, boolean> = {};
+        machineOptions.forEach((name) => {
+          initialSelection[name] = true;
+        });
+        return initialSelection;
+      }
+      const allSelected = prevKeys.every((name) => prev[name]);
+      const nextSelection: Record<string, boolean> = {};
+      machineOptions.forEach((name) => {
+        if (Object.prototype.hasOwnProperty.call(prev, name)) {
+          nextSelection[name] = prev[name];
+        } else {
+          nextSelection[name] = allSelected;
+        }
+      });
+      const nextKeys = Object.keys(nextSelection);
+      if (nextKeys.length === prevKeys.length) {
+        let unchanged = true;
+        for (const name of nextKeys) {
+          if (nextSelection[name] !== prev[name]) {
+            unchanged = false;
+            break;
+          }
+        }
+        if (unchanged) {
+          return prev;
+        }
+      }
+      return nextSelection;
+    });
+  }, [machineOptions]);
+
+  const toggleMachine = React.useCallback((name: string) => {
+    setSelectedMachines((prev) => ({
+      ...prev,
+      [name]: !prev[name],
+    }));
+  }, []);
+
+  const selectedCount = React.useMemo(() => {
+    return machineOptions.reduce((count, name) => count + (selectedMachines[name] ? 1 : 0), 0);
+  }, [machineOptions, selectedMachines]);
+
+  const allMachinesSelected = machineOptions.length > 0 && selectedCount === machineOptions.length;
+  const selectionLabel = machineOptions.length === 0
+    ? "No sources"
+    : allMachinesSelected
+      ? "All sources"
+      : selectedCount === 0
+        ? "None selected"
+        : `${selectedCount} selected`;
+
+  const isMachineSelected = React.useCallback(
+    (name: string) => {
+      if (machineOptions.length === 0) {
+        return true;
+      }
+      if (Object.keys(selectedMachines).length === 0) {
+        return true;
+      }
+      return Boolean(selectedMachines[name]);
+    },
+    [machineOptions.length, selectedMachines]
+  );
+
   const visibleLogs = React.useMemo(() => {
     return logs.filter((log) => {
       if (!showInfo && log.level === "info") return false;
       if (!showDebug && log.level === "debug") return false;
-      if (machineFilter !== "all" && log.machine !== machineFilter) return false;
+      if (!isMachineSelected(log.machine)) return false;
       if (!search.trim()) return true;
       const term = search.toLowerCase();
       return (
@@ -321,7 +480,7 @@ export default function LogsScreen() {
         log.timestamp.toLowerCase().includes(term)
       );
     });
-  }, [logs, showInfo, showDebug, machineFilter, search]);
+  }, [logs, showInfo, showDebug, isMachineSelected, search]);
 
   const refreshControl =
     Platform.OS === "web"
@@ -417,14 +576,47 @@ export default function LogsScreen() {
 
           <View style={styles.filterRow}>
             <View style={[styles.filterItem, styles.flexItem]}>
-              <Text style={styles.label}>Machine</Text>
-              <StableTextInput
-                style={styles.input}
-                placeholder="all for all"
-                placeholderTextColor={theme.muted}
-                value={machineFilter}
-                onChangeText={setMachineFilter}
-              />
+              <Text style={styles.label}>Sources</Text>
+              <TouchableOpacity
+                style={styles.dropdownButton}
+                onPress={() => setMachinePickerOpen((prev) => !prev)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.dropdownButtonText}>Select sources</Text>
+                <Text style={styles.dropdownButtonMeta}>{selectionLabel}</Text>
+              </TouchableOpacity>
+              {machinePickerOpen ? (
+                <View style={styles.dropdownPanel}>
+                  {machineOptions.length === 0 ? (
+                    <Text style={styles.dropdownEmpty}>No sources available</Text>
+                  ) : (
+                    <ScrollView
+                      style={styles.dropdownScroll}
+                      contentContainerStyle={styles.checkboxList}
+                      showsVerticalScrollIndicator
+                    >
+                      {machineOptions.map((name) => {
+                        const checked = isMachineSelected(name);
+                        return (
+                          <TouchableOpacity
+                            key={name}
+                            style={styles.checkboxRow}
+                            onPress={() => toggleMachine(name)}
+                            activeOpacity={0.7}
+                          >
+                            <View style={[styles.checkboxBox, checked && styles.checkboxBoxChecked]}>
+                              {checked ? <View style={styles.checkboxIndicator} /> : null}
+                            </View>
+                            <Text style={styles.checkboxLabel} numberOfLines={1}>
+                              {name}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                  )}
+                </View>
+              ) : null}
             </View>
             <View style={[styles.filterItem, styles.smallColumn]}>
               <Text style={styles.label}>Level (API)</Text>

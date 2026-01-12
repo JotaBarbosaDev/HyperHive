@@ -38,7 +38,7 @@ import ConfirmDialog from "@/components/modals/ConfirmDialog";
 import { DockerNetwork } from "@/types/docker";
 import { Machine } from "@/types/machine";
 import { createDockerNetwork, listDockerNetworks, removeDockerNetwork } from "@/services/docker";
-import { Network, RefreshCcw, Trash2, Plus, Shield } from "lucide-react-native";
+import { WifiPen, RefreshCcw, Trash2, Plus, Shield } from "lucide-react-native";
 
 const NetworkCard = ({
 	network,
@@ -55,7 +55,7 @@ const NetworkCard = ({
 			<HStack className="items-start justify-between gap-3">
 				<HStack className="items-center gap-3">
 					<Box className="w-10 h-10 rounded-xl bg-primary-50/70 dark:bg-[#12213A] items-center justify-center">
-						<Icon as={Network} size="md" className="text-primary-700 dark:text-[#8AB9FF]" />
+						<Icon as={WifiPen} size="md" className="text-primary-700 dark:text-[#8AB9FF]" />
 					</Box>
 					<VStack className="gap-1">
 						<Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">{network.Name}</Text>

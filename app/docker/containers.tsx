@@ -62,7 +62,7 @@ import {
 	Pause,
 	PowerOff,
 	Trash2,
-	Network as NetworkIcon,
+	WifiPen as NetworkIcon,
 	Plus,
 	ShieldCheck,
 	X,

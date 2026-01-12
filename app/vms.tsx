@@ -2103,15 +2103,23 @@ export default function VirtualMachinesScreen() {
                         setDeletingVm(null);
                       }
                     } else {
+                      const { type, vm } = confirmAction;
                       const action =
-                        confirmAction.type === "force-shutdown"
+                        type === "force-shutdown"
                           ? "force-shutdown"
-                          : confirmAction.type === "shutdown"
+                          : type === "shutdown"
                             ? "shutdown"
-                            : confirmAction.type === "restart"
+                            : type === "restart"
                               ? "restart"
                               : "pause";
-                      await handleVmAction(confirmAction.vm.name, action);
+                      const shouldCloseImmediately =
+                        type === "shutdown" || type === "restart" || type === "pause";
+                      if (shouldCloseImmediately) {
+                        setConfirmAction(null);
+                        void handleVmAction(vm.name, action);
+                        return;
+                      }
+                      await handleVmAction(vm.name, action);
                       setConfirmAction(null);
                     }
                   }}

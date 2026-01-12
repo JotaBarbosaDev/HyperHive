@@ -196,7 +196,7 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
   const resolvedMode = themePreference === "system" ? (systemScheme === "dark" ? "dark" : "light") : themePreference;
   const isWeb = Platform.OS === "web";
   const chevronMuted = resolvedMode === "dark" ? "#94A3B8" : "#9AA4B8";
-  const chevronActive = resolvedMode === "dark" ? "#E8EBF0" : "#0F172A";
+  const chevronActive = resolvedMode === "dark" ? "#E8EBF0" : "#475569";
   const chevronAnims = React.useRef<Record<string, Animated.Value>>({});
   const [expandedParents, setExpandedParents] = React.useState<Record<string, boolean>>({});
   const [showSettings, setShowSettings] = React.useState(false);
