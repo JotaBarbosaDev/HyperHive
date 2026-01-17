@@ -822,15 +822,15 @@ export default function StreamsScreen() {
       </Modal>
 
       <AlertDialog isOpen={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)}>
-        <AlertDialogBackdrop />
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <Heading size="md" className="text-typography-900">
+        <AlertDialogBackdrop className="bg-background-950/60 dark:bg-black/70" />
+        <AlertDialogContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] shadow-soft-2">
+          <AlertDialogHeader className="border-b border-outline-100 dark:border-[#2A3B52]">
+            <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
               Remove stream?
             </Heading>
           </AlertDialogHeader>
-          <AlertDialogBody>
-            <Text className="text-typography-700">
+          <AlertDialogBody className="py-4">
+            <Text className="text-typography-700 dark:text-typography-300">
               This action will delete{" "}
               <Text className="font-semibold">
                 Port {deleteTarget?.incoming_port}
@@ -838,9 +838,15 @@ export default function StreamsScreen() {
               . Do you want to continue?
             </Text>
           </AlertDialogBody>
-          <AlertDialogFooter className="gap-3">
-            <Button className="rounded-xl" variant="outline" action="default" onPress={() => setDeleteTarget(null)} isDisabled={Boolean(deletingId)}>
-              <ButtonText className="text-typography-900">Cancel</ButtonText>
+          <AlertDialogFooter className="gap-3 border-t border-outline-100 dark:border-[#2A3B52] pt-3">
+            <Button
+              className="rounded-xl"
+              variant="outline"
+              action="default"
+              onPress={() => setDeleteTarget(null)}
+              isDisabled={Boolean(deletingId)}
+            >
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
             </Button>
             <Button
               action="negative"
@@ -848,7 +854,11 @@ export default function StreamsScreen() {
               onPress={handleDelete}
               isDisabled={Boolean(deletingId)}
             >
-              {deletingId ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" />}
+              {deletingId ? (
+                <ButtonSpinner />
+              ) : (
+                <ButtonIcon as={Trash2} size="sm" className="text-background-0 dark:text-[#0A1628]" />
+              )}
               <ButtonText className="text-background-0 dark:text-[#0A1628]">Delete</ButtonText>
             </Button>
           </AlertDialogFooter>
