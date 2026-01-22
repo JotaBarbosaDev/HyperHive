@@ -265,7 +265,7 @@ export default function DockerNetworksScreen() {
 					Docker Networks
 				</Heading>
 				<HStack className="items-center justify-between flex-wrap gap-3">
-					<Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
+					<Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
 						List and manage Docker networks (bridge / macvlan).
 					</Text>
 					<Button action="primary" className="rounded-xl" onPress={() => setIsCreateOpen(true)} isDisabled={!selectedMachine}>
@@ -277,7 +277,7 @@ export default function DockerNetworksScreen() {
 				<VStack className="mt-5 gap-4">
 					<HStack className="gap-3 flex-wrap items-end">
 						<Box className="min-w-[180px]">
-							<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Machine</Text>
+							<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Machine</Text>
 							<Select
 								selectedValue={selectedMachine ?? undefined}
 								onValueChange={setSelectedMachine as any}
@@ -305,7 +305,7 @@ export default function DockerNetworksScreen() {
 						</Box>
 						<HStack className="gap-3 flex-wrap">
 							<Box className="p-3 rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
-								<Text className="text-xs text-typography-500 dark:text-typography-400">Networks</Text>
+								<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Networks</Text>
 								<Text className="text-xl font-semibold text-typography-900 dark:text-[#E8EBF0]">{networks.length}</Text>
 							</Box>
 						</HStack>
@@ -350,13 +350,13 @@ export default function DockerNetworksScreen() {
 							<VStack className="gap-2">
 								<Text className="text-xs font-semibold text-typography-500 dark:text-typography-300 uppercase tracking-[0.08em]">Basics</Text>
 								<Box>
-									<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Name (required)</Text>
+									<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Name (required)</Text>
 									<Input className="rounded-xl">
 										<InputField value={formName} onChangeText={setFormName} placeholder="ex: bridge-prod" autoCapitalize="none" />
 									</Input>
 								</Box>
 								<Box>
-									<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Type</Text>
+									<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Type</Text>
 									<Select selectedValue={formType} onValueChange={setFormType as any}>
 										<SelectTrigger className="rounded-xl border border-outline-200 dark:border-[#1F2A3C]">
 											<SelectInput placeholder="Select driver" />
@@ -373,7 +373,7 @@ export default function DockerNetworksScreen() {
 											</SelectContent>
 										</SelectPortal>
 									</Select>
-									<Text className="text-[11px] text-typography-500 dark:text-typography-400 mt-1">Bridge = default. Macvlan = attach to VLAN.</Text>
+									<Text className="text-[11px] text-typography-500 dark:text-[#8A94A8] mt-1">Bridge = default. Macvlan = attach to VLAN.</Text>
 								</Box>
 							</VStack>
 

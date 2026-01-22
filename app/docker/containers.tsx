@@ -198,10 +198,10 @@ const ContainerCard = ({
 							<BadgeText className="text-white text-[11px]">{container.Status || ""}</BadgeText>
 						</Badge>
 					</HStack>
-					<Text className="text-xs text-typography-500 dark:text-typography-400">{container.Image}</Text>
+					<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">{container.Image}</Text>
 					{portsLabel ? (
 						<HStack className="items-center gap-2">
-							<Icon as={NetworkIcon} size="sm" className="text-typography-500 dark:text-typography-400" />
+							<Icon as={NetworkIcon} size="sm" className="text-typography-500 dark:text-[#8A94A8]" />
 							<Text className="text-xs text-typography-600 dark:text-typography-300" numberOfLines={2}>
 								{portsLabel}
 							</Text>
@@ -238,7 +238,7 @@ const ContainerCard = ({
 					) : null}
 					{mountsPreview.length ? (
 						<VStack className="gap-1 mt-1">
-							<Text className="text-xs text-typography-500 dark:text-typography-400">Mounts</Text>
+							<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Mounts</Text>
 							{mountsPreview.map((mount, idx) => (
 								<Text
 									key={`${mount.Source || "host"}-${mount.Destination || "container"}-${idx}`}
@@ -249,7 +249,7 @@ const ContainerCard = ({
 								</Text>
 							))}
 							{extraMounts > 0 ? (
-								<Text className="text-[11px] text-typography-500 dark:text-typography-400">+{extraMounts} more</Text>
+								<Text className="text-[11px] text-typography-500 dark:text-[#8A94A8]">+{extraMounts} more</Text>
 							) : null}
 						</VStack>
 					) : null}
@@ -743,7 +743,7 @@ export default function DockerContainersScreen() {
 					Docker Containers
 				</Heading>
 				<HStack className="items-center justify-between flex-wrap gap-3">
-					<Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
+					<Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
 						Manage containers: start, stop, create, and apply quick limits.
 					</Text>
 					<Button
@@ -760,7 +760,7 @@ export default function DockerContainersScreen() {
 				<VStack className="mt-5 gap-4">
 					<HStack className="gap-3 flex-wrap items-end">
 						<Box className="min-w-[180px]">
-							<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Machine</Text>
+							<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Machine</Text>
 							<Select
 								selectedValue={selectedMachine ?? undefined}
 								onValueChange={setSelectedMachine as any}
@@ -788,11 +788,11 @@ export default function DockerContainersScreen() {
 						</Box>
 						<HStack className="gap-3 flex-wrap">
 							<Box className="p-3 rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
-								<Text className="text-xs text-typography-500 dark:text-typography-400">Containers</Text>
+								<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Containers</Text>
 								<Text className="text-xl font-semibold text-typography-900 dark:text-[#E8EBF0]">{containers.length}</Text>
 							</Box>
 							<Box className="p-3 rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
-								<Text className="text-xs text-typography-500 dark:text-typography-400">Running</Text>
+								<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Running</Text>
 								<Text className="text-xl font-semibold text-typography-900 dark:text-[#E8EBF0]">{runningCount}</Text>
 							</Box>
 						</HStack>
@@ -871,13 +871,13 @@ export default function DockerContainersScreen() {
 											<Text className="text-xs font-semibold text-typography-500 dark:text-typography-300 uppercase tracking-[0.08em]">Basics</Text>
 											<HStack className="gap-3 flex-wrap">
 												<Box className="flex-1 min-w-[220px]">
-													<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Image</Text>
+													<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Image</Text>
 													<Input className="rounded-xl">
 														<InputField value={formImage} onChangeText={setFormImage} placeholder="nginx:alpine" autoCapitalize="none" />
 													</Input>
 												</Box>
 												<Box className="flex-1 min-w-[200px]">
-													<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Name</Text>
+													<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Name</Text>
 													<Input className="rounded-xl">
 														<InputField value={formName} onChangeText={setFormName} placeholder="frontend" autoCapitalize="none" />
 													</Input>
@@ -888,7 +888,7 @@ export default function DockerContainersScreen() {
 										<VStack className="gap-2">
 											<Text className="text-xs font-semibold text-typography-500 dark:text-typography-300 uppercase tracking-[0.08em]">Ports</Text>
 											<Box>
-												<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Ports (host:container)</Text>
+												<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Ports (host:container)</Text>
 												<Input className="rounded-xl">
 													<InputField
 														value={formPorts}
@@ -904,7 +904,7 @@ export default function DockerContainersScreen() {
 											<Text className="text-xs font-semibold text-typography-500 dark:text-typography-300 uppercase tracking-[0.08em]">Runtime</Text>
 											<HStack className="flex-wrap gap-3 items-end">
 												<Box className="min-w-[180px]">
-													<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Network</Text>
+													<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Network</Text>
 													<Select selectedValue={formNetwork} onValueChange={setFormNetwork as any}>
 														<SelectTrigger className="w-40 rounded-xl border border-outline-200 dark:border-[#1F2A3C]">
 															<SelectInput />
@@ -924,7 +924,7 @@ export default function DockerContainersScreen() {
 													</Select>
 												</Box>
 												<Box className="w-32">
-													<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Restart</Text>
+													<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Restart</Text>
 													<Select selectedValue={formRestart} onValueChange={setFormRestart as any}>
 														<SelectTrigger className="rounded-xl border border-outline-200 dark:border-[#1F2A3C]">
 															<SelectInput />
@@ -944,20 +944,20 @@ export default function DockerContainersScreen() {
 													</Select>
 												</Box>
 												<Box className="w-32">
-													<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Detach</Text>
+													<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Detach</Text>
 													<HStack className="items-center gap-2">
 														<Switch value={formDetach} onToggle={setFormDetach} />
 														<Text className="text-sm text-typography-700 dark:text-typography-200">Detach</Text>
 													</HStack>
 												</Box>
 												<Box className="w-28">
-													<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">RAM (MB)</Text>
+													<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">RAM (MB)</Text>
 													<Input className="rounded-xl">
 														<InputField value={formMemory} onChangeText={setFormMemory} placeholder="1024" keyboardType="numeric" />
 													</Input>
 												</Box>
 												<Box className="w-24">
-													<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">CPUs</Text>
+													<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">CPUs</Text>
 													<Input className="rounded-xl">
 														<InputField value={formCpu} onChangeText={setFormCpu} placeholder="1" keyboardType="numeric" />
 													</Input>
@@ -969,13 +969,13 @@ export default function DockerContainersScreen() {
 											<Text className="text-xs font-semibold text-typography-500 dark:text-typography-300 uppercase tracking-[0.08em]">Commands</Text>
 											<HStack className="flex-wrap gap-3">
 												<Box className="flex-1 min-w-[200px]">
-													<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Command (space-separated)</Text>
+													<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Command (space-separated)</Text>
 													<Input className="rounded-xl">
 														<InputField value={formCommand} onChangeText={setFormCommand} placeholder="/start.sh --flag" autoCapitalize="none" />
 													</Input>
 												</Box>
 												<Box className="flex-1 min-w-[200px]">
-													<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Entrypoint</Text>
+													<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Entrypoint</Text>
 													<Input className="rounded-xl">
 														<InputField value={formEntryPoint} onChangeText={setFormEntryPoint} placeholder="/entrypoint.sh" autoCapitalize="none" />
 													</Input>
@@ -989,7 +989,7 @@ export default function DockerContainersScreen() {
 									<VStack className="gap-4">
 										<Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">Attach volumes</Text>
 										<Box className="gap-3">
-											<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Existing volume</Text>
+											<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Existing volume</Text>
 											<HStack className="flex-wrap gap-3 items-end">
 												<Box className="flex-1 min-w-[200px]">
 													<Select selectedValue={volumeSelect} onValueChange={setVolumeSelect as any} isDisabled={!volumes.length}>
@@ -1011,7 +1011,7 @@ export default function DockerContainersScreen() {
 													</Select>
 												</Box>
 												<Box className="w-44">
-													<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Mount path</Text>
+													<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Mount path</Text>
 													<Input className="rounded-xl">
 														<InputField value={volumeMount} onChangeText={setVolumeMount} placeholder="/data" autoCapitalize="none" />
 													</Input>
@@ -1036,7 +1036,7 @@ export default function DockerContainersScreen() {
 										</Box>
 
 										<Box className="gap-3">
-											<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Bind mount (host path)</Text>
+											<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Bind mount (host path)</Text>
 											<HStack className="flex-wrap gap-3 items-end">
 												<Box className="flex-1 min-w-[200px]">
 													<Input className="rounded-xl">
@@ -1082,7 +1082,7 @@ export default function DockerContainersScreen() {
 												</HStack>
 											</VStack>
 										) : (
-											<Text className="text-xs text-typography-500 dark:text-typography-400">No volumes attached yet.</Text>
+											<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">No volumes attached yet.</Text>
 										)}
 									</VStack>
 								) : null}
@@ -1092,13 +1092,13 @@ export default function DockerContainersScreen() {
 										<Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">Environment variables</Text>
 										<HStack className="flex-wrap gap-3 items-end">
 											<Box className="flex-1 min-w-[180px]">
-												<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Env key</Text>
+												<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Env key</Text>
 												<Input className="rounded-xl">
 													<InputField value={envKey} onChangeText={setEnvKey} placeholder="EULA" autoCapitalize="none" />
 												</Input>
 											</Box>
 											<Box className="flex-1 min-w-[180px]">
-												<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Env value</Text>
+												<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Env value</Text>
 												<Input className="rounded-xl">
 													<InputField value={envValue} onChangeText={setEnvValue} placeholder="TRUE" autoCapitalize="none" />
 												</Input>
@@ -1166,19 +1166,19 @@ export default function DockerContainersScreen() {
 							</Text>
 							<HStack className="flex-wrap gap-3">
 								<Box className="w-32 min-w-[120px]">
-									<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">RAM (MB)</Text>
+									<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">RAM (MB)</Text>
 									<Input className="rounded-xl">
 										<InputField value={updateMemory} onChangeText={setUpdateMemory} placeholder="4096" keyboardType="numeric" />
 									</Input>
 								</Box>
 								<Box className="w-24 min-w-[100px]">
-									<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">CPUs</Text>
+									<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">CPUs</Text>
 									<Input className="rounded-xl">
 										<InputField value={updateCpu} onChangeText={setUpdateCpu} placeholder="2" keyboardType="numeric" />
 									</Input>
 								</Box>
 								<Box className="w-36 min-w-[120px]">
-									<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Restart</Text>
+									<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Restart</Text>
 									<Select selectedValue={updateRestart} onValueChange={setUpdateRestart as any}>
 										<SelectTrigger className="rounded-xl border border-outline-200 dark:border-[#1F2A3C]">
 											<SelectInput />
@@ -1241,7 +1241,7 @@ export default function DockerContainersScreen() {
 							<Box className="rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-50 dark:bg-[#0F1625] p-3" style={{ maxHeight: 360 }}>
 								<ScrollView>
 									{logConsole.lines.length === 0 ? (
-										<Text className="text-xs text-typography-500 dark:text-typography-400">A aguardar logs...</Text>
+										<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">A aguardar logs...</Text>
 									) : (
 										<VStack className="gap-1">
 											{logConsole.lines.map((line, idx) => (

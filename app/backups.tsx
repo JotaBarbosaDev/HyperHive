@@ -575,7 +575,7 @@ export default function BackupsScreen() {
           >
             Backups
           </Heading>
-          <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl mb-6">
+          <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl mb-6">
             Full backup management for virtual machines with quick restores and version control.
           </Text>
 
@@ -836,13 +836,13 @@ export default function BackupsScreen() {
                                 {formatDate(backup.backupDate)}
                               </Text>
                               <Text
-                                className="flex-[2] text-sm text-typography-600 dark:text-typography-400"
+                                className="flex-[2] text-sm text-typography-600 dark:text-[#8A94A8]"
                                 style={{ fontFamily: "Inter_400Regular" }}
                               >
                                 {getNfsName(backup.nfsShareId)}
                               </Text>
                               <Text
-                                className="flex-1 text-sm text-typography-600 dark:text-typography-400"
+                                className="flex-1 text-sm text-typography-600 dark:text-[#8A94A8]"
                                 style={{ fontFamily: "Inter_400Regular" }}
                               >
                                 {formatSizeGb(backup.size)}
@@ -956,7 +956,7 @@ export default function BackupsScreen() {
                     <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
                       {vmName}
                     </Text>
-                    <Text className="text-xs text-typography-500 dark:text-typography-400">
+                    <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
                       {vmBackups.length} backup{vmBackups.length > 1 ? "s" : ""}
                       {vmTotalSize > 0 ? ` • ${formatSizeGb(vmTotalSize)}` : ""}
                     </Text>
@@ -978,16 +978,16 @@ export default function BackupsScreen() {
                               <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
                                 {backup.vmName}
                               </Text>
-                              <Text className="text-xs text-typography-600 dark:text-typography-400 mt-1">
+                              <Text className="text-xs text-typography-600 dark:text-[#8A94A8] mt-1">
                                 {formatDate(backup.backupDate)}
                               </Text>
-                              <Text className="text-xs text-typography-500 dark:text-typography-400 mt-1">
+                              <Text className="text-xs text-typography-500 dark:text-[#8A94A8] mt-1">
                                 {backup.machineName}
                               </Text>
-                              <Text className="text-xs text-typography-500 dark:text-typography-400 mt-1">
+                              <Text className="text-xs text-typography-500 dark:text-[#8A94A8] mt-1">
                                 Size: {formatSizeGb(backup.size)}
                               </Text>
-                              <Text className="text-xs text-typography-500 dark:text-typography-400 mt-1">
+                              <Text className="text-xs text-typography-500 dark:text-[#8A94A8] mt-1">
                                 Working: {working ? "Live" : "Offline"}
                               </Text>
                             </VStack>
@@ -1051,7 +1051,7 @@ export default function BackupsScreen() {
                     <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] p-4">
                       <VStack className="gap-3">
                         <HStack className="items-center justify-between">
-                          <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                          <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
                             VM
                           </Text>
                           <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
@@ -1059,7 +1059,7 @@ export default function BackupsScreen() {
                           </Text>
                         </HStack>
                         <HStack className="items-center justify-between">
-                          <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                          <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
                             Backup Date
                           </Text>
                           <Text className="text-sm text-typography-700 dark:text-typography-200">
@@ -1107,7 +1107,7 @@ export default function BackupsScreen() {
                               value={restoreMachine}
                               className="text-typography-900 dark:text-[#E8EBF0]"
                             />
-                            <SelectIcon className="mr-3 text-typography-500 dark:text-typography-400" as={ChevronDownIcon} />
+                            <SelectIcon className="mr-3 text-typography-500 dark:text-[#8A94A8]" as={ChevronDownIcon} />
                           </SelectTrigger>
                           <SelectPortal>
                             <SelectBackdropContent />
@@ -1245,7 +1245,7 @@ export default function BackupsScreen() {
                               value={restoreNfsLabel}
                               className="text-typography-900 dark:text-[#E8EBF0]"
                             />
-                            <SelectIcon className="mr-3 text-typography-500 dark:text-typography-400" as={ChevronDownIcon} />
+                            <SelectIcon className="mr-3 text-typography-500 dark:text-[#8A94A8]" as={ChevronDownIcon} />
                           </SelectTrigger>
                           <SelectPortal>
                             <SelectBackdropContent />
@@ -1296,7 +1296,7 @@ export default function BackupsScreen() {
                           </Heading>
                         </HStack>
 
-                        <Text className="text-sm text-typography-600 dark:text-typography-400 mb-4">
+                        <Text className="text-sm text-typography-600 dark:text-[#8A94A8] mb-4">
                           Select slaves to compare and get a CPU configuration compatible between them.
                         </Text>
 
@@ -1462,7 +1462,7 @@ export default function BackupsScreen() {
                             </HStack>
                           </HStack>
 
-                          <Text className="text-xs text-typography-500 dark:text-typography-400">
+                          <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
                             This XML configures the VM CPU. You can edit it manually if needed.
                           </Text>
 
@@ -1556,12 +1556,12 @@ export default function BackupsScreen() {
                 >
                   Delete backup?
                 </Heading>
-                <Text className="text-sm text-typography-600 dark:text-typography-400">
+                <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                   This permanently removes the backup file from storage.
                 </Text>
               </VStack>
             </HStack>
-            <ModalCloseButton className="text-typography-600 dark:text-typography-400" />
+            <ModalCloseButton className="text-typography-600 dark:text-[#8A94A8]" />
           </ModalHeader>
           <ModalBody className="pt-5">
             <VStack className="gap-4">
@@ -1569,7 +1569,7 @@ export default function BackupsScreen() {
                 <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0A1628] p-4">
                   <VStack className="gap-3">
                     <HStack className="items-center justify-between">
-                      <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                      <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
                         VM
                       </Text>
                       <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
@@ -1577,7 +1577,7 @@ export default function BackupsScreen() {
                       </Text>
                     </HStack>
                     <HStack className="items-center justify-between">
-                      <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                      <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
                         Date
                       </Text>
                       <Text className="text-sm text-typography-700 dark:text-typography-200">
@@ -1585,7 +1585,7 @@ export default function BackupsScreen() {
                       </Text>
                     </HStack>
                     <HStack className="items-center justify-between">
-                      <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                      <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
                         NFS share
                       </Text>
                       <Text className="text-sm text-typography-700 dark:text-typography-200">
@@ -1593,7 +1593,7 @@ export default function BackupsScreen() {
                       </Text>
                     </HStack>
                     <HStack className="items-center justify-between">
-                      <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                      <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
                         Type
                       </Text>
                       <Text className="text-sm text-typography-700 dark:text-typography-200">
@@ -1601,7 +1601,7 @@ export default function BackupsScreen() {
                       </Text>
                     </HStack>
                     <HStack className="items-center justify-between">
-                      <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                      <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
                         Status
                       </Text>
                       <Text className="text-sm text-typography-700 dark:text-typography-200">
@@ -1609,7 +1609,7 @@ export default function BackupsScreen() {
                       </Text>
                     </HStack>
                     <HStack className="items-center justify-between">
-                      <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                      <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
                         Size
                       </Text>
                       <Text className="text-sm text-typography-700 dark:text-typography-200">
@@ -1672,7 +1672,7 @@ export default function BackupsScreen() {
             >
               Backup Actions
             </Heading>
-            <ModalCloseButton className="text-typography-600 dark:text-typography-400" />
+            <ModalCloseButton className="text-typography-600 dark:text-[#8A94A8]" />
           </ModalHeader>
           <ModalBody className="py-4">
             {mobileActionBackup ? (
@@ -1682,10 +1682,10 @@ export default function BackupsScreen() {
                     <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
                       {mobileActionBackup.vmName}
                     </Text>
-                    <Text className="text-xs text-typography-600 dark:text-typography-400">
+                    <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">
                       {formatDate(mobileActionBackup.backupDate)}
                     </Text>
-                    <Text className="text-xs text-typography-500 dark:text-typography-400">
+                    <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
                       {mobileActionBackup.machineName}
                     </Text>
                   </VStack>
@@ -1734,7 +1734,7 @@ export default function BackupsScreen() {
             >
               Create Backup
             </Heading>
-            <ModalCloseButton className="text-typography-600 dark:text-typography-400" />
+            <ModalCloseButton className="text-typography-600 dark:text-[#8A94A8]" />
           </ModalHeader>
           <ModalBody className="py-4">
             <VStack className="gap-5">
@@ -1756,7 +1756,7 @@ export default function BackupsScreen() {
                       value={createVmName}
                       className="text-typography-900 dark:text-[#E8EBF0]"
                     />
-                    <SelectIcon className="mr-3 text-typography-500 dark:text-typography-400" as={ChevronDownIcon} />
+                    <SelectIcon className="mr-3 text-typography-500 dark:text-[#8A94A8]" as={ChevronDownIcon} />
                   </SelectTrigger>
                   <SelectPortal>
                     <SelectBackdropContent />
@@ -1794,7 +1794,7 @@ export default function BackupsScreen() {
                       value={createNfsLabel}
                       className="text-typography-900 dark:text-[#E8EBF0]"
                     />
-                    <SelectIcon className="mr-3 text-typography-500 dark:text-typography-400" as={ChevronDownIcon} />
+                    <SelectIcon className="mr-3 text-typography-500 dark:text-[#8A94A8]" as={ChevronDownIcon} />
                   </SelectTrigger>
                   <SelectPortal>
                     <SelectBackdropContent />

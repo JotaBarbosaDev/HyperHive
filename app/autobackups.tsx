@@ -446,7 +446,7 @@ export default function AutoBackupsScreen() {
               >
                 Auto-Backups
               </Heading>
-              <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl mt-2">
+              <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl mt-2">
                 Configure automatic backup schedules for your VMs with frequency
                 and retention control.
               </Text>
@@ -664,7 +664,7 @@ export default function AutoBackupsScreen() {
                         {schedule.retention} backups
                       </Text>
                       <Text
-                        className="text-xs text-typography-600 dark:text-typography-400"
+                        className="text-xs text-typography-600 dark:text-[#8A94A8]"
                         style={{fontFamily: "Inter_400Regular"}}
                       >
                         Last backup: {formatDate(schedule.lastBackup)}
@@ -747,7 +747,7 @@ export default function AutoBackupsScreen() {
             >
               {editSchedule ? "Edit Auto-Backup" : "New Auto-Backup"}
             </Heading>
-            <ModalCloseButton className="text-typography-600 dark:text-typography-400" />
+            <ModalCloseButton className="text-typography-600 dark:text-[#8A94A8]" />
           </ModalHeader>
           <ModalBody className="py-4">
             <VStack className="gap-4">
@@ -776,7 +776,7 @@ export default function AutoBackupsScreen() {
                       className="text-typography-900 dark:text-[#E8EBF0]"
                     />
                     <SelectIcon
-                      className="mr-3 text-typography-500 dark:text-typography-400"
+                      className="mr-3 text-typography-500 dark:text-[#8A94A8]"
                       as={ChevronDownIcon}
                     />
                   </SelectTrigger>
@@ -831,7 +831,7 @@ export default function AutoBackupsScreen() {
                         className="text-typography-900 dark:text-[#E8EBF0]"
                       />
                       <SelectIcon
-                        className="mr-3 text-typography-500 dark:text-typography-400"
+                        className="mr-3 text-typography-500 dark:text-[#8A94A8]"
                         as={ChevronDownIcon}
                       />
                     </SelectTrigger>
@@ -908,7 +908,7 @@ export default function AutoBackupsScreen() {
                         className="text-typography-900 dark:text-[#E8EBF0]"
                       />
                       <SelectIcon
-                        className="mr-3 text-typography-500 dark:text-typography-400"
+                        className="mr-3 text-typography-500 dark:text-[#8A94A8]"
                         as={ChevronDownIcon}
                       />
                     </SelectTrigger>
@@ -949,7 +949,7 @@ export default function AutoBackupsScreen() {
                         className="text-typography-900 dark:text-[#E8EBF0]"
                       />
                       <SelectIcon
-                        className="mr-3 text-typography-500 dark:text-typography-400"
+                        className="mr-3 text-typography-500 dark:text-[#8A94A8]"
                         as={ChevronDownIcon}
                       />
                     </SelectTrigger>
@@ -999,7 +999,7 @@ export default function AutoBackupsScreen() {
                       className="text-typography-900 dark:text-[#E8EBF0]"
                     />
                     <SelectIcon
-                      className="mr-3 text-typography-500 dark:text-typography-400"
+                      className="mr-3 text-typography-500 dark:text-[#8A94A8]"
                       as={ChevronDownIcon}
                     />
                   </SelectTrigger>
@@ -1034,7 +1034,7 @@ export default function AutoBackupsScreen() {
                   isChecked
                   aria-label="Live backups require qemu-guest-agent"
                 >
-                  <CheckboxLabel className="text-sm text-typography-600 dark:text-typography-400">
+                  <CheckboxLabel className="text-sm text-typography-600 dark:text-[#8A94A8]">
                     VMs need qemu-guest-agent for live backups
                   </CheckboxLabel>
                 </Checkbox>
@@ -1087,7 +1087,7 @@ export default function AutoBackupsScreen() {
               <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
                 Delete auto-backup?
               </Heading>
-              <Text className="text-sm text-typography-600 dark:text-typography-400">
+              <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                 This removes the schedule permanently.
               </Text>
             </VStack>
@@ -1098,7 +1098,7 @@ export default function AutoBackupsScreen() {
               {confirmDelete ? (
                 <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] p-4">
                   <VStack className="gap-2">
-                    <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                    <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
                       Schedule
                     </Text>
                     <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">

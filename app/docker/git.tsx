@@ -76,7 +76,7 @@ const GitCard = ({
 					<VStack className="gap-1">
 						<Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">{entry.Name}</Text>
 						<HStack className="items-center gap-2">
-							<Icon as={Link} size="sm" className="text-typography-500 dark:text-typography-400" />
+							<Icon as={Link} size="sm" className="text-typography-500 dark:text-[#8A94A8]" />
 							<Text className="text-xs text-typography-600 dark:text-typography-300" numberOfLines={2}>
 								{entry.RepoLink}
 							</Text>
@@ -400,7 +400,7 @@ export default function DockerGitScreen() {
 					Docker Git
 				</Heading>
 				<HStack className="items-center justify-between flex-wrap gap-3">
-					<Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
+					<Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
 						Clone, update, and remove stacks from Git repositories (compose/stack runner).
 					</Text>
 					<Button action="primary" className="rounded-xl" onPress={() => setIsCreateOpen(true)} isDisabled={!selectedMachine}>
@@ -412,7 +412,7 @@ export default function DockerGitScreen() {
 				<VStack className="mt-5 gap-4">
 					<HStack className="gap-3 flex-wrap items-end">
 						<Box className="min-w-[180px]">
-							<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Machine</Text>
+							<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Machine</Text>
 							<Select
 								selectedValue={selectedMachine ?? undefined}
 								onValueChange={setSelectedMachine as any}
@@ -440,7 +440,7 @@ export default function DockerGitScreen() {
 						</Box>
 						<HStack className="gap-3 flex-wrap">
 							<Box className="p-3 rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
-								<Text className="text-xs text-typography-500 dark:text-typography-400">Stacks</Text>
+								<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Stacks</Text>
 								<Text className="text-xl font-semibold text-typography-900 dark:text-[#E8EBF0]">{entries.length}</Text>
 							</Box>
 						</HStack>
@@ -486,7 +486,7 @@ export default function DockerGitScreen() {
 								<VStack className="gap-2">
 									<Text className="text-xs font-semibold text-typography-500 dark:text-typography-300 uppercase tracking-[0.08em]">Repository</Text>
 									<Box>
-										<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Repository URL</Text>
+										<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Repository URL</Text>
 										<Input className="rounded-xl">
 											<InputField
 												value={formLink}
@@ -497,18 +497,18 @@ export default function DockerGitScreen() {
 										</Input>
 									</Box>
 									<Box>
-										<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Compose path (folder_to_run)</Text>
+										<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Compose path (folder_to_run)</Text>
 										<Input className="rounded-xl">
 											<InputField value={formPath} onChangeText={setFormPath} placeholder="portainer/compose.yaml" autoCapitalize="none" />
 										</Input>
-										<Text className="text-[11px] text-typography-500 dark:text-typography-400 mt-1">Leave blank for repo root compose.</Text>
+										<Text className="text-[11px] text-typography-500 dark:text-[#8A94A8] mt-1">Leave blank for repo root compose.</Text>
 									</Box>
 								</VStack>
 
 								<VStack className="gap-2">
 									<Text className="text-xs font-semibold text-typography-500 dark:text-typography-300 uppercase tracking-[0.08em]">Stack details</Text>
 									<Box>
-										<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Name (required)</Text>
+										<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Name (required)</Text>
 										<Input className="rounded-xl">
 											<InputField value={formName} onChangeText={setFormName} placeholder="stack-name" autoCapitalize="none" />
 										</Input>
@@ -520,13 +520,13 @@ export default function DockerGitScreen() {
 									<VStack className="gap-2">
 										<HStack className="gap-3 flex-wrap items-end">
 											<Box className="flex-1 min-w-[180px]">
-												<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Env key</Text>
+												<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Env key</Text>
 												<Input className="rounded-xl">
 													<InputField value={envKey} onChangeText={setEnvKey} placeholder="HOST_PORT" autoCapitalize="none" />
 												</Input>
 											</Box>
 											<Box className="flex-1 min-w-[180px]">
-												<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Env value</Text>
+												<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Env value</Text>
 												<Input className="rounded-xl">
 													<InputField value={envValue} onChangeText={setEnvValue} placeholder="8080" autoCapitalize="none" />
 												</Input>
@@ -555,7 +555,7 @@ export default function DockerGitScreen() {
 												))}
 											</HStack>
 										) : null}
-										<Text className="text-[11px] text-typography-500 dark:text-typography-400 mt-1">Replaces env vars before running.</Text>
+										<Text className="text-[11px] text-typography-500 dark:text-[#8A94A8] mt-1">Replaces env vars before running.</Text>
 									</VStack>
 								</VStack>
 							</VStack>
@@ -596,13 +596,13 @@ export default function DockerGitScreen() {
 								<Text className="text-xs font-semibold text-typography-500 dark:text-typography-300 uppercase tracking-[0.08em]">Environment</Text>
 								<HStack className="gap-3 flex-wrap items-end">
 									<Box className="flex-1 min-w-[180px]">
-										<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Env key</Text>
+										<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Env key</Text>
 										<Input className="rounded-xl">
 											<InputField value={updateEnvKey} onChangeText={setUpdateEnvKey} placeholder="HOST_PORT" autoCapitalize="none" />
 										</Input>
 									</Box>
 									<Box className="flex-1 min-w-[180px]">
-										<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Env value</Text>
+										<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Env value</Text>
 										<Input className="rounded-xl">
 											<InputField value={updateEnvValue} onChangeText={setUpdateEnvValue} placeholder="8080" autoCapitalize="none" />
 										</Input>
@@ -631,7 +631,7 @@ export default function DockerGitScreen() {
 										))}
 									</HStack>
 								) : null}
-								<Text className="text-[11px] text-typography-500 dark:text-typography-400 mt-1">Env overrides are optional.</Text>
+								<Text className="text-[11px] text-typography-500 dark:text-[#8A94A8] mt-1">Env overrides are optional.</Text>
 							</VStack>
 						</VStack>
 					</ModalBody>
@@ -672,7 +672,7 @@ export default function DockerGitScreen() {
 						<Box className="rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-50 dark:bg-[#0F1625] p-3" style={{ maxHeight: 360 }}>
 							<ScrollView>
 								{consoleState.lines.length === 0 ? (
-									<Text className="text-xs text-typography-500 dark:text-typography-400">A aguardar logs...</Text>
+									<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">A aguardar logs...</Text>
 								) : (
 									<VStack className="gap-1">
 										{consoleState.lines.map((line, idx) => (

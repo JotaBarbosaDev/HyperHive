@@ -512,7 +512,7 @@ export function CreateMountDrawer({
             <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
               Host Normal Mount
             </Text>
-            <Text className="text-xs text-typography-500 dark:text-typography-400">
+            <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
               Allow the host to access storage directly for better
               performance.
             </Text>
@@ -657,7 +657,7 @@ export function CreateMountDrawer({
           btrfsAutoMountLoading ? (
             <HStack className="items-center gap-2">
               <ButtonSpinner size="small" />
-              <Text className="text-sm text-typography-500 dark:text-typography-400">
+              <Text className="text-sm text-typography-500 dark:text-[#8A94A8]">
                 Loading automatic mounts...
               </Text>
             </HStack>
@@ -693,11 +693,11 @@ export function CreateMountDrawer({
                       >
                         {mountLabel}
                       </RadioLabel>
-                      <Text className="text-xs text-typography-500 dark:text-typography-400">
+                      <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
                         UUID: {mountUuid}
                       </Text>
                       {mount.compression ? (
-                        <Text className="text-xs text-typography-500 dark:text-typography-400">
+                        <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
                           Compression: {mount.compression}
                         </Text>
                       ) : null}
@@ -707,12 +707,12 @@ export function CreateMountDrawer({
               })}
             </RadioGroup>
           ) : (
-            <Text className="text-sm text-typography-500 dark:text-typography-400">
+            <Text className="text-sm text-typography-500 dark:text-[#8A94A8]">
               No automatic mounts found for this machine.
             </Text>
           )
         ) : (
-          <Text className="text-sm text-typography-500 dark:text-typography-400">
+          <Text className="text-sm text-typography-500 dark:text-[#8A94A8]">
             Select a machine to load automatic mounts.
           </Text>
         )}

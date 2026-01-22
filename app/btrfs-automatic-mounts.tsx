@@ -340,7 +340,7 @@ export default function BtrfsAutomaticMountsScreen() {
           >
             BTRFS Auto-Mounts
           </Heading>
-          <Text className="text-typography-600 dark:text-typography-400 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
+          <Text className="text-typography-600 dark:text-[#8A94A8] dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
             Rules that automatically mount BTRFS RAIDs when the machine starts.
           </Text>
 

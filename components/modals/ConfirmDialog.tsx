@@ -49,7 +49,7 @@ export function ConfirmDialog({
 				</ModalHeader>
 				<ModalBody>
 					{description ? (
-						<Text className="text-typography-600 dark:text-typography-400">{description}</Text>
+						<Text className="text-typography-600 dark:text-[#8A94A8]">{description}</Text>
 					) : null}
 					{bodyContent ? <>{bodyContent}</> : null}
 				</ModalBody>

@@ -368,7 +368,7 @@ export default function CertificatesScreen() {
           >
             SSL Certificates
           </Heading>
-          <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
+          <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
             Manage SSL certificates for your proxy hosts.
           </Text>
 
@@ -525,11 +525,11 @@ export default function CertificatesScreen() {
                       </HStack>
                       <HStack className="items-center gap-2 flex-wrap">
                         <Calendar color={expired ? "#ef4444" : isDarkMode ? "#E2E8F0" : "#0f172a"} size={14} />
-                        <Text className={`text-xs ${expired ? "text-error-600" : "text-typography-600 dark:text-typography-400"}`}>
+                        <Text className={`text-xs ${expired ? "text-error-600" : "text-typography-600 dark:text-[#8A94A8]"}`}>
                           Expires {formatDate(resolveExpiry(cert))}
                         </Text>
                       </HStack>
-                      <Text className="text-xs text-typography-500 dark:text-typography-400">
+                      <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
                         Tap for details & actions
                       </Text>
                     </VStack>
@@ -549,7 +549,7 @@ export default function CertificatesScreen() {
               <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
                 Certificate
               </Heading>
-              <Text className="text-typography-600 dark:text-typography-400 mt-1">
+              <Text className="text-typography-600 dark:text-[#8A94A8] mt-1">
                 Details and actions for this certificate.
               </Text>
             </VStack>
@@ -559,7 +559,7 @@ export default function CertificatesScreen() {
             {selectedCert ? (
               <VStack className="gap-4">
                 <VStack className="gap-2">
-                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
                     Domains
                   </Text>
                   <HStack className="flex-wrap gap-2">
@@ -655,7 +655,7 @@ export default function CertificatesScreen() {
               <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
                 Issue Let's Encrypt
               </Heading>
-              <Text className="text-typography-600 dark:text-typography-400 mt-1">
+              <Text className="text-typography-600 dark:text-[#8A94A8] mt-1">
                 Generate SSL certificates via ACME with HTTP or DNS challenge.
               </Text>
             </VStack>
@@ -765,7 +765,7 @@ export default function CertificatesScreen() {
                             placeholder={dnsLoading ? "Loading providers..." : dnsProviders.find((d) => d.id === selectedDnsProviderId)?.name ?? "Select provider"}
                             className="text-typography-900 dark:text-[#E8EBF0]"
                           />
-                          <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-typography-400" />
+                          <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-[#8A94A8]" />
                         </SelectTrigger>
                         <SelectPortal>
                           <SelectBackdropContent />

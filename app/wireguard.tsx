@@ -409,7 +409,7 @@ export default function WireGuardScreen() {
           >
             WireGuard VPN
           </Heading>
-          <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl mb-3">
+          <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl mb-3">
             Configure and manage the WireGuard VPN for secure cluster access with end-to-end encryption.
           </Text>
           <Button
@@ -441,7 +441,7 @@ export default function WireGuardScreen() {
             isLoading ? (
               <Box className="p-6 web:rounded-2xl web:bg-background-0/80 dark:web:bg-[#151F30]/80 mt-6">
                 <Text
-                  className="text-typography-600 dark:text-typography-400 text-center"
+                  className="text-typography-600 dark:text-[#8A94A8] text-center"
                   style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Loading VPN information...
@@ -460,7 +460,7 @@ export default function WireGuardScreen() {
                     No VPN Configured
                   </Heading>
                   <Text
-                    className="text-typography-600 dark:text-typography-400 text-center max-w-md"
+                    className="text-typography-600 dark:text-[#8A94A8] text-center max-w-md"
                     style={{ fontFamily: "Inter_400Regular" }}
                   >
                     Set up a WireGuard VPN to securely connect to your cluster from anywhere.
@@ -511,7 +511,7 @@ export default function WireGuardScreen() {
                 {peers.length === 0 ? (
                   <Box className="p-8">
                     <Text
-                      className="text-center text-typography-600 dark:text-typography-400"
+                      className="text-center text-typography-600 dark:text-[#8A94A8]"
                       style={{ fontFamily: "Inter_400Regular" }}
                     >
                       No peers configured
@@ -570,14 +570,14 @@ export default function WireGuardScreen() {
                             {peer.name}
                           </Text>
                           <Text
-                            className="w-[120px] text-sm text-typography-600 dark:text-typography-400"
+                            className="w-[120px] text-sm text-typography-600 dark:text-[#8A94A8]"
                             style={{ fontFamily: "Inter_400Regular" }}
                           >
                             {peer.client_ip?.split("/")[0] ?? "—"}
                           </Text>
                           <HStack className="flex-1 min-w-[200px] items-center gap-2">
                             <Text
-                              className="flex-1 text-sm text-typography-600 dark:text-typography-400"
+                              className="flex-1 text-sm text-typography-600 dark:text-[#8A94A8]"
                               style={{ fontFamily: "Inter_400Regular" }}
                             >
                               {truncateMiddle(peer.public_key, 30)}
@@ -591,12 +591,12 @@ export default function WireGuardScreen() {
                               <ButtonIcon
                                 as={Copy}
                                 size="sm"
-                                className="text-typography-600 dark:text-typography-400"
+                                className="text-typography-600 dark:text-[#8A94A8]"
                               />
                             </Button>
                           </HStack>
                           <Text
-                            className="w-[140px] text-sm text-typography-600 dark:text-typography-400"
+                            className="w-[140px] text-sm text-typography-600 dark:text-[#8A94A8]"
                             style={{ fontFamily: "Inter_400Regular" }}
                           >
                             {formatAllowedIps(peer)}
@@ -636,7 +636,7 @@ export default function WireGuardScreen() {
                               >
                                 {peer.name}
                               </Text>
-                              <Text className="text-xs text-typography-500 dark:text-typography-400">
+                              <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
                                 {peer.client_ip?.split("/")[0] ?? "—"}
                               </Text>
                             </VStack>
@@ -658,7 +658,7 @@ export default function WireGuardScreen() {
                             </Button>
                           </HStack>
                           <VStack className="gap-2">
-                            <Text className="text-xs text-typography-500 dark:text-typography-400">Public key</Text>
+                            <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Public key</Text>
                             <HStack className="items-center gap-2">
                               <Text
                                 className="flex-1 text-sm text-typography-700 dark:text-typography-300"
@@ -681,7 +681,7 @@ export default function WireGuardScreen() {
                             </HStack>
                           </VStack>
                           <VStack className="gap-1">
-                            <Text className="text-xs text-typography-500 dark:text-typography-400">Allowed IPs</Text>
+                            <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Allowed IPs</Text>
                             <Text className="text-sm text-typography-700 dark:text-typography-300">
                               {formatAllowedIps(peer)}
                             </Text>
@@ -709,7 +709,7 @@ export default function WireGuardScreen() {
             >
               Create WireGuard VPN
             </Heading>
-            <ModalCloseButton className="text-typography-600 dark:text-typography-400" />
+            <ModalCloseButton className="text-typography-600 dark:text-[#8A94A8]" />
           </ModalHeader>
           <ModalBody className="py-4">
             <VStack className="gap-5">
@@ -725,7 +725,7 @@ export default function WireGuardScreen() {
               </HStack>
 
               <Text
-                className="text-sm text-typography-600 dark:text-typography-400"
+                className="text-sm text-typography-600 dark:text-[#8A94A8]"
                 style={{ fontFamily: "Inter_400Regular" }}
               >
                 After it is created, use the add peer button to generate client configurations.
@@ -778,7 +778,7 @@ export default function WireGuardScreen() {
             >
               Add Peer
             </Heading>
-            <ModalCloseButton className="text-typography-600 dark:text-typography-400" />
+            <ModalCloseButton className="text-typography-600 dark:text-[#8A94A8]" />
           </ModalHeader>
           <ModalBody className="py-4">
             <VStack className="gap-5">
@@ -794,7 +794,7 @@ export default function WireGuardScreen() {
               </HStack>
 
               <Text
-                className="text-sm text-typography-600 dark:text-typography-400"
+                className="text-sm text-typography-600 dark:text-[#8A94A8]"
                 style={{ fontFamily: "Inter_400Regular" }}
               >
                 The IP will be assigned automatically when generating the peer.
@@ -860,7 +860,7 @@ export default function WireGuardScreen() {
                   />
                 </Input>
                 <Text
-                  className="text-xs text-typography-500 dark:text-typography-400"
+                  className="text-xs text-typography-500 dark:text-[#8A94A8]"
                   style={{ fontFamily: "Inter_400Regular" }}
                 >
                   Use 0 to disable or leave blank to use the recommended default.
@@ -914,7 +914,7 @@ export default function WireGuardScreen() {
               <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
                 Delete peer?
               </Heading>
-              <Text className="text-sm text-typography-600 dark:text-typography-400">
+              <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                 This removes the peer permanently.
               </Text>
             </VStack>
@@ -924,16 +924,16 @@ export default function WireGuardScreen() {
             {confirmDeletePeer ? (
               <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] p-4">
                 <VStack className="gap-2">
-                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
                     Peer
                   </Text>
                   <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
                     {confirmDeletePeer.name}
                   </Text>
-                  <Text className="text-sm text-typography-600 dark:text-typography-400">
+                  <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                     IP: {confirmDeletePeer.client_ip?.split("/")[0] ?? "—"}
                   </Text>
-                  <Text className="text-sm text-typography-600 dark:text-typography-400">
+                  <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                     Allowed IPs: {formatAllowedIps(confirmDeletePeer)}
                   </Text>
                 </VStack>
@@ -978,7 +978,7 @@ export default function WireGuardScreen() {
             >
               Connect locally
             </Heading>
-            <ModalCloseButton className="text-typography-600 dark:text-typography-400" />
+            <ModalCloseButton className="text-typography-600 dark:text-[#8A94A8]" />
           </ModalHeader>
           <ModalBody className="py-4">
             <VStack className="gap-5">
@@ -996,7 +996,7 @@ export default function WireGuardScreen() {
               <Box className="flex flex-col gap-4 web:grid web:grid-cols-2">
                 <Box className="flex flex-col gap-2">
                   <Text
-                    className="text-[11px] font-semibold uppercase text-typography-500 dark:text-typography-400 tracking-wide"
+                    className="text-[11px] font-semibold uppercase text-typography-500 dark:text-[#8A94A8] tracking-wide"
                     style={{ fontFamily: "Inter_600SemiBold" }}
                   >
                     Before
@@ -1012,7 +1012,7 @@ export default function WireGuardScreen() {
                 </Box>
                 <Box className="flex flex-col gap-2">
                   <Text
-                    className="text-[11px] font-semibold uppercase text-typography-500 dark:text-typography-400 tracking-wide"
+                    className="text-[11px] font-semibold uppercase text-typography-500 dark:text-[#8A94A8] tracking-wide"
                     style={{ fontFamily: "Inter_600SemiBold" }}
                   >
                     After

@@ -475,7 +475,7 @@ export default function MachineDetailsScreen() {
 				return (
 					<Box>
 						<Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0] mb-1">{title}</Text>
-						<Text className="text-sm text-typography-500 dark:text-typography-400">No history</Text>
+						<Text className="text-sm text-typography-500 dark:text-[#8A94A8]">No history</Text>
 					</Box>
 				);
 			}
@@ -553,7 +553,7 @@ export default function MachineDetailsScreen() {
 				return (
 					<Box>
 						<Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0] mb-1">{title}</Text>
-						<Text className="text-sm text-typography-500 dark:text-typography-400">No history</Text>
+						<Text className="text-sm text-typography-500 dark:text-[#8A94A8]">No history</Text>
 					</Box>
 				);
 			}
@@ -661,7 +661,7 @@ export default function MachineDetailsScreen() {
 								<Heading size="2xl" className="text-typography-900 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_700Bold" }}>
 									{machineName || "Machine"}
 								</Heading>
-								<Text className="text-sm text-typography-600 dark:text-typography-400">
+								<Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
 									Detailed view with CPU, RAM, disk, and network charts ({selectedRange.label}, {selectedRange.description}).
 								</Text>
 								{machine ? (
@@ -704,7 +704,7 @@ export default function MachineDetailsScreen() {
 							<Box className="items-center my-2">
 								<PercentGauge value={cpuAvg} isDark={isDark} />
 							</Box>
-							<Text className="text-sm text-typography-600 dark:text-typography-400">
+							<Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
 								{cpu?.cores?.length ?? 0} cores • Avg temp {tempAvg ? `${tempAvg.toFixed(1)}ºC` : "—"} • Max {tempMax ? `${tempMax.toFixed(1)}ºC` : "—"}
 							</Text>
 						</Box>
@@ -719,7 +719,7 @@ export default function MachineDetailsScreen() {
 							<Box className="items-center my-2">
 								<PercentGauge value={ramPercent} isDark={isDark} />
 							</Box>
-							<Text className="text-sm text-typography-600 dark:text-typography-400">
+							<Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
 								{mbToGb(mem?.usedMb ?? 0)} / {mbToGb(mem?.totalMb ?? 0)} GB
 							</Text>
 						</Box>
@@ -734,7 +734,7 @@ export default function MachineDetailsScreen() {
 							<Box className="items-center my-2">
 								<PercentGauge value={diskPercent} isDark={isDark} />
 							</Box>
-							<Text className="text-sm text-typography-600 dark:text-typography-400">
+							<Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
 								{formatBytes(diskTotals.used)} / {formatBytes(diskTotals.total)}
 							</Text>
 						</Box>
@@ -747,7 +747,7 @@ export default function MachineDetailsScreen() {
 								<Icon as={Clock3} size={ICON_SIZE_MD} className="text-primary-700 dark:text-[#5EEAD4]" />
 							</HStack>
 							<Heading size="xl" className="text-typography-900 dark:text-[#E8EBF0]">{parseUptime(uptime?.uptime)}</Heading>
-							<Text className="text-sm text-typography-600 dark:text-typography-400">Online since {formatRelative((machine as any)?.EntryTime)}</Text>
+							<Text className="text-sm text-typography-600 dark:text-[#8A94A8]">Online since {formatRelative((machine as any)?.EntryTime)}</Text>
 						</Box>
 					</HStack>
 
@@ -782,7 +782,7 @@ export default function MachineDetailsScreen() {
 									<Text className="text-xs text-typography-500 dark:text-typography-300">Temp: {core.temp ? `${core.temp}ºC` : "—"}</Text>
 								</Box>
 							))}
-							{!cpuCores.length ? <Text className="text-sm text-typography-600 dark:text-typography-400">No CPU data.</Text> : null}
+							{!cpuCores.length ? <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">No CPU data.</Text> : null}
 						</HStack>
 						{hasHiddenCpuCores ? (
 							<Pressable
@@ -838,7 +838,7 @@ export default function MachineDetailsScreen() {
 									</Box>
 								);
 							})}
-							{!disk?.disks?.length ? <Text className="text-sm text-typography-600 dark:text-typography-400">No disks listed.</Text> : null}
+							{!disk?.disks?.length ? <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">No disks listed.</Text> : null}
 						</VStack>
 					</Box>
 
@@ -865,7 +865,7 @@ export default function MachineDetailsScreen() {
 									</HStack>
 								);
 							})}
-							{!network?.stats?.length ? <Text className="text-sm text-typography-600 dark:text-typography-400">No visible interfaces.</Text> : null}
+							{!network?.stats?.length ? <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">No visible interfaces.</Text> : null}
 						</VStack>
 					</Box>
 
@@ -873,7 +873,7 @@ export default function MachineDetailsScreen() {
 						<HStack className="items-center justify-between mb-4">
 							<VStack className="gap-1">
 								<Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">History • {selectedRange.label}</Heading>
-								<Text className="text-xs text-typography-600 dark:text-typography-400">{selectedRange.description}</Text>
+								<Text className="text-xs text-typography-600 dark:text-[#8A94A8]">{selectedRange.description}</Text>
 							</VStack>
 							<HStack className="gap-2 items-center">
 								{RANGE_OPTIONS.map((option) => (

@@ -319,7 +319,7 @@ export default function StreamsScreen() {
           >
             Streams
           </Heading>
-          <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
+          <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
             Configure TCP/UDP port forwarding for non-HTTP services.
           </Text>
 
@@ -342,7 +342,7 @@ export default function StreamsScreen() {
                     }`}
                   >
                     <Text
-                      className={`text-sm ${active ? "text-background-0 dark:text-[#0A1628]" : "text-typography-700 dark:text-typography-400"}`}
+                      className={`text-sm ${active ? "text-background-0 dark:text-[#0A1628]" : "text-typography-700 dark:text-[#8A94A8]"}`}
                       style={{ fontFamily: active ? "Inter_700Bold" : "Inter_500Medium" }}
                     >
                       {tab.label}
@@ -499,11 +499,11 @@ export default function StreamsScreen() {
                         ) : (
                           <HStack className="items-center gap-1">
                             <Shield size={16} color="#9ca3af" />
-                            <Text className="text-typography-600 dark:text-typography-400 text-sm">No SSL</Text>
+                            <Text className="text-typography-600 dark:text-[#8A94A8] text-sm">No SSL</Text>
                           </HStack>
                         )}
                       </HStack>
-                      <Text className="text-xs text-typography-500 dark:text-typography-400">
+                      <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
                         Tap for details & actions
                       </Text>
                     </VStack>
@@ -523,7 +523,7 @@ export default function StreamsScreen() {
               <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
                 Stream
               </Heading>
-              <Text className="text-typography-600 dark:text-typography-400 mt-1">
+              <Text className="text-typography-600 dark:text-[#8A94A8] mt-1">
                 Details and actions for this stream.
               </Text>
             </VStack>
@@ -533,7 +533,7 @@ export default function StreamsScreen() {
             {selectedHost ? (
               <VStack className="gap-4">
                 <VStack className="gap-2">
-                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
                     Ports
                   </Text>
                   <HStack className="items-center gap-2">
@@ -562,7 +562,7 @@ export default function StreamsScreen() {
                   ) : (
                     <HStack className="items-center gap-1">
                       <Shield size={16} color="#9ca3af" />
-                      <Text className="text-typography-600 dark:text-typography-400 text-sm">No SSL</Text>
+                      <Text className="text-typography-600 dark:text-[#8A94A8] text-sm">No SSL</Text>
                     </HStack>
                   )}
                 </HStack>
@@ -640,7 +640,7 @@ export default function StreamsScreen() {
               <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
                 {editingHost ? "Edit Stream" : "Add Stream"}
               </Heading>
-              <Text className="text-typography-600 dark:text-typography-400 mt-1">
+              <Text className="text-typography-600 dark:text-[#8A94A8] mt-1">
                 TCP/UDP port forwarding with optional SNI certificate.
               </Text>
             </VStack>
@@ -671,7 +671,7 @@ export default function StreamsScreen() {
                         }`}
                       >
                         <Text
-                          className={`text-sm ${active ? "text-background-0 dark:text-[#0A1628]" : "text-typography-700 dark:text-typography-400"}`}
+                          className={`text-sm ${active ? "text-background-0 dark:text-[#0A1628]" : "text-typography-700 dark:text-[#8A94A8]"}`}
                           style={{ fontFamily: active ? "Inter_700Bold" : "Inter_500Medium" }}
                         >
                           {tab.label}
@@ -770,7 +770,7 @@ export default function StreamsScreen() {
                       >
                         <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] h-11 px-4">
                           <Text className="text-typography-900 dark:text-[#E8EBF0]">{selectedCertificateLabel}</Text>
-                          <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-typography-400" />
+                          <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-[#8A94A8]" />
                         </SelectTrigger>
                         <SelectPortal>
                           <SelectBackdropContent />

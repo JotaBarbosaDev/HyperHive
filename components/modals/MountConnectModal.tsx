@@ -74,7 +74,7 @@ export function MountConnectModal({isOpen, mount, onClose}: MountConnectModalPro
                 <Box className="flex flex-col gap-3 web:grid web:grid-cols-2">
                   <Box className="flex flex-col gap-2">
                     <Text
-                      className="text-[11px] font-semibold uppercase text-typography-500 dark:text-typography-400 tracking-wide"
+                      className="text-[11px] font-semibold uppercase text-typography-500 dark:text-[#8A94A8] tracking-wide"
                       style={{fontFamily: "Inter_600SemiBold"}}
                     >
                       Source
@@ -87,7 +87,7 @@ export function MountConnectModal({isOpen, mount, onClose}: MountConnectModalPro
                   </Box>
                   <Box className="flex flex-col gap-2">
                     <Text
-                      className="text-[11px] font-semibold uppercase text-typography-500 dark:text-typography-400 tracking-wide"
+                      className="text-[11px] font-semibold uppercase text-typography-500 dark:text-[#8A94A8] tracking-wide"
                       style={{fontFamily: "Inter_600SemiBold"}}
                     >
                       Mount point
@@ -141,13 +141,13 @@ export function MountConnectModal({isOpen, mount, onClose}: MountConnectModalPro
                 >
                   Step 2: Mount commands
                 </Text>
-                <Text className="text-sm text-typography-500 dark:text-typography-400">
+                <Text className="text-sm text-typography-500 dark:text-[#8A94A8]">
                   Use the commands below for your operating system.
                 </Text>
                 <Box className="flex flex-col gap-3">
                   <Box className="flex flex-col gap-2">
                     <Text
-                      className="text-[11px] font-semibold uppercase text-typography-500 dark:text-typography-400 tracking-wide"
+                      className="text-[11px] font-semibold uppercase text-typography-500 dark:text-[#8A94A8] tracking-wide"
                       style={{fontFamily: "Inter_600SemiBold"}}
                     >
                       Linux
@@ -160,7 +160,7 @@ export function MountConnectModal({isOpen, mount, onClose}: MountConnectModalPro
                   </Box>
                   <Box className="flex flex-col gap-2">
                     <Text
-                      className="text-[11px] font-semibold uppercase text-typography-500 dark:text-typography-400 tracking-wide"
+                      className="text-[11px] font-semibold uppercase text-typography-500 dark:text-[#8A94A8] tracking-wide"
                       style={{fontFamily: "Inter_600SemiBold"}}
                     >
                       macOS
@@ -173,12 +173,12 @@ export function MountConnectModal({isOpen, mount, onClose}: MountConnectModalPro
                   </Box>
                   <Box className="flex flex-col gap-2">
                     <Text
-                      className="text-[11px] font-semibold uppercase text-typography-500 dark:text-typography-400 tracking-wide"
+                      className="text-[11px] font-semibold uppercase text-typography-500 dark:text-[#8A94A8] tracking-wide"
                       style={{fontFamily: "Inter_600SemiBold"}}
                     >
                       Windows
                     </Text>
-                    <Text className="text-xs text-typography-500 dark:text-typography-400">
+                    <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
                       Requires the Windows "Client for NFS" feature.
                     </Text>
                     <Box className="bg-background-100 dark:bg-[#0F172A] border border-outline-200 dark:border-[#1E2F47] rounded-lg p-3">

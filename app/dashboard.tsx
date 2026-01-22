@@ -394,7 +394,7 @@ export default function DashboardScreen() {
         {value}
       </Heading>
       {description ? (
-        <Text className="text-sm text-typography-600 dark:text-typography-400 mt-1">
+        <Text className="text-sm text-typography-600 dark:text-[#8A94A8] mt-1">
           {description}
         </Text>
       ) : null}
@@ -417,7 +417,7 @@ export default function DashboardScreen() {
             >
               Cluster Dashboard
             </Heading>
-            <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
+            <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
               Overview of all nodes with CPU, RAM, disk, and recent activity.
               Tap "View details" to open per-machine charts.
             </Text>
@@ -469,7 +469,7 @@ export default function DashboardScreen() {
                   <Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#5EEAD4] tracking-[0.08em]">
                     Total disk
                   </Text>
-                  <Text className="text-sm text-typography-600 dark:text-typography-400">
+                  <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                     Uses the same NFS calculation to sum mounts of each node.
                   </Text>
                 </VStack>
@@ -515,7 +515,7 @@ export default function DashboardScreen() {
                 </Text>
                 <Box className="h-2 rounded-full bg-background-100 dark:bg-[#132032] overflow-hidden">
                   <Box
-                    className="h-2 rounded-full bg-primary-500"
+                    className="h-2 rounded-full bg-[#5EEAD4]"
                     style={{
                       width: `${overallTotals.diskTotals.total ? (overallTotals.diskTotals.used / overallTotals.diskTotals.total) * 100 : 0}%`,
                     }}
@@ -592,9 +592,9 @@ export default function DashboardScreen() {
                             <Icon
                               as={LinkIcon}
                               size={ICON_SIZE_SM}
-                              className="text-typography-500 dark:text-typography-400"
+                              className="text-typography-500 dark:text-[#8A94A8]"
                             />
-                            <Text className="text-sm text-typography-600 dark:text-typography-400">
+                            <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                               {addr || "—"}
                             </Text>
                           </HStack>
@@ -602,9 +602,9 @@ export default function DashboardScreen() {
                             <Icon
                               as={Clock3}
                               size={ICON_SIZE_SM}
-                              className="text-typography-500 dark:text-typography-400"
+                              className="text-typography-500 dark:text-[#8A94A8]"
                             />
-                            <Text className="text-sm text-typography-600 dark:text-typography-400">
+                            <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                               Uptime: {parseUptime(snap.uptime?.uptime)} • Since{" "}
                               {formatRelative(entryTime)}
                             </Text>
@@ -686,7 +686,7 @@ export default function DashboardScreen() {
                         <Text className="text-lg font-semibold text-typography-900 dark:text-[#E8EBF0]">
                           {formatPercent(avgCpu)}
                         </Text>
-                        <Text className="text-xs text-typography-500 dark:text-typography-400">
+                        <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
                           {snap.cpu?.cores?.length ?? 0} cores
                         </Text>
                       </Box>
@@ -705,7 +705,7 @@ export default function DashboardScreen() {
                         <Text className="text-lg font-semibold text-typography-900 dark:text-[#E8EBF0]">
                           {formatPercent(ramPercent)}
                         </Text>
-                        <Text className="text-xs text-typography-500 dark:text-typography-400">
+                        <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
                           {mbToGb(snap.mem?.usedMb ?? 0)} /{" "}
                           {mbToGb(snap.mem?.totalMb ?? 0)} GB
                         </Text>
@@ -725,7 +725,7 @@ export default function DashboardScreen() {
                         <Text className="text-lg font-semibold text-typography-900 dark:text-[#E8EBF0]">
                           {formatPercent(diskUsage)}
                         </Text>
-                        <Text className="text-xs text-typography-500 dark:text-typography-400">
+                        <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
                           {formatGbCompact(diskTotals.used)} /{" "}
                           {formatGbCompact(diskTotals.total)}
                         </Text>
@@ -751,7 +751,7 @@ export default function DashboardScreen() {
                               )}ºC max`
                             : "—"}
                         </Text>
-                        <Text className="text-xs text-typography-500 dark:text-typography-400">
+                        <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
                           Average and max of core sensors
                         </Text>
                       </Box>
@@ -762,7 +762,7 @@ export default function DashboardScreen() {
 
               {!snapshots.length && !isLoading ? (
                 <Box className="rounded-2xl border border-dashed border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-6">
-                  <Text className="text-typography-600 dark:text-typography-400">
+                  <Text className="text-typography-600 dark:text-[#8A94A8]">
                     No nodes found. Add machines and pull to refresh.
                   </Text>
                 </Box>
@@ -807,7 +807,7 @@ export default function DashboardScreen() {
                   ? "Shutdown now?"
                   : "Restart now?"}
               </Heading>
-              <Text className="text-sm text-typography-600 dark:text-typography-400">
+              <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                 Choose whether this action should run immediately.
               </Text>
             </VStack>
@@ -816,7 +816,7 @@ export default function DashboardScreen() {
           <ModalBody className="pt-5">
             <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] p-4">
               <VStack className="gap-2">
-                <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
                   Machine
                 </Text>
                 <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
@@ -888,7 +888,7 @@ export default function DashboardScreen() {
                   ? "Are you sure you want to shut down?"
                   : "Are you sure you want to restart?"}
               </Heading>
-              <Text className="text-sm text-typography-600 dark:text-typography-400">
+              <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                 This will send the request immediately.
               </Text>
             </VStack>
@@ -898,7 +898,7 @@ export default function DashboardScreen() {
             <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] p-4">
               <VStack className="gap-3">
                 <VStack className="gap-1">
-                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
                     Machine
                   </Text>
                   <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
@@ -906,7 +906,7 @@ export default function DashboardScreen() {
                   </Text>
                 </VStack>
                 <VStack className="gap-1">
-                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
                     Run now
                   </Text>
                   <Text className="text-sm text-typography-700 dark:text-typography-300">

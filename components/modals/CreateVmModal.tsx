@@ -756,7 +756,7 @@ export default function CreateVmModal({
                     </Heading>
                   </HStack>
 
-                  <Text className="text-sm text-typography-600 dark:text-typography-400 mb-4">
+                  <Text className="text-sm text-typography-600 dark:text-[#8A94A8] mb-4">
                     Select slaves to compare and get a CPU configuration
                     compatible between them.
                   </Text>
@@ -943,7 +943,7 @@ export default function CreateVmModal({
                       </HStack>
                     </HStack>
 
-                    <Text className="text-xs text-typography-500 dark:text-typography-400">
+                    <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
                       This XML configures the VM CPU. You can edit it manually
                       if needed.
                     </Text>

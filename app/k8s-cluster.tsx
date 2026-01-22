@@ -188,7 +188,7 @@ export default function K8ClusterScreen() {
 					<Text className="text-xs font-semibold uppercase text-typography-500 dark:text-typography-300 tracking-[0.08em]" style={{ fontFamily: "Inter_600SemiBold" }}>
 						{label}
 					</Text>
-					<Text className="text-xs text-typography-500 dark:text-typography-400">
+					<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
 						{nodes.length} node{nodes.length === 1 ? "" : "s"}
 					</Text>
 				</HStack>
@@ -266,7 +266,7 @@ export default function K8ClusterScreen() {
           >
             K8 Cluster
           </Heading>
-          <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl mb-6">
+          <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl mb-6">
             Download the cluster connection file and monitor node connectivity.
           </Text>
 
@@ -290,13 +290,13 @@ export default function K8ClusterScreen() {
               >
                 Connection File
               </Heading>
-              <Text className="text-sm text-typography-600 dark:text-typography-400 mb-4">
+              <Text className="text-sm text-typography-600 dark:text-[#8A94A8] mb-4">
                 Select the cluster IP to include in the connection file and
                 download it.
               </Text>
 
               {isLoading ? (
-                <Text className="text-sm text-typography-600 dark:text-typography-400">
+                <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                   Loading options...
                 </Text>
               ) : (
@@ -326,7 +326,7 @@ export default function K8ClusterScreen() {
                     </Radio>
                   ))}
                   {!tlsSans.length ? (
-                    <Text className="text-sm text-typography-600 dark:text-typography-400">
+                    <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                       No TLS SANs available.
                     </Text>
                   ) : null}
@@ -363,11 +363,11 @@ export default function K8ClusterScreen() {
               >
                 Cluster Status
               </Heading>
-              <Text className="text-sm text-typography-600 dark:text-typography-400">
+              <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                 Current connectivity for each node in the cluster.
               </Text>
               {isLoading && !status ? (
-                <Text className="text-sm text-typography-600 dark:text-typography-400 mt-3">
+                <Text className="text-sm text-typography-600 dark:text-[#8A94A8] mt-3">
                   Loading status...
                 </Text>
               ) : null}

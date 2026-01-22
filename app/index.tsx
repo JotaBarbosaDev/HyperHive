@@ -204,7 +204,7 @@ export default function LoginScreen() {
         >
           Welcome back
         </Heading>
-        <Text className="text-typography-500 dark:text-typography-400 text-sm font-body mt-2 web:text-base">
+        <Text className="text-typography-500 dark:text-[#8A94A8] text-sm font-body mt-2 web:text-base">
           Sign in with your credentials to access the dashboard.
         </Text>
       </Box>
@@ -336,7 +336,7 @@ export default function LoginScreen() {
           <InputSlot className="pr-3" onPress={togglePasswordVisibility}>
             <InputIcon
               as={showPassword ? EyeOffIcon : EyeIcon}
-              className="text-typography-500 dark:text-typography-400"
+              className="text-typography-500 dark:text-[#8A94A8]"
             />
           </InputSlot>
         </Input>
@@ -410,7 +410,7 @@ export default function LoginScreen() {
               >
                 HyperHive
               </Heading>
-              <Text className="text-typography-500 dark:text-typography-400 text-sm text-center mt-2 web:text-base">
+              <Text className="text-typography-500 dark:text-[#8A94A8] text-sm text-center mt-2 web:text-base">
                 Simplified Mounts Management
               </Text>
             </Box>
@@ -434,7 +434,7 @@ export default function LoginScreen() {
             )}
 
             {/* Footer */}
-            <Text className="text-typography-500 dark:text-typography-400 text-xs text-center mt-6 web:text-sm">
+            <Text className="text-typography-500 dark:text-[#8A94A8] text-xs text-center mt-6 web:text-sm">
               © {currentYear} HyperHive. All rights reserved.
             </Text>
           </Box>

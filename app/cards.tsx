@@ -49,7 +49,7 @@ export default function CardsScreen() {
                 >
                   No Saved Cards
                 </Heading>
-                <Text className="text-typography-600 dark:text-typography-400 text-center text-sm web:text-base max-w-md">
+                <Text className="text-typography-600 dark:text-[#8A94A8] text-center text-sm web:text-base max-w-md">
                   You haven't saved any payment methods yet. Add your cards here to make future
                   transactions faster and more convenient.
                 </Text>

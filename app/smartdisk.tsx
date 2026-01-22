@@ -659,7 +659,7 @@ export default function SmartDiskScreen() {
           >
             SMART Tests
           </Heading>
-          <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
+          <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
             Monitor disks, run self-tests, and track reallocation in real time.
           </Text>
 

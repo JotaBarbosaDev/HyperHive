@@ -69,7 +69,7 @@ type StatCardProps = {
 const StatCard = ({label, value, icon}: StatCardProps) => (
   <Box className="flex-1 min-w-[180px] p-4 rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
     <HStack className="items-center justify-between mb-2">
-      <Text className="text-typography-500 dark:text-typography-400 text-xs">{label}</Text>
+      <Text className="text-typography-500 dark:text-[#8A94A8] text-xs">{label}</Text>
       {icon}
     </HStack>
     <Text
@@ -148,7 +148,7 @@ const UpdateCard = ({
           )}
         </HStack>
         {update.description ? (
-          <Text className="text-typography-600 dark:text-typography-400 text-sm leading-relaxed">
+          <Text className="text-typography-600 dark:text-[#8A94A8] text-sm leading-relaxed">
             {update.description}
           </Text>
         ) : null}
@@ -389,7 +389,7 @@ export default function UpdatesScreen() {
           >
             Updates
           </Heading>
-          <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
+          <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
             Review pending packages per machine and trigger individual or full updates with optional automatic reboot.
           </Text>
 
@@ -504,7 +504,7 @@ export default function UpdatesScreen() {
           </HStack>
 
           {lastCheckedLabel ? (
-            <Text className="text-typography-500 dark:text-typography-400 text-xs mt-2">
+            <Text className="text-typography-500 dark:text-[#8A94A8] text-xs mt-2">
               Last checked: {lastCheckedLabel}
             </Text>
           ) : null}
@@ -526,7 +526,7 @@ export default function UpdatesScreen() {
           {isLoading || loadingMachines ? (
             <Box className="mt-8 items-center justify-center flex-row gap-3">
               <Spinner size="large" />
-              <Text className="text-typography-500 dark:text-typography-400">
+              <Text className="text-typography-500 dark:text-[#8A94A8]">
                 {loadingMachines ? "Loading machines..." : "Loading updates..."}
               </Text>
             </Box>
@@ -549,7 +549,7 @@ export default function UpdatesScreen() {
                     <Text className="text-typography-900 dark:text-[#E8EBF0] mb-1" style={{fontFamily: "Inter_600SemiBold"}}>
                       No pending updates
                     </Text>
-                    <Text className="text-typography-600 dark:text-typography-400 text-sm text-center">
+                    <Text className="text-typography-600 dark:text-[#8A94A8] text-sm text-center">
                       {searchTerm
                         ? "No package matches the applied filter."
                         : "This machine currently has no updates available."}
@@ -561,7 +561,7 @@ export default function UpdatesScreen() {
                   <Text className="text-typography-900 dark:text-[#E8EBF0] mb-1" style={{fontFamily: "Inter_600SemiBold"}}>
                     Choose a machine
                   </Text>
-                  <Text className="text-typography-600 dark:text-typography-400 text-sm text-center">
+                  <Text className="text-typography-600 dark:text-[#8A94A8] text-sm text-center">
                     Select a machine to list the pending packages.
                   </Text>
                 </Box>
@@ -581,7 +581,7 @@ export default function UpdatesScreen() {
               <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
                 Restart after Update?
               </Heading>
-              <Text className="text-sm text-typography-600 dark:text-typography-400">
+              <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                 Choose whether this machine should restart once the update finishes.
               </Text>
             </VStack>
@@ -590,7 +590,7 @@ export default function UpdatesScreen() {
           <ModalBody className="pt-5">
             <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] p-4">
               <VStack className="gap-2">
-                <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
                   Update target
                 </Text>
                 <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
@@ -625,7 +625,7 @@ export default function UpdatesScreen() {
               <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
                 Are you sure you want to update?
               </Heading>
-              <Text className="text-sm text-typography-600 dark:text-typography-400">
+              <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                 This will start the update job immediately.
               </Text>
             </VStack>
@@ -635,7 +635,7 @@ export default function UpdatesScreen() {
             <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] p-4">
               <VStack className="gap-3">
                 <VStack className="gap-1">
-                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
                     Update target
                   </Text>
                   <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
@@ -643,7 +643,7 @@ export default function UpdatesScreen() {
                   </Text>
                 </VStack>
                 <VStack className="gap-1">
-                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
                     Restart after update
                   </Text>
                   <Text className="text-sm text-typography-700 dark:text-typography-300">

@@ -66,7 +66,7 @@ const ImageCard = ({ img, onRemove, removingId }: { img: DockerImage; onRemove: 
 						<Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]" numberOfLines={1}>
 							{repoTag}
 						</Text>
-						<Text className="text-xs text-typography-500 dark:text-typography-400" numberOfLines={2}>
+						<Text className="text-xs text-typography-500 dark:text-[#8A94A8]" numberOfLines={2}>
 							{img.repo_tags?.slice(1).join(", ") || ""}
 						</Text>
 					</VStack>
@@ -92,7 +92,7 @@ const ImageCard = ({ img, onRemove, removingId }: { img: DockerImage; onRemove: 
 			</HStack>
 			{img.labels && Object.keys(img.labels).length ? (
 				<Box className="mt-2">
-					<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Labels</Text>
+					<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Labels</Text>
 					<HStack className="flex-wrap gap-2">
 						{Object.entries(img.labels).map(([key, value]) => (
 							<Badge key={`${img.id}-${key}`} size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
@@ -263,7 +263,7 @@ export default function DockerImagesScreen() {
 					Docker Images
 				</Heading>
 				<HStack className="items-center justify-between flex-wrap gap-3">
-					<Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
+					<Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
 						List images on the selected machine and pull new ones.
 					</Text>
 					<Button action="primary" className="rounded-xl" onPress={() => setIsAddOpen(true)} isDisabled={!selectedMachine}>
@@ -275,7 +275,7 @@ export default function DockerImagesScreen() {
 				<VStack className="mt-5 gap-4">
 					<HStack className="gap-3 flex-wrap items-end">
 						<Box className="min-w-[180px]">
-							<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Machine</Text>
+							<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Machine</Text>
 							<Select
 								selectedValue={selectedMachine ?? undefined}
 								onValueChange={setSelectedMachine as any}
@@ -304,11 +304,11 @@ export default function DockerImagesScreen() {
 
 						<HStack className="gap-3 flex-wrap">
 							<Box className="p-3 rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
-								<Text className="text-xs text-typography-500 dark:text-typography-400">Images</Text>
+								<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Images</Text>
 								<Text className="text-xl font-semibold text-typography-900 dark:text-[#E8EBF0]">{images.length}</Text>
 							</Box>
 							<Box className="p-3 rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
-								<Text className="text-xs text-typography-500 dark:text-typography-400">Disk usage</Text>
+								<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Disk usage</Text>
 								<Text className="text-xl font-semibold text-typography-900 dark:text-[#E8EBF0]">{formatBytes(totalSize)}</Text>
 							</Box>
 						</HStack>
@@ -346,13 +346,13 @@ export default function DockerImagesScreen() {
 					<ModalBody>
 						<VStack className="gap-3">
 							<Box>
-								<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Image</Text>
+								<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Image</Text>
 								<Input className="rounded-xl">
 									<InputField value={pullImage} onChangeText={setPullImage} placeholder="e.g. nginx:alpine" autoCapitalize="none" />
 								</Input>
 							</Box>
 							<Box>
-								<Text className="text-xs text-typography-500 dark:text-typography-400 mb-1">Registry (optional)</Text>
+								<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Registry (optional)</Text>
 								<Input className="rounded-xl">
 									<InputField value={pullRegistry} onChangeText={setPullRegistry} placeholder="registry" autoCapitalize="none" />
 								</Input>

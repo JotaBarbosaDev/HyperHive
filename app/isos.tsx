@@ -1072,7 +1072,7 @@ export default function ProfileScreen() {
           >
             ISO Downloads
           </Heading>
-          <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
+          <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
             Browse all ISOs available for your VMs and add new images by
             downloading them straight to the cluster.
           </Text>
@@ -1080,7 +1080,7 @@ export default function ProfileScreen() {
           <VStack className="mt-6 gap-4 web:flex-row web:items-end">
             <Box className="flex-1">
               <Text
-                className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400 mb-2"
+                className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8] mb-2"
                 style={{fontFamily: "Inter_600SemiBold"}}
               >
                 Filter ISOs
@@ -1089,7 +1089,7 @@ export default function ProfileScreen() {
                 <InputSlot className="pl-4">
                   <InputIcon
                     as={Search}
-                    className="text-typography-500 dark:text-typography-400"
+                    className="text-typography-500 dark:text-[#8A94A8]"
                   />
                 </InputSlot>
                 <InputField
@@ -1207,7 +1207,7 @@ export default function ProfileScreen() {
           {isLoading ? (
             <VStack className="items-center justify-center gap-3 py-16">
               <Spinner color="#2DD4BF" />
-              <Text className="text-sm text-typography-600 dark:text-typography-400">
+              <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                 Loading available ISOs...
               </Text>
             </VStack>
@@ -1221,7 +1221,7 @@ export default function ProfileScreen() {
                   ? "No ISOs found for this filter."
                   : "No ISOs available yet."}
               </Text>
-              <Text className="mt-2 text-sm text-typography-600 dark:text-typography-400">
+              <Text className="mt-2 text-sm text-typography-600 dark:text-[#8A94A8]">
                 {query.trim()
                   ? "Adjust your search or clear the filter to see the full library."
                   : "As soon as your subscriptions are active, images will appear automatically."}
@@ -1253,7 +1253,7 @@ export default function ProfileScreen() {
                 <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
                   Remove ISO?
                 </Heading>
-                <Text className="text-sm text-typography-600 dark:text-typography-400">
+                <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                   This action permanently deletes the ISO from storage.
                 </Text>
               </VStack>
@@ -1264,7 +1264,7 @@ export default function ProfileScreen() {
               {deleteTarget ? (
                 <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0A1628] p-4">
                   <VStack className="gap-2">
-                    <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400">
+                    <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
                       ISO
                     </Text>
                     <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
@@ -1294,7 +1294,7 @@ export default function ProfileScreen() {
                       ) : null}
                     </HStack>
                     {deleteTarget.filePath ? (
-                      <Text className="text-xs text-typography-600 dark:text-typography-400 break-all">
+                      <Text className="text-xs text-typography-600 dark:text-[#8A94A8] break-all">
                         {deleteTarget.filePath}
                       </Text>
                     ) : null}
@@ -1369,7 +1369,7 @@ function IsoCard({ iso, onDelete, isDeleting }: IsoCardProps) {
           </Heading>
           {iso.description ? (
             <Text
-              className="text-sm text-typography-600 dark:text-typography-400"
+              className="text-sm text-typography-600 dark:text-[#8A94A8]"
               numberOfLines={3}
               style={{fontFamily: "Inter_400Regular"}}
             >
@@ -1509,7 +1509,7 @@ function IsoInfoRow({ icon, label, value, mono = false }: IsoInfoRowProps) {
       </Box>
       <VStack className="flex-1 min-w-0">
         <Text
-          className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400"
+          className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]"
           style={{ fontFamily: "Inter_500Medium" }}
         >
           {label}
@@ -1996,7 +1996,7 @@ function AddIsoModal({ isOpen, onClose, onSuccess, authToken, onDownloadChange }
                 >
                   Downloading ISO
                 </Text>
-                <Text className="text-sm text-typography-500 dark:text-typography-400 max-w-md">
+                <Text className="text-sm text-typography-500 dark:text-[#8A94A8] max-w-md">
                   Keep this window open to follow the progress. You can close it
                   once the download finishes.
                 </Text>
@@ -2042,7 +2042,7 @@ function AddIsoModal({ isOpen, onClose, onSuccess, authToken, onDownloadChange }
                           Download error
                         </Text>
                       ) : (
-                        <Text className="text-sm text-typography-600 dark:text-typography-400">
+                        <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                           Downloading...
                         </Text>
                       )}
@@ -2060,7 +2060,7 @@ function AddIsoModal({ isOpen, onClose, onSuccess, authToken, onDownloadChange }
                         </Text>
                         {downloadMonitor.detail ? (
                           <Text
-                            className="text-sm text-typography-600 dark:text-typography-400 font-medium"
+                            className="text-sm text-typography-600 dark:text-[#8A94A8] font-medium"
                             style={{ fontFamily: "Inter_500Medium" }}
                           >
                             {downloadMonitor.detail}
@@ -2117,7 +2117,7 @@ function AddIsoModal({ isOpen, onClose, onSuccess, authToken, onDownloadChange }
                     className="text-typography-900 dark:text-[#E8EBF0]"
                   />
                 </Input>
-                <Text className="mt-2 text-xs text-typography-500 dark:text-typography-400">
+                <Text className="mt-2 text-xs text-typography-500 dark:text-[#8A94A8]">
                   The link must point directly to a .iso file.
                 </Text>
                 {urlError ? (
@@ -2177,7 +2177,7 @@ function AddIsoModal({ isOpen, onClose, onSuccess, authToken, onDownloadChange }
                   </Box>
                 ) : shareOptions.length === 0 ? (
                   <Box className="mt-3 rounded-2xl border border-outline-100 px-3 py-2 dark:border-[#2A3B52]">
-                    <Text className="text-sm text-typography-500 dark:text-typography-400">
+                    <Text className="text-sm text-typography-500 dark:text-[#8A94A8]">
                       No mounts configured yet. Create one before downloading
                       ISOs.
                     </Text>
@@ -2197,7 +2197,7 @@ function AddIsoModal({ isOpen, onClose, onSuccess, authToken, onDownloadChange }
                       />
                       <SelectIcon
                         as={ChevronDownIcon}
-                        className="text-typography-500 dark:text-typography-400"
+                        className="text-typography-500 dark:text-[#8A94A8]"
                       />
                     </SelectTrigger>
                     <SelectPortal>

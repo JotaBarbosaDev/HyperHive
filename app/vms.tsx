@@ -1129,7 +1129,7 @@ export default function VirtualMachinesScreen() {
               >
                 Virtual Machines
               </Heading>
-              <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl mt-2">
+              <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl mt-2">
                 Complete management of virtual machines distributed across slaves with resource controls and monitoring.
               </Text>
             </VStack>
@@ -1321,7 +1321,7 @@ export default function VirtualMachinesScreen() {
           <HStack className="mb-6 gap-4 flex-wrap hidden">
             <HStack className="gap-2 items-center">
               <Text
-                className="text-typography-600 dark:text-typography-400 text-sm"
+                className="text-typography-600 dark:text-[#8A94A8] text-sm"
                 style={{ fontFamily: "Inter_400Regular" }}
               >
                 Total:
@@ -1336,7 +1336,7 @@ export default function VirtualMachinesScreen() {
             <HStack className="gap-2 items-center">
               <Box className="w-2 h-2 rounded-full bg-[#2DD4BF] dark:bg-[#5EEAD4]" />
               <Text
-                className="text-typography-600 dark:text-typography-400 text-sm"
+                className="text-typography-600 dark:text-[#8A94A8] text-sm"
                 style={{ fontFamily: "Inter_400Regular" }}
               >
                 Running:
@@ -1351,7 +1351,7 @@ export default function VirtualMachinesScreen() {
             <HStack className="gap-2 items-center">
               <Box className="w-2 h-2 rounded-full bg-[#94A3B8] dark:bg-[#64748B]" />
               <Text
-                className="text-typography-600 dark:text-typography-400 text-sm"
+                className="text-typography-600 dark:text-[#8A94A8] text-sm"
                 style={{ fontFamily: "Inter_400Regular" }}
               >
                 Stopped:
@@ -1365,7 +1365,7 @@ export default function VirtualMachinesScreen() {
             </HStack>
             <HStack className="gap-2 items-center">
               <Text
-                className="text-typography-600 dark:text-typography-400 text-sm"
+                className="text-typography-600 dark:text-[#8A94A8] text-sm"
                 style={{ fontFamily: "Inter_400Regular" }}
               >
                 vCPU:
@@ -1379,7 +1379,7 @@ export default function VirtualMachinesScreen() {
             </HStack>
             <HStack className="gap-2 items-center">
               <Text
-                className="text-typography-600 dark:text-typography-400 text-sm"
+                className="text-typography-600 dark:text-[#8A94A8] text-sm"
                 style={{ fontFamily: "Inter_400Regular" }}
               >
                 RAM:
@@ -1911,7 +1911,7 @@ export default function VirtualMachinesScreen() {
                       <Divider className="my-2" />
                       <VStack className="gap-3 web:grid web:grid-cols-2 web:gap-4">
                         <HStack className="justify-between">
-                          <Text className="text-sm text-typography-600 dark:text-typography-400">State</Text>
+                          <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">State</Text>
                           <Badge
                             variant={VM_STATES[detailsVm.state].badgeVariant}
                             className="rounded-full"
@@ -1922,38 +1922,38 @@ export default function VirtualMachinesScreen() {
                           </Badge>
                         </HStack>
                         <HStack className="justify-between">
-                          <Text className="text-sm text-typography-600 dark:text-typography-400">vCPU</Text>
+                          <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">vCPU</Text>
                           <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
                             {detailsVm.DefinedCPUS} cores
                           </Text>
                         </HStack>
                         <HStack className="justify-between">
-                          <Text className="text-sm text-typography-600 dark:text-typography-400">RAM</Text>
+                          <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">RAM</Text>
                           <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
                             {formatMemory(detailsVm.DefinedRam)}
                           </Text>
                         </HStack>
                         <HStack className="justify-between">
-                          <Text className="text-sm text-typography-600 dark:text-typography-400">Disk</Text>
+                          <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">Disk</Text>
                           <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
                             {detailsVm.diskSizeGB} GB (Allocated: {detailsVm.AllocatedGb} GB)
                           </Text>
                         </HStack>
                         <HStack className="justify-between">
-                          <Text className="text-sm text-typography-600 dark:text-typography-400">Network</Text>
+                          <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">Network</Text>
                           <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
                             {detailsVm.network}
                           </Text>
                         </HStack>
                         <HStack className="justify-between">
-                          <Text className="text-sm text-typography-600 dark:text-typography-400">Disk Path</Text>
+                          <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">Disk Path</Text>
                           <Text className="text-sm text-typography-900 dark:text-[#E8EBF0] truncate max-w-[200px]">
                             {detailsVm.diskPath}
                           </Text>
                         </HStack>
                         {detailsVmNfsName ? (
                           <HStack className="justify-between">
-                            <Text className="text-sm text-typography-600 dark:text-typography-400">NFS</Text>
+                            <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">NFS</Text>
                             <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
                               {detailsVmNfsName}
                             </Text>
@@ -1961,14 +1961,14 @@ export default function VirtualMachinesScreen() {
                         ) : null}
                         {detailsVm.ip.length > 0 && (
                           <HStack className="justify-between col-span-2">
-                            <Text className="text-sm text-typography-600 dark:text-typography-400">IP</Text>
+                            <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">IP</Text>
                             <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
                               {detailsVm.ip.join(", ")}
                             </Text>
                           </HStack>
                         )}
                         <HStack className="justify-between col-span-2">
-                          <Text className="text-sm text-typography-600 dark:text-typography-400">
+                          <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                             Auto-start
                           </Text>
                           <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
@@ -1976,7 +1976,7 @@ export default function VirtualMachinesScreen() {
                           </Text>
                         </HStack>
                         <HStack className="justify-between col-span-2">
-                          <Text className="text-sm text-typography-600 dark:text-typography-400">Live VM</Text>
+                          <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">Live VM</Text>
                           <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
                             {detailsVm.isLive ? "Yes" : "No"}
                           </Text>
@@ -2833,7 +2833,7 @@ export default function VirtualMachinesScreen() {
             <ModalBody className="overflow-y-auto max-h-[calc(85vh-140px)] web:max-h-[calc(90vh-140px)]">
               <VStack className="gap-1">
                 {/* Configurações */}
-                <Text className="text-xs text-typography-500 dark:text-typography-400 px-3 py-2 font-semibold">
+                <Text className="text-xs text-typography-500 dark:text-[#8A94A8] px-3 py-2 font-semibold">
                   SETTINGS
                 </Text>
                 <Pressable
@@ -2874,7 +2874,7 @@ export default function VirtualMachinesScreen() {
                 <Divider className="my-2" />
 
                 {/* Operações */}
-                <Text className="text-xs text-typography-500 dark:text-typography-400 px-3 py-2 font-semibold">
+                <Text className="text-xs text-typography-500 dark:text-[#8A94A8] px-3 py-2 font-semibold">
                   OPERATIONS
                 </Text>
                 <Pressable
@@ -2933,7 +2933,7 @@ export default function VirtualMachinesScreen() {
                 <Divider className="my-2" />
 
                 {/* Migração & Disco */}
-                <Text className="text-xs text-typography-500 dark:text-typography-400 px-3 py-2 font-semibold">
+                <Text className="text-xs text-typography-500 dark:text-[#8A94A8] px-3 py-2 font-semibold">
                   MIGRATION & DISK
                 </Text>
                 <Pressable
@@ -3102,7 +3102,7 @@ export default function VirtualMachinesScreen() {
 
               {/* Configurações label */}
               <ActionsheetItem isDisabled>
-                <ActionsheetItemText className="text-xs text-typography-500 dark:text-typography-400">
+                <ActionsheetItemText className="text-xs text-typography-500 dark:text-[#8A94A8]">
                   SETTINGS
                 </ActionsheetItemText>
               </ActionsheetItem>
@@ -3133,7 +3133,7 @@ export default function VirtualMachinesScreen() {
               {/* Operações label */}
               <Box className="h-[1px] bg-outline-100 w-full" />
               <ActionsheetItem isDisabled>
-                <ActionsheetItemText className="text-xs text-typography-500 dark:text-typography-400">
+                <ActionsheetItemText className="text-xs text-typography-500 dark:text-[#8A94A8]">
                   OPERATIONS
                 </ActionsheetItemText>
               </ActionsheetItem>
@@ -3181,7 +3181,7 @@ export default function VirtualMachinesScreen() {
               {/* Migração & Disco */}
               <Box className="h-[1px] bg-outline-100 w-full" />
               <ActionsheetItem isDisabled>
-                <ActionsheetItemText className="text-xs text-typography-500 dark:text-typography-400">
+                <ActionsheetItemText className="text-xs text-typography-500 dark:text-[#8A94A8]">
                   MIGRATION & DISK
                 </ActionsheetItemText>
               </ActionsheetItem>

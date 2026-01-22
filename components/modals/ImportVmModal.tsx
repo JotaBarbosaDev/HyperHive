@@ -538,7 +538,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                           <Text className="text-typography-900 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_600SemiBold" }}>
                             {selectedFile ? selectedFile.name : "Select the .qcow2 file"}
                           </Text>
-                          <Text className="text-xs text-typography-600 dark:text-typography-400">
+                          <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">
                             {selectedFile ? formatFileSize(selectedFile.size) : "Maximum size depends on the backend"}
                           </Text>
                         </VStack>
@@ -547,8 +547,8 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                     {typeof uploadProgress === "number" && (
                       <Box className="mt-3">
                         <HStack className="justify-between mb-1">
-                          <Text className="text-xs text-typography-600 dark:text-typography-400">Upload progress</Text>
-                          <Text className="text-xs text-typography-600 dark:text-typography-400">{uploadProgress}%</Text>
+                          <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">Upload progress</Text>
+                          <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">{uploadProgress}%</Text>
                         </HStack>
                         <Progress value={uploadProgress} className="h-2 rounded-full bg-outline-100 dark:bg-[#1E2F47]">
                           <ProgressFilledTrack className="bg-primary-500" />
@@ -558,7 +558,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                   </>
                 ) : (
                   <Box className="border border-outline-200 dark:border-[#2A3B52] rounded-lg p-3 bg-background-0 dark:bg-[#0F1A2E]">
-                    <Text className="text-sm text-typography-600 dark:text-typography-400">
+                    <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                       Importing with disk upload is available only on the web version.
                     </Text>
                   </Box>
@@ -589,7 +589,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                     </Heading>
                   </HStack>
 
-                  <Text className="text-sm text-typography-600 dark:text-typography-400 mb-4">
+                  <Text className="text-sm text-typography-600 dark:text-[#8A94A8] mb-4">
                     Select slaves to compare and get a CPU configuration compatible between them.
                   </Text>
 
@@ -725,7 +725,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                       </HStack>
                     </HStack>
 
-                    <Text className="text-xs text-typography-500 dark:text-typography-400">
+                    <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
                       This XML configures the VM CPU. You can edit it manually if needed.
                     </Text>
 

@@ -65,7 +65,7 @@ export default function MountsScreen() {
             >
               NFS Mounts
             </Heading>
-            <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
+            <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
               Manage your NFS shares across the cluster and create new mounts for your VMs.
             </Text>
           </VStack>

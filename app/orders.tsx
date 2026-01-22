@@ -49,7 +49,7 @@ export default function OrdersScreen() {
                 >
                   No Orders Yet
                 </Heading>
-                <Text className="text-typography-600 dark:text-typography-400 text-center text-sm web:text-base max-w-md">
+                <Text className="text-typography-600 dark:text-[#8A94A8] text-center text-sm web:text-base max-w-md">
                   Your order history will appear here. This feature is coming soon to help you track
                   all your purchases and subscriptions.
                 </Text>

@@ -820,7 +820,7 @@ function RootLayoutNav() {
                     <Text className="text-lg font-semibold text-typography-900 dark:text-[#E2E8F0]">
                       Front-End Setup Tutorial
                     </Text>
-                    <Text className="text-typography-600 dark:text-typography-400 mt-1">
+                    <Text className="text-typography-600 dark:text-[#8A94A8] mt-1">
                       Follow these steps to configure your front-end in NPM.
                     </Text>
                   </VStack>
@@ -839,7 +839,7 @@ function RootLayoutNav() {
                             <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
                               {step.title}
                             </Text>
-                            <Text className="text-sm text-typography-600 dark:text-typography-400">
+                            <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                               {step.description}
                             </Text>
                           </VStack>

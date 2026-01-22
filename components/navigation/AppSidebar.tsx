@@ -369,14 +369,15 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
       <DrawerBackdrop className="bg-background-950/50 dark:bg-black/70" />
       <DrawerContent className="w-[280px] max-w-[90%] md:w-[340px] bg-background-0 dark:bg-[#0E1524]">
         <DrawerBody className="flex-1 px-3 py-2">
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-            <VStack className="gap-1">
-              {renderMenuItems(MENU_ITEMS)}
-            </VStack>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{paddingBottom: 24}}
+          >
+            <VStack className="gap-1">{renderMenuItems(MENU_ITEMS)}</VStack>
 
             <VStack className="mt-4 px-1 pb-2 gap-3">
               <Button
-                className="w-full gap-2 h-12 rounded-xl"
+                className="w-full gap-2 h-12 rounded-xl dark:border-[#E8EBF0] dark:hover:bg-[#1A2637]/50 dark:active:bg-[#1A2637]"
                 variant="outline"
                 action="secondary"
                 onPress={() => setShowSettings(true)}
@@ -390,7 +391,7 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
                 </ButtonText>
               </Button>
               <Button
-                className="w-full gap-2 h-12 rounded-xl"
+                className="w-full gap-2 h-12 rounded-xl dark:border-[#E8EBF0] dark:hover:bg-[#1A2637]/50 dark:active:bg-[#1A2637]"
                 variant="outline"
                 action="secondary"
                 onPress={handleLogout}
