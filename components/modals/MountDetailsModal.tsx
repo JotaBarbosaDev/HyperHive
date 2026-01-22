@@ -289,20 +289,20 @@ export function MountDetailsModal({isOpen, mount, onClose}: MountDetailsModalPro
             variant="solid"
             action="primary"
             disabled={isRemounting}
-            className="flex-1 h-12 rounded-xl web:flex-1 dark:bg-blue-600 dark:hover:bg-blue-700 dark:active:bg-blue-800"
+            className="flex-1 h-12 web:flex-1 rounded-xl dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
             onPress={handleRemount}
           >
             {isRemounting ? (
-              <ButtonSpinner size="small" className="mr-2" />
+              <ButtonSpinner size="small" className="mr-2 dark:text-base" />
             ) : (
               <Icon
                 as={RotateCw}
                 size="sm"
-                className="mr-2 text-white dark:text-[#E8EBF0]"
+                className="mr-2 dark:text-black"
               />
             )}
             <ButtonText
-              className="font-semibold web:text-base"
+              className="font-semibold dark:text-base"
               style={{fontFamily: "Inter_600SemiBold"}}
             >
               Remount

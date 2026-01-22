@@ -566,30 +566,60 @@ export default function BtrfsRaidsScreen() {
       className="flex-row items-center justify-between px-3 py-2 border-b border-outline-100 dark:border-[#1E2F47]"
     >
       <VStack className="gap-1">
-        <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold">{formatDeviceDisplay(disk)}</Text>
+        <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold">
+          {formatDeviceDisplay(disk)}
+        </Text>
         <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">
           {disk.model || disk.name || "—"} • {formatSize(disk.size)}
         </Text>
       </VStack>
       <HStack className="gap-2">
         {disk.type ? (
-          <Badge className="rounded-full px-3 py-1 border-outline-200 dark:border-[#1E2F47]" size="sm" action="muted" variant="outline">
-            <BadgeText className="text-xs text-typography-800 dark:text-[#E8EBF0]">{disk.type}</BadgeText>
+          <Badge
+            className="rounded-full px-3 py-1 border-outline-200 dark:border-[#1E2F47]"
+            size="sm"
+            action="muted"
+            variant="outline"
+          >
+            <BadgeText className="text-xs text-typography-800 dark:text-[#E8EBF0]">
+              {disk.type}
+            </BadgeText>
           </Badge>
         ) : null}
         {disk.status ? (
-          <Badge className="rounded-full px-3 py-1 border-outline-200 dark:border-[#1E2F47]" size="sm" action="muted" variant="outline">
-            <BadgeText className="text-xs text-typography-800 dark:text-[#E8EBF0]">{disk.status}</BadgeText>
+          <Badge
+            className="rounded-full px-3 py-1 border-outline-200 dark:border-[#1E2F47]"
+            size="sm"
+            action="muted"
+            variant="outline"
+          >
+            <BadgeText className="text-xs text-typography-800 dark:text-[#E8EBF0]">
+              {disk.status}
+            </BadgeText>
           </Badge>
         ) : null}
         {disk.mounted !== undefined ? (
-          <Badge className="rounded-full px-3 py-1 border-outline-200 dark:border-[#1E2F47]" size="sm" action={disk.mounted ? "success" : "muted"} variant="outline">
-            <BadgeText className="text-xs text-typography-800 dark:text-[#E8EBF0]">{disk.mounted ? "Mounted" : "Free"}</BadgeText>
+          <Badge
+            className="rounded-full px-3 py-1 border-outline-200 dark:bg-[#0F1A2E] dark:border-[#1E2F47]"
+            size="sm"
+            action={disk.mounted ? "success" : "muted"}
+            variant="outline"
+          >
+            <BadgeText className="text-xs text-typography-800 dark:text-[#E8EBF0]">
+              {disk.mounted ? "Mounted" : "Free"}
+            </BadgeText>
           </Badge>
         ) : null}
         {disk.rotational !== undefined ? (
-          <Badge className="rounded-full px-3 py-1 border-outline-200 dark:border-[#1E2F47]" size="sm" action="muted" variant="outline">
-            <BadgeText className="text-xs text-typography-800 dark:text-[#E8EBF0]">{disk.rotational ? "HDD" : "SSD"}</BadgeText>
+          <Badge
+            className="rounded-full px-3 py-1 border-outline-200 dark:bg-[#0F1A2E] dark:border-[#1E2F47]"
+            size="sm"
+            action="muted"
+            variant="outline"
+          >
+            <BadgeText className="text-xs text-typography-800 dark:text-[#E8EBF0]">
+              {disk.rotational ? "HDD" : "SSD"}
+            </BadgeText>
           </Badge>
         ) : null}
       </HStack>
@@ -686,7 +716,7 @@ export default function BtrfsRaidsScreen() {
                     <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm">{(Array.isArray(freeDisks) ? freeDisks.length : 0)} disks</Text>
                   </HStack>
                 </HStack>
-                <Divider className="opacity-60 dark:border-[#1E2F47]" />
+                <Divider className="opacity-60 dark:bg-[#1E2F47] dark:border-[#1E2F47]" />
                 {(!Array.isArray(freeDisks) || freeDisks.length === 0) ? (
                   <Box className="p-4">
                     <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">No free disks found.</Text>
@@ -726,7 +756,7 @@ export default function BtrfsRaidsScreen() {
                     })}
                   </HStack>
                 </HStack>
-                <Divider className="opacity-60 dark:border-[#1E2F47]" />
+                <Divider className="opacity-60 dark:bg-[#1E2F47] dark:border-[#1E2F47]" />
                 {filteredRaids.length === 0 ? (
                   <Box className="p-4">
                     <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">No RAID found.</Text>
@@ -745,36 +775,90 @@ export default function BtrfsRaidsScreen() {
                           <HStack className="items-start justify-between gap-4 flex-wrap">
                             <VStack className="gap-2 flex-1">
                               <HStack className="items-center gap-2 flex-wrap">
-                                <Box className={`h-2.5 w-2.5 rounded-full ${active ? "bg-[#2DD4BF] dark:bg-[#2DD4BF]" : "bg-[#94A3B8] dark:bg-[#64748B]"}`} />
-                                <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold">{raid.mount_point || raid.name || raid.uuid}</Text>
+                                <Box
+                                  className={`h-2.5 w-2.5 rounded-full ${active ? "bg-[#2DD4BF] dark:bg-[#2DD4BF]" : "bg-[#94A3B8] dark:bg-[#64748B]"}`}
+                                />
+                                <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold">
+                                  {raid.mount_point || raid.name || raid.uuid}
+                                </Text>
                                 {raid.raid_level ? (
-                                  <Badge className="rounded-full px-3 py-1 border-outline-200 dark:border-[#1E2F47]" size="sm" action="muted" variant="outline">
-                                    <BadgeText className="text-xs text-typography-800 dark:text-[#E8EBF0]">{(raid.raid_level || "").toUpperCase()}</BadgeText>
+                                  <Badge
+                                    className="rounded-full px-3 py-1 border-outline-200 dark:bg-[#0F1A2E] dark:border-[#1E2F47]"
+                                    size="sm"
+                                    action="muted"
+                                    variant="outline"
+                                  >
+                                    <BadgeText className="text-xs text-typography-800 dark:text-[#E8EBF0]">
+                                      {(raid.raid_level || "").toUpperCase()}
+                                    </BadgeText>
                                   </Badge>
                                 ) : null}
                                 {raid.compression ? (
-                                  <Badge className="rounded-full px-3 py-1 border-outline-200 dark:border-[#1E2F47]" size="sm" action="muted" variant="outline">
-                                    <BadgeText className="text-xs text-typography-800 dark:text-[#E8EBF0]">Compression: {getCompressionLabel(raid.compression)}</BadgeText>
+                                  <Badge
+                                    className="rounded-full px-3 py-1 border-outline-200 dark:bg-[#0F1A2E] dark:border-[#1E2F47]"
+                                    size="sm"
+                                    action="muted"
+                                    variant="outline"
+                                  >
+                                    <BadgeText className="text-xs text-typography-800 dark:text-[#E8EBF0]">
+                                      Compression:{" "}
+                                      {getCompressionLabel(raid.compression)}
+                                    </BadgeText>
                                   </Badge>
                                 ) : null}
                                 {auto ? (
-                                  <Badge className="rounded-full px-3 py-1 border-outline-200 dark:border-[#1E2F47]" size="sm" action="muted" variant="outline">
-                                    <BadgeText className="text-xs text-typography-800 dark:text-[#E8EBF0]">Auto-mount</BadgeText>
+                                  <Badge
+                                    className="rounded-full px-3 py-1 border-outline-200 dark:bg-[#0F1A2E] dark:border-[#1E2F47]"
+                                    size="sm"
+                                    action="muted"
+                                    variant="outline"
+                                  >
+                                    <BadgeText className="text-xs text-typography-800 dark:text-[#E8EBF0]">
+                                      Auto-mount
+                                    </BadgeText>
                                   </Badge>
                                 ) : null}
                               </HStack>
-                              <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm">UUID: {raid.uuid}</Text>
-                              {raid.status ? <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">Status: {raid.status}</Text> : null}
+                              <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm">
+                                UUID: {raid.uuid}
+                              </Text>
+                              {raid.status ? (
+                                <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">
+                                  Status: {raid.status}
+                                </Text>
+                              ) : null}
                               <HStack className="gap-4 flex-wrap">
-                                <Text className="text-typography-800 dark:text-[#E8EBF0] text-sm">Used: {formatSize(raid.used)}</Text>
-                                <Text className="text-typography-800 dark:text-[#E8EBF0] text-sm">Total: {formatSize(raid.total)}</Text>
-                                <Text className="text-typography-800 dark:text-[#E8EBF0] text-sm">Free: {formatSize(raid.free)}</Text>
+                                <Text className="text-typography-800 dark:text-[#E8EBF0] text-sm">
+                                  Used: {formatSize(raid.used)}
+                                </Text>
+                                <Text className="text-typography-800 dark:text-[#E8EBF0] text-sm">
+                                  Total: {formatSize(raid.total)}
+                                </Text>
+                                <Text className="text-typography-800 dark:text-[#E8EBF0] text-sm">
+                                  Free: {formatSize(raid.free)}
+                                </Text>
                               </HStack>
                               <HStack className="gap-2 flex-wrap">
-                                {(Array.isArray(raid.devices) ? raid.devices : []).map((dev) => {
-                                  const devDisplay = getRaidDeviceLabel(dev, disks);
+                                {(Array.isArray(raid.devices)
+                                  ? raid.devices
+                                  : []
+                                ).map((dev) => {
+                                  const devDisplay = getRaidDeviceLabel(
+                                    dev,
+                                    disks,
+                                  );
                                   return (
-                                    <Badge key={typeof dev === "string" ? dev : (dev as any).device} className="rounded-full px-3 py-1 border-outline-200 dark:border-[#1E2F47]" size="sm" action="muted" variant="outline">
+                                    <Badge
+                                      key={
+                                        typeof dev === "string"
+                                          ? dev
+                                          : (dev as any).device
+                                      }
+                                      className="rounded-full px-3 py-1 border-outline-200 dark:bg-[#0F1A2E] dark:border-[#1E2F47]"
+                                      size="sm"
+                                      action="muted"
+                                      variant="outline"
+                                    >
                                       <BadgeText className="text-xs text-typography-800 dark:text-[#E8EBF0]">
                                         {devDisplay}
                                       </BadgeText>
@@ -783,7 +867,11 @@ export default function BtrfsRaidsScreen() {
                                 })}
                               </HStack>
                             </VStack>
-                            <Icon as={ArrowRight} size="sm" className="text-typography-500 dark:text-[#9AA4B8]" />
+                            <Icon
+                              as={ArrowRight}
+                              size="sm"
+                              className="text-typography-500 dark:text-[#9AA4B8]"
+                            />
                           </HStack>
                         </Pressable>
                       );
@@ -1395,7 +1483,7 @@ export default function BtrfsRaidsScreen() {
                       action="default"
                       variant="outline"
                       size="md"
-                      className="flex-1 min-w-[110px] rounded-xl border-outline-200 dark:border-[#243247]"
+                      className="flex-1 min-w-[110px] rounded-xl border-outline-200 dark:border-[#243247] dark:hover:bg-"
                       onPress={() => raidModal?.uuid && performAction("pause balance", () => pauseBalance(selectedMachine, raidModal.uuid))}
                       isDisabled={savingAction !== null}
                     >

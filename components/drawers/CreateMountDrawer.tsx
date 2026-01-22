@@ -683,7 +683,7 @@ export function CreateMountDrawer({
                   >
                     <RadioIndicator className="mt-1">
                       {isSelected ? (
-                        <RadioIcon as={Dot} size="sm" className="text-primary-700 dark:text-[#8AB9FF]" />
+                        <Box className="w-2 h-2 rounded-full bg-primary-700 dark:bg-[#E8EBF0]"></Box>
                       ) : null}
                     </RadioIndicator>
                     <VStack className="flex-1">

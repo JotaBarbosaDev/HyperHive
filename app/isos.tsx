@@ -1355,15 +1355,15 @@ function IsoCard({ iso, onDelete, isDeleting }: IsoCardProps) {
       <VStack className="gap-5">
         <VStack className="gap-3">
           <Text
-            className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400"
-            style={{ fontFamily: "Inter_600SemiBold" }}
+            className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#5EEAD4]"
+            style={{fontFamily: "Inter_600SemiBold"}}
           >
             ISO image
           </Text>
           <Heading
             size="md"
             className="text-typography-900 dark:text-[#E8EBF0]"
-            style={{ fontFamily: "Inter_600SemiBold" }}
+            style={{fontFamily: "Inter_600SemiBold"}}
           >
             {iso.name}
           </Heading>
@@ -1371,7 +1371,7 @@ function IsoCard({ iso, onDelete, isDeleting }: IsoCardProps) {
             <Text
               className="text-sm text-typography-600 dark:text-typography-400"
               numberOfLines={3}
-              style={{ fontFamily: "Inter_400Regular" }}
+              style={{fontFamily: "Inter_400Regular"}}
             >
               {iso.description}
             </Text>
@@ -1381,12 +1381,22 @@ function IsoCard({ iso, onDelete, isDeleting }: IsoCardProps) {
         <VStack className="gap-2">
           <HStack className="flex-wrap gap-2">
             {iso.osLabel ? (
-              <Badge action="info" variant="outline" className="rounded-full border border-info-300/60 bg-info-500/5 px-3">
-                <BadgeText className="text-xs font-semibold text-info-600">{iso.osLabel}</BadgeText>
+              <Badge
+                action="info"
+                variant="outline"
+                className="rounded-full border border-info-300/60 bg-info-500/5 px-3"
+              >
+                <BadgeText className="text-xs font-semibold text-info-600">
+                  {iso.osLabel}
+                </BadgeText>
               </Badge>
             ) : null}
             {iso.version ? (
-              <Badge action="muted" variant="outline" className="rounded-full border px-3">
+              <Badge
+                action="muted"
+                variant="outline"
+                className="rounded-full border px-3"
+              >
                 <BadgeText className="text-xs font-medium text-typography-700 dark:text-typography-200">
                   v{iso.version}
                 </BadgeText>
@@ -1408,8 +1418,8 @@ function IsoCard({ iso, onDelete, isDeleting }: IsoCardProps) {
           {iso.availableOn.length > 0 ? (
             <VStack className="gap-2">
               <Text
-                className="text-xs uppercase tracking-wide text-typography-500 dark:text-typography-400"
-                style={{ fontFamily: "Inter_500Medium" }}
+                className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#5EEAD4]"
+                style={{fontFamily: "Inter_500Medium"}}
               >
                 Available on
               </Text>
@@ -1421,7 +1431,7 @@ function IsoCard({ iso, onDelete, isDeleting }: IsoCardProps) {
                     variant="outline"
                     className="rounded-full border px-3 max-w-full min-w-0 shrink"
                   >
-                    <BadgeText className="text-xs font-semibold text-typography-700 dark:text-typography-200 whitespace-normal break-normal">
+                    <BadgeText className="text-xs font-semibold text-typography-700 dark:text-typography-950 whitespace-normal break-normal">
                       {host}
                     </BadgeText>
                   </Badge>
@@ -1436,10 +1446,19 @@ function IsoCard({ iso, onDelete, isDeleting }: IsoCardProps) {
             <IsoInfoRow icon={Database} label="Size" value={iso.sizeLabel} />
           ) : null}
           {iso.dateLabel ? (
-            <IsoInfoRow icon={CalendarClock} label="Updated" value={iso.dateLabel} />
+            <IsoInfoRow
+              icon={CalendarClock}
+              label="Updated"
+              value={iso.dateLabel}
+            />
           ) : null}
           {iso.checksum ? (
-            <IsoInfoRow icon={Hash} label="Checksum" value={iso.checksum} mono />
+            <IsoInfoRow
+              icon={Hash}
+              label="Checksum"
+              value={iso.checksum}
+              mono
+            />
           ) : null}
           {iso.mountName ? (
             <IsoInfoRow icon={HardDrive} label="Mount" value={iso.mountName} />
@@ -1455,12 +1474,15 @@ function IsoCard({ iso, onDelete, isDeleting }: IsoCardProps) {
               action="negative"
               onPress={() => onDelete?.(iso)}
               isDisabled={!onDelete || isDeleting}
-              className="rounded-xl px-4 h-10 bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#F87171] dark:hover:bg-[#FB7185] dark:active:bg-[#DC2626]"
+              className="rounded-xl px-4 h-10 bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#af2b2b] dark:hover:bg-[#be4a4a] dark:active:bg-[#DC2626]"
             >
               {isDeleting ? (
                 <ButtonSpinner />
               ) : (
-                <ButtonText className="text-background-0 dark:text-[#0A1628]" style={{ fontFamily: "Inter_600SemiBold" }}>
+                <ButtonText
+                  className="text-background-0 dark:text-typography-950"
+                  style={{fontFamily: "Inter_600SemiBold"}}
+                >
                   Remove
                 </ButtonText>
               )}
@@ -1483,7 +1505,7 @@ function IsoInfoRow({ icon, label, value, mono = false }: IsoInfoRowProps) {
   return (
     <HStack className="items-start gap-3">
       <Box className="h-10 w-10 rounded-2xl bg-background-50 dark:bg-[#1A2637] items-center justify-center">
-        <Icon as={icon} size="sm" className="text-typography-500 dark:text-typography-300" />
+        <Icon as={icon} size="sm" className="text-typography-500 dark:text-[#5EEAD4]" />
       </Box>
       <VStack className="flex-1 min-w-0">
         <Text

@@ -474,11 +474,7 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
                         }`}
                       >
                         {isActive ? (
-                          <RadioIcon
-                            as={Dot}
-                            size="sm"
-                            className="text-primary-700 dark:text-[#2DD4BF]"
-                          />
+                          <Box className="w-2 h-2 rounded-full bg-primary-700 dark:bg-[#E8EBF0]"></Box>
                         ) : null}
                       </RadioIndicator>
                       <Box className="flex-row items-start gap-3 flex-1">

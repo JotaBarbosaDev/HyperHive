@@ -369,26 +369,34 @@ export default function DashboardScreen() {
     title: string,
     value: string,
     icon: React.ComponentType<any>,
-    description?: string
+    description?: string,
   ) => (
     <Box className="flex-1 min-w-[180px] rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
       <HStack className="items-center justify-between mb-3">
-        <Text className="text-xs font-semibold uppercase text-typography-500 dark:text-typography-300 tracking-[0.08em]">
+        <Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#5EEAD4] tracking-[0.08em]">
           {title}
         </Text>
         <Box className="w-9 h-9 rounded-xl bg-primary-50/70 dark:bg-[#12213A] items-center justify-center shrink-0">
           <Icon
-            as={(props) => React.createElement(icon, { ...props, strokeWidth: 1.5 })}
+            as={(props) =>
+              React.createElement(icon, {...props, strokeWidth: 1.5})
+            }
             size={ICON_SIZE_MD}
             className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80 flex-none"
           />
         </Box>
       </HStack>
-      <Heading size="xl" className="text-typography-900 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_700Bold" }}>
+      <Heading
+        size="xl"
+        className="text-typography-900 dark:text-[#E8EBF0]"
+        style={{fontFamily: "Inter_700Bold"}}
+      >
         {value}
       </Heading>
       {description ? (
-        <Text className="text-sm text-typography-600 dark:text-typography-400 mt-1">{description}</Text>
+        <Text className="text-sm text-typography-600 dark:text-typography-400 mt-1">
+          {description}
+        </Text>
       ) : null}
     </Box>
   );
@@ -398,23 +406,26 @@ export default function DashboardScreen() {
       <ScrollView
         refreshControl={refreshControl}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{paddingBottom: 40}}
       >
         <Box className="p-4 pt-16 web:p-10 web:max-w-7xl web:mx-auto web:w-full">
           <VStack className="gap-2 mb-6">
             <Heading
               size="2xl"
               className="text-typography-900 dark:text-[#E8EBF0] web:text-4xl"
-              style={{ fontFamily: "Inter_700Bold" }}
+              style={{fontFamily: "Inter_700Bold"}}
             >
               Cluster Dashboard
             </Heading>
             <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
-              Overview of all nodes with CPU, RAM, disk, and recent activity. Tap "View details" to open per-machine charts.
+              Overview of all nodes with CPU, RAM, disk, and recent activity.
+              Tap "View details" to open per-machine charts.
             </Text>
             {error ? (
               <Box className="mt-2 p-3 rounded-xl border border-error-300 dark:border-error-700 bg-error-50 dark:bg-error-900/30">
-                <Text className="text-error-700 dark:text-error-200 text-sm">{error}</Text>
+                <Text className="text-error-700 dark:text-error-200 text-sm">
+                  {error}
+                </Text>
               </Box>
             ) : null}
           </VStack>
@@ -424,7 +435,7 @@ export default function DashboardScreen() {
               "Total cores",
               overallTotals.totalCores ? `${overallTotals.totalCores}` : "—",
               Cpu,
-              `Avg usage ${formatPercent(overallTotals.avgCpuUsage)}`
+              `Avg usage ${formatPercent(overallTotals.avgCpuUsage)}`,
             )}
             {renderStatCard(
               "Memory",
@@ -432,13 +443,15 @@ export default function DashboardScreen() {
                 ? `${mbToGb(overallTotals.usedRamMb)} / ${mbToGb(overallTotals.totalRamMb)} GB`
                 : "—",
               MemoryStick,
-              overallTotals.totalRamMb ? `${formatPercent(overallTotals.ramUsagePercent)} in use` : undefined
+              overallTotals.totalRamMb
+                ? `${formatPercent(overallTotals.ramUsagePercent)} in use`
+                : undefined,
             )}
             {renderStatCard(
               "Temperatures",
               overallTotals.temp ? `${overallTotals.temp.toFixed(1)}ºC` : "—",
               ThermometerSun,
-              "Average of core sensors"
+              "Average of core sensors",
             )}
           </HStack>
 
@@ -446,10 +459,14 @@ export default function DashboardScreen() {
             <HStack className="items-center justify-between mb-4">
               <HStack className="items-center gap-3">
                 <Box className="w-10 h-10 rounded-xl bg-primary-50/70 dark:bg-[#12213A] items-center justify-center">
-                  <Icon as={HardDrive} size={ICON_SIZE_MD} className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80" />
+                  <Icon
+                    as={HardDrive}
+                    size={ICON_SIZE_MD}
+                    className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80"
+                  />
                 </Box>
                 <VStack className="gap-1">
-                  <Text className="text-xs font-semibold uppercase text-typography-500 dark:text-typography-300 tracking-[0.08em]">
+                  <Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#5EEAD4] tracking-[0.08em]">
                     Total disk
                   </Text>
                   <Text className="text-sm text-typography-600 dark:text-typography-400">
@@ -465,19 +482,33 @@ export default function DashboardScreen() {
                 onPress={() => loadSnapshots("refresh")}
                 isDisabled={isLoading || isRefreshing}
               >
-                <ButtonIcon as={RefreshCcw} className="text-typography-900 dark:text-[#E8EBF0]" />
-                <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Update</ButtonText>
+                <ButtonIcon
+                  as={RefreshCcw}
+                  className="text-typography-900 dark:text-[#E8EBF0]"
+                />
+                <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                  Update
+                </ButtonText>
               </Button>
             </HStack>
             <HStack className="gap-4 items-center flex-wrap">
               <MountUsageGauge
-                usagePercent={overallTotals.diskTotals.total ? (overallTotals.diskTotals.used / overallTotals.diskTotals.total) * 100 : 0}
+                usagePercent={
+                  overallTotals.diskTotals.total
+                    ? (overallTotals.diskTotals.used /
+                        overallTotals.diskTotals.total) *
+                      100
+                    : 0
+                }
                 usedGB={bytesToGb(overallTotals.diskTotals.used)}
                 totalGB={bytesToGb(overallTotals.diskTotals.total)}
-                freeGB={bytesToGb(overallTotals.diskTotals.total - overallTotals.diskTotals.used)}
+                freeGB={bytesToGb(
+                  overallTotals.diskTotals.total -
+                    overallTotals.diskTotals.used,
+                )}
               />
               <VStack className="gap-2 flex-1 min-w-[220px]">
-                <Text className="text-sm text-typography-600 dark:text-typography-400">
+                <Text className="text-sm text-typography-600 dark:text-typography-950">
                   {overallTotals.diskTotals.total
                     ? `${formatGbCompact(overallTotals.diskTotals.used)} used of ${formatGbCompact(overallTotals.diskTotals.total)}`
                     : "No disk data yet."}
@@ -485,7 +516,9 @@ export default function DashboardScreen() {
                 <Box className="h-2 rounded-full bg-background-100 dark:bg-[#132032] overflow-hidden">
                   <Box
                     className="h-2 rounded-full bg-primary-500"
-                    style={{ width: `${overallTotals.diskTotals.total ? (overallTotals.diskTotals.used / overallTotals.diskTotals.total) * 100 : 0}%` }}
+                    style={{
+                      width: `${overallTotals.diskTotals.total ? (overallTotals.diskTotals.used / overallTotals.diskTotals.total) * 100 : 0}%`,
+                    }}
                   />
                 </Box>
               </VStack>
@@ -494,7 +527,10 @@ export default function DashboardScreen() {
 
           <Box className="mt-8">
             <HStack className="items-center justify-between mb-3">
-              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+              <Heading
+                size="lg"
+                className="text-typography-900 dark:text-[#E8EBF0]"
+              >
                 Connected nodes
               </Heading>
               <Badge
@@ -503,7 +539,7 @@ export default function DashboardScreen() {
                 action="muted"
                 className="rounded-full px-3 bg-background-100 dark:bg-[#1A2436] border border-outline-200 dark:border-[#243247]"
               >
-                <BadgeText className="text-sm text-typography-700 dark:text-typography-100">
+                <BadgeText className="text-sm text-typography-700 dark:text-typography-950">
                   {machines.length} online
                 </BadgeText>
               </Badge>
@@ -512,13 +548,16 @@ export default function DashboardScreen() {
             <VStack className="gap-4">
               {snapshots.map((snap) => {
                 const diskTotals = computeDiskTotals(snap.disk);
-                const diskUsage = diskTotals.total ? (diskTotals.used / diskTotals.total) * 100 : 0;
+                const diskUsage = diskTotals.total
+                  ? (diskTotals.used / diskTotals.total) * 100
+                  : 0;
                 const avgCpu = averageCpuUsage(snap.cpu);
                 const ramPercent = snap.mem?.usedPercent ?? 0;
                 const lastSeen = (snap.machine as any).LastSeen;
                 const entryTime = (snap.machine as any).EntryTime;
                 const addr = (snap.machine as any).Addr ?? "";
-                const isPowerActioning = powerActioning?.machineName === snap.machine.MachineName;
+                const isPowerActioning =
+                  powerActioning?.machineName === snap.machine.MachineName;
 
                 return (
                   <Box
@@ -544,7 +583,7 @@ export default function DashboardScreen() {
                               variant="outline"
                               className="border-outline-300 dark:border-[#243247] bg-background-50 dark:bg-[#152136]"
                             >
-                              <BadgeText className="text-xs text-typography-600 dark:text-typography-100">
+                              <BadgeText className="text-xs text-typography-600 dark:text-typography-950">
                                 {formatRelative(lastSeen)} online
                               </BadgeText>
                             </Badge>
@@ -578,22 +617,39 @@ export default function DashboardScreen() {
                           variant="outline"
                           action="secondary"
                           className="rounded-xl border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E]"
-                          onPress={() => openPowerPrompt(snap.machine.MachineName, "restart")}
+                          onPress={() =>
+                            openPowerPrompt(snap.machine.MachineName, "restart")
+                          }
                           isDisabled={isPowerActioning}
                         >
-                          <ButtonIcon as={RotateCcw} className="text-typography-900 dark:text-[#E8EBF0]" />
-                          <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Restart</ButtonText>
+                          <ButtonIcon
+                            as={RotateCcw}
+                            className="text-typography-900 dark:text-[#E8EBF0]"
+                          />
+                          <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                            Restart
+                          </ButtonText>
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           action="negative"
-                          className="rounded-xl border-error-300 dark:border-error-700 bg-background-0 dark:bg-[#0F1A2E]"
-                          onPress={() => openPowerPrompt(snap.machine.MachineName, "shutdown")}
+                          className="rounded-xl border-error-300 dark:border-error-700 bg-background-0 dark:bg-red-900/20 dark:hover:bg-red-900/30"
+                          onPress={() =>
+                            openPowerPrompt(
+                              snap.machine.MachineName,
+                              "shutdown",
+                            )
+                          }
                           isDisabled={isPowerActioning}
                         >
-                          <ButtonIcon as={Power} className="text-error-600 dark:text-error-400" />
-                          <ButtonText className="text-error-700 dark:text-error-200">Shutdown</ButtonText>
+                          <ButtonIcon
+                            as={Power}
+                            className="text-error-600 dark:text-error-700"
+                          />
+                          <ButtonText className="text-error-700 dark:text-error-700">
+                            Shutdown
+                          </ButtonText>
                         </Button>
                         <Button
                           size="sm"
@@ -603,8 +659,8 @@ export default function DashboardScreen() {
                           onPress={() =>
                             router.push(
                               `/dashboard/${encodeURIComponent(
-                                snap.machine.MachineName
-                              )}` as any
+                                snap.machine.MachineName,
+                              )}` as any,
                             )
                           }
                         >
@@ -618,7 +674,7 @@ export default function DashboardScreen() {
                     <HStack className="mt-4 gap-3 flex-wrap">
                       <Box className="flex-1 min-w-[160px] rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
                         <HStack className="items-center justify-between mb-2">
-                          <Text className="text-xs text-typography-600 dark:text-typography-400 uppercase font-semibold tracking-[0.08em]">
+                          <Text className="text-xs text-typography-600 dark:text-[#5EEAD4] uppercase font-semibold tracking-[0.08em]">
                             CPU
                           </Text>
                           <Icon
@@ -637,7 +693,7 @@ export default function DashboardScreen() {
 
                       <Box className="flex-1 min-w-[160px] rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
                         <HStack className="items-center justify-between mb-2">
-                          <Text className="text-xs text-typography-600 dark:text-typography-400 uppercase font-semibold tracking-[0.08em]">
+                          <Text className="text-xs text-typography-600 dark:text-[#5EEAD4] uppercase font-semibold tracking-[0.08em]">
                             RAM
                           </Text>
                           <Icon
@@ -650,13 +706,14 @@ export default function DashboardScreen() {
                           {formatPercent(ramPercent)}
                         </Text>
                         <Text className="text-xs text-typography-500 dark:text-typography-400">
-                          {mbToGb(snap.mem?.usedMb ?? 0)} / {mbToGb(snap.mem?.totalMb ?? 0)} GB
+                          {mbToGb(snap.mem?.usedMb ?? 0)} /{" "}
+                          {mbToGb(snap.mem?.totalMb ?? 0)} GB
                         </Text>
                       </Box>
 
                       <Box className="flex-1 min-w-[160px] rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
                         <HStack className="items-center justify-between mb-2">
-                          <Text className="text-xs text-typography-600 dark:text-typography-400 uppercase font-semibold tracking-[0.08em]">
+                          <Text className="text-xs text-typography-600 dark:text-[#5EEAD4] uppercase font-semibold tracking-[0.08em]">
                             Disk
                           </Text>
                           <Icon
@@ -676,7 +733,7 @@ export default function DashboardScreen() {
 
                       <Box className="flex-1 min-w-[160px] rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
                         <HStack className="items-center justify-between mb-2">
-                          <Text className="text-xs text-typography-600 dark:text-typography-400 uppercase font-semibold tracking-[0.08em]">
+                          <Text className="text-xs text-typography-600 dark:text-[#5EEAD4] uppercase font-semibold tracking-[0.08em]">
                             Temp
                           </Text>
                           <Icon
@@ -688,10 +745,10 @@ export default function DashboardScreen() {
                         <Text className="text-lg font-semibold text-typography-900 dark:text-[#E8EBF0]">
                           {averageCpuTemp(snap.cpu)
                             ? `${averageCpuTemp(snap.cpu).toFixed(
-                              1
-                            )}ºC avg / ${maxCpuTemp(snap.cpu).toFixed(
-                              1
-                            )}ºC max`
+                                1,
+                              )}ºC avg / ${maxCpuTemp(snap.cpu).toFixed(
+                                1,
+                              )}ºC max`
                             : "—"}
                         </Text>
                         <Text className="text-xs text-typography-500 dark:text-typography-400">
@@ -714,7 +771,11 @@ export default function DashboardScreen() {
           </Box>
         </Box>
       </ScrollView>
-      <Modal isOpen={showPowerNowPrompt} onClose={closePowerNowPrompt} size="md">
+      <Modal
+        isOpen={showPowerNowPrompt}
+        onClose={closePowerNowPrompt}
+        size="md"
+      >
         <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
         <ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-5">
           <ModalHeader className="flex-row items-center gap-3 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
@@ -726,14 +787,25 @@ export default function DashboardScreen() {
               }`}
             >
               {pendingPowerAction?.action === "shutdown" ? (
-                <Power size={18} className="text-error-600 dark:text-error-400" />
+                <Power
+                  size={18}
+                  className="text-error-600 dark:text-error-400"
+                />
               ) : (
-                <RotateCcw size={18} className="text-[#0F766E] dark:text-[#5EEAD4]" />
+                <RotateCcw
+                  size={18}
+                  className="text-[#0F766E] dark:text-[#5EEAD4]"
+                />
               )}
             </Box>
             <VStack className="flex-1">
-              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
-                {pendingPowerAction?.action === "shutdown" ? "Shutdown now?" : "Restart now?"}
+              <Heading
+                size="lg"
+                className="text-typography-900 dark:text-[#E8EBF0]"
+              >
+                {pendingPowerAction?.action === "shutdown"
+                  ? "Shutdown now?"
+                  : "Restart now?"}
               </Heading>
               <Text className="text-sm text-typography-600 dark:text-typography-400">
                 Choose whether this action should run immediately.
@@ -760,19 +832,31 @@ export default function DashboardScreen() {
               className="flex-1 rounded-xl"
               onPress={() => handlePowerNowChoice(false)}
             >
-              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Not now</ButtonText>
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                Not now
+              </ButtonText>
             </Button>
             <Button
-              action={pendingPowerAction?.action === "shutdown" ? "negative" : "primary"}
+              action={
+                pendingPowerAction?.action === "shutdown"
+                  ? "negative"
+                  : "primary"
+              }
               className="flex-1 rounded-xl"
               onPress={() => handlePowerNowChoice(true)}
             >
-              <ButtonText className="text-background-0 dark:text-[#0A1628]">Now</ButtonText>
+              <ButtonText className="text-background-0 dark:text-[#0A1628]">
+                Now
+              </ButtonText>
             </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
-      <Modal isOpen={showPowerConfirmPrompt} onClose={closePowerConfirmPrompt} size="md">
+      <Modal
+        isOpen={showPowerConfirmPrompt}
+        onClose={closePowerConfirmPrompt}
+        size="md"
+      >
         <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
         <ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-5">
           <ModalHeader className="flex-row items-center gap-3 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
@@ -784,13 +868,22 @@ export default function DashboardScreen() {
               }`}
             >
               {pendingPowerAction?.action === "shutdown" ? (
-                <Power size={18} className="text-error-600 dark:text-error-400" />
+                <Power
+                  size={18}
+                  className="text-error-600 dark:text-error-400"
+                />
               ) : (
-                <RotateCcw size={18} className="text-[#0F766E] dark:text-[#5EEAD4]" />
+                <RotateCcw
+                  size={18}
+                  className="text-[#0F766E] dark:text-[#5EEAD4]"
+                />
               )}
             </Box>
             <VStack className="flex-1">
-              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+              <Heading
+                size="lg"
+                className="text-typography-900 dark:text-[#E8EBF0]"
+              >
                 {pendingPowerAction?.action === "shutdown"
                   ? "Are you sure you want to shut down?"
                   : "Are you sure you want to restart?"}
@@ -830,15 +923,23 @@ export default function DashboardScreen() {
               className="flex-1 rounded-xl"
               onPress={closePowerConfirmPrompt}
             >
-              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                Cancel
+              </ButtonText>
             </Button>
             <Button
-              action={pendingPowerAction?.action === "shutdown" ? "negative" : "primary"}
+              action={
+                pendingPowerAction?.action === "shutdown"
+                  ? "negative"
+                  : "primary"
+              }
               className="flex-1 rounded-xl"
               onPress={handleConfirmPowerAction}
             >
               <ButtonText className="text-background-0 dark:text-[#0A1628]">
-                {pendingPowerAction?.action === "shutdown" ? "Shutdown" : "Restart"}
+                {pendingPowerAction?.action === "shutdown"
+                  ? "Shutdown"
+                  : "Restart"}
               </ButtonText>
             </Button>
           </ModalFooter>

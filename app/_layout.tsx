@@ -39,9 +39,9 @@ import {
   loadApiBaseUrl,
   loadAuthToken,
 } from "@/services/auth-storage";
-import { ApiError, onApiResult, onUnauthorized, setAuthToken } from "@/services/api-client";
+import { ApiError, getAuthToken, onApiResult, onUnauthorized, setAuthToken } from "@/services/api-client";
 import { listMachines } from "@/services/hyperhive";
-import { ensureHyperHiveWebsocket } from "@/services/websocket-client";
+import { ensureHyperHiveWebsocket, getActiveHyperHiveWebsocket } from "@/services/websocket-client";
 import { AppThemeProvider } from "@/hooks/useAppTheme";
 import { SelectedMachineProvider } from "@/hooks/useSelectedMachine";
 import { ThemePreference, loadThemePreference, saveThemePreference } from "@/services/theme-preference";
@@ -288,6 +288,7 @@ function RootLayoutNav() {
     () => getApiBaseUrl() ?? null
   );
   const [themePreference, setThemePreference] = React.useState<ThemePreference>("system");
+  const [isWsConnected, setIsWsConnected] = React.useState(false);
 
   // For web, use webSystemTheme if available, otherwise fall back to systemColorScheme
   const effectiveSystemScheme = React.useMemo(() => {
@@ -419,6 +420,58 @@ function RootLayoutNav() {
     restoreSession();
     return () => {
       isMounted = false;
+    };
+  }, []);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const checkSocketStatus = async () => {
+      if (typeof WebSocket === "undefined") {
+        if (isMounted) {
+          setIsWsConnected(false);
+        }
+        return;
+      }
+
+      const socket = getActiveHyperHiveWebsocket();
+      const readyState = socket?.readyState;
+      const isConnected = readyState === WebSocket.OPEN;
+      const isConnecting = readyState === WebSocket.CONNECTING;
+
+      if (isMounted) {
+        setIsWsConnected(isConnected);
+      }
+
+      const token = getAuthToken();
+      const baseUrl = getApiBaseUrl();
+      if (!token || !baseUrl) {
+        if (isMounted) {
+          setIsWsConnected(false);
+        }
+        return;
+      }
+
+      if (!isConnected && !isConnecting) {
+        try {
+          await ensureHyperHiveWebsocket({ token, baseUrl });
+        } catch {
+          // Keep indicator red when the connection cannot be restored.
+        }
+      }
+    };
+
+    void checkSocketStatus();
+    intervalId = setInterval(() => {
+      void checkSocketStatus();
+    }, 5000);
+
+    return () => {
+      isMounted = false;
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
     };
   }, []);
 
@@ -656,24 +709,31 @@ function RootLayoutNav() {
                       className="absolute top-3 right-3 web:top-5 web:right-5 z-20"
                       pointerEvents="none"
                     >
-                      <Box className="h-9 w-9 web:h-10 web:w-10 items-center justify-center rounded-xl bg-[#0E1524]/95 border border-outline-100 dark:border-[#2A3B52] shadow-soft-1">
-                        <Image
-                          source={APP_CORNER_ICON}
-                          alt="HyperHive"
-                          resizeMode="contain"
-                          size="none"
-                          className="h-5 w-5 web:h-6 web:w-6"
+                      <VStack className="items-center gap-1">
+                        <Box className="h-9 w-9 web:h-10 web:w-10 items-center justify-center rounded-xl bg-[#0E1524]/95 border border-outline-100 dark:border-[#2A3B52] shadow-soft-1">
+                          <Image
+                            source={APP_CORNER_ICON}
+                            alt="HyperHive"
+                            resizeMode="contain"
+                            size="none"
+                            className="h-5 w-5 web:h-6 web:w-6"
+                          />
+                        </Box>
+                        <Box
+                          className={`h-2.5 w-2.5 rounded-full border-2 border-background-0 ${
+                            isWsConnected ? "bg-success-500" : "bg-error-500"
+                          }`}
                         />
-                      </Box>
+                      </VStack>
                     </Box>
                   )}
                   <GoAccessStreamButtons />
-                  <Box className="flex-1 pt-2 web:pt-3">
+                  <Box className="flex-1">
                     <Slot />
                   </Box>
                 </Box>
               </SelectedMachineProvider>
-            </AppThemeProvider>
+            </AppThemeProvider> 
             {pathname === "/mounts" && !isWeb && (
               <Button
                 size="lg"

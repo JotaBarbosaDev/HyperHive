@@ -115,7 +115,7 @@ export default function BtrfsAutomaticMountsScreen() {
   const selectInputClass = "text-typography-900 dark:text-[#E8EBF0] placeholder:text-typography-500 dark:placeholder:text-[#9AA4B8]";
   const selectIconClass = "text-typography-700 dark:text-[#9AA4B8]";
   const inputShellClass = "rounded-xl border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]";
-  const dividerClass = "opacity-60 border-outline-100 dark:border-[#1E2F47]";
+  const dividerClass = "border-outline-100 dark:bg-[#1E2F47] dark:border-[#1E2F47]";
 
   const showToast = React.useCallback(
     (title: string, description: string, action: "success" | "error" = "success") => {
@@ -340,7 +340,7 @@ export default function BtrfsAutomaticMountsScreen() {
           >
             BTRFS Auto-Mounts
           </Heading>
-          <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl">
+          <Text className="text-typography-600 dark:text-typography-400 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
             Rules that automatically mount BTRFS RAIDs when the machine starts.
           </Text>
 
@@ -350,9 +350,18 @@ export default function BtrfsAutomaticMountsScreen() {
                 selectedValue={selectedMachine}
                 onValueChange={(val) => setSelectedMachine(val)}
               >
-                <SelectTrigger className={`${selectTriggerClass} min-w-[180px] pr-2`}>
-                  <SelectInput placeholder="Machine" value={selectedMachine} className={selectInputClass} />
-                  <SelectIcon as={ChevronDownIcon} className={selectIconClass} />
+                <SelectTrigger
+                  className={`${selectTriggerClass} min-w-[180px] pr-2`}
+                >
+                  <SelectInput
+                    placeholder="Machine"
+                    value={selectedMachine}
+                    className={selectInputClass}
+                  />
+                  <SelectIcon
+                    as={ChevronDownIcon}
+                    className={selectIconClass}
+                  />
                 </SelectTrigger>
                 <SelectPortal>
                   <SelectBackdrop />
@@ -377,7 +386,11 @@ export default function BtrfsAutomaticMountsScreen() {
                 onPress={() => loadData("refresh")}
                 className={`${outlineButtonClass} h-10`}
               >
-                <ButtonIcon as={RefreshCcw} size="sm" className={outlineButtonIconClass} />
+                <ButtonIcon
+                  as={RefreshCcw}
+                  size="sm"
+                  className={outlineButtonIconClass}
+                />
                 <ButtonText className={outlineButtonTextClass}>
                   Refresh
                 </ButtonText>
@@ -385,7 +398,7 @@ export default function BtrfsAutomaticMountsScreen() {
             </HStack>
             <Button
               action="primary"
-              className="h-10 px-5 rounded-xl"
+              className="h-10 px-5 rounded-xl dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
               onPress={() => setCreateModal(true)}
             >
               <ButtonIcon as={Plus} size="sm" />
@@ -408,10 +421,7 @@ export default function BtrfsAutomaticMountsScreen() {
             {loading ? (
               <VStack className="gap-3 p-4">
                 {[1, 2].map((i) => (
-                  <Box
-                    key={i}
-                    className={`p-3 ${softCardShellClass}`}
-                  >
+                  <Box key={i} className={`p-3 ${softCardShellClass}`}>
                     <Skeleton className="h-5 w-1/2 mb-2" />
                     <SkeletonText className="w-1/3" />
                   </Box>
@@ -470,12 +480,19 @@ export default function BtrfsAutomaticMountsScreen() {
                         variant="outline"
                         onPress={() => handleRemove(rule.id)}
                         isDisabled={removingId !== null}
-                        className={outlineButtonClass}
+                        className={
+                          outlineButtonClass +
+                          "rounded-xl border-error-300 dark:border-error-700 bg-background-0 dark:bg-red-900/20 dark:hover:bg-red-900/30"
+                        }
                       >
                         {removingId === rule.id ? (
                           <ButtonSpinner />
                         ) : (
-                          <ButtonIcon as={Trash2} size="sm" className={dangerOutlineIconClass} />
+                          <ButtonIcon
+                            as={Trash2}
+                            size="sm"
+                            className={dangerOutlineIconClass}
+                          />
                         )}
                         <ButtonText className={dangerOutlineTextClass}>
                           Remove
@@ -498,7 +515,10 @@ export default function BtrfsAutomaticMountsScreen() {
         <ModalBackdrop className={modalBackdropClass} />
         <ModalContent className={`max-w-2xl max-h-[90vh] ${modalShellClass}`}>
           <ModalHeader className={modalHeaderClass}>
-            <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
+            <Heading
+              size="md"
+              className="text-typography-900 dark:text-[#E8EBF0]"
+            >
               New Auto-mount
             </Heading>
             <ModalCloseButton className="text-typography-500 dark:text-[#9AA4B8]" />
@@ -512,7 +532,10 @@ export default function BtrfsAutomaticMountsScreen() {
                     value={getRaidLabel(formRaid, raids)}
                     className={selectInputClass}
                   />
-                  <SelectIcon as={ChevronDownIcon} className={selectIconClass} />
+                  <SelectIcon
+                    as={ChevronDownIcon}
+                    className={selectIconClass}
+                  />
                 </SelectTrigger>
                 <SelectPortal>
                   <SelectBackdrop />
@@ -554,7 +577,9 @@ export default function BtrfsAutomaticMountsScreen() {
                 {isFetchingDir ? (
                   <>
                     <ButtonSpinner size="small" />
-                    <ButtonText className={`${outlineButtonTextClass} ml-2 text-sm`}>
+                    <ButtonText
+                      className={`${outlineButtonTextClass} ml-2 text-sm`}
+                    >
                       Loading directories...
                     </ButtonText>
                   </>
@@ -579,7 +604,10 @@ export default function BtrfsAutomaticMountsScreen() {
                     value={getCompressionLabel(formCompression)}
                     className={selectInputClass}
                   />
-                  <SelectIcon as={ChevronDownIcon} className={selectIconClass} />
+                  <SelectIcon
+                    as={ChevronDownIcon}
+                    className={selectIconClass}
+                  />
                 </SelectTrigger>
                 <SelectPortal>
                   <SelectBackdrop />
@@ -607,9 +635,7 @@ export default function BtrfsAutomaticMountsScreen() {
               isDisabled={saving}
               className={outlineButtonClass}
             >
-              <ButtonText className={outlineButtonTextClass}>
-                Cancel
-              </ButtonText>
+              <ButtonText className={outlineButtonTextClass}>Cancel</ButtonText>
             </Button>
             <Button
               action="primary"

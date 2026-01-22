@@ -12,7 +12,12 @@ import { Button, ButtonIcon, ButtonSpinner, ButtonText } from "@/components/ui/b
 import { Radio, RadioGroup, RadioIndicator, RadioLabel, RadioIcon } from "@/components/ui/radio";
 import { Toast, ToastTitle, useToast } from "@/components/ui/toast";
 import { Icon } from "@/components/ui/icon";
-import { Download, CheckCircle2, AlertTriangle, Dot } from "lucide-react-native";
+import {
+  Download,
+  CheckCircle2,
+  AlertTriangle,
+  Loader,
+} from "lucide-react-native";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { fetchK8sClusterStatus, fetchK8sTlsSans, downloadK8sConnectionFile } from "@/services/k8s";
 import { K8sClusterNode, K8sClusterStatusResponse } from "@/types/k8s";
@@ -239,109 +244,147 @@ export default function K8ClusterScreen() {
 	};
 
 	return (
-		<Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
-			<ScrollView
-				showsVerticalScrollIndicator={false}
-				contentContainerStyle={{ paddingBottom: 80 }}
-				refreshControl={
-					<RefreshControl
-						refreshing={isRefreshing}
-						onRefresh={handleRefresh}
-						tintColor={refreshControlTint}
-						colors={[refreshControlTint]}
-						progressBackgroundColor={refreshControlBackground}
-					/>
-				}
-			>
-				<Box className="p-4 pt-16 web:p-10 web:max-w-7xl web:mx-auto web:w-full">
-					<Heading
-						size="2xl"
-						className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
-						style={{ fontFamily: "Inter_700Bold" }}
-					>
-						K8 Cluster
-					</Heading>
-					<Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl mb-6">
-						Download the cluster connection file and monitor node connectivity.
-					</Text>
+    <Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{paddingBottom: 80}}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={refreshControlTint}
+            colors={[refreshControlTint]}
+            progressBackgroundColor={refreshControlBackground}
+          />
+        }
+      >
+        <Box className="p-4 pt-16 web:p-10 web:max-w-7xl web:mx-auto web:w-full">
+          <Heading
+            size="2xl"
+            className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
+            style={{fontFamily: "Inter_700Bold"}}
+          >
+            K8 Cluster
+          </Heading>
+          <Text className="text-typography-600 dark:text-typography-400 text-sm web:text-base max-w-3xl mb-6">
+            Download the cluster connection file and monitor node connectivity.
+          </Text>
 
-					{error ? (
-						<Box className="p-3 mb-4 rounded-lg border border-[#FCA5A5] bg-[#FEF2F2] dark:bg-[#2A1212]">
-							<Text className="text-[#B91C1C] dark:text-[#FCA5A5]" style={{ fontFamily: "Inter_500Medium" }}>
-								{error}
-							</Text>
-						</Box>
-					) : null}
+          {error ? (
+            <Box className="p-3 mb-4 rounded-lg border border-[#FCA5A5] bg-[#FEF2F2] dark:bg-[#2A1212]">
+              <Text
+                className="text-[#B91C1C] dark:text-[#FCA5A5]"
+                style={{fontFamily: "Inter_500Medium"}}
+              >
+                {error}
+              </Text>
+            </Box>
+          ) : null}
 
-					<Box className="gap-6">
-						<Box className="p-5 rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524] shadow-soft-1">
-							<Heading size="md" className="text-typography-900 dark:text-[#E8EBF0] mb-1" style={{ fontFamily: "Inter_700Bold" }}>
-								Connection File
-							</Heading>
-							<Text className="text-sm text-typography-600 dark:text-typography-400 mb-4">
-								Select the cluster IP to include in the connection file and download it.
-							</Text>
+          <Box className="gap-6">
+            <Box className="p-5 rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524] shadow-soft-1">
+              <Heading
+                size="md"
+                className="text-typography-900 dark:text-[#E8EBF0] mb-1"
+                style={{fontFamily: "Inter_700Bold"}}
+              >
+                Connection File
+              </Heading>
+              <Text className="text-sm text-typography-600 dark:text-typography-400 mb-4">
+                Select the cluster IP to include in the connection file and
+                download it.
+              </Text>
 
-							{isLoading ? (
-								<Text className="text-sm text-typography-600 dark:text-typography-400">Loading options...</Text>
-							) : (
-								<RadioGroup value={selectedIp ?? undefined} onChange={(val: any) => setSelectedIp(val)} className="gap-3">
-									{tlsSans.map((ip) => (
-										<Radio
-											key={ip}
-											value={ip}
-											aria-label={ip}
-											className="flex-row items-center gap-3 rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50/70 dark:bg-[#0F1A2E] px-3 py-3"
-										>
-											<RadioIndicator>
-												{selectedIp === ip ? <RadioIcon as={Dot} size="sm" className="text-primary-700 dark:text-[#8AB9FF]" /> : null}
-											</RadioIndicator>
-											<RadioLabel className="text-base text-typography-900 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_600SemiBold" }}>
-												{ip}
-											</RadioLabel>
-										</Radio>
-									))}
-									{!tlsSans.length ? (
-										<Text className="text-sm text-typography-600 dark:text-typography-400">No TLS SANs available.</Text>
-									) : null}
-								</RadioGroup>
-							)}
+              {isLoading ? (
+                <Text className="text-sm text-typography-600 dark:text-typography-400">
+                  Loading options...
+                </Text>
+              ) : (
+                <RadioGroup
+                  value={selectedIp ?? undefined}
+                  onChange={(val: any) => setSelectedIp(val)}
+                  className="gap-3"
+                >
+                  {tlsSans.map((ip) => (
+                    <Radio
+                      key={ip}
+                      value={ip}
+                      aria-label={ip}
+                      className="flex-row items-center gap-3 rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50/70 dark:bg-[#0F1A2E] px-3 py-3"
+                    >
+                      <RadioIndicator>
+                        {selectedIp === ip ? (
+                          <Box className="w-2 h-2 rounded-full bg-primary-700 dark:bg-[#E8EBF0]"></Box>
+                        ) : null}
+                      </RadioIndicator>
+                      <RadioLabel
+                        className="text-base text-typography-900 dark:text-[#E8EBF0]"
+                        style={{fontFamily: "Inter_600SemiBold"}}
+                      >
+                        {ip}
+                      </RadioLabel>
+                    </Radio>
+                  ))}
+                  {!tlsSans.length ? (
+                    <Text className="text-sm text-typography-600 dark:text-typography-400">
+                      No TLS SANs available.
+                    </Text>
+                  ) : null}
+                </RadioGroup>
+              )}
 
-							<Divider className="my-4" />
+              <Divider className="my-4" />
 
-							<Button
-								onPress={handleDownload}
-								isDisabled={!selectedIp || isDownloading}
-								className="rounded-xl h-12"
-								action="primary"
-							>
-								{isDownloading ? <ButtonSpinner color="white" /> : <ButtonIcon as={Download} className="text-background-0" />}
-								<ButtonText className="text-background-0" style={{ fontFamily: "Inter_600SemiBold" }}>
-									Download Cluster Connection File
-								</ButtonText>
-							</Button>
-						</Box>
+              <Button
+                onPress={handleDownload}
+                isDisabled={!selectedIp || isDownloading}
+                className="rounded-xl h-12"
+                action="primary"
+              >
+                {isDownloading ? (
+                  <ButtonSpinner color="white" />
+                ) : (
+                  <ButtonIcon as={Download} className="text-background-0" />
+                )}
+                <ButtonText
+                  className="text-background-0"
+                  style={{fontFamily: "Inter_600SemiBold"}}
+                >
+                  Download Cluster Connection File
+                </ButtonText>
+              </Button>
+            </Box>
 
-						<Box className="p-5 rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524] shadow-soft-1">
-							<Heading size="md" className="text-typography-900 dark:text-[#E8EBF0] mb-1" style={{ fontFamily: "Inter_700Bold" }}>
-								Cluster Status
-							</Heading>
-							<Text className="text-sm text-typography-600 dark:text-typography-400">
-								Current connectivity for each node in the cluster.
-							</Text>
-							{isLoading && !status ? (
-								<Text className="text-sm text-typography-600 dark:text-typography-400 mt-3">Loading status...</Text>
-							) : null}
-							{status ? (
-								<>
-									{renderNodes("Connected", status.connected || [], true)}
-									{renderNodes("Disconnected", status.disconnected || [], false)}
-								</>
-							) : null}
-						</Box>
-					</Box>
-				</Box>
-			</ScrollView>
-		</Box>
-	);
+            <Box className="p-5 rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524] shadow-soft-1">
+              <Heading
+                size="md"
+                className="text-typography-900 dark:text-[#E8EBF0] mb-1"
+                style={{fontFamily: "Inter_700Bold"}}
+              >
+                Cluster Status
+              </Heading>
+              <Text className="text-sm text-typography-600 dark:text-typography-400">
+                Current connectivity for each node in the cluster.
+              </Text>
+              {isLoading && !status ? (
+                <Text className="text-sm text-typography-600 dark:text-typography-400 mt-3">
+                  Loading status...
+                </Text>
+              ) : null}
+              {status ? (
+                <>
+                  {renderNodes("Connected", status.connected || [], true)}
+                  {renderNodes(
+                    "Disconnected",
+                    status.disconnected || [],
+                    false,
+                  )}
+                </>
+              ) : null}
+            </Box>
+          </Box>
+        </Box>
+      </ScrollView>
+    </Box>
+  );
 }
