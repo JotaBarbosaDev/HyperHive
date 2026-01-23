@@ -113,7 +113,7 @@ const isEnabled = (host: ProxyHost) => host.enabled !== false;
 
 const StatusChip = ({ label, action = "muted" }: { label: string; action?: "muted" | "info" | "success" | "error" }) => (
   <Badge className="rounded-full px-3 py-1" size="sm" action={action} variant="solid">
-    <BadgeText className={`text-xs ${action === "muted" ? "text-typography-800 dark:text-typography-200" : ""}`}>{label}</BadgeText>
+    <BadgeText className={`text-xs ${action === "muted" ? "text-typography-800 dark:text-typography-950" : ""}`}>{label}</BadgeText>
   </Badge>
 );
 
@@ -459,13 +459,13 @@ export default function ProxyHostsScreen() {
               })}
             </HStack>
             <HStack className="gap-3 items-center flex-wrap justify-end">
-              <HStack className="items-center gap-2 flex-wrap">
+              <HStack className="items-center ml-4 gap-2 flex-wrap">
                 <Button
                   action="primary"
                   variant="solid"
                   size="md"
                   onPress={openSetupModal}
-                  className="rounded-xl px-5 bg-typography-900 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+                  className="rounded-xl px-5 ml-4 bg-typography-900 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
                 >
                   <ButtonIcon as={Shield} size="sm" className="text-background-0 dark:text-[#0A1628]" />
                   <ButtonText className="text-background-0 dark:text-[#0A1628]">Setup FrontEnd Page</ButtonText>

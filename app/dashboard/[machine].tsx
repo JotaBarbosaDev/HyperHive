@@ -650,7 +650,7 @@ export default function MachineDetailsScreen() {
 	return (
 		<Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
 			<ScrollView showsVerticalScrollIndicator={false} refreshControl={refreshControl} contentContainerStyle={{ paddingBottom: 36 }}>
-				<Box className="p-4 pt-14 web:p-10 web:max-w-7xl web:mx-auto web:w-full">
+				<Box className="p-4 pt-14 web:p-20 web:max-w-7xl web:mx-auto web:w-full">
 					<HStack className="items-center justify-between mb-4">
 						<HStack className="items-center gap-3 flex-1">
 							<Button size="sm" variant="outline" className="rounded-xl" onPress={() => router.replace("/dashboard")}>
