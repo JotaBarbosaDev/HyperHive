@@ -75,7 +75,7 @@ export function MountCard({
 
   return (
     <>
-      <Box className="flex w-full flex-col justify-between rounded-2xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] mb-6 overflow-hidden web:mb-0 web:min-h-[340px] web:shadow-md dark:web:shadow-none">
+      <Box className="flex w-full flex-col justify-between rounded-2xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] mb-6 overflow-hidden web:mb-0 web:min-h-[340px] web:shadow-md dark:web:shadow-none">
         <Box className="flex flex-1 flex-col gap-2 p-3 web:p-4 web:gap-2">
           <Box className="flex flex-row justify-between items-center gap-3">
             <Box className="flex-1 min-w-0">

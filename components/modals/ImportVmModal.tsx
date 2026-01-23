@@ -77,9 +77,12 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
   const { resolvedMode } = useAppTheme();
   const isWeb = Platform.OS === "web";
   const primaryButtonClass =
-    isWeb ? "bg-typography-900 dark:bg-[#E8EBF0]" : resolvedMode === "dark" ? "bg-[#2DD4BF]" : "bg-typography-900";
-  const primaryButtonTextClass =
-    isWeb ? "text-background-0 dark:text-typography-900" : resolvedMode === "dark" ? "text-[#0A1628]" : "text-background-0";
+    isWeb ? "dark:text-[#0A1628] dark:bg-[#5EEAD4]" : resolvedMode === "dark" ? "bg-[#2DD4BF]" : "bg-typography-900";
+  const primaryButtonTextClass = isWeb
+    ? "text-background-0 dark:text-background-0"
+    : resolvedMode === "dark"
+      ? "text-[#0A1628]"
+      : "text-background-0";
   const quickMemoryGb = [2, 4, 8, 16, 32, 64];
 
   const availableSlaves = useMemo(
@@ -292,12 +295,12 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
   return (
     <Modal isOpen={showModal} onClose={() => setShowModal(false)} size="full">
       <ModalBackdrop />
-      <ModalContent className="max-w-[90%] max-h-[90%] web:max-w-4xl">
+      <ModalContent className="max-w-[90%] max-h-[90%] web:max-w-4xl dark:border-[#1E2F47] dark:bg-[#0F1A2E]">
         <ModalHeader className="pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
           <Heading
             size="lg"
             className="text-typography-900 dark:text-[#E8EBF0]"
-            style={{ fontFamily: "Inter_700Bold" }}
+            style={{fontFamily: "Inter_700Bold"}}
           >
             Import Virtual Machine
           </Heading>
@@ -306,18 +309,21 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
           </ModalCloseButton>
         </ModalHeader>
 
-        <ModalBody className="dark:bg-[#0A1628]">
+        <ModalBody className="dark:border-[#1E2F47] dark:bg-[#0F1A2E]">
           <ScrollView showsVerticalScrollIndicator>
             <Box className="p-4 web:p-6">
               <VStack className="gap-4 web:grid web:grid-cols-2 web:gap-4">
                 <VStack className="gap-2">
                   <Text
-                    className="text-sm text-typography-700 dark:text-typography-300"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
+                    className="text-sm text-typography-700 dark:text-[#8A94A8]"
+                    style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     VM Name
                   </Text>
-                  <Input variant="outline" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
+                  <Input
+                    variant="outline"
+                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
+                  >
                     <InputField
                       value={vmName}
                       onChangeText={setVmName}
@@ -329,28 +335,43 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
 
                 <VStack className="gap-2">
                   <Text
-                    className="text-sm text-typography-700 dark:text-typography-300"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
+                    className="text-sm text-typography-700 dark:text-[#8A94A8]"
+                    style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     Slave
                   </Text>
-                  <Select selectedValue={slave} onValueChange={setSlave} isDisabled={loadingOptions || slaveOptions.length === 0}>
-                    <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
-                      <SelectInput placeholder={loadingOptions ? "Loading..." : "Select..."} className="text-typography-900 dark:text-[#E8EBF0]" />
+                  <Select
+                    selectedValue={slave}
+                    onValueChange={setSlave}
+                    isDisabled={loadingOptions || slaveOptions.length === 0}
+                  >
+                    <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]">
+                      <SelectInput
+                        placeholder={
+                          loadingOptions ? "Loading..." : "Select..."
+                        }
+                        className="text-typography-900 dark:text-[#E8EBF0]"
+                      />
                       <SelectIcon as={ChevronDown} className="mr-3" />
                     </SelectTrigger>
                     <SelectPortal>
                       <SelectBackdrop />
-                      <SelectContent className="bg-background-0 dark:bg-[#151F30]">
+                      <SelectContent className="bg-background-0 dark:bg-[#0E1828]">
                         <SelectDragIndicatorWrapper>
-                        <SelectDragIndicator />
-                      </SelectDragIndicatorWrapper>
-                      {slaveOptions.length === 0 ? (
-                        <SelectItem label={loadingOptions ? "Loading..." : "No slaves found"} value="" isDisabled />
-                      ) : (
-                        slaveOptions.map((s) => (
+                          <SelectDragIndicator />
+                        </SelectDragIndicatorWrapper>
+                        {slaveOptions.length === 0 ? (
                           <SelectItem
-                            key={s.MachineName}
+                            label={
+                              loadingOptions ? "Loading..." : "No slaves found"
+                            }
+                            value=""
+                            isDisabled
+                          />
+                        ) : (
+                          slaveOptions.map((s) => (
+                            <SelectItem
+                              key={s.MachineName}
                               label={s.MachineName}
                               value={s.MachineName}
                               className="text-typography-900 dark:text-[#E8EBF0]"
@@ -364,12 +385,15 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
 
                 <VStack className="gap-2">
                   <Text
-                    className="text-sm text-typography-700 dark:text-typography-300"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
+                    className="text-sm text-typography-700 dark:text-[#8A94A8]"
+                    style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     vCPU
                   </Text>
-                  <Input variant="outline" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
+                  <Input
+                    variant="outline"
+                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
+                  >
                     <InputField
                       value={vcpu}
                       onChangeText={setVcpu}
@@ -382,12 +406,15 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
 
                 <VStack className="gap-2">
                   <Text
-                    className="text-sm text-typography-700 dark:text-typography-300"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
+                    className="text-sm text-typography-700 dark:text-[#8A94A8]"
+                    style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     Memory (MB)
                   </Text>
-                  <Input variant="outline" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
+                  <Input
+                    variant="outline"
+                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
+                  >
                     <InputField
                       value={memory}
                       onChangeText={setMemory}
@@ -402,10 +429,14 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                         key={`mem-${gb}`}
                         onPress={() => setMemory(String(gb * 1024))}
                         className={`px-3 py-2 rounded-full border ${
-                          Number(memory) === gb * 1024 ? "border-primary-500 bg-primary-50/20" : "border-outline-200 bg-background-0"
+                          Number(memory) === gb * 1024
+                            ? "rounded-full px-3 border-outline-200 dark:bg-[#213250] dark:border-[#1E2F47]"
+                            : "rounded-full px-3 border-outline-200 dark:bg-[#0F1A2E] dark:border-[#1E2F47]"
                         }`}
                       >
-                        <Text className="text-xs font-medium text-typography-700">{gb} GB</Text>
+                        <Text className="text-xs font-medium text-typography-700">
+                          {gb} GB
+                        </Text>
                       </Pressable>
                     ))}
                   </HStack>
@@ -413,13 +444,17 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
 
                 <VStack className="gap-2">
                   <Text
-                    className="text-sm text-typography-700 dark:text-typography-300"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
+                    className="text-sm text-typography-700 dark:text-[#8A94A8]"
+                    style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     Network
                   </Text>
                   <Select
-                    selectedValue={network === "default" || network === "512rede" ? network : "outro"}
+                    selectedValue={
+                      network === "default" || network === "512rede"
+                        ? network
+                        : "outro"
+                    }
                     onValueChange={(value) => {
                       if (value === "outro") {
                         setNetwork("");
@@ -428,24 +463,42 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                       }
                     }}
                   >
-                    <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
-                      <SelectInput placeholder="Select network" className="text-typography-900 dark:text-[#E8EBF0]" />
+                    <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]">
+                      <SelectInput
+                        placeholder="Select network"
+                        className="text-typography-900 dark:text-[#E8EBF0]"
+                      />
                       <SelectIcon as={ChevronDown} className="mr-3" />
                     </SelectTrigger>
                     <SelectPortal>
                       <SelectBackdrop />
-                      <SelectContent className="bg-background-0 dark:bg-[#151F30]">
+                      <SelectContent className="bg-background-0 dark:bg-[#0E1828]">
                         <SelectDragIndicatorWrapper>
                           <SelectDragIndicator />
                         </SelectDragIndicatorWrapper>
-                        <SelectItem label="default" value="default" className="text-typography-900 dark:text-[#E8EBF0]" />
-                        <SelectItem label="512rede" value="512rede" className="text-typography-900 dark:text-[#E8EBF0]" />
-                        <SelectItem label="other..." value="outro" className="text-typography-900 dark:text-[#E8EBF0]" />
+                        <SelectItem
+                          label="default"
+                          value="default"
+                          className="text-typography-900 dark:text-[#E8EBF0]"
+                        />
+                        <SelectItem
+                          label="512rede"
+                          value="512rede"
+                          className="text-typography-900 dark:text-[#E8EBF0]"
+                        />
+                        <SelectItem
+                          label="other..."
+                          value="outro"
+                          className="text-typography-900 dark:text-[#E8EBF0]"
+                        />
                       </SelectContent>
                     </SelectPortal>
                   </Select>
                   {network !== "default" && network !== "512rede" && (
-                    <Input variant="outline" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] mt-2">
+                    <Input
+                      variant="outline"
+                      className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828] mt-2"
+                    >
                       <InputField
                         value={network}
                         onChangeText={setNetwork}
@@ -458,21 +511,35 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
 
                 <VStack className="gap-2">
                   <Text
-                    className="text-sm text-typography-700 dark:text-typography-300"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
+                    className="text-sm text-typography-700 dark:text-[#8A94A8]"
+                    style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     NFS Share ID
                   </Text>
-                  <Select selectedValue={nfsShare} onValueChange={setNfsShare} isDisabled={loadingOptions || mountOptions.length === 0}>
+                  <Select
+                    selectedValue={nfsShare}
+                    onValueChange={setNfsShare}
+                    isDisabled={loadingOptions || mountOptions.length === 0}
+                  >
                     <SelectTrigger variant="outline" size="md">
-                      <SelectInput placeholder={loadingOptions ? "Loading..." : "Select NFS"} />
+                      <SelectInput
+                        placeholder={
+                          loadingOptions ? "Loading..." : "Select NFS"
+                        }
+                      />
                       <SelectIcon className="mr-3" as={ChevronDown} />
                     </SelectTrigger>
                     <SelectPortal>
                       <SelectBackdrop />
                       <SelectContent>
                         {mountOptions.length === 0 ? (
-                          <SelectItem label={loadingOptions ? "Loading..." : "No NFS found"} value="" isDisabled />
+                          <SelectItem
+                            label={
+                              loadingOptions ? "Loading..." : "No NFS found"
+                            }
+                            value=""
+                            isDisabled
+                          />
                         ) : (
                           mountOptions.map((s) => (
                             <SelectItem
@@ -490,12 +557,15 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
 
                 <VStack className="gap-2">
                   <Text
-                    className="text-sm text-typography-700 dark:text-typography-300"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
+                    className="text-sm text-typography-700 dark:text-[#8A94A8]"
+                    style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     VNC Password (optional)
                   </Text>
-                  <Input variant="outline" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
+                  <Input
+                    variant="outline"
+                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
+                  >
                     <InputField
                       value={vncPassword}
                       onChangeText={setVncPassword}
@@ -509,8 +579,8 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
 
               <VStack className="gap-3 mt-6">
                 <Text
-                  className="text-sm text-typography-700 dark:text-typography-300"
-                  style={{ fontFamily: "Inter_600SemiBold" }}
+                  className="text-sm text-typography-700 dark:text-[#8A94A8]"
+                  style={{fontFamily: "Inter_600SemiBold"}}
                 >
                   VM file
                 </Text>
@@ -520,7 +590,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                       ref={fileInputRef}
                       type="file"
                       accept=".qcow2,.qcow,.img,.raw,.vmdk"
-                      style={{ display: "none" }}
+                      style={{display: "none"}}
                       onChange={(event) => {
                         const file = event.target.files?.[0] ?? null;
                         setSelectedFile(file);
@@ -535,11 +605,18 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                           <Upload className="text-primary-500" />
                         </Box>
                         <VStack className="flex-1">
-                          <Text className="text-typography-900 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_600SemiBold" }}>
-                            {selectedFile ? selectedFile.name : "Select the .qcow2 file"}
+                          <Text
+                            className="text-typography-900 dark:text-[#E8EBF0]"
+                            style={{fontFamily: "Inter_600SemiBold"}}
+                          >
+                            {selectedFile
+                              ? selectedFile.name
+                              : "Select the .qcow2 file"}
                           </Text>
                           <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">
-                            {selectedFile ? formatFileSize(selectedFile.size) : "Maximum size depends on the backend"}
+                            {selectedFile
+                              ? formatFileSize(selectedFile.size)
+                              : "Maximum size depends on the backend"}
                           </Text>
                         </VStack>
                       </HStack>
@@ -547,10 +624,17 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                     {typeof uploadProgress === "number" && (
                       <Box className="mt-3">
                         <HStack className="justify-between mb-1">
-                          <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">Upload progress</Text>
-                          <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">{uploadProgress}%</Text>
+                          <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">
+                            Upload progress
+                          </Text>
+                          <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">
+                            {uploadProgress}%
+                          </Text>
                         </HStack>
-                        <Progress value={uploadProgress} className="h-2 rounded-full bg-outline-100 dark:bg-[#1E2F47]">
+                        <Progress
+                          value={uploadProgress}
+                          className="h-2 rounded-full bg-outline-100 dark:bg-[#1E2F47]"
+                        >
                           <ProgressFilledTrack className="bg-primary-500" />
                         </Progress>
                       </Box>
@@ -559,18 +643,24 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                 ) : (
                   <Box className="border border-outline-200 dark:border-[#2A3B52] rounded-lg p-3 bg-background-0 dark:bg-[#0F1A2E]">
                     <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
-                      Importing with disk upload is available only on the web version.
+                      Importing with disk upload is available only on the web
+                      version.
                     </Text>
                   </Box>
                 )}
               </VStack>
 
               <VStack className="gap-3 mt-6">
-                <Checkbox value="live" isChecked={live} onChange={setLive} className="gap-2">
+                <Checkbox
+                  value="live"
+                  isChecked={live}
+                  onChange={setLive}
+                  className="gap-2"
+                >
                   <CheckboxIndicator className="border-outline-300 dark:border-[#2A3B52]">
                     <CheckboxIcon as={Check} />
                   </CheckboxIndicator>
-                  <CheckboxLabel className="text-typography-700 dark:text-typography-300">
+                  <CheckboxLabel className="text-typography-700 dark:text-[#8A94A8]">
                     Live VM / custom CPU
                   </CheckboxLabel>
                 </Checkbox>
@@ -579,24 +669,28 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
               {live && (
                 <Box className="mt-4 p-4 bg-background-0 dark:bg-[#0F1A2E] border border-outline-200 dark:border-[#2A3B52] rounded-xl">
                   <HStack className="gap-2 items-center mb-3">
-                    <Cpu size={20} className="text-typography-700 dark:text-[#E8EBF0]" />
+                    <Cpu
+                      size={20}
+                      className="text-typography-700 dark:text-[#E8EBF0]"
+                    />
                     <Heading
                       size="sm"
                       className="text-typography-900 dark:text-[#E8EBF0]"
-                      style={{ fontFamily: "Inter_700Bold" }}
+                      style={{fontFamily: "Inter_700Bold"}}
                     >
                       Advanced CPU Configuration
                     </Heading>
                   </HStack>
 
                   <Text className="text-sm text-typography-600 dark:text-[#8A94A8] mb-4">
-                    Select slaves to compare and get a CPU configuration compatible between them.
+                    Select slaves to compare and get a CPU configuration
+                    compatible between them.
                   </Text>
 
                   <VStack className="gap-2 mb-4">
                     <Text
-                      className="text-sm text-typography-700 dark:text-typography-300"
-                      style={{ fontFamily: "Inter_600SemiBold" }}
+                      className="text-sm text-typography-700 dark:text-[#8A94A8]"
+                      style={{fontFamily: "Inter_600SemiBold"}}
                     >
                       Selected slaves ({selectedSlaves.length})
                     </Text>
@@ -622,7 +716,11 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                                   size="xs"
                                   variant="link"
                                   onPress={() => {
-                                    setSelectedSlaves(selectedSlaves.filter((s) => s !== slaveName));
+                                    setSelectedSlaves(
+                                      selectedSlaves.filter(
+                                        (s) => s !== slaveName,
+                                      ),
+                                    );
                                   }}
                                   className="p-0 min-w-0 h-4"
                                 >
@@ -642,8 +740,8 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
 
                   <VStack className="gap-2 mb-4">
                     <Text
-                      className="text-sm text-typography-700 dark:text-typography-300"
-                      style={{ fontFamily: "Inter_600SemiBold" }}
+                      className="text-sm text-typography-700 dark:text-[#8A94A8]"
+                      style={{fontFamily: "Inter_600SemiBold"}}
                     >
                       Add slave to comparison
                     </Text>
@@ -651,28 +749,48 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                     <Select
                       selectedValue={currentSlaveSelect}
                       onValueChange={(value) => {
-                        if (value && slaveOptions.find((s) => s.MachineName === value) && !selectedSlaves.includes(value)) {
+                        if (
+                          value &&
+                          slaveOptions.find((s) => s.MachineName === value) &&
+                          !selectedSlaves.includes(value)
+                        ) {
                           setSelectedSlaves([...selectedSlaves, value]);
                           setCurrentSlaveSelect("");
                         }
                       }}
-                      isDisabled={loadingOptions || availableSlaves.length === 0}
+                      isDisabled={
+                        loadingOptions || availableSlaves.length === 0
+                      }
                     >
-                      <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
-                        <SelectInput placeholder={loadingOptions ? "Loading..." : "Select a slave..."} className="text-typography-900 dark:text-[#E8EBF0]" />
+                      <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]">
+                        <SelectInput
+                          placeholder={
+                            loadingOptions ? "Loading..." : "Select a slave..."
+                          }
+                          className="text-typography-900 dark:text-[#E8EBF0]"
+                        />
                         <SelectIcon as={ChevronDown} className="mr-3" />
                       </SelectTrigger>
                       <SelectPortal>
                         <SelectBackdrop />
-                        <SelectContent className="bg-background-0 dark:bg-[#151F30]">
+                        <SelectContent className="bg-background-0 dark:bg-[#0E1828]">
                           <SelectDragIndicatorWrapper>
                             <SelectDragIndicator />
                           </SelectDragIndicatorWrapper>
                           {availableSlaves.length === 0 ? (
-                            <SelectItem label="All slaves have been added" value="" isDisabled />
+                            <SelectItem
+                              label="All slaves have been added"
+                              value=""
+                              isDisabled
+                            />
                           ) : (
                             availableSlaves.map((s) => (
-                              <SelectItem key={s} label={s} value={s} className="text-typography-900 dark:text-[#E8EBF0]" />
+                              <SelectItem
+                                key={s}
+                                label={s}
+                                value={s}
+                                className="text-typography-900 dark:text-[#E8EBF0]"
+                              />
                             ))
                           )}
                         </SelectContent>
@@ -689,12 +807,19 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                     {loadingCPU ? (
                       <>
                         <ButtonSpinner className="mr-2" />
-                        <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Fetching CPUs...</ButtonText>
+                        <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                          Fetching CPUs...
+                        </ButtonText>
                       </>
                     ) : (
                       <>
-                        <ButtonIcon as={Cpu} className="mr-2 text-typography-900 dark:text-[#E8EBF0]" />
-                        <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Get Mutual CPUs</ButtonText>
+                        <ButtonIcon
+                          as={Cpu}
+                          className="mr-2 text-typography-900 dark:text-[#E8EBF0]"
+                        />
+                        <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                          Get Mutual CPUs
+                        </ButtonText>
                       </>
                     )}
                   </Button>
@@ -702,15 +827,25 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                   <VStack className="gap-2">
                     <HStack className="justify-between items-center">
                       <Text
-                        className="text-sm text-typography-700 dark:text-typography-300"
-                        style={{ fontFamily: "Inter_600SemiBold" }}
+                        className="text-sm text-typography-700 dark:text-[#8A94A8]"
+                        style={{fontFamily: "Inter_600SemiBold"}}
                       >
                         CPU Configuration XML
                       </Text>
 
                       <HStack className="gap-2">
-                        <Button size="xs" variant="outline" onPress={handleCopyXml} disabled={!cpuXml} className="rounded-md border-outline-200 dark:border-[#2A3B52]">
-                          <ButtonIcon as={Copy} size="xs" className="text-typography-700 dark:text-[#E8EBF0]" />
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          onPress={handleCopyXml}
+                          disabled={!cpuXml}
+                          className="rounded-md border-outline-200 dark:border-[#2A3B52]"
+                        >
+                          <ButtonIcon
+                            as={Copy}
+                            size="xs"
+                            className="text-typography-700 dark:text-[#E8EBF0]"
+                          />
                         </Button>
 
                         <Button
@@ -720,19 +855,28 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                           disabled={!cpuXml}
                           className="rounded-md border-red-300 dark:border-red-700"
                         >
-                          <ButtonIcon as={Trash2} size="xs" className="text-red-600 dark:text-red-400" />
+                          <ButtonIcon
+                            as={Trash2}
+                            size="xs"
+                            className="text-red-600 dark:text-red-400"
+                          />
                         </Button>
                       </HStack>
                     </HStack>
 
                     <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
-                      This XML configures the VM CPU. You can edit it manually if needed.
+                      This XML configures the VM CPU. You can edit it manually
+                      if needed.
                     </Text>
 
                     <Box className="bg-[#0F172A] border border-[#1E2F47] rounded-lg overflow-hidden">
                       <Box className="bg-[#0A0E1A] px-3 py-2 border-b border-[#1E2F47] flex-row justify-between items-center">
-                        <Text className="text-xs text-[#64748B] font-mono">XML Editor</Text>
-                        <Text className="text-xs text-[#475569]">{cpuXml.length} chars</Text>
+                        <Text className="text-xs text-[#64748B] font-mono">
+                          XML Editor
+                        </Text>
+                        <Text className="text-xs text-[#475569]">
+                          {cpuXml.length} chars
+                        </Text>
                       </Box>
                       <StableTextInput
                         defaultValue={cpuXml}
@@ -744,7 +888,10 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                         spellCheck={false}
                         textAlignVertical="top"
                         style={{
-                          fontFamily: Platform.select({ ios: "Menlo", android: "monospace" }),
+                          fontFamily: Platform.select({
+                            ios: "Menlo",
+                            android: "monospace",
+                          }),
                           color: cpuXml ? "#22C55E" : "#64748B",
                           backgroundColor: "#0F172A",
                           fontSize: 12,
@@ -772,7 +919,9 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
               }}
               disabled={importing}
             >
-              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                Cancel
+              </ButtonText>
             </Button>
 
             <Button
@@ -781,7 +930,9 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
               disabled={importing || !isWeb}
             >
               {importing ? <ButtonSpinner className="mr-2" /> : null}
-              <ButtonText className={`${primaryButtonTextClass}`}>Import VM</ButtonText>
+              <ButtonText className={`${primaryButtonTextClass}`}>
+                Import VM
+              </ButtonText>
             </Button>
           </HStack>
         </ModalFooter>

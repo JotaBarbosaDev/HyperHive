@@ -107,8 +107,8 @@ export default function BtrfsAutomaticMountsScreen() {
   const outlineButtonClass = "border-outline-200 rounded-xl dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]";
   const outlineButtonTextClass = "text-typography-900 dark:text-[#E8EBF0]";
   const outlineButtonIconClass = "text-typography-900 dark:text-[#E8EBF0]";
-  const dangerOutlineTextClass = "text-error-600 dark:text-error-400";
-  const dangerOutlineIconClass = "text-error-600 dark:text-error-400";
+  const dangerOutlineTextClass = "text-error-700 dark:text-error-700";
+  const dangerOutlineIconClass = "text-error-600 dark:text-error-700";
   const neutralBadgeClass = "rounded-full px-3 py-1 border border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]";
   const neutralBadgeTextClass = "text-xs text-typography-800 dark:text-[#E8EBF0]";
   const selectTriggerClass = "rounded-xl border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]";
@@ -332,7 +332,7 @@ export default function BtrfsAutomaticMountsScreen() {
           />
         }
       >
-        <Box className="p-4 pt-16 web:p-10 web:max-w-5xl web:mx-auto web:w-full">
+        <Box className="p-4 pt-16 web:p-20 web:max-w-5xl web:mx-auto web:w-full">
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
@@ -641,7 +641,7 @@ export default function BtrfsAutomaticMountsScreen() {
               action="primary"
               onPress={() => handleCreate().then(() => setCreateModal(false))}
               isDisabled={saving}
-              className="rounded-xl"
+              className="rounded-xl dark:bg-[#5EEAD4]"
             >
               {saving ? <ButtonSpinner /> : <ButtonIcon as={Plus} size="sm" />}
               <ButtonText>Create</ButtonText>

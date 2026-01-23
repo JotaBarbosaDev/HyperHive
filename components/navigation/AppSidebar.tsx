@@ -432,7 +432,7 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
                 >
                   Settings
                 </Heading>
-                <Text className="text-sm text-typography-600 dark:text-typography-300">
+                <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                   Quickly personalize the dashboard experience.
                 </Text>
               </Box>
@@ -442,12 +442,12 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
           <ModalBody className="gap-5 pt-5">
             <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50/70 dark:bg-[#0F1A2E] p-4 gap-3">
               <Text
-                className="text-xs font-semibold uppercase text-typography-500 dark:text-typography-300 tracking-[0.08em]"
+                className="text-xs font-semibold uppercase text-typography-500 dark:text-[#8A94A8] tracking-[0.08em]"
                 style={{fontFamily: "Inter_600SemiBold"}}
               >
                 Theme
               </Text>
-              <Text className="text-sm text-typography-600 dark:text-typography-300">
+              <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                 Choose how HyperHive adapts to your environment.
               </Text>
               <RadioGroup
@@ -492,7 +492,7 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
                             className={
                               isActive
                                 ? "text-primary-700 dark:text-[#2dd4be88]"
-                                : "text-typography-600 dark:text-typography-200"
+                                : "text-typography-600 dark:text-[#8A94A8]"
                             }
                           />
                         </Box>
@@ -503,7 +503,7 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
                           >
                             {option.label}
                           </RadioLabel>
-                          <Text className="text-xs text-typography-500 dark:text-typography-300 mt-0.5">
+                          <Text className="text-xs text-typography-500 dark:text-[#8A94A8] mt-0.5">
                             {option.description}
                           </Text>
                         </Box>
@@ -518,7 +518,7 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
             <Button
               variant="outline"
               action="secondary"
-              className="rounded-xl px-4 h-11 border-outline-100 dark:border-[#2A3B52]"
+              className="rounded-xl px-4 h-11 border-outline-100 dark:border-[#2A3B52] dark:hover:bg-[#1A2637]/50 dark:active:bg-[#1A2637]"
               onPress={() => setShowSettings(false)}
             >
               <ButtonText className="font-semibold text-typography-900 dark:text-[#E8EBF0]">

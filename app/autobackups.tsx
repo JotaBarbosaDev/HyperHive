@@ -436,7 +436,7 @@ export default function AutoBackupsScreen() {
           />
         }
       >
-        <Box className="p-4 pt-16 web:p-10 web:max-w-7xl web:mx-auto web:w-full">
+        <Box className="p-4 pt-16 web:p-20 web:max-w-7xl web:mx-auto web:w-full">
           <HStack className="justify-between items-start mb-3">
             <VStack className="flex-1">
               <Heading
@@ -456,7 +456,10 @@ export default function AutoBackupsScreen() {
                 className={`rounded-xl px-4 ${primaryButtonClass}`}
                 onPress={() => setShowCreateModal(true)}
               >
-                <ButtonIcon as={Plus} className={`${primaryButtonTextClass} mr-1.5`} />
+                <ButtonIcon
+                  as={Plus}
+                  className={`${primaryButtonTextClass} mr-1.5`}
+                />
                 <ButtonText
                   className={`${primaryButtonTextClass}`}
                   style={{fontFamily: "Inter_600SemiBold"}}
@@ -473,7 +476,7 @@ export default function AutoBackupsScreen() {
               size="md"
               onPress={handleRefresh}
               disabled={loading}
-              className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+              className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
             >
               {loading ? (
                 <ButtonSpinner />
@@ -490,7 +493,10 @@ export default function AutoBackupsScreen() {
               onPress={() => setShowCreateModal(true)}
               disabled={loading}
             >
-              <ButtonIcon as={Plus} className={`${primaryButtonTextClass} mr-1.5`} />
+              <ButtonIcon
+                as={Plus}
+                className={`${primaryButtonTextClass} mr-1.5`}
+              />
               <ButtonText
                 className={`${primaryButtonTextClass}`}
                 style={{fontFamily: "Inter_600SemiBold"}}
@@ -502,11 +508,11 @@ export default function AutoBackupsScreen() {
 
           {/* Stats Overview */}
           <HStack className="mb-6 gap-4 flex-wrap web:grid web:grid-cols-4">
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
+            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
               <HStack className="items-center gap-2 mb-2">
                 <Calendar
                   size={16}
-                  className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                  className="text-[#9AA4B8] dark:text-[#5EEAD4]"
                   color={statsIconMutedColor}
                 />
                 <Text
@@ -524,7 +530,7 @@ export default function AutoBackupsScreen() {
               </Text>
             </Box>
 
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
+            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
               <HStack className="items-center gap-2 mb-2">
                 <Database
                   size={16}
@@ -546,11 +552,11 @@ export default function AutoBackupsScreen() {
               </Text>
             </Box>
 
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
+            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
               <HStack className="items-center gap-2 mb-2">
                 <TrendingUp
                   size={16}
-                  className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                  className="text-[#9AA4B8] dark:text-[#5EEAD4]"
                   color={statsIconMutedColor}
                 />
                 <Text
@@ -568,11 +574,11 @@ export default function AutoBackupsScreen() {
               </Text>
             </Box>
 
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
+            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
               <HStack className="items-center gap-2 mb-2">
                 <Clock
                   size={16}
-                  className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                  className="text-[#9AA4B8] dark:text-[#5EEAD4]"
                   color={statsIconMutedColor}
                 />
                 <Text
@@ -598,7 +604,7 @@ export default function AutoBackupsScreen() {
               size="md"
               onPress={handleRefresh}
               disabled={loading}
-              className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+              className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
             >
               {loading ? (
                 <ButtonSpinner />
@@ -638,7 +644,7 @@ export default function AutoBackupsScreen() {
               {schedules.map((schedule) => (
                 <Box
                   key={schedule.id}
-                  className="rounded-2xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4 web:p-6"
+                  className="rounded-2xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4 web:p-6"
                 >
                   <HStack className="justify-between items-start">
                     <VStack className="gap-1">
@@ -685,10 +691,13 @@ export default function AutoBackupsScreen() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="rounded-xl border-red-500"
+                        className="rounded-xl border-error-300 dark:border-error-700 bg-background-0 dark:bg-red-900/20 dark:hover:bg-red-900/30"
                         onPress={() => handleDelete(schedule)}
                       >
-                        <ButtonIcon as={Trash2} className="text-red-500" />
+                        <ButtonIcon
+                          as={Trash2}
+                          className="text-error-600 dark:text-error-700"
+                        />
                       </Button>
                     </HStack>
                   </HStack>
@@ -716,7 +725,7 @@ export default function AutoBackupsScreen() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="rounded-xl"
+                      className="rounded-xl dark:hover:bg-[#1A2637]/50 dark:active:bg-[#1A2637]"
                       onPress={() => handleToggleEnabled(schedule)}
                     >
                       <ButtonIcon
@@ -738,7 +747,7 @@ export default function AutoBackupsScreen() {
       {/* Modal create/edit */}
       <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)}>
         <ModalBackdrop className="bg-black/60" />
-        <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] shadow-2xl max-w-lg p-6">
+        <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828] shadow-2xl max-w-lg p-6">
           <ModalHeader className="pb-4">
             <Heading
               size="lg"
@@ -1076,15 +1085,25 @@ export default function AutoBackupsScreen() {
           </ModalFooter>
         </ModalContent>
       </Modal>
-      <Modal isOpen={!!confirmDelete} onClose={handleCloseDeleteModal} size="md">
+      <Modal
+        isOpen={!!confirmDelete}
+        onClose={handleCloseDeleteModal}
+        size="md"
+      >
         <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
         <ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-5">
           <ModalHeader className="flex-row items-center gap-3 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
             <Box className="h-10 w-10 rounded-2xl bg-error-500/10 dark:bg-error-900/20 items-center justify-center">
-              <Trash2 size={18} className="text-error-600 dark:text-error-400" />
+              <Trash2
+                size={18}
+                className="text-error-600 dark:text-error-400"
+              />
             </Box>
             <VStack className="flex-1">
-              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+              <Heading
+                size="lg"
+                className="text-typography-900 dark:text-[#E8EBF0]"
+              >
                 Delete auto-backup?
               </Heading>
               <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
@@ -1105,22 +1124,39 @@ export default function AutoBackupsScreen() {
                       {confirmDelete.vmName}
                     </Text>
                     <HStack className="flex-wrap gap-2">
-                      <Badge action="muted" variant="outline" className="rounded-full border px-3">
+                      <Badge
+                        action="muted"
+                        variant="outline"
+                        className="rounded-full border px-3"
+                      >
                         <BadgeText className="text-xs text-typography-700 dark:text-typography-200">
                           {getFrequencyLabel(confirmDelete.frequencyDays)}
                         </BadgeText>
                       </Badge>
-                      <Badge action="muted" variant="outline" className="rounded-full border px-3">
+                      <Badge
+                        action="muted"
+                        variant="outline"
+                        className="rounded-full border px-3"
+                      >
                         <BadgeText className="text-xs text-typography-700 dark:text-typography-200">
                           {getNfsName(confirmDelete.nfsShareId)}
                         </BadgeText>
                       </Badge>
-                      <Badge action="muted" variant="outline" className="rounded-full border px-3">
+                      <Badge
+                        action="muted"
+                        variant="outline"
+                        className="rounded-full border px-3"
+                      >
                         <BadgeText className="text-xs text-typography-700 dark:text-typography-200">
-                          {confirmDelete.minTime || "00:00"} - {confirmDelete.maxTime || "23:59"}
+                          {confirmDelete.minTime || "00:00"} -{" "}
+                          {confirmDelete.maxTime || "23:59"}
                         </BadgeText>
                       </Badge>
-                      <Badge action="muted" variant="outline" className="rounded-full border px-3">
+                      <Badge
+                        action="muted"
+                        variant="outline"
+                        className="rounded-full border px-3"
+                      >
                         <BadgeText className="text-xs text-typography-700 dark:text-typography-200">
                           Retain {confirmDelete.retention}
                         </BadgeText>
@@ -1131,7 +1167,9 @@ export default function AutoBackupsScreen() {
               ) : null}
               {deleteError ? (
                 <Box className="rounded-xl border border-error-300 dark:border-error-700 bg-error-50 dark:bg-error-900/20 px-4 py-3">
-                  <Text className="text-sm text-error-700 dark:text-error-200">{deleteError}</Text>
+                  <Text className="text-sm text-error-700 dark:text-error-200">
+                    {deleteError}
+                  </Text>
                 </Box>
               ) : null}
             </VStack>
@@ -1144,7 +1182,9 @@ export default function AutoBackupsScreen() {
               onPress={handleCloseDeleteModal}
               isDisabled={Boolean(deletingScheduleId)}
             >
-              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                Cancel
+              </ButtonText>
             </Button>
             <Button
               action="negative"
@@ -1158,7 +1198,9 @@ export default function AutoBackupsScreen() {
               {deletingScheduleId ? (
                 <ButtonSpinner />
               ) : (
-                <ButtonText className="text-background-0 dark:text-[#0A1628]">Delete</ButtonText>
+                <ButtonText className="text-background-0 dark:text-[#0A1628]">
+                  Delete
+                </ButtonText>
               )}
             </Button>
           </ModalFooter>

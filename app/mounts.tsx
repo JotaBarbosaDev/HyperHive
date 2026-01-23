@@ -56,7 +56,7 @@ export default function MountsScreen() {
           />
         }
       >
-        <Box className="p-4 pt-16 web:p-10 web:max-w-7xl web:mx-auto web:w-full">
+        <Box className="p-4 pt-16 web:p-20 web:max-w-7xl web:mx-auto web:w-full">
           <VStack className="gap-2 mb-6">
             <Heading
               size="2xl"

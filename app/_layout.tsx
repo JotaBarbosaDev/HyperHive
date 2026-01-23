@@ -689,7 +689,7 @@ function RootLayoutNav() {
                         size="md"
                         variant="outline"
                         action="secondary"
-                        className="gap-2 rounded-xl px-4 h-11 border-outline-100 dark:border-[#2A3B52] bg-background-0/95 dark:bg-[#1A2332]/95 shadow-soft-1 web:hover:bg-background-50 dark:web:hover:bg-[#1F2D42]"
+                        className="gap-2 mt-16 rounded-xl px-4 h-11 border-outline-100 dark:border-[#2A3B52] bg-background-0/95 dark:bg-[#1A2332]/95 shadow-soft-1 web:hover:bg-background-50 dark:web:hover:bg-[#1F2D42]"
                         onPress={() => setShowSidebar(true)}
                         pointerEvents="auto"
                       >

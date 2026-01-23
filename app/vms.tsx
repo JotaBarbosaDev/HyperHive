@@ -1119,7 +1119,7 @@ export default function VirtualMachinesScreen() {
           />
         }
       >
-        <Box className="p-4 pt-16 web:p-10 web:max-w-7xl web:mx-auto web:w-full">
+        <Box className="p-4 pt-16 web:p-20 web:max-w-7xl web:mx-auto web:w-full">
           <HStack className="justify-between items-start mb-3 flex-col gap-3 web:flex-row web:items-start">
             <VStack className="flex-1">
               <Heading
@@ -1139,7 +1139,7 @@ export default function VirtualMachinesScreen() {
                 size="md"
                 onPress={handleRefresh}
                 disabled={loading}
-                className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
               >
                 {loading ? (
                   <ButtonSpinner />
@@ -1155,7 +1155,7 @@ export default function VirtualMachinesScreen() {
                   variant="outline"
                   size="md"
                   onPress={() => setOpenImport(true)}
-                  className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                  className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
                 >
                   <ButtonIcon
                     as={Upload}
@@ -1184,11 +1184,11 @@ export default function VirtualMachinesScreen() {
 
           {/* Stats Overview */}
           <HStack className="mb-6 mt-6 gap-4 flex-wrap web:grid web:grid-cols-6">
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
+            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
               <HStack className="items-center gap-2 mb-2">
                 <Server
                   size={16}
-                  className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                  className="text-[#9AA4B8] dark:text-[#5EEAD4]"
                   color={statsIconMutedColor}
                 />
                 <Text
@@ -1206,7 +1206,7 @@ export default function VirtualMachinesScreen() {
               </Text>
             </Box>
 
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
+            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
               <HStack className="items-center gap-2 mb-2">
                 <Play
                   size={16}
@@ -1228,11 +1228,11 @@ export default function VirtualMachinesScreen() {
               </Text>
             </Box>
 
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
+            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
               <HStack className="items-center gap-2 mb-2">
                 <Square
                   size={16}
-                  className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                  className="text-[#9AA4B8] dark:text-[#5EEAD4]"
                   color={statsIconMutedColor}
                 />
                 <Text
@@ -1250,11 +1250,11 @@ export default function VirtualMachinesScreen() {
               </Text>
             </Box>
 
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
+            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
               <HStack className="items-center gap-2 mb-2">
                 <Pause
                   size={16}
-                  className="text-[#FBBF24] dark:text-[#FCD34D]"
+                  className="text-[#9AA4B8] dark:text-[#5EEAD4]"
                   color={statsIconWarningColor}
                 />
                 <Text
@@ -1272,11 +1272,11 @@ export default function VirtualMachinesScreen() {
               </Text>
             </Box>
 
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
+            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
               <HStack className="items-center gap-2 mb-2">
                 <Cpu
                   size={16}
-                  className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                  className="text-[#9AA4B8] dark:text-[#5EEAD4]"
                   color={statsIconMutedColor}
                 />
                 <Text
@@ -1294,11 +1294,11 @@ export default function VirtualMachinesScreen() {
               </Text>
             </Box>
 
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
+            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
               <HStack className="items-center gap-2 mb-2">
                 <MemoryStick
                   size={16}
-                  className="text-[#9AA4B8] dark:text-[#8A94A8]"
+                  className="text-[#9AA4B8] dark:text-[#5EEAD4]"
                   color={statsIconMutedColor}
                 />
                 <Text
@@ -1463,7 +1463,7 @@ export default function VirtualMachinesScreen() {
                 return (
                   <Box
                     key={slaveName}
-                    className="rounded-2xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] overflow-hidden web:shadow-md dark:web:shadow-none"
+                    className="rounded-2xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] overflow-hidden web:shadow-md dark:web:shadow-none"
                   >
                     {/* Slave Header */}
                     <Box className="border-b border-outline-100 dark:border-[#2A3B52] p-4 web:p-6">
@@ -2040,7 +2040,7 @@ export default function VirtualMachinesScreen() {
                 <AlertDialogCloseButton />
               </AlertDialogHeader>
               <AlertDialogBody className="py-4">
-                <Text className="text-typography-700 dark:text-typography-300">
+                <Text className="text-typography-700 dark:text-[#8A94A8]">
                   {confirmAction?.type === "delete"
                     ? `Are you sure you want to delete VM ${confirmAction?.vm.name}?`
                     : confirmAction?.type === "force-shutdown"
@@ -2703,7 +2703,7 @@ export default function VirtualMachinesScreen() {
               <ModalBody>
                 {restoreVm && (
                   <VStack className="gap-3">
-                    <Text className="text-typography-700 dark:text-typography-300">
+                    <Text className="text-typography-700 dark:text-[#8A94A8]">
                       Confirm backup restore for {restoreVm.name}?
                     </Text>
                     <HStack className="justify-end gap-2">
@@ -3400,7 +3400,7 @@ function EditVmForm({
     <VStack className="gap-6">
       <VStack className="gap-4">
         <Text
-          className="text-sm text-typography-700 dark:text-typography-300"
+          className="text-sm text-typography-700 dark:text-[#8A94A8]"
           style={{ fontFamily: "Inter_600SemiBold" }}
         >
           Adjust resources
@@ -3408,14 +3408,14 @@ function EditVmForm({
         <VStack className="gap-4 web:grid web:grid-cols-2 web:gap-4">
           <VStack className="gap-2">
             <Text
-              className="text-sm text-typography-700 dark:text-typography-300"
+              className="text-sm text-typography-700 dark:text-[#8A94A8]"
               style={{ fontFamily: "Inter_600SemiBold" }}
             >
               vCPU
             </Text>
             <Input
               variant="outline"
-              className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+              className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
             >
               <InputField
                 value={vcpu ? String(vcpu) : ""}
@@ -3429,14 +3429,14 @@ function EditVmForm({
 
           <VStack className="gap-2">
             <Text
-              className="text-sm text-typography-700 dark:text-typography-300"
+              className="text-sm text-typography-700 dark:text-[#8A94A8]"
               style={{ fontFamily: "Inter_600SemiBold" }}
             >
               Memory (MB)
             </Text>
             <Input
               variant="outline"
-              className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+              className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
             >
               <InputField
                 placeholder="4096"
@@ -3469,14 +3469,14 @@ function EditVmForm({
 
           <VStack className="gap-2">
             <Text
-              className="text-sm text-typography-700 dark:text-typography-300"
+              className="text-sm text-typography-700 dark:text-[#8A94A8]"
               style={{ fontFamily: "Inter_600SemiBold" }}
             >
               Disk (GB)
             </Text>
             <Input
               variant="outline"
-              className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+              className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
             >
               <InputField
                 placeholder="50"
@@ -3516,7 +3516,7 @@ function EditVmForm({
 
           <VStack className="gap-2">
             <Text
-              className="text-sm text-typography-700 dark:text-typography-300"
+              className="text-sm text-typography-700 dark:text-[#8A94A8]"
               style={{ fontFamily: "Inter_600SemiBold" }}
             >
               Network
@@ -3535,7 +3535,7 @@ function EditVmForm({
                 }
               }}
             >
-              <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
+              <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]">
                 <SelectInput
                   placeholder="Select network"
                   className="text-typography-900 dark:text-[#E8EBF0]"
@@ -3544,7 +3544,7 @@ function EditVmForm({
               </SelectTrigger>
               <SelectPortal>
                 <SelectBackdrop />
-                <SelectContent className="bg-background-0 dark:bg-[#151F30]">
+                <SelectContent className="bg-background-0 dark:bg-[#0E1828]">
                   <SelectDragIndicatorWrapper>
                     <SelectDragIndicator />
                   </SelectDragIndicatorWrapper>
@@ -3569,7 +3569,7 @@ function EditVmForm({
             {network !== "default" && network !== "512rede" && (
               <Input
                 variant="outline"
-                className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] mt-2"
+                className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828] mt-2"
               >
                 <InputField
                   value={network}
@@ -3856,7 +3856,7 @@ function MigrateVmForm({
   };
   return (
     <VStack className="gap-4">
-      <Text className="text-typography-700 dark:text-typography-300">
+      <Text className="text-typography-700 dark:text-[#8A94A8]">
         Migrate {vm.name} from <Text className="font-semibold">{vm.machineName}</Text> to:
       </Text>
       <FormControl>
@@ -4027,7 +4027,7 @@ function ChangeVncPasswordForm({
 
   return (
     <VStack className="gap-4">
-      <Text className="text-typography-700 dark:text-typography-300">
+      <Text className="text-typography-700 dark:text-[#8A94A8]">
         Set a new VNC password for <Text className="font-semibold">{vm.name}</Text>.
       </Text>
 
@@ -4137,7 +4137,7 @@ function MoveDiskForm({
 
   return (
     <VStack className="gap-4">
-      <Text className="text-typography-700 dark:text-typography-300">
+      <Text className="text-typography-700 dark:text-[#8A94A8]">
         Move disk from {vm.name} to another NFS.
       </Text>
 
@@ -4308,7 +4308,7 @@ function BackupVmForm({
 
   return (
     <VStack className="gap-4">
-      <Text className="text-typography-700 dark:text-typography-300">
+      <Text className="text-typography-700 dark:text-[#8A94A8]">
         Create a backup for <Text className="font-semibold">{vm.name}</Text>.
       </Text>
 
@@ -4443,7 +4443,7 @@ function UpdateCpuXmlForm({
 
   return (
     <VStack className="gap-4">
-      <Text className="text-typography-700 dark:text-typography-300">
+      <Text className="text-typography-700 dark:text-[#8A94A8]">
         Update CPU XML for VM <Text className="font-semibold">{vm.name}</Text>.
       </Text>
 

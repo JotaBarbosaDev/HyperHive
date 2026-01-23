@@ -185,7 +185,7 @@ export default function K8ClusterScreen() {
 		return (
 			<Box className="mt-4">
 				<HStack className="items-center justify-between mb-2">
-					<Text className="text-xs font-semibold uppercase text-typography-500 dark:text-typography-300 tracking-[0.08em]" style={{ fontFamily: "Inter_600SemiBold" }}>
+					<Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#8A94A8] tracking-[0.08em]" style={{ fontFamily: "Inter_600SemiBold" }}>
 						{label}
 					</Text>
 					<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
@@ -194,7 +194,7 @@ export default function K8ClusterScreen() {
 				</HStack>
 				{!nodes.length ? (
 					<Box className="p-3 rounded-lg border border-outline-100 dark:border-[#2A3B52] bg-background-50/70 dark:bg-[#0F1A2E]">
-						<Text className="text-sm text-typography-600 dark:text-typography-300">No nodes in this state.</Text>
+						<Text className="text-sm text-typography-600 dark:text-[#8A94A8]">No nodes in this state.</Text>
 					</Box>
 				) : (
 					<VStack className="gap-3">
@@ -258,7 +258,7 @@ export default function K8ClusterScreen() {
           />
         }
       >
-        <Box className="p-4 pt-16 web:p-10 web:max-w-7xl web:mx-auto web:w-full">
+        <Box className="p-4 pt-16 web:p-20 web:max-w-7xl web:mx-auto web:w-full">
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
@@ -338,7 +338,7 @@ export default function K8ClusterScreen() {
               <Button
                 onPress={handleDownload}
                 isDisabled={!selectedIp || isDownloading}
-                className="rounded-xl h-12"
+                className="rounded-xl h-12 dark:bg-[#5EEAD4]"
                 action="primary"
               >
                 {isDownloading ? (

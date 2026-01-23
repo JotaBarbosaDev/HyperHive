@@ -256,37 +256,61 @@ export default function SpaScreen() {
     <Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 32 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadPorts("refresh")} />}
+        contentContainerStyle={{paddingBottom: 32}}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => loadPorts("refresh")}
+          />
+        }
       >
-        <Box className="p-4 pt-16 web:p-10 web:max-w-6xl web:mx-auto web:w-full">
+        <Box className="p-4 pt-16 web:p-20 web:max-w-6xl web:mx-auto web:w-full">
           <VStack className="gap-2 mb-6">
             <Heading
               size="2xl"
               className="text-typography-900 dark:text-[#E8EBF0] mb-1 web:text-4xl"
-              style={{ fontFamily: "Inter_700Bold" }}
+              style={{fontFamily: "Inter_700Bold"}}
             >
               Single Packet Authorization
             </Heading>
             <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
-              Create password-protected ports for temporary access. Don't rely on SPA as your only line of defense.
+              Create password-protected ports for temporary access. Don't rely
+              on SPA as your only line of defense.
             </Text>
           </VStack>
 
           <VStack space="lg">
             <Box className={`p-4 md:p-5 gap-5 ${cardShellClass}`}>
               <VStack space="sm">
-                <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">New port</Heading>
-                <Text size="sm" className="text-typography-600 dark:text-[#9AA4B8]">
-                  Choose a port and set a password to open access while the token remains valid.
+                <Heading
+                  size="lg"
+                  className="text-typography-900 dark:text-[#E8EBF0]"
+                >
+                  New port
+                </Heading>
+                <Text
+                  size="sm"
+                  className="text-typography-600 dark:text-[#9AA4B8]"
+                >
+                  Choose a port and set a password to open access while the
+                  token remains valid.
                 </Text>
               </VStack>
 
               <VStack space="md">
                 <HStack className="gap-3 flex-wrap">
                   <Box className="flex-1 min-w-[180px]">
-                    <Text size="xs" className="mb-2 text-typography-700 dark:text-[#9AA4B8]">Port</Text>
-                    <Input size="md" isDisabled={saving} className={inputShellClass}>
+                    <Text
+                      size="xs"
+                      className="mb-2 text-typography-700 dark:text-[#9AA4B8]"
+                    >
+                      Port
+                    </Text>
+                    <Input
+                      size="md"
+                      isDisabled={saving}
+                      className={inputShellClass}
+                    >
                       <InputField
                         keyboardType="numeric"
                         placeholder="25565"
@@ -297,8 +321,17 @@ export default function SpaScreen() {
                     </Input>
                   </Box>
                   <Box className="flex-1 min-w-[200px]">
-                    <Text size="xs" className="mb-2 text-typography-700 dark:text-[#9AA4B8]">Password</Text>
-                    <Input size="md" isDisabled={saving} className={inputShellClass}>
+                    <Text
+                      size="xs"
+                      className="mb-2 text-typography-700 dark:text-[#9AA4B8]"
+                    >
+                      Password
+                    </Text>
+                    <Input
+                      size="md"
+                      isDisabled={saving}
+                      className={inputShellClass}
+                    >
                       <InputField
                         secureTextEntry
                         placeholder="SPA password"
@@ -312,14 +345,23 @@ export default function SpaScreen() {
                 <HStack className="items-center gap-3 flex-wrap">
                   <Button
                     action="primary"
-                    className="rounded-xl px-5"
+                    className="rounded-xl px-5 dark:bg-[#5EEAD4]"
                     onPress={handleCreate}
                     isDisabled={saving}
                   >
-                    {saving ? <ButtonSpinner /> : <ButtonIcon as={Plus} className="mr-1" />}
-                    <ButtonText style={{ fontFamily: "Inter_600SemiBold" }}>{saving ? "Saving..." : "Create port"}</ButtonText>
+                    {saving ? (
+                      <ButtonSpinner />
+                    ) : (
+                      <ButtonIcon as={Plus} className="mr-1" />
+                    )}
+                    <ButtonText style={{fontFamily: "Inter_600SemiBold"}}>
+                      {saving ? "Saving..." : "Create port"}
+                    </ButtonText>
                   </Button>
-                  <Text size="xs" className="text-typography-600 dark:text-[#9AA4B8]">
+                  <Text
+                    size="xs"
+                    className="text-typography-600 dark:text-[#9AA4B8]"
+                  >
                     Once created, you can copy the link to share access.
                   </Text>
                 </HStack>
@@ -328,23 +370,44 @@ export default function SpaScreen() {
 
             <Box className={`p-4 md:p-5 gap-4 ${cardShellClass}`}>
               <HStack className="items-center justify-between flex-wrap gap-3">
-                <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">Configured ports</Heading>
-                {loading ? <Text size="sm" className="text-typography-600 dark:text-[#9AA4B8]">Loading...</Text> : null}
+                <Heading
+                  size="lg"
+                  className="text-typography-900 dark:text-[#E8EBF0]"
+                >
+                  Configured ports
+                </Heading>
+                {loading ? (
+                  <Text
+                    size="sm"
+                    className="text-typography-600 dark:text-[#9AA4B8]"
+                  >
+                    Loading...
+                  </Text>
+                ) : null}
               </HStack>
 
               {loading ? (
                 <VStack space="md" className="mt-2">
                   {[1, 2, 3].map((item) => (
-                    <Box
-                      key={item}
-                      className={`h-16 ${softCardShellClass}`}
-                    />
+                    <Box key={item} className={`h-16 ${softCardShellClass}`} />
                   ))}
                 </VStack>
               ) : ports.length === 0 ? (
-                <Box className={`border border-dashed p-6 gap-2 ${softCardShellClass}`}>
-                  <Heading size="sm" className="text-typography-900 dark:text-[#E8EBF0]">No SPA ports</Heading>
-                  <Text size="sm" className="text-typography-600 dark:text-[#9AA4B8]">Create a port to generate an access link.</Text>
+                <Box
+                  className={`border border-dashed p-6 gap-2 ${softCardShellClass}`}
+                >
+                  <Heading
+                    size="sm"
+                    className="text-typography-900 dark:text-[#E8EBF0]"
+                  >
+                    No SPA ports
+                  </Heading>
+                  <Text
+                    size="sm"
+                    className="text-typography-600 dark:text-[#9AA4B8]"
+                  >
+                    Create a port to generate an access link.
+                  </Text>
                 </Box>
               ) : (
                 <VStack space="md" className="mt-1">
@@ -354,11 +417,28 @@ export default function SpaScreen() {
                       className="rounded-xl active:opacity-80"
                       onPress={() => setAllowTarget(item)}
                     >
-                      <HStack className={`items-center justify-between px-4 py-3 ${softCardShellClass}`}>
+                      <HStack
+                        className={`items-center justify-between px-4 py-3 ${softCardShellClass}`}
+                      >
                         <VStack space="xs">
-                          <Heading size="sm" className="text-typography-900 dark:text-[#E8EBF0]">Port {item.port}</Heading>
-                          <Text size="xs" className="text-typography-600 dark:text-[#9AA4B8]">Created at {formatDate(item.created_at)}</Text>
-                          <Text size="xs" className="text-typography-600 dark:text-[#9AA4B8]">Tap to view allow list</Text>
+                          <Heading
+                            size="sm"
+                            className="text-typography-900 dark:text-[#E8EBF0]"
+                          >
+                            Port {item.port}
+                          </Heading>
+                          <Text
+                            size="xs"
+                            className="text-typography-600 dark:text-[#9AA4B8]"
+                          >
+                            Created at {formatDate(item.created_at)}
+                          </Text>
+                          <Text
+                            size="xs"
+                            className="text-typography-600 dark:text-[#9AA4B8]"
+                          >
+                            Tap to view allow list
+                          </Text>
                         </VStack>
                         <HStack space="sm" className="items-center">
                           <Button
@@ -368,18 +448,36 @@ export default function SpaScreen() {
                             className={outlineButtonClass}
                             onPress={() => copyAccessLink(item.port)}
                           >
-                            <ButtonIcon as={Copy} className={outlineButtonIconClass} />
-                            <ButtonText className={outlineButtonTextClass}>Copy link</ButtonText>
+                            <ButtonIcon
+                              as={Copy}
+                              className={outlineButtonIconClass}
+                            />
+                            <ButtonText className={outlineButtonTextClass}>
+                              Copy link
+                            </ButtonText>
                           </Button>
                           <Button
                             action="negative"
                             variant="outline"
                             size="sm"
-                            className={outlineButtonClass}
+                            className={
+                              "rounded-xl border-error-300 dark:border-error-700 bg-background-0 dark:bg-red-900/20 dark:hover:bg-red-900/30"
+                            }
                             onPress={() => setDeleteTarget(item)}
                           >
-                            {deletingPort === item.port ? <ButtonSpinner /> : <ButtonIcon as={Trash2} className={dangerOutlineIconClass} />}
-                            <ButtonText className={dangerOutlineTextClass}>Remove</ButtonText>
+                            {deletingPort === item.port ? (
+                              <ButtonSpinner />
+                            ) : (
+                              <ButtonIcon
+                                as={Trash2}
+                                className={"text-error-600 dark:text-error-700"}
+                              />
+                            )}
+                            <ButtonText
+                              className={"text-error-700 dark:text-error-700"}
+                            >
+                              Remove
+                            </ButtonText>
                           </Button>
                         </HStack>
                       </HStack>
@@ -391,16 +489,25 @@ export default function SpaScreen() {
           </VStack>
         </Box>
 
-        <AlertDialog isOpen={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)}>
+        <AlertDialog
+          isOpen={Boolean(deleteTarget)}
+          onClose={() => setDeleteTarget(null)}
+        >
           <AlertDialogBackdrop className={modalBackdropClass} />
           <AlertDialogContent className={`max-w-lg ${modalShellClass}`}>
             <AlertDialogHeader className={modalHeaderClass}>
-              <Text className="font-semibold text-lg text-typography-900 dark:text-[#E8EBF0]">Remove port</Text>
+              <Text className="font-semibold text-lg text-typography-900 dark:text-[#E8EBF0]">
+                Remove port
+              </Text>
               <AlertDialogCloseButton className="text-typography-500 dark:text-[#9AA4B8]" />
             </AlertDialogHeader>
             <AlertDialogBody className={alertBodyClass}>
-              <Text size="sm" className="text-typography-700 dark:text-[#9AA4B8]">
-                Confirm removing port {deleteTarget?.port}? Access will be revoked.
+              <Text
+                size="sm"
+                className="text-typography-700 dark:text-[#9AA4B8]"
+              >
+                Confirm removing port {deleteTarget?.port}? Access will be
+                revoked.
               </Text>
             </AlertDialogBody>
             <AlertDialogFooter className={alertFooterClass}>
@@ -410,7 +517,9 @@ export default function SpaScreen() {
                 className={`flex-1 ${outlineButtonClass}`}
                 onPress={() => setDeleteTarget(null)}
               >
-                <ButtonText className={outlineButtonTextClass}>Cancel</ButtonText>
+                <ButtonText className={outlineButtonTextClass}>
+                  Cancel
+                </ButtonText>
               </Button>
               <Button
                 action="negative"
@@ -419,19 +528,31 @@ export default function SpaScreen() {
                 onPress={confirmDelete}
                 isDisabled={deletingPort !== null}
               >
-                {deletingPort ? <ButtonSpinner /> : <ButtonIcon as={Trash2} className={dangerOutlineIconClass} />}
-                <ButtonText className={dangerOutlineTextClass}>Remove</ButtonText>
+                {deletingPort ? (
+                  <ButtonSpinner />
+                ) : (
+                  <ButtonIcon as={Trash2} className={dangerOutlineIconClass} />
+                )}
+                <ButtonText className={dangerOutlineTextClass}>
+                  Remove
+                </ButtonText>
               </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
-        <Modal isOpen={Boolean(allowTarget)} onClose={() => setAllowTarget(null)}>
+        <Modal
+          isOpen={Boolean(allowTarget)}
+          onClose={() => setAllowTarget(null)}
+        >
           <ModalBackdrop className={modalBackdropClass} />
           <ModalContent className={`max-w-2xl max-h-[90vh] ${modalShellClass}`}>
             <ModalHeader className={modalHeaderClass}>
               <VStack space="xs">
-                <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
+                <Heading
+                  size="md"
+                  className="text-typography-900 dark:text-[#E8EBF0]"
+                >
                   SPA allow list
                 </Heading>
               </VStack>
@@ -441,10 +562,20 @@ export default function SpaScreen() {
               {allowLoading ? (
                 <HStack className="items-center gap-2">
                   <ButtonSpinner />
-                  <Text size="sm" className="text-typography-600 dark:text-[#9AA4B8]">Loading allow list...</Text>
+                  <Text
+                    size="sm"
+                    className="text-typography-600 dark:text-[#9AA4B8]"
+                  >
+                    Loading allow list...
+                  </Text>
                 </HStack>
               ) : allowError ? (
-                <Text size="sm" className="text-typography-600 dark:text-[#9AA4B8]">{allowError}</Text>
+                <Text
+                  size="sm"
+                  className="text-typography-600 dark:text-[#9AA4B8]"
+                >
+                  {allowError}
+                </Text>
               ) : allowCountdown?.allows?.length ? (
                 <VStack space="sm">
                   {allowCountdown.allows.map((entry) => (
@@ -452,22 +583,40 @@ export default function SpaScreen() {
                       key={`${entry.ip}-${entry.remaining_seconds}`}
                       className={`items-center justify-between px-3 py-2 ${softCardShellClass}`}
                     >
-                      <Text size="sm" className="text-typography-900 dark:text-[#E8EBF0]">{entry.ip}</Text>
-                      <Text size="sm" className="text-typography-600 dark:text-[#9AA4B8]">
+                      <Text
+                        size="sm"
+                        className="text-typography-900 dark:text-[#E8EBF0]"
+                      >
+                        {entry.ip}
+                      </Text>
+                      <Text
+                        size="sm"
+                        className="text-typography-600 dark:text-[#9AA4B8]"
+                      >
                         {formatRemainingSeconds(entry.remaining_seconds)}
                       </Text>
                     </HStack>
                   ))}
                 </VStack>
               ) : (
-                <Text size="sm" className="text-typography-600 dark:text-[#9AA4B8]">
+                <Text
+                  size="sm"
+                  className="text-typography-600 dark:text-[#9AA4B8]"
+                >
                   No active allows for this port.
                 </Text>
               )}
             </ModalBody>
             <ModalFooter className={modalFooterClass}>
-              <Button variant="outline" action="default" className={outlineButtonClass} onPress={() => setAllowTarget(null)}>
-                <ButtonText className={outlineButtonTextClass}>Close</ButtonText>
+              <Button
+                variant="outline"
+                action="default"
+                className={outlineButtonClass}
+                onPress={() => setAllowTarget(null)}
+              >
+                <ButtonText className={outlineButtonTextClass}>
+                  Close
+                </ButtonText>
               </Button>
             </ModalFooter>
           </ModalContent>

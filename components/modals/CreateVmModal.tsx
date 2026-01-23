@@ -317,8 +317,8 @@ export default function CreateVmModal({
   return (
     <Modal isOpen={showModal} onClose={() => setShowModal(false)} size="full">
       <ModalBackdrop />
-      <ModalContent className="max-w-[90%] max-h-[90%] web:max-w-4xl">
-        <ModalHeader className="border-b border-outline-100 dark:border-[#2A3B52]">
+      <ModalContent className="max-w-[90%] max-h-[90%] web:max-w-4xl dark:border-[#1E2F47] dark:bg-[#0F1A2E]">
+        <ModalHeader className="border-b pb-4 border-outline-100 dark:border-[#1E2F47] dark:bg-[#0F1A2E]">
           <Heading
             size="lg"
             className="text-typography-900 dark:text-[#E8EBF0]"
@@ -331,7 +331,7 @@ export default function CreateVmModal({
           </ModalCloseButton>
         </ModalHeader>
 
-        <ModalBody className="bg-background-50 dark:bg-[#0A1628]">
+        <ModalBody className="bg-background-50 dark:border-[#1E2F47] dark:bg-[#0F1A2E]">
           <ScrollView showsVerticalScrollIndicator={true}>
             <Box className="p-4 web:p-6">
               {/* SEÇÃO 1: CAMPOS BÁSICOS */}
@@ -339,14 +339,14 @@ export default function CreateVmModal({
                 {/* Nome da VM */}
                 <VStack className="gap-2">
                   <Text
-                    className="text-sm text-typography-700 dark:text-typography-300"
+                    className="text-sm text-typography-700 dark:text-[#8A94A8]"
                     style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     VM Name
                   </Text>
                   <Input
                     variant="outline"
-                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
                   >
                     <InputField
                       value={name}
@@ -360,7 +360,7 @@ export default function CreateVmModal({
                 {/* Slave */}
                 <VStack className="gap-2">
                   <Text
-                    className="text-sm text-typography-700 dark:text-typography-300"
+                    className="text-sm text-typography-700 dark:text-[#8A94A8]"
                     style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     Slave
@@ -370,18 +370,18 @@ export default function CreateVmModal({
                     onValueChange={setSlave}
                     isDisabled={loadingOptions || slaveOptions.length === 0}
                   >
-                    <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
+                    <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]">
                       <SelectInput
                         placeholder={
                           loadingOptions ? "Loading..." : "Select..."
                         }
-                        className="text-typography-900 dark:text-[#E8EBF0]"
+                        className="dark:text-[#E8EBF0]"
                       />
                       <SelectIcon as={ChevronDown} className="mr-3" />
                     </SelectTrigger>
                     <SelectPortal>
                       <SelectBackdrop />
-                      <SelectContent className="bg-background-0 dark:bg-[#151F30]">
+                      <SelectContent className="bg-background-0 dark:bg-[#0E1828]">
                         <SelectDragIndicatorWrapper>
                           <SelectDragIndicator />
                         </SelectDragIndicatorWrapper>
@@ -411,14 +411,14 @@ export default function CreateVmModal({
                 {/* vCPU */}
                 <VStack className="gap-2">
                   <Text
-                    className="text-sm text-typography-700 dark:text-typography-300"
+                    className="text-sm text-typography-700 dark:text-[#8A94A8]"
                     style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     vCPU
                   </Text>
                   <Input
                     variant="outline"
-                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
                   >
                     <InputField
                       value={vcpu}
@@ -433,14 +433,14 @@ export default function CreateVmModal({
                 {/* Memória */}
                 <VStack className="gap-2">
                   <Text
-                    className="text-sm text-typography-700 dark:text-typography-300"
+                    className="text-sm text-typography-700 dark:text-[#8A94A8]"
                     style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     Memory (MB)
                   </Text>
                   <Input
                     variant="outline"
-                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
                   >
                     <InputField
                       value={memory}
@@ -457,8 +457,8 @@ export default function CreateVmModal({
                         onPress={() => setMemory(String(gb * 1024))}
                         className={`px-3 py-2 rounded-full border ${
                           Number(memory) === gb * 1024
-                            ? "border-primary-500 bg-primary-50/20"
-                            : "border-outline-200 bg-background-0"
+                            ? "rounded-full px-3 border-outline-200 dark:bg-[#213250] dark:border-[#1E2F47]"
+                            : "rounded-full px-3 border-outline-200 dark:bg-[#0F1A2E] dark:border-[#1E2F47]"
                         }`}
                       >
                         <Text className="text-xs font-medium text-typography-700">
@@ -472,14 +472,14 @@ export default function CreateVmModal({
                 {/* Disco */}
                 <VStack className="gap-2">
                   <Text
-                    className="text-sm text-typography-700 dark:text-typography-300"
+                    className="text-sm text-typography-700 dark:text-[#8A94A8]"
                     style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     Disk (GB)
                   </Text>
                   <Input
                     variant="outline"
-                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                    className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
                   >
                     <InputField
                       value={disk}
@@ -496,8 +496,8 @@ export default function CreateVmModal({
                         onPress={() => setDisk(String(gb))}
                         className={`px-3 py-2 rounded-full border ${
                           Number(disk) === gb
-                            ? "border-primary-500 bg-primary-50/20"
-                            : "border-outline-200 bg-background-0"
+                            ? "rounded-full px-3 border-outline-200 dark:bg-[#213250] dark:border-[#1E2F47]"
+                            : "rounded-full px-3 border-outline-200 dark:bg-[#0F1A2E] dark:border-[#1E2F47]"
                         }`}
                       >
                         <Text className="text-xs font-medium text-typography-700">
@@ -511,7 +511,7 @@ export default function CreateVmModal({
                 {/* Network */}
                 <VStack className="gap-2">
                   <Text
-                    className="text-sm text-typography-700 dark:text-typography-300"
+                    className="text-sm text-typography-700 dark:text-[#8A94A8]"
                     style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     Network
@@ -530,7 +530,7 @@ export default function CreateVmModal({
                       }
                     }}
                   >
-                    <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
+                    <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]">
                       <SelectInput
                         placeholder="Select network"
                         className="text-typography-900 dark:text-[#E8EBF0]"
@@ -539,7 +539,7 @@ export default function CreateVmModal({
                     </SelectTrigger>
                     <SelectPortal>
                       <SelectBackdrop />
-                      <SelectContent className="bg-background-0 dark:bg-[#151F30]">
+                      <SelectContent className="bg-background-0 dark:bg-[#0E1828]">
                         <SelectDragIndicatorWrapper>
                           <SelectDragIndicator />
                         </SelectDragIndicatorWrapper>
@@ -564,7 +564,7 @@ export default function CreateVmModal({
                   {network !== "default" && network !== "512rede" && (
                     <Input
                       variant="outline"
-                      className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] mt-2"
+                      className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828] mt-2"
                     >
                       <InputField
                         value={network}
@@ -579,7 +579,7 @@ export default function CreateVmModal({
                 {/* NFS Share ID */}
                 <VStack className="gap-2">
                   <Text
-                    className="text-sm text-typography-700 dark:text-typography-300"
+                    className="text-sm text-typography-700 dark:text-[#8A94A8]"
                     style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     NFS Share ID
@@ -626,7 +626,7 @@ export default function CreateVmModal({
                 {/* ISO ID */}
                 <VStack className="gap-2">
                   <Text
-                    className="text-sm text-typography-700 dark:text-typography-300"
+                    className="text-sm text-typography-700 dark:text-[#8A94A8]"
                     style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     ISO ID (Optional)
@@ -682,7 +682,7 @@ export default function CreateVmModal({
                   <CheckboxIndicator className="border-outline-300 dark:border-[#2A3B52]">
                     <CheckboxIcon as={Check} />
                   </CheckboxIndicator>
-                  <CheckboxLabel className="text-typography-700 dark:text-typography-300">
+                  <CheckboxLabel className="text-typography-700 dark:text-[#8A94A8]">
                     Auto-start on slave boot
                   </CheckboxLabel>
                 </Checkbox>
@@ -696,7 +696,7 @@ export default function CreateVmModal({
                   <CheckboxIndicator className="border-outline-300 dark:border-[#2A3B52]">
                     <CheckboxIcon as={Check} />
                   </CheckboxIndicator>
-                  <CheckboxLabel className="text-typography-700 dark:text-typography-300">
+                  <CheckboxLabel className="text-typography-700 dark:text-[#8A94A8]">
                     Windows VM
                   </CheckboxLabel>
                 </Checkbox>
@@ -710,7 +710,7 @@ export default function CreateVmModal({
                   <CheckboxIndicator className="border-outline-300 dark:border-[#2A3B52]">
                     <CheckboxIcon as={Check} />
                   </CheckboxIndicator>
-                  <CheckboxLabel className="text-typography-700 dark:text-typography-300">
+                  <CheckboxLabel className="text-typography-700 dark:text-[#8A94A8]">
                     Live VM
                   </CheckboxLabel>
                 </Checkbox>
@@ -719,14 +719,14 @@ export default function CreateVmModal({
               {/* SEÇÃO 3: VNC PASSWORD */}
               <VStack className="gap-2 mt-6">
                 <Text
-                  className="text-sm text-typography-700 dark:text-typography-300"
+                  className="text-sm text-typography-700 dark:text-[#8A94A8]"
                   style={{fontFamily: "Inter_600SemiBold"}}
                 >
                   VNC Password
                 </Text>
                 <Input
                   variant="outline"
-                  className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                  className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
                 >
                   <InputField
                     value={vncPassword}
@@ -764,7 +764,7 @@ export default function CreateVmModal({
                   {/* Lista de Slaves Selecionados */}
                   <VStack className="gap-2 mb-4">
                     <Text
-                      className="text-sm text-typography-700 dark:text-typography-300"
+                      className="text-sm text-typography-700 dark:text-[#8A94A8]"
                       style={{fontFamily: "Inter_600SemiBold"}}
                     >
                       Selected slaves ({selectedSlaves.length})
@@ -793,8 +793,8 @@ export default function CreateVmModal({
                                   onPress={() => {
                                     setSelectedSlaves(
                                       selectedSlaves.filter(
-                                        (s) => s !== slaveName
-                                      )
+                                        (s) => s !== slaveName,
+                                      ),
                                     );
                                   }}
                                   className="p-0 min-w-0 h-4"
@@ -816,7 +816,7 @@ export default function CreateVmModal({
                   {/* Dropdown Adicionar Slaves */}
                   <VStack className="gap-2 mb-4">
                     <Text
-                      className="text-sm text-typography-700 dark:text-typography-300"
+                      className="text-sm text-typography-700 dark:text-[#8A94A8]"
                       style={{fontFamily: "Inter_600SemiBold"}}
                     >
                       Add slave to comparison
@@ -838,7 +838,7 @@ export default function CreateVmModal({
                         loadingOptions || availableSlaves.length === 0
                       }
                     >
-                      <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
+                      <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]">
                         <SelectInput
                           placeholder={
                             loadingOptions ? "Loading..." : "Select a slave..."
@@ -849,7 +849,7 @@ export default function CreateVmModal({
                       </SelectTrigger>
                       <SelectPortal>
                         <SelectBackdrop />
-                        <SelectContent className="bg-background-0 dark:bg-[#151F30]">
+                        <SelectContent className="bg-background-0 dark:bg-[#0E1828]">
                           <SelectDragIndicatorWrapper>
                             <SelectDragIndicator />
                           </SelectDragIndicatorWrapper>
@@ -906,7 +906,7 @@ export default function CreateVmModal({
                   <VStack className="gap-2">
                     <HStack className="justify-between items-center">
                       <Text
-                        className="text-sm text-typography-700 dark:text-typography-300"
+                        className="text-sm text-typography-700 dark:text-[#8A94A8]"
                         style={{fontFamily: "Inter_600SemiBold"}}
                       >
                         CPU Configuration XML

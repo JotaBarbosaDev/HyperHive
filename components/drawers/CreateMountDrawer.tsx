@@ -385,7 +385,7 @@ export function CreateMountDrawer({
         <Input
           variant="outline"
           size="md"
-          className="bg-background-50 dark:bg-[#0E1524] border-outline-200 dark:border-[#2A3647] rounded-xl h-11 web:bg-background-50 dark:web:bg-[#0E1524] web:border-outline-200 dark:web:border-[#2A3647] web:rounded-xl web:h-12"
+          className="bg-background-50 dark:border-[#1E2F47] dark:bg-[#0F1A2E] border-outline-200 rounded-xl h-11 web:bg-background-50 web:border-outline-200 web:rounded-xl web:h-12"
         >
           <InputField
             placeholder="Enter mount name..."
@@ -418,7 +418,7 @@ export function CreateMountDrawer({
           <SelectTrigger
             variant="outline"
             size="md"
-            className="bg-background-50 dark:bg-[#0E1524] border-outline-200 dark:border-[#2A3647] rounded-xl h-11 web:bg-background-50 dark:web:bg-[#0E1524] web:border-outline-200 dark:web:border-[#2A3647] web:rounded-xl web:h-12"
+            className="bg-background-50 dark:border-[#1E2F47] dark:bg-[#0F1A2E] rounded-xl h-11 web:bg-background-50 web:rounded-xl web:h-12"
           >
             <SelectInput
               placeholder="Select machine"
@@ -466,7 +466,7 @@ export function CreateMountDrawer({
         <Input
           variant="outline"
           size="md"
-          className="bg-background-50 dark:bg-[#0E1524] border-outline-200 dark:border-[#2A3647] rounded-xl h-11 web:bg-background-50 dark:web:bg-[#0E1524] web:border-outline-200 dark:web:border-[#2A3647] web:rounded-xl web:h-12"
+          className="bg-background-50 dark:border-[#1E2F47] dark:bg-[#0F1A2E] rounded-xl h-11 web:bg-background-50 web:rounded-xl web:h-12"
         >
           <InputField
             placeholder="/"
@@ -477,7 +477,7 @@ export function CreateMountDrawer({
                   ? "/"
                   : text.startsWith("/")
                     ? text.replace(/\/{2,}/g, "/")
-                    : `/${text}`.replace(/\/{2,}/g, "/")
+                    : `/${text}`.replace(/\/{2,}/g, "/"),
               );
               setDirError(null);
             }}
@@ -506,15 +506,14 @@ export function CreateMountDrawer({
           )}
         </Button>
       </FormControl>
-      <VStack className="gap-3 rounded-xl border border-outline-100 dark:border-[#2A3647] bg-background-50 dark:bg-[#0E1524] p-4">
+      <VStack className="gap-3 rounded-xl border border-outline-100 dark:border-[#1E2F47] dark:bg-[#0F1A2E] p-4">
         <Box className="flex flex-row items-start justify-between">
           <VStack className="gap-1.5">
             <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
               Host Normal Mount
             </Text>
             <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
-              Allow the host to access storage directly for better
-              performance.
+              Allow the host to access storage directly for better performance.
             </Text>
           </VStack>
           <Tooltip
@@ -548,16 +547,18 @@ export function CreateMountDrawer({
         <Button
           variant="outline"
           onPress={() => setHostNormalMount((prev) => !prev)}
-          className={`flex-row items-center gap-3 h-11 rounded-xl px-4 border-2 dark:border-[#2A3B52] hover:web:bg-background-100 dark:hover:web:bg-[#1A2637] ${hostNormalMount
-            ? "bg-[#2DD4BF] border-[#2DD4BF] dark:bg-[#2DD4BF] dark:border-[#2DD4BF]"
-            : "bg-background-0 dark:bg-[#0E1524]"
-            }`}
+          className={`flex-row items-center gap-3 h-11 rounded-xl px-4 border-2 dark:border-[#2A3B52] hover:web:bg-background-100 dark:hover:web:bg-[#1A2637] ${
+            hostNormalMount
+              ? "dark:border-[#1E2F47] dark:bg-[#0F1A2E]"
+              : "dark:border-[#1E2F47] dark:bg-[#0F1A2E]"
+          }`}
         >
           <Box
-            className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${hostNormalMount
-              ? "bg-[#0D1420] border-[#0D1420]"
-              : "border-outline-300 dark:border-[#2A3B52]"
-              }`}
+            className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${
+              hostNormalMount
+                ? "bg-[#0D1420] border-[#0D1420]"
+                : "border-outline-300 dark:border-[#2A3B52]"
+            }`}
           >
             {hostNormalMount ? (
               <Icon as={CheckIcon} className="text-[#2DD4BF]" size="xs" />
@@ -582,7 +583,7 @@ export function CreateMountDrawer({
         <Input
           variant="outline"
           size="md"
-          className="bg-background-50 dark:bg-[#0E1524] border-outline-200 dark:border-[#2A3647] rounded-xl h-11 web:bg-background-50 dark:web:bg-[#0E1524] web:border-outline-200 dark:web:border-[#2A3647] web:rounded-xl web:h-12"
+          className="bg-background-50 dark:border-[#1E2F47] dark:bg-[#0F1A2E] rounded-xl h-11 web:bg-background-50 web:rounded-xl web:h-12"
         >
           <InputField
             placeholder="Enter mount name..."
@@ -614,7 +615,7 @@ export function CreateMountDrawer({
           <SelectTrigger
             variant="outline"
             size="md"
-            className="bg-background-50 dark:bg-[#0E1524] border-outline-200 dark:border-[#2A3647] rounded-xl h-11 web:bg-background-50 dark:web:bg-[#0E1524] web:border-outline-200 dark:web:border-[#2A3647] web:rounded-xl web:h-12"
+            className="bg-background-50 dark:border-[#1E2F47] dark:bg-[#0F1A2E] rounded-xl h-11 web:bg-background-50 web:rounded-xl web:h-12"
           >
             <SelectInput
               placeholder="Select machine"
@@ -689,7 +690,7 @@ export function CreateMountDrawer({
                     <VStack className="flex-1">
                       <RadioLabel
                         className="text-base text-typography-900 dark:text-[#E8EBF0]"
-                        style={{ fontFamily: "Inter_600SemiBold" }}
+                        style={{fontFamily: "Inter_600SemiBold"}}
                       >
                         {mountLabel}
                       </RadioLabel>
@@ -745,7 +746,7 @@ export function CreateMountDrawer({
                   }`}
               >
                 <Text
-                  className={`text-sm ${active ? "text-primary-700 dark:text-[#8AB9FF]" : "text-typography-700 dark:text-typography-300"}`}
+                  className={`text-sm ${active ? "text-primary-700 dark:text-[#8AB9FF]" : "text-typography-700 dark:text-[#8A94A8]"}`}
                   style={{ fontFamily: active ? "Inter_600SemiBold" : "Inter_500Medium" }}
                 >
                   {tab.label}
@@ -804,7 +805,7 @@ export function CreateMountDrawer({
       <>
         <Modal isOpen={isOpen} onClose={onClose} size="lg">
           <ModalBackdrop className="bg-black/70" />
-          <ModalContent className="w-full max-w-[720px] px-6 py-5 rounded-2xl bg-background-0 dark:bg-[#1A2332] border border-outline-200 dark:border-[#2A3647] shadow-2xl">
+          <ModalContent className="w-full max-w-[720px] px-6 py-5 rounded-2xl bg-background-0  border border-outline-200 dark:border-[#1E2F47] dark:bg-[#0F1A2E] shadow-2xl">
             <ModalHeader className="pb-4 border-b border-outline-100 dark:border-[#2A3647] mb-4 flex-row items-start justify-between">
               <Heading
                 size="lg"

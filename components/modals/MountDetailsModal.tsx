@@ -293,16 +293,16 @@ export function MountDetailsModal({isOpen, mount, onClose}: MountDetailsModalPro
             onPress={handleRemount}
           >
             {isRemounting ? (
-              <ButtonSpinner size="small" className="mr-2 dark:text-base" />
+              <ButtonSpinner size="small" className="mr-2" />
             ) : (
               <Icon
                 as={RotateCw}
                 size="sm"
-                className="mr-2 dark:text-black"
+                className="mr-2 text-white dark:text-base"
               />
             )}
             <ButtonText
-              className="font-semibold dark:text-base"
+              className="font-semibold web:text-base"
               style={{fontFamily: "Inter_600SemiBold"}}
             >
               Remount

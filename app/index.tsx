@@ -219,7 +219,7 @@ export default function LoginScreen() {
 
       <FormControl isInvalid={!!baseUrlError}>
         <FormControlLabel>
-          <FormControlLabelText className="text-sm text-typography-600 dark:text-typography-300 font-semibold web:text-base">
+          <FormControlLabelText className="text-sm text-typography-600 dark:text-[#8A94A8] font-semibold web:text-base">
             Domain or API Base
           </FormControlLabelText>
         </FormControlLabel>
@@ -257,7 +257,7 @@ export default function LoginScreen() {
 
       <FormControl isInvalid={!!emailError}>
         <FormControlLabel>
-          <FormControlLabelText className="text-sm text-typography-600 dark:text-typography-300 font-semibold web:text-base">
+          <FormControlLabelText className="text-sm text-typography-600 dark:text-[#8A94A8] font-semibold web:text-base">
             Email
           </FormControlLabelText>
         </FormControlLabel>
@@ -297,7 +297,7 @@ export default function LoginScreen() {
 
       <FormControl isInvalid={!!passwordError}>
         <FormControlLabel>
-          <FormControlLabelText className="text-sm text-typography-600 dark:text-typography-300 font-semibold web:text-base">
+          <FormControlLabelText className="text-sm text-typography-600 dark:text-[#8A94A8] font-semibold web:text-base">
             Password
           </FormControlLabelText>
         </FormControlLabel>

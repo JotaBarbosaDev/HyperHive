@@ -69,11 +69,11 @@ const VolumeCard = ({ volume, onRemove, removingId }: { volume: DockerVolume; on
 						<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">{volume.Mountpoint}</Text>
 						<HStack className="flex-wrap gap-2">
 							<Badge size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-								<BadgeText className="text-xs text-typography-600 dark:text-typography-300">{volume.Driver}</BadgeText>
+								<BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">{volume.Driver}</BadgeText>
 							</Badge>
 							{volume.Options?.type ? (
 								<Badge size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-									<BadgeText className="text-xs text-typography-600 dark:text-typography-300">{volume.Options.type}</BadgeText>
+									<BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">{volume.Options.type}</BadgeText>
 								</Badge>
 							) : null}
 						</HStack>
@@ -325,11 +325,11 @@ export default function DockerVolumesScreen() {
 						refreshControl={refreshControl}
 					>
 						{isLoading ? (
-							<Text className="text-typography-500 dark:text-typography-300">Loading...</Text>
+							<Text className="text-typography-500 dark:text-[#8A94A8]">Loading...</Text>
 						) : error ? (
 							<Text className="text-[#EF4444]">{error}</Text>
 						) : volumes.length === 0 ? (
-							<Text className="text-typography-500 dark:text-typography-300">No volumes found.</Text>
+							<Text className="text-typography-500 dark:text-[#8A94A8]">No volumes found.</Text>
 						) : (
 							<VStack className="gap-3">
 								{volumes.map((volume) => (
@@ -346,7 +346,7 @@ export default function DockerVolumesScreen() {
 					<ModalHeader className="flex-row items-center justify-between">
 						<VStack className="gap-1 flex-1">
 							<Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">Create volume</Heading>
-							<Text className="text-sm text-typography-500 dark:text-typography-300">
+							<Text className="text-sm text-typography-500 dark:text-[#8A94A8]">
 								Bind to a folder or NFS target. Pick one path style; labels are added automatically.
 							</Text>
 						</VStack>
@@ -355,7 +355,7 @@ export default function DockerVolumesScreen() {
 					<ModalBody>
 						<VStack className="gap-4">
 							<VStack className="gap-2">
-								<Text className="text-xs font-semibold text-typography-500 dark:text-typography-300 uppercase tracking-[0.08em]">Basics</Text>
+								<Text className="text-xs font-semibold text-typography-500 dark:text-[#8A94A8] uppercase tracking-[0.08em]">Basics</Text>
 								<Box>
 									<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Volume name (required)</Text>
 									<Input className="rounded-xl">
@@ -365,7 +365,7 @@ export default function DockerVolumesScreen() {
 							</VStack>
 
 							<VStack className="gap-2">
-								<Text className="text-xs font-semibold text-typography-500 dark:text-typography-300 uppercase tracking-[0.08em]">Mount target</Text>
+								<Text className="text-xs font-semibold text-typography-500 dark:text-[#8A94A8] uppercase tracking-[0.08em]">Mount target</Text>
 								<Box>
 									<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Folder (bind)</Text>
 									<Input className="rounded-xl">

@@ -145,7 +145,7 @@ const resolveCreated = (cert: Certificate) => {
 };
 
 const StatusChip = ({ label, action = "info" }: { label: string; action?: "info" | "muted" | "success" | "error" }) => (
-  <Badge className="rounded-full px-3 py-1" size="sm" action={action === "muted" ? "muted" : action} variant="solid">
+  <Badge className="rounded-full px-3 py-1 border border-outline-200 dark:bg-[#0F1A2E] dark:border-[#1E2F47]" size="sm" action={action === "muted" ? "muted" : action} variant="solid">
     <BadgeText className={`text-xs ${action === "muted" ? "text-typography-700" : ""}`}>{label}</BadgeText>
   </Badge>
 );
@@ -360,7 +360,7 @@ export default function CertificatesScreen() {
         contentContainerStyle={{ paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadCerts("refresh")} />}
       >
-        <Box className="p-4 pt-16 web:p-10 web:max-w-6xl web:mx-auto web:w-full">
+        <Box className="p-4 pt-16 web:p-20 web:max-w-6xl web:mx-auto web:w-full">
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
@@ -374,7 +374,7 @@ export default function CertificatesScreen() {
 
           <HStack className="mt-6 items-center justify-between flex-wrap gap-3">
             <Box className="flex-row items-center gap-3 px-4 py-3 rounded-xl bg-background-0 dark:bg-[#0F1A2E] border border-outline-200 dark:border-[#2A3B52] shadow-soft-1">
-              <Shield size={20} color="#0f172a" />
+              <Shield size={20} color="#ffffff" />
               <Text className="text-typography-900 font-semibold text-base">
                 {certs.length} certificate{certs.length === 1 ? "" : "s"} total
               </Text>
@@ -405,30 +405,57 @@ export default function CertificatesScreen() {
               {certs.map((cert) => {
                 const expired = isExpired(cert);
                 return (
-                  <Box className="bg-background-0 dark:bg-[#0F1A2E] rounded-2xl p-5 border border-outline-100 dark:border-[#2A3B52] shadow-soft-1" key={cert.id}>
+                  <Box
+                    className="bg-background-0 dark:bg-[#0F1A2E] rounded-2xl p-5 border border-outline-100 dark:border-[#2A3B52] shadow-soft-1"
+                    key={cert.id}
+                  >
                     <HStack className="items-start justify-between gap-4 flex-wrap">
                       <VStack className="gap-2 flex-1">
                         <HStack className="items-center gap-2 flex-wrap">
-                          <Shield size={18} color={expired ? "#ef4444" : "#16a34a"} />
+                          <Shield
+                            size={18}
+                            color={expired ? "#ef4444" : "#16a34a"}
+                          />
                           <Text
                             className="text-typography-900 text-base"
-                            style={{ fontFamily: "Inter_700Bold" }}
+                            style={{fontFamily: "Inter_700Bold"}}
                           >
-                            {cert.nice_name ?? (cert.domain_names ?? [])[0] ?? "-"}
+                            {cert.nice_name ??
+                              (cert.domain_names ?? [])[0] ??
+                              "-"}
                           </Text>
                           <StatusChip
-                            label={cert.provider?.toLowerCase() === "letsencrypt" ? "Let's Encrypt" : "Custom"}
+                            label={
+                              cert.provider?.toLowerCase() === "letsencrypt"
+                                ? "Let's Encrypt"
+                                : "Custom"
+                            }
                             action="muted"
                           />
                         </HStack>
                         <HStack className="gap-2 flex-wrap">
-                          {(cert.domain_names ?? []).slice(0, 3).map((domain) => (
-                            <Badge key={domain} className="rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
-                              <BadgeText className="text-xs text-typography-800">{domain}</BadgeText>
-                            </Badge>
-                          ))}
+                          {(cert.domain_names ?? [])
+                            .slice(0, 3)
+                            .map((domain) => (
+                              <Badge
+                                key={domain}
+                                className="rounded-full px-3 py-1 border-outline-200 dark:bg-[#0F1A2E] dark:border-[#1E2F47]"
+                                size="sm"
+                                action="muted"
+                                variant="solid"
+                              >
+                                <BadgeText className="text-xs text-typography-800">
+                                  {domain}
+                                </BadgeText>
+                              </Badge>
+                            ))}
                           {(cert.domain_names?.length ?? 0) > 3 ? (
-                            <Badge className="rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
+                            <Badge
+                              className="rounded-full px-3 py-1"
+                              size="sm"
+                              action="muted"
+                              variant="solid"
+                            >
                               <BadgeText className="text-xs text-typography-800">
                                 +{(cert.domain_names?.length ?? 0) - 3} domains
                               </BadgeText>
@@ -437,12 +464,20 @@ export default function CertificatesScreen() {
                         </HStack>
                         <HStack className="items-center gap-3 flex-wrap">
                           <HStack className="items-center gap-2">
-                            <Calendar color={expired ? "#ef4444" : "#0f172a"} size={16} />
-                            <Text className={`text-sm ${expired ? "text-error-600 font-semibold" : "text-typography-800"}`}>
+                            <Calendar
+                              color={expired ? "#ef4444" : "#ffffff"}
+                              size={16}
+                            />
+                            <Text
+                              className={`text-sm ${expired ? "text-error-600 font-semibold" : "text-typography-800"}`}
+                            >
                               Expires: {formatDate(resolveExpiry(cert))}
                             </Text>
                           </HStack>
-                          <StatusChip label={expired ? "Expired" : "Valid"} action={expired ? "error" : "success"} />
+                          <StatusChip
+                            label={expired ? "Expired" : "Valid"}
+                            action={expired ? "error" : "success"}
+                          />
                           {cert.meta?.dns_challenge ? (
                             <StatusChip
                               label={`DNS Challenge - ${cert.meta?.dns_provider || "provider"}`}
@@ -451,13 +486,17 @@ export default function CertificatesScreen() {
                           ) : (
                             <StatusChip label="HTTP Challenge" action="muted" />
                           )}
-                          <StatusChip label={`Created: ${formatDate(resolveCreated(cert))}`} action="muted" />
+                          <StatusChip
+                            label={`Created: ${formatDate(resolveCreated(cert))}`}
+                            action="muted"
+                          />
                         </HStack>
                         {expired ? (
                           <HStack className="items-center gap-2">
                             <AlertTriangle size={16} color="#ef4444" />
                             <Text className="text-error-600 text-sm font-semibold">
-                              This certificate has expired and needs to be renewed
+                              This certificate has expired and needs to be
+                              renewed
                             </Text>
                           </HStack>
                         ) : null}
@@ -472,8 +511,14 @@ export default function CertificatesScreen() {
                           isDisabled={renewingId === cert.id}
                           className="border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E] rounded-xl"
                         >
-                          {renewingId === cert.id ? <ButtonSpinner /> : <ButtonIcon as={RefreshCcw} size="sm" />}
-                          <ButtonText className="text-typography-900">Renew</ButtonText>
+                          {renewingId === cert.id ? (
+                            <ButtonSpinner />
+                          ) : (
+                            <ButtonIcon as={RefreshCcw} size="sm" />
+                          )}
+                          <ButtonText className="text-typography-900">
+                            Renew
+                          </ButtonText>
                         </Button>
                         {/* Download removed per request */}
                         <Button
@@ -481,9 +526,13 @@ export default function CertificatesScreen() {
                           variant="solid"
                           size="sm"
                           onPress={() => setDeleteTarget(cert)}
-                          className="px-3 rounded-xl"
+                          className="rounded-xl border-error-300 dark:border-error-700 bg-background-0 dark:bg-red-900/20 dark:hover:bg-red-900/30"
                         >
-                          <ButtonIcon as={Trash2} size="sm" />
+                          <ButtonIcon
+                            as={Trash2}
+                            size="sm"
+                            className="text-error-600 dark:text-error-700"
+                          />
                         </Button>
                       </HStack>
                     </HStack>
@@ -591,7 +640,7 @@ export default function CertificatesScreen() {
                   </HStack>
                   <HStack className="items-center gap-2">
                     <Calendar color={isDarkMode ? "#E2E8F0" : "#0f172a"} size={16} />
-                    <Text className="text-sm text-typography-700 dark:text-typography-300">
+                    <Text className="text-sm text-typography-700 dark:text-[#8A94A8]">
                       Created: {formatDate(resolveCreated(selectedCert))}
                     </Text>
                   </HStack>
@@ -840,7 +889,7 @@ export default function CertificatesScreen() {
             </Heading>
           </AlertDialogHeader>
           <AlertDialogBody className="py-4">
-            <Text className="text-typography-700 dark:text-typography-300">
+            <Text className="text-typography-700 dark:text-[#8A94A8]">
               This action will delete{" "}
               <Text className="font-semibold">
                 {(deleteTarget?.domain_names ?? []).join(", ")}

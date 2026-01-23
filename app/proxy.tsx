@@ -418,7 +418,7 @@ export default function ProxyHostsScreen() {
         contentContainerStyle={{ paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadHosts("refresh")} />}
       >
-        <Box className="p-4 pt-16 web:p-10 web:max-w-6xl web:mx-auto web:w-full">
+        <Box className="p-4 pt-16 web:p-20 web:max-w-6xl web:mx-auto web:w-full">
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
@@ -612,7 +612,7 @@ export default function ProxyHostsScreen() {
                       </HStack>
                       <HStack className="items-center gap-2 flex-wrap">
                         <Globe size={16} color={isDarkMode ? "#E2E8F0" : "#0f172a"} />
-                        <Text className="text-typography-700 dark:text-typography-300 text-sm">
+                        <Text className="text-typography-700 dark:text-[#8A94A8] text-sm">
                           {host.forward_scheme}://{host.forward_host}:{host.forward_port}
                         </Text>
                       </HStack>
@@ -669,7 +669,7 @@ export default function ProxyHostsScreen() {
                 </VStack>
                 <HStack className="items-center gap-2">
                   <Globe size={16} color={isDarkMode ? "#E2E8F0" : "#0f172a"} />
-                  <Text className="text-typography-700 dark:text-typography-300 text-sm">
+                  <Text className="text-typography-700 dark:text-[#8A94A8] text-sm">
                     {selectedHost.forward_scheme}://{selectedHost.forward_host}:{selectedHost.forward_port}
                   </Text>
                 </HStack>
@@ -1198,7 +1198,7 @@ export default function ProxyHostsScreen() {
             </Heading>
           </AlertDialogHeader>
           <AlertDialogBody className="py-4">
-            <Text className="text-typography-700 dark:text-typography-300">
+            <Text className="text-typography-700 dark:text-[#8A94A8]">
               This action will delete{" "}
               <Text className="font-semibold">
                 {(deleteTarget?.domain_names ?? []).join(", ")}

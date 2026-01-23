@@ -202,7 +202,7 @@ const ContainerCard = ({
 					{portsLabel ? (
 						<HStack className="items-center gap-2">
 							<Icon as={NetworkIcon} size="sm" className="text-typography-500 dark:text-[#8A94A8]" />
-							<Text className="text-xs text-typography-600 dark:text-typography-300" numberOfLines={2}>
+							<Text className="text-xs text-typography-600 dark:text-[#8A94A8]" numberOfLines={2}>
 								{portsLabel}
 							</Text>
 						</HStack>
@@ -210,28 +210,28 @@ const ContainerCard = ({
 					<HStack className="flex-wrap gap-2 mt-1">
 						{network ? (
 							<Badge size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-								<BadgeText className="text-xs text-typography-600 dark:text-typography-300">{network}</BadgeText>
+								<BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">{network}</BadgeText>
 							</Badge>
 						) : null}
 						<Badge size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-							<BadgeText className="text-xs text-typography-600 dark:text-typography-300">{formatDate(container.Created)}</BadgeText>
+							<BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">{formatDate(container.Created)}</BadgeText>
 						</Badge>
 					</HStack>
 					{memoryLabel || cpuLabel || restartPolicy ? (
 						<HStack className="flex-wrap gap-2 mt-1">
 							{memoryLabel ? (
 								<Badge size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-									<BadgeText className="text-xs text-typography-600 dark:text-typography-300">RAM {memoryLabel}</BadgeText>
+									<BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">RAM {memoryLabel}</BadgeText>
 								</Badge>
 							) : null}
 							{cpuLabel ? (
 								<Badge size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-									<BadgeText className="text-xs text-typography-600 dark:text-typography-300">{cpuLabel}</BadgeText>
+									<BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">{cpuLabel}</BadgeText>
 								</Badge>
 							) : null}
 							{restartPolicy ? (
 								<Badge size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-									<BadgeText className="text-xs text-typography-600 dark:text-typography-300">Restart {restartPolicy}</BadgeText>
+									<BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">Restart {restartPolicy}</BadgeText>
 								</Badge>
 							) : null}
 						</HStack>
@@ -242,7 +242,7 @@ const ContainerCard = ({
 							{mountsPreview.map((mount, idx) => (
 								<Text
 									key={`${mount.Source || "host"}-${mount.Destination || "container"}-${idx}`}
-									className="text-xs text-typography-600 dark:text-typography-300"
+									className="text-xs text-typography-600 dark:text-[#8A94A8]"
 									numberOfLines={1}
 								>
 									{mount.Source ?? "host"} {"->"} {mount.Destination ?? "container"}
@@ -805,11 +805,11 @@ export default function DockerContainersScreen() {
 						refreshControl={refreshControl}
 					>
 						{isLoading ? (
-							<Text className="text-typography-500 dark:text-typography-300">Loading...</Text>
+							<Text className="text-typography-500 dark:text-[#8A94A8]">Loading...</Text>
 						) : error ? (
 							<Text className="text-[#EF4444]">{error}</Text>
 						) : containers.length === 0 ? (
-							<Text className="text-typography-500 dark:text-typography-300">No containers found.</Text>
+							<Text className="text-typography-500 dark:text-[#8A94A8]">No containers found.</Text>
 						) : (
 							<VStack className="gap-3">
 								{containers.map((container) => (
@@ -833,7 +833,7 @@ export default function DockerContainersScreen() {
 					<ModalHeader className="flex-row items-center justify-between">
 						<VStack className="gap-1 flex-1">
 							<Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">Create container</Heading>
-							<Text className="text-sm text-typography-500 dark:text-typography-300">
+							<Text className="text-sm text-typography-500 dark:text-[#8A94A8]">
 								Pulls and starts a container on the selected machine. Configure ports, envs, resources, and entrypoint in one place.
 							</Text>
 						</VStack>
@@ -868,7 +868,7 @@ export default function DockerContainersScreen() {
 								{activeTab === "runtime" ? (
 									<VStack className="gap-4">
 										<VStack className="gap-2">
-											<Text className="text-xs font-semibold text-typography-500 dark:text-typography-300 uppercase tracking-[0.08em]">Basics</Text>
+											<Text className="text-xs font-semibold text-typography-500 dark:text-[#8A94A8] uppercase tracking-[0.08em]">Basics</Text>
 											<HStack className="gap-3 flex-wrap">
 												<Box className="flex-1 min-w-[220px]">
 													<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Image</Text>
@@ -886,7 +886,7 @@ export default function DockerContainersScreen() {
 										</VStack>
 
 										<VStack className="gap-2">
-											<Text className="text-xs font-semibold text-typography-500 dark:text-typography-300 uppercase tracking-[0.08em]">Ports</Text>
+											<Text className="text-xs font-semibold text-typography-500 dark:text-[#8A94A8] uppercase tracking-[0.08em]">Ports</Text>
 											<Box>
 												<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Ports (host:container)</Text>
 												<Input className="rounded-xl">
@@ -901,7 +901,7 @@ export default function DockerContainersScreen() {
 										</VStack>
 
 										<VStack className="gap-2">
-											<Text className="text-xs font-semibold text-typography-500 dark:text-typography-300 uppercase tracking-[0.08em]">Runtime</Text>
+											<Text className="text-xs font-semibold text-typography-500 dark:text-[#8A94A8] uppercase tracking-[0.08em]">Runtime</Text>
 											<HStack className="flex-wrap gap-3 items-end">
 												<Box className="min-w-[180px]">
 													<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Network</Text>
@@ -966,7 +966,7 @@ export default function DockerContainersScreen() {
 										</VStack>
 
 										<VStack className="gap-2">
-											<Text className="text-xs font-semibold text-typography-500 dark:text-typography-300 uppercase tracking-[0.08em]">Commands</Text>
+											<Text className="text-xs font-semibold text-typography-500 dark:text-[#8A94A8] uppercase tracking-[0.08em]">Commands</Text>
 											<HStack className="flex-wrap gap-3">
 												<Box className="flex-1 min-w-[200px]">
 													<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Command (space-separated)</Text>
@@ -1069,11 +1069,11 @@ export default function DockerContainersScreen() {
 
 										{attachedVolumes.length ? (
 											<VStack className="gap-2">
-												<Text className="text-xs font-semibold text-typography-500 dark:text-typography-300 uppercase tracking-[0.08em]">Attached</Text>
+												<Text className="text-xs font-semibold text-typography-500 dark:text-[#8A94A8] uppercase tracking-[0.08em]">Attached</Text>
 												<HStack className="flex-wrap gap-2">
 													{attachedVolumes.map((vol, idx) => (
 														<Badge key={`${vol.HostPath}-${vol.ContainerPath}-${idx}`} size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-															<BadgeText className="text-xs text-typography-600 dark:text-typography-300">{vol.HostPath} → {vol.ContainerPath}</BadgeText>
+															<BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">{vol.HostPath} → {vol.ContainerPath}</BadgeText>
 															<Pressable onPress={() => setAttachedVolumes((prev) => prev.filter((_, i) => i !== idx))} className="ml-1">
 																<Icon as={X} size="xs" className="text-typography-500" />
 															</Pressable>
@@ -1119,7 +1119,7 @@ export default function DockerContainersScreen() {
 											<HStack className="flex-wrap gap-2">
 												{envEntries.map((env, idx) => (
 													<Badge key={`${env.Key}-${idx}`} size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-														<BadgeText className="text-xs text-typography-600 dark:text-typography-300">{env.Key}={env.Value}</BadgeText>
+														<BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">{env.Key}={env.Value}</BadgeText>
 														<Pressable onPress={() => handleRemoveEnv(idx)} className="ml-1">
 															<Icon as={X} size="xs" className="text-typography-500" />
 														</Pressable>
@@ -1155,7 +1155,7 @@ export default function DockerContainersScreen() {
 					<ModalHeader className="flex-row items-center justify-between">
 						<VStack className="gap-1 flex-1">
 							<Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">Update container</Heading>
-							<Text className="text-sm text-typography-500 dark:text-typography-300">Restart policy and limits are optional.</Text>
+							<Text className="text-sm text-typography-500 dark:text-[#8A94A8]">Restart policy and limits are optional.</Text>
 						</VStack>
 						<ModalCloseButton onPress={closeUpdateModal} />
 					</ModalHeader>
@@ -1221,13 +1221,13 @@ export default function DockerContainersScreen() {
 				<ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
 					<ModalHeader className="flex-row items-center justify-between">
 						<HStack className="items-center gap-2">
-							<Icon as={Terminal} size="sm" className="text-typography-600 dark:text-typography-300" />
+							<Icon as={Terminal} size="sm" className="text-typography-600 dark:text-[#8A94A8]" />
 							<Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">Container logs</Heading>
 						</HStack>
 						<HStack className="items-center gap-2">
 							{logConsole.id ? (
 								<Badge size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-									<BadgeText className="text-xs text-typography-600 dark:text-typography-300">{logConsole.id}</BadgeText>
+									<BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">{logConsole.id}</BadgeText>
 								</Badge>
 							) : null}
 							<ModalCloseButton onPress={closeLogConsole} />

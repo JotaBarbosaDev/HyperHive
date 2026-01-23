@@ -408,7 +408,7 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{paddingBottom: 40}}
       >
-        <Box className="p-4 pt-16 web:p-10 web:max-w-7xl web:mx-auto web:w-full">
+        <Box className="p-4 pt-16 web:p-20 web:max-w-7xl web:mx-auto web:w-full">
           <VStack className="gap-2 mb-6">
             <Heading
               size="2xl"
@@ -909,7 +909,7 @@ export default function DashboardScreen() {
                   <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
                     Run now
                   </Text>
-                  <Text className="text-sm text-typography-700 dark:text-typography-300">
+                  <Text className="text-sm text-typography-700 dark:text-[#8A94A8]">
                     {pendingPowerNow ? "Yes" : "No"}
                   </Text>
                 </VStack>

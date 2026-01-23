@@ -365,7 +365,7 @@ export default function RedirectionHostsScreen() {
         contentContainerStyle={{ paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadItems("refresh")} />}
       >
-        <Box className="p-4 pt-16 web:p-10 web:max-w-6xl web:mx-auto web:w-full">
+        <Box className="p-4 pt-16 web:p-20 web:max-w-6xl web:mx-auto web:w-full">
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
@@ -542,7 +542,7 @@ export default function RedirectionHostsScreen() {
                       </HStack>
                       <HStack className="items-center gap-2 flex-wrap">
                         <ArrowRight size={16} color={isDarkMode ? "#E2E8F0" : "#0f172a"} />
-                        <Text className="text-typography-700 dark:text-typography-300 text-sm">
+                        <Text className="text-typography-700 dark:text-[#8A94A8] text-sm">
                           {host.forward_domain_name}
                         </Text>
                       </HStack>
@@ -599,7 +599,7 @@ export default function RedirectionHostsScreen() {
                 </VStack>
                 <HStack className="items-center gap-2">
                   <ArrowRight size={16} color={isDarkMode ? "#E2E8F0" : "#0f172a"} />
-                  <Text className="text-typography-700 dark:text-typography-300 text-sm">
+                  <Text className="text-typography-700 dark:text-[#8A94A8] text-sm">
                     {selectedHost.forward_domain_name}
                   </Text>
                 </HStack>
@@ -999,7 +999,7 @@ export default function RedirectionHostsScreen() {
             </Heading>
           </AlertDialogHeader>
           <AlertDialogBody className="py-4">
-            <Text className="text-typography-700 dark:text-typography-300">
+            <Text className="text-typography-700 dark:text-[#8A94A8]">
               This action will delete{" "}
               <Text className="font-semibold">
                 {(deleteTarget?.domain_names ?? []).join(", ")}

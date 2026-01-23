@@ -107,15 +107,15 @@ const StatusChip = ({
   <Badge
     className={`rounded-full px-3 py-1 border ${
       active
-        ? "bg-background-100 dark:bg-[#0E1524] border-outline-200 dark:border-[#243247]"
-        : "bg-background-50 dark:bg-[#0E1524] border-outline-200 dark:border-[#243247]"
+        ? "rounded-full px-3 border-outline-200 dark:bg-[#213250] dark:border-[#1E2F47]"
+        : "rounded-full px-3 border-outline-200 dark:bg-[#0F1A2E] dark:border-[#1E2F47]"
     }`}
     size="sm"
     action={active ? "info" : "muted"}
-    variant="solid"
+    variant="solid" 
   >
     <BadgeText
-      className={`text-xs ${active ? "text-typography-800 dark:text-typography-200" : "text-typography-600 dark:text-[#8A94A8]"}`}
+      className={`text-xs ${active ? "text-typography-800 dark:text-typography-950" : "text-typography-600 dark:text-[#8A94A8]"}`}
     >
       {label}
     </BadgeText>
@@ -367,7 +367,7 @@ export default function NotFoundHostsScreen() {
         contentContainerStyle={{ paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadHosts("refresh")} />}
       >
-        <Box className="p-4 pt-16 web:p-10 web:max-w-6xl web:mx-auto web:w-full">
+        <Box className="p-4 pt-16 web:p-20 web:max-w-6xl web:mx-auto web:w-full">
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
@@ -433,7 +433,10 @@ export default function NotFoundHostsScreen() {
               {filteredHosts.map((host) => {
                 const enabled = isHostEnabled(host);
                 return isWeb ? (
-                  <Box className="bg-background-0 dark:bg-[#0F1A2E] rounded-2xl p-5 border border-outline-100 dark:border-[#2A3B52] shadow-soft-1" key={host.id}>
+                  <Box
+                    className="bg-background-0 dark:bg-[#0F1A2E] rounded-2xl p-5 border border-outline-100 dark:border-[#2A3B52] shadow-soft-1"
+                    key={host.id}
+                  >
                     <HStack className="items-start justify-between gap-4 flex-wrap">
                       <HStack className="items-center gap-2 flex-1 flex-wrap">
                         <Box
@@ -442,12 +445,23 @@ export default function NotFoundHostsScreen() {
                         <HStack className="flex-wrap">
                           {(host.domain_names ?? []).map((d, idx) => (
                             <React.Fragment key={d}>
-                              <ExternalLink href={(d.includes("//") ? d : `https://${d}`) as any}>
-                                <Text className="text-typography-900 text-base" style={{ fontFamily: "Inter_700Bold" }}>
+                              <ExternalLink
+                                href={
+                                  (d.includes("//") ? d : `https://${d}`) as any
+                                }
+                              >
+                                <Text
+                                  className="text-typography-900 text-base"
+                                  style={{fontFamily: "Inter_700Bold"}}
+                                >
                                   {d}
                                 </Text>
                               </ExternalLink>
-                              {idx < (host.domain_names ?? []).length - 1 ? <Text className="text-typography-900 text-base">{", "}</Text> : null}
+                              {idx < (host.domain_names ?? []).length - 1 ? (
+                                <Text className="text-typography-900 text-base">
+                                  {", "}
+                                </Text>
+                              ) : null}
                             </React.Fragment>
                           ))}
                         </HStack>
@@ -466,7 +480,9 @@ export default function NotFoundHostsScreen() {
                           ) : (
                             <ButtonIcon as={Power} size="sm" />
                           )}
-                          <ButtonText className="text-typography-900">{enabled ? "Disable" : "Enable"}</ButtonText>
+                          <ButtonText className="text-typography-900">
+                            {enabled ? "Disable" : "Enable"}
+                          </ButtonText>
                         </Button>
                         <Button
                           action="default"
@@ -482,9 +498,9 @@ export default function NotFoundHostsScreen() {
                           variant="solid"
                           size="sm"
                           onPress={() => setDeleteTarget(host)}
-                          className="px-3 rounded-xl"
+                          className="rounded-xl border-error-300 dark:border-error-700 bg-background-0 dark:bg-red-900/20 dark:hover:bg-red-900/30"
                         >
-                          <ButtonIcon as={Trash2} size="sm" />
+                          <ButtonIcon as={Trash2} size="sm" className="text-error-600 dark:text-error-700"/>
                         </Button>
                       </HStack>
                     </HStack>
@@ -492,7 +508,9 @@ export default function NotFoundHostsScreen() {
                     <HStack className="mt-3 items-center gap-4 flex-wrap">
                       <HStack className="items-center gap-2">
                         <AlertTriangle size={18} color="#ef4444" />
-                        <Text className="text-error-600 font-semibold text-sm">404 Not Found</Text>
+                        <Text className="text-error-600 font-semibold text-sm">
+                          404 Not Found
+                        </Text>
                       </HStack>
                       <HStack className="items-center gap-2">
                         {host.ssl_forced ? (
@@ -500,28 +518,45 @@ export default function NotFoundHostsScreen() {
                         ) : (
                           <ShieldOff size={18} color="#9ca3af" />
                         )}
-                        <Text className={`text-sm ${host.ssl_forced ? "text-success-600" : "text-typography-600"}`}>
+                        <Text
+                          className={`text-sm ${host.ssl_forced ? "text-success-600" : "text-typography-600"}`}
+                        >
                           SSL {host.ssl_forced ? "(Forced)" : "(Optional)"}
                         </Text>
                       </HStack>
-                      {host.certificate_id ? <StatusChip label="SSL enabled" /> : null}
-                      {host.http2_support ? <StatusChip label="HTTP/2" /> : null}
+                      {host.certificate_id ? (
+                        <StatusChip label="SSL enabled" />
+                      ) : null}
+                      {host.http2_support ? (
+                        <StatusChip label="HTTP/2" />
+                      ) : null}
                       {host.hsts_enabled ? (
-                        <StatusChip label={`HSTS${host.hsts_subdomains ? " + Subdomains" : ""}`} />
+                        <StatusChip
+                          label={`HSTS${host.hsts_subdomains ? " + Subdomains" : ""}`}
+                        />
                       ) : null}
                     </HStack>
 
                     <HStack className="mt-3 gap-2 flex-wrap">
-                      {host.meta?.letsencrypt_agree ? <StatusChip label="Let's Encrypt" /> : null}
-                      {host.meta?.dns_challenge ? <StatusChip label="DNS Challenge" /> : null}
-                      <StatusChip label={enabled ? "Active" : "Inactive"} active={enabled} />
+                      {host.meta?.letsencrypt_agree ? (
+                        <StatusChip label="Let's Encrypt" />
+                      ) : null}
+                      {host.meta?.dns_challenge ? (
+                        <StatusChip label="DNS Challenge" />
+                      ) : null}
+                      <StatusChip
+                        label={enabled ? "Active" : "Inactive"}
+                        active={enabled}
+                      />
                     </HStack>
 
                     {host.advanced_config ? (
                       <Box className="mt-3 p-3 rounded-xl bg-background-50 dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52]">
                         <HStack className="items-center gap-2 mb-2">
                           <Shield size={16} color="#0f172a" />
-                          <Text className="text-typography-800 font-semibold text-sm">Advanced configuration</Text>
+                          <Text className="text-typography-800 font-semibold text-sm">
+                            Advanced configuration
+                          </Text>
                         </HStack>
                         <Text className="text-typography-600 text-xs leading-5">
                           {host.advanced_config}
@@ -538,29 +573,38 @@ export default function NotFoundHostsScreen() {
                     <VStack className="gap-2">
                       <HStack className="items-center justify-between gap-2">
                         <HStack className="items-center gap-2 flex-1 flex-wrap">
-                          <Box className={`h-2.5 w-2.5 rounded-full ${enabled ? "bg-success-500" : "bg-outline-400"}`} />
+                          <Box
+                            className={`h-2.5 w-2.5 rounded-full ${enabled ? "bg-success-500" : "bg-outline-400"}`}
+                          />
                           <HStack className="flex-wrap">
                             {(host.domain_names ?? []).map((d, idx) => (
                               <React.Fragment key={d}>
                                 <Text
                                   className="text-typography-900 dark:text-[#E8EBF0] text-sm"
-                                  style={{ fontFamily: "Inter_700Bold" }}
+                                  style={{fontFamily: "Inter_700Bold"}}
                                 >
                                   {d}
                                 </Text>
                                 {idx < (host.domain_names ?? []).length - 1 ? (
-                                  <Text className="text-typography-900 dark:text-[#E8EBF0] text-sm">{", "}</Text>
+                                  <Text className="text-typography-900 dark:text-[#E8EBF0] text-sm">
+                                    {", "}
+                                  </Text>
                                 ) : null}
                               </React.Fragment>
                             ))}
                           </HStack>
                         </HStack>
-                        <StatusChip label={enabled ? "Active" : "Inactive"} active={enabled} />
+                        <StatusChip
+                          label={enabled ? "Active" : "Inactive"}
+                          active={enabled}
+                        />
                       </HStack>
                       <HStack className="items-center gap-3 flex-wrap">
                         <HStack className="items-center gap-2">
                           <AlertTriangle size={16} color="#ef4444" />
-                          <Text className="text-error-600 font-semibold text-xs">404 Not Found</Text>
+                          <Text className="text-error-600 font-semibold text-xs">
+                            404 Not Found
+                          </Text>
                         </HStack>
                         <HStack className="items-center gap-2">
                           {host.ssl_forced ? (
@@ -653,7 +697,7 @@ export default function NotFoundHostsScreen() {
                 {selectedHost.advanced_config ? (
                   <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] p-3">
                     <Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-2">Advanced config</Text>
-                    <Text className="text-typography-700 dark:text-typography-300 text-xs">
+                    <Text className="text-typography-700 dark:text-[#8A94A8] text-xs">
                       {selectedHost.advanced_config}
                     </Text>
                   </Box>
@@ -942,7 +986,7 @@ export default function NotFoundHostsScreen() {
             </Heading>
           </AlertDialogHeader>
           <AlertDialogBody className="py-4">
-            <Text className="text-typography-700 dark:text-typography-300">
+            <Text className="text-typography-700 dark:text-[#8A94A8]">
               This action will remove{" "}
               <Text className="font-semibold">
                 {(deleteTarget?.domain_names ?? []).join(", ")}

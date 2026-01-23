@@ -1064,7 +1064,7 @@ export default function ProfileScreen() {
           />
         }
       >
-        <Box className="p-4 pt-16 web:p-10 web:max-w-6xl web:mx-auto web:w-full">
+        <Box className="p-4 pt-16 web:p-20 web:max-w-6xl web:mx-auto web:w-full">
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
@@ -1429,7 +1429,7 @@ function IsoCard({ iso, onDelete, isDeleting }: IsoCardProps) {
                     key={`${iso.id}-${host}`}
                     action="muted"
                     variant="outline"
-                    className="rounded-full border px-3 max-w-full min-w-0 shrink"
+                    className="rounded-full px-3 py-1 border-outline-200 dark:bg-[#0F1A2E] dark:border-[#1E2F47]"
                   >
                     <BadgeText className="text-xs font-semibold text-typography-700 dark:text-typography-950 whitespace-normal break-normal">
                       {host}

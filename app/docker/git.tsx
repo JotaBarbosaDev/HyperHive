@@ -77,7 +77,7 @@ const GitCard = ({
 						<Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">{entry.Name}</Text>
 						<HStack className="items-center gap-2">
 							<Icon as={Link} size="sm" className="text-typography-500 dark:text-[#8A94A8]" />
-							<Text className="text-xs text-typography-600 dark:text-typography-300" numberOfLines={2}>
+							<Text className="text-xs text-typography-600 dark:text-[#8A94A8]" numberOfLines={2}>
 								{entry.RepoLink}
 							</Text>
 						</HStack>
@@ -453,11 +453,11 @@ export default function DockerGitScreen() {
 						refreshControl={refreshControl}
 					>
 						{isLoading ? (
-							<Text className="text-typography-500 dark:text-typography-300">Loading...</Text>
+							<Text className="text-typography-500 dark:text-[#8A94A8]">Loading...</Text>
 						) : error ? (
 							<Text className="text-[#EF4444]">{error}</Text>
 						) : entries.length === 0 ? (
-							<Text className="text-typography-500 dark:text-typography-300">No repositories configured.</Text>
+							<Text className="text-typography-500 dark:text-[#8A94A8]">No repositories configured.</Text>
 						) : (
 							<VStack className="gap-3">
 								{entries.map((entry) => (
@@ -474,7 +474,7 @@ export default function DockerGitScreen() {
 					<ModalHeader className="flex-row items-center justify-between">
 						<VStack className="gap-1 flex-1">
 							<Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">Clone stack</Heading>
-							<Text className="text-sm text-typography-500 dark:text-typography-300">
+							<Text className="text-sm text-typography-500 dark:text-[#8A94A8]">
 								Pull a docker-compose repo and optionally swap environment vars before starting.
 							</Text>
 						</VStack>
@@ -484,7 +484,7 @@ export default function DockerGitScreen() {
 						<ScrollView className="max-h-[60vh]">
 							<VStack space="md">
 								<VStack className="gap-2">
-									<Text className="text-xs font-semibold text-typography-500 dark:text-typography-300 uppercase tracking-[0.08em]">Repository</Text>
+									<Text className="text-xs font-semibold text-typography-500 dark:text-[#8A94A8] uppercase tracking-[0.08em]">Repository</Text>
 									<Box>
 										<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Repository URL</Text>
 										<Input className="rounded-xl">
@@ -506,7 +506,7 @@ export default function DockerGitScreen() {
 								</VStack>
 
 								<VStack className="gap-2">
-									<Text className="text-xs font-semibold text-typography-500 dark:text-typography-300 uppercase tracking-[0.08em]">Stack details</Text>
+									<Text className="text-xs font-semibold text-typography-500 dark:text-[#8A94A8] uppercase tracking-[0.08em]">Stack details</Text>
 									<Box>
 										<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Name (required)</Text>
 										<Input className="rounded-xl">
@@ -516,7 +516,7 @@ export default function DockerGitScreen() {
 								</VStack>
 
 								<VStack className="gap-2">
-									<Text className="text-xs font-semibold text-typography-500 dark:text-typography-300 uppercase tracking-[0.08em]">Environment</Text>
+									<Text className="text-xs font-semibold text-typography-500 dark:text-[#8A94A8] uppercase tracking-[0.08em]">Environment</Text>
 									<VStack className="gap-2">
 										<HStack className="gap-3 flex-wrap items-end">
 											<Box className="flex-1 min-w-[180px]">
@@ -547,7 +547,7 @@ export default function DockerGitScreen() {
 											<HStack className="flex-wrap gap-2">
 												{envEntries.map((env, idx) => (
 													<Badge key={`${env.Key}-${idx}`} size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-														<BadgeText className="text-xs text-typography-600 dark:text-typography-300">{env.Key}={env.Value}</BadgeText>
+														<BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">{env.Key}={env.Value}</BadgeText>
 														<Pressable onPress={() => handleRemoveEnv(idx)} className="ml-1">
 															<Icon as={X} size="xs" className="text-typography-500" />
 														</Pressable>
@@ -583,7 +583,7 @@ export default function DockerGitScreen() {
 					<ModalHeader className="flex-row items-center justify-between">
 						<VStack className="gap-1 flex-1">
 							<Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">Update stack</Heading>
-							<Text className="text-sm text-typography-500 dark:text-typography-300">Apply env overrides and re-run the stack.</Text>
+							<Text className="text-sm text-typography-500 dark:text-[#8A94A8]">Apply env overrides and re-run the stack.</Text>
 						</VStack>
 						<ModalCloseButton onPress={closeUpdateModal} />
 					</ModalHeader>
@@ -593,7 +593,7 @@ export default function DockerGitScreen() {
 								{updateTarget ?? ""}
 							</Text>
 							<VStack className="gap-2">
-								<Text className="text-xs font-semibold text-typography-500 dark:text-typography-300 uppercase tracking-[0.08em]">Environment</Text>
+								<Text className="text-xs font-semibold text-typography-500 dark:text-[#8A94A8] uppercase tracking-[0.08em]">Environment</Text>
 								<HStack className="gap-3 flex-wrap items-end">
 									<Box className="flex-1 min-w-[180px]">
 										<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Env key</Text>
@@ -623,7 +623,7 @@ export default function DockerGitScreen() {
 									<HStack className="flex-wrap gap-2">
 										{updateEnvEntries.map((env, idx) => (
 											<Badge key={`${env.Key}-${idx}`} size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-												<BadgeText className="text-xs text-typography-600 dark:text-typography-300">{env.Key}={env.Value}</BadgeText>
+												<BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">{env.Key}={env.Value}</BadgeText>
 												<Pressable onPress={() => handleRemoveUpdateEnv(idx)} className="ml-1">
 													<Icon as={X} size="xs" className="text-typography-500" />
 												</Pressable>
@@ -656,13 +656,13 @@ export default function DockerGitScreen() {
 				<ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
 					<ModalHeader className="flex-row items-center justify-between">
 						<HStack className="items-center gap-2">
-							<Icon as={Terminal} size="sm" className="text-typography-600 dark:text-typography-300" />
+							<Icon as={Terminal} size="sm" className="text-typography-600 dark:text-[#8A94A8]" />
 							<Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">Stack console</Heading>
 						</HStack>
 						<HStack className="items-center gap-2">
 							{consoleState.id ? (
 								<Badge size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-									<BadgeText className="text-xs text-typography-600 dark:text-typography-300">{consoleState.id}</BadgeText>
+									<BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">{consoleState.id}</BadgeText>
 								</Badge>
 							) : null}
 							<ModalCloseButton onPress={closeConsole} />

@@ -567,7 +567,7 @@ export default function BackupsScreen() {
           />
         }
       >
-        <Box className="p-4 pt-16 web:p-10 web:max-w-7xl web:mx-auto web:w-full">
+        <Box className="p-4 pt-16 web:p-20 web:max-w-7xl web:mx-auto web:w-full">
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
@@ -581,7 +581,7 @@ export default function BackupsScreen() {
 
           {/* Stats Overview */}
           <HStack className="mb-6 gap-4 flex-wrap web:grid web:grid-cols-4">
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
+            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
               <HStack className="items-center gap-2 mb-2">
                 <HardDrive
                   size={16}
@@ -603,7 +603,7 @@ export default function BackupsScreen() {
               </Text>
             </Box>
 
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
+            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
               <HStack className="items-center gap-2 mb-2">
                 <Database
                   size={16}
@@ -625,7 +625,7 @@ export default function BackupsScreen() {
               </Text>
             </Box>
 
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
+            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
               <HStack className="items-center gap-2 mb-2">
                 <HardDrive
                   size={16}
@@ -647,7 +647,7 @@ export default function BackupsScreen() {
               </Text>
             </Box>
 
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4">
+            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
               <HStack className="items-center gap-2 mb-2">
                 <Calendar
                   size={16}
@@ -689,7 +689,7 @@ export default function BackupsScreen() {
               size="md"
               onPress={handleRefresh}
               disabled={isRefreshing}
-              className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+              className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
             >
               {isRefreshing ? (
                 <ButtonSpinner />
@@ -752,7 +752,7 @@ export default function BackupsScreen() {
                 return (
                   <Box
                     key={vmName}
-                    className="rounded-2xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] overflow-hidden web:shadow-md dark:web:shadow-none"
+                    className="rounded-2xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] overflow-hidden web:shadow-md dark:web:shadow-none"
                   >
                     {/* Header */}
                     <Box className="border-b border-outline-100 dark:border-[#2A3B52] p-4 web:p-6">
@@ -971,7 +971,7 @@ export default function BackupsScreen() {
                         <Pressable
                           key={backup.id}
                           onPress={() => setMobileActionBackup(backup)}
-                          className="rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] p-4"
+                          className="rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4"
                         >
                           <HStack className="items-start justify-between">
                             <VStack className="flex-1 pr-3">
@@ -1048,7 +1048,7 @@ export default function BackupsScreen() {
               <Box className="p-4 web:p-6">
                 {restoreBackup && (
                   <VStack className="gap-5">
-                    <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] p-4">
+                    <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828] p-4">
                       <VStack className="gap-3">
                         <HStack className="items-center justify-between">
                           <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
@@ -1072,14 +1072,14 @@ export default function BackupsScreen() {
                     <VStack className="gap-4 web:grid web:grid-cols-2 web:gap-4">
                       <VStack className="gap-2">
                         <Text
-                          className="text-sm text-typography-700 dark:text-typography-300"
+                          className="text-sm text-typography-700 dark:text-[#8A94A8]"
                           style={{ fontFamily: "Inter_600SemiBold" }}
                         >
                           VM name
                         </Text>
                         <Input
                           variant="outline"
-                          className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                          className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
                         >
                           <InputField
                             value={restoreVmName}
@@ -1091,7 +1091,7 @@ export default function BackupsScreen() {
 
                       <VStack className="gap-2">
                         <Text
-                          className="text-sm text-typography-700 dark:text-typography-300"
+                          className="text-sm text-typography-700 dark:text-[#8A94A8]"
                           style={{ fontFamily: "Inter_600SemiBold" }}
                         >
                           Target machine
@@ -1101,7 +1101,7 @@ export default function BackupsScreen() {
                           onValueChange={setRestoreMachine}
                           isDisabled={loadingOptions || machineOptions.length === 0}
                         >
-                          <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
+                          <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]">
                             <SelectInput
                               placeholder={loadingOptions ? "Loading..." : "Choose a machine..."}
                               value={restoreMachine}
@@ -1111,7 +1111,7 @@ export default function BackupsScreen() {
                           </SelectTrigger>
                           <SelectPortal>
                             <SelectBackdropContent />
-                            <SelectContent className="bg-background-0 dark:bg-[#151F30]">
+                            <SelectContent className="bg-background-0 dark:bg-[#0E1828]">
                               <SelectDragIndicatorWrapper>
                                 <SelectDragIndicator />
                               </SelectDragIndicatorWrapper>
@@ -1133,14 +1133,14 @@ export default function BackupsScreen() {
 
                       <VStack className="gap-2">
                         <Text
-                          className="text-sm text-typography-700 dark:text-typography-300"
+                          className="text-sm text-typography-700 dark:text-[#8A94A8]"
                           style={{ fontFamily: "Inter_600SemiBold" }}
                         >
                           vCPU
                         </Text>
                         <Input
                           variant="outline"
-                          className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                          className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
                         >
                           <InputField
                             keyboardType="numeric"
@@ -1153,14 +1153,14 @@ export default function BackupsScreen() {
 
                       <VStack className="gap-2">
                         <Text
-                          className="text-sm text-typography-700 dark:text-typography-300"
+                          className="text-sm text-typography-700 dark:text-[#8A94A8]"
                           style={{ fontFamily: "Inter_600SemiBold" }}
                         >
                           Memory (MB)
                         </Text>
                         <Input
                           variant="outline"
-                          className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                          className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
                         >
                           <InputField
                             keyboardType="numeric"
@@ -1190,14 +1190,14 @@ export default function BackupsScreen() {
 
                       <VStack className="gap-2">
                         <Text
-                          className="text-sm text-typography-700 dark:text-typography-300"
+                          className="text-sm text-typography-700 dark:text-[#8A94A8]"
                           style={{ fontFamily: "Inter_600SemiBold" }}
                         >
                           Network
                         </Text>
                         <Input
                           variant="outline"
-                          className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                          className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
                         >
                           <InputField
                             value={restoreNetwork}
@@ -1209,14 +1209,14 @@ export default function BackupsScreen() {
 
                       <VStack className="gap-2">
                         <Text
-                          className="text-sm text-typography-700 dark:text-typography-300"
+                          className="text-sm text-typography-700 dark:text-[#8A94A8]"
                           style={{ fontFamily: "Inter_600SemiBold" }}
                         >
                           VNC password
                         </Text>
                         <Input
                           variant="outline"
-                          className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]"
+                          className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
                         >
                           <InputField
                             value={restorePassword}
@@ -1229,7 +1229,7 @@ export default function BackupsScreen() {
 
                       <VStack className="gap-2">
                         <Text
-                          className="text-sm text-typography-700 dark:text-typography-300"
+                          className="text-sm text-typography-700 dark:text-[#8A94A8]"
                           style={{ fontFamily: "Inter_600SemiBold" }}
                         >
                           NFS share
@@ -1239,7 +1239,7 @@ export default function BackupsScreen() {
                           onValueChange={setRestoreNfsShare}
                           isDisabled={loadingOptions || Object.keys(nfsShares).length === 0}
                         >
-                          <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
+                          <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]">
                             <SelectInput
                               placeholder={loadingOptions ? "Loading..." : "Choose a NFS share..."}
                               value={restoreNfsLabel}
@@ -1249,7 +1249,7 @@ export default function BackupsScreen() {
                           </SelectTrigger>
                           <SelectPortal>
                             <SelectBackdropContent />
-                            <SelectContent className="bg-background-0 dark:bg-[#151F30]">
+                            <SelectContent className="bg-background-0 dark:bg-[#0E1828]">
                               <SelectDragIndicatorWrapper>
                                 <SelectDragIndicator />
                               </SelectDragIndicatorWrapper>
@@ -1277,7 +1277,7 @@ export default function BackupsScreen() {
                         <CheckboxIndicator className="border-outline-300 dark:border-[#2A3B52]">
                           <CheckboxIcon as={Check} />
                         </CheckboxIndicator>
-                        <CheckboxLabel className="text-typography-700 dark:text-typography-300">
+                        <CheckboxLabel className="text-typography-700 dark:text-[#8A94A8]">
                           Live restore
                         </CheckboxLabel>
                       </Checkbox>
@@ -1302,7 +1302,7 @@ export default function BackupsScreen() {
 
                         <VStack className="gap-2 mb-4">
                           <Text
-                            className="text-sm text-typography-700 dark:text-typography-300"
+                            className="text-sm text-typography-700 dark:text-[#8A94A8]"
                             style={{ fontFamily: "Inter_600SemiBold" }}
                           >
                             Selected slaves ({selectedSlaves.length})
@@ -1351,7 +1351,7 @@ export default function BackupsScreen() {
 
                         <VStack className="gap-2 mb-4">
                           <Text
-                            className="text-sm text-typography-700 dark:text-typography-300"
+                            className="text-sm text-typography-700 dark:text-[#8A94A8]"
                             style={{ fontFamily: "Inter_600SemiBold" }}
                           >
                             Add slave to comparison
@@ -1371,7 +1371,7 @@ export default function BackupsScreen() {
                             }}
                             isDisabled={loadingOptions || availableSlaves.length === 0}
                           >
-                            <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30]">
+                            <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]">
                               <SelectInput
                                 placeholder={loadingOptions ? "Loading..." : "Select a slave..."}
                                 className="text-typography-900 dark:text-[#E8EBF0]"
@@ -1380,7 +1380,7 @@ export default function BackupsScreen() {
                             </SelectTrigger>
                             <SelectPortal>
                               <SelectBackdropContent />
-                              <SelectContent className="bg-background-0 dark:bg-[#151F30]">
+                              <SelectContent className="bg-background-0 dark:bg-[#0E1828]">
                                 <SelectDragIndicatorWrapper>
                                   <SelectDragIndicator />
                                 </SelectDragIndicatorWrapper>
@@ -1427,7 +1427,7 @@ export default function BackupsScreen() {
                         <VStack className="gap-2">
                           <HStack className="justify-between items-center">
                             <Text
-                              className="text-sm text-typography-700 dark:text-typography-300"
+                              className="text-sm text-typography-700 dark:text-[#8A94A8]"
                               style={{ fontFamily: "Inter_600SemiBold" }}
                             >
                               CPU Configuration XML
@@ -1542,7 +1542,7 @@ export default function BackupsScreen() {
 
       <Modal isOpen={!!deleteTarget} onClose={handleCloseDeleteModal}>
         <ModalBackdrop className="bg-black/60" />
-        <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] shadow-2xl max-w-lg p-6">
+        <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828] shadow-2xl max-w-lg p-6">
           <ModalHeader className="pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
             <HStack className="items-center gap-3">
               <Box className="h-10 w-10 rounded-2xl bg-error-500/10 dark:bg-error-900/20 items-center justify-center">
@@ -1663,7 +1663,7 @@ export default function BackupsScreen() {
         onClose={() => setMobileActionBackup(null)}
       >
         <ModalBackdrop className="bg-black/60" />
-        <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] shadow-2xl max-w-lg p-6">
+        <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828] shadow-2xl max-w-lg p-6">
           <ModalHeader className="pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
             <Heading
               size="md"
@@ -1725,7 +1725,7 @@ export default function BackupsScreen() {
       {/* Modal: Criar Backup */}
       <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)}>
         <ModalBackdrop className="bg-black/60" />
-        <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] shadow-2xl max-w-lg p-6">
+        <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828] shadow-2xl max-w-lg p-6">
           <ModalHeader className="pb-4">
             <Heading
               size="lg"

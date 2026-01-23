@@ -62,17 +62,17 @@ const NetworkCard = ({
 						<HStack className="flex-wrap gap-2">
 							{network.Driver ? (
 								<Badge size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-									<BadgeText className="text-xs text-typography-600 dark:text-typography-300">{network.Driver}</BadgeText>
+									<BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">{network.Driver}</BadgeText>
 								</Badge>
 							) : null}
 							{network.Scope ? (
 								<Badge size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-									<BadgeText className="text-xs text-typography-600 dark:text-typography-300">{network.Scope}</BadgeText>
+									<BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">{network.Scope}</BadgeText>
 								</Badge>
 							) : null}
 							{subnets ? (
 								<Badge size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-									<BadgeText className="text-xs text-typography-600 dark:text-typography-300">{subnets}</BadgeText>
+									<BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">{subnets}</BadgeText>
 								</Badge>
 							) : null}
 						</HStack>
@@ -93,7 +93,7 @@ const NetworkCard = ({
 				<HStack className="flex-wrap gap-2">
 					{Object.entries(network.Options).map(([key, value]) => (
 						<Badge key={`${network.Id}-${key}`} size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-							<BadgeText className="text-xs text-typography-600 dark:text-typography-300">
+							<BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">
 								{key}: {value}
 							</BadgeText>
 						</Badge>
@@ -318,11 +318,11 @@ export default function DockerNetworksScreen() {
 						refreshControl={refreshControl}
 					>
 						{isLoading ? (
-							<Text className="text-typography-500 dark:text-typography-300">Loading...</Text>
+							<Text className="text-typography-500 dark:text-[#8A94A8]">Loading...</Text>
 						) : error ? (
 							<Text className="text-[#EF4444]">{error}</Text>
 						) : networks.length === 0 ? (
-							<Text className="text-typography-500 dark:text-typography-300">No networks found.</Text>
+							<Text className="text-typography-500 dark:text-[#8A94A8]">No networks found.</Text>
 						) : (
 							<VStack className="gap-3">
 								{networks.map((network) => (
@@ -339,7 +339,7 @@ export default function DockerNetworksScreen() {
 					<ModalHeader className="flex-row items-center justify-between">
 						<VStack className="gap-1 flex-1">
 							<Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">Create network</Heading>
-							<Text className="text-sm text-typography-500 dark:text-typography-300">
+							<Text className="text-sm text-typography-500 dark:text-[#8A94A8]">
 								Bridge and macvlan are common. Provide subnet only if you need static addressing.
 							</Text>
 						</VStack>
@@ -348,7 +348,7 @@ export default function DockerNetworksScreen() {
 					<ModalBody>
 						<VStack className="gap-4">
 							<VStack className="gap-2">
-								<Text className="text-xs font-semibold text-typography-500 dark:text-typography-300 uppercase tracking-[0.08em]">Basics</Text>
+								<Text className="text-xs font-semibold text-typography-500 dark:text-[#8A94A8] uppercase tracking-[0.08em]">Basics</Text>
 								<Box>
 									<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Name (required)</Text>
 									<Input className="rounded-xl">

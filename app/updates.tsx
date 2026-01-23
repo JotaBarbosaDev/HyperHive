@@ -109,7 +109,7 @@ const UpdateCard = ({
                   ? "bg-[#0F766E]"
                   : update.severity === "bugfix"
                     ? "bg-[#1D4ED8]"
-                    : "bg-[#334155]"
+                    : "bg-[#465533]"
               }
             >
               <BadgeText className="text-white text-[11px] capitalize">
@@ -120,30 +120,44 @@ const UpdateCard = ({
         </HStack>
         <HStack className="flex-wrap gap-2">
           {(update.currentVersion || update.newVersion) && (
-            <Badge size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-              <BadgeText className="text-xs text-typography-600 dark:text-typography-300">
+            <Badge
+              size="sm"
+              variant="outline"
+              className="border-outline-300 dark:bg-[#0F1A2E] dark:border-[#1E2F47]"
+            >
+              <BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">
                 {update.currentVersion ? update.currentVersion : "—"} →{" "}
                 {update.newVersion ? update.newVersion : "—"}
               </BadgeText>
             </Badge>
           )}
           {update.repository && (
-            <Badge size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-              <BadgeText className="text-xs text-typography-600 dark:text-typography-300">
+            <Badge
+              size="sm"
+              variant="outline"
+              className="border-outline-300 dark:border-[#243247]"
+            >
+              <BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">
                 {update.repository}
               </BadgeText>
             </Badge>
           )}
           {update.architecture && (
-            <Badge size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-              <BadgeText className="text-xs text-typography-600 dark:text-typography-300">
+            <Badge
+              size="sm"
+              variant="outline"
+              className="border-outline-300 dark:border-[#243247]"
+            >
+              <BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">
                 {update.architecture}
               </BadgeText>
             </Badge>
           )}
           {update.rebootRequired && (
             <Badge size="sm" variant="solid" className="bg-[#F97316]">
-              <BadgeText className="text-white text-[11px]">Reboot required</BadgeText>
+              <BadgeText className="text-white text-[11px]">
+                Reboot required
+              </BadgeText>
             </Badge>
           )}
         </HStack>
@@ -157,7 +171,7 @@ const UpdateCard = ({
         size="sm"
         variant="solid"
         action="primary"
-        className="rounded-xl px-4"
+        className="rounded-xl px-4 dark:bg-[#5EEAD4]"
         onPress={() => onUpdate(update.name)}
         isDisabled={isUpdating}
       >
@@ -381,7 +395,7 @@ export default function UpdatesScreen() {
           />
         }
       >
-        <Box className="p-4 pt-16 web:p-10 web:max-w-7xl web:mx-auto web:w-full">
+        <Box className="p-4 pt-16 web:p-20 web:max-w-7xl web:mx-auto web:w-full">
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
@@ -390,7 +404,8 @@ export default function UpdatesScreen() {
             Updates
           </Heading>
           <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
-            Review pending packages per machine and trigger individual or full updates with optional automatic reboot.
+            Review pending packages per machine and trigger individual or full
+            updates with optional automatic reboot.
           </Text>
 
           <VStack className="mt-6 gap-3">
@@ -407,7 +422,9 @@ export default function UpdatesScreen() {
                     className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]"
                   >
                     <SelectInput
-                      placeholder={loadingMachines ? "Loading..." : "Choose a machine"}
+                      placeholder={
+                        loadingMachines ? "Loading..." : "Choose a machine"
+                      }
                       className="text-typography-900 dark:text-[#E8EBF0]"
                       style={{fontFamily: "Inter_500Medium"}}
                     />
@@ -438,13 +455,17 @@ export default function UpdatesScreen() {
                 onPress={handleRefresh}
                 isDisabled={isRefreshing}
               >
-                {isRefreshing ? <ButtonSpinner /> : <ButtonIcon as={RefreshCw} />}
+                {isRefreshing ? (
+                  <ButtonSpinner />
+                ) : (
+                  <ButtonIcon as={RefreshCw} />
+                )}
               </Button>
 
               <Button
                 variant="solid"
                 action="primary"
-                className="rounded-xl px-5"
+                className="rounded-xl px-5 dark:bg-[#5EEAD4]"
                 onPress={() => handleOpenUpdatePrompt()}
                 isDisabled={!selectedMachine || totalPending === 0}
               >
@@ -484,22 +505,22 @@ export default function UpdatesScreen() {
             <StatCard
               label="Machine"
               value={selectedMachine ?? "—"}
-              icon={<Server size={16} className="text-typography-400" />}
+              icon={<Server size={16} className="text-[#5EEAD4]" />}
             />
             <StatCard
               label="Pending"
               value={totalPending}
-              icon={<RefreshCw size={16} className="text-typography-400" />}
+              icon={<RefreshCw size={16} className="text-[#5EEAD4]" />}
             />
             <StatCard
               label="Security"
               value={securityCount}
-              icon={<Shield size={16} className="text-typography-400" />}
+              icon={<Shield size={16} className="text-[#5EEAD4]" />}
             />
             <StatCard
               label="Reboot expected"
               value={rebootExpected ? "Likely" : "Not expected"}
-              icon={<Power size={16} className="text-typography-400" />}
+              icon={<Power size={16} className="text-[#5EEAD4]" />}
             />
           </HStack>
 
@@ -514,7 +535,10 @@ export default function UpdatesScreen() {
               <HStack className="items-start gap-3">
                 <AlertCircle size={18} className="text-[#DC2626]" />
                 <VStack className="gap-1">
-                  <Text className="text-[#DC2626]" style={{fontFamily: "Inter_600SemiBold"}}>
+                  <Text
+                    className="text-[#DC2626]"
+                    style={{fontFamily: "Inter_600SemiBold"}}
+                  >
                     Failed to load updates
                   </Text>
                   <Text className="text-[#991B1B] text-sm">{error}</Text>
@@ -541,12 +565,17 @@ export default function UpdatesScreen() {
                       key={update.id}
                       update={update}
                       onUpdate={handleOpenUpdatePrompt}
-                      isUpdating={runningUpdate === update.name || isUpdatingAll}
+                      isUpdating={
+                        runningUpdate === update.name || isUpdatingAll
+                      }
                     />
                   ))
                 ) : (
                   <Box className="p-6 rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] items-center">
-                    <Text className="text-typography-900 dark:text-[#E8EBF0] mb-1" style={{fontFamily: "Inter_600SemiBold"}}>
+                    <Text
+                      className="text-typography-900 dark:text-[#E8EBF0] mb-1"
+                      style={{fontFamily: "Inter_600SemiBold"}}
+                    >
                       No pending updates
                     </Text>
                     <Text className="text-typography-600 dark:text-[#8A94A8] text-sm text-center">
@@ -558,7 +587,10 @@ export default function UpdatesScreen() {
                 )
               ) : (
                 <Box className="p-6 rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] items-center">
-                  <Text className="text-typography-900 dark:text-[#E8EBF0] mb-1" style={{fontFamily: "Inter_600SemiBold"}}>
+                  <Text
+                    className="text-typography-900 dark:text-[#E8EBF0] mb-1"
+                    style={{fontFamily: "Inter_600SemiBold"}}
+                  >
                     Choose a machine
                   </Text>
                   <Text className="text-typography-600 dark:text-[#8A94A8] text-sm text-center">
@@ -570,7 +602,11 @@ export default function UpdatesScreen() {
           ) : null}
         </Box>
       </ScrollView>
-      <Modal isOpen={showRestartPrompt} onClose={handleCloseRestartPrompt} size="md">
+      <Modal
+        isOpen={showRestartPrompt}
+        onClose={handleCloseRestartPrompt}
+        size="md"
+      >
         <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
         <ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-5">
           <ModalHeader className="flex-row items-center gap-3 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
@@ -578,11 +614,15 @@ export default function UpdatesScreen() {
               <Power size={18} className="text-[#F97316] dark:text-[#FDBA74]" />
             </Box>
             <VStack className="flex-1">
-              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+              <Heading
+                size="lg"
+                className="text-typography-900 dark:text-[#E8EBF0]"
+              >
                 Restart after Update?
               </Heading>
               <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
-                Choose whether this machine should restart once the update finishes.
+                Choose whether this machine should restart once the update
+                finishes.
               </Text>
             </VStack>
             <ModalCloseButton onPress={handleCloseRestartPrompt} />
@@ -606,23 +646,41 @@ export default function UpdatesScreen() {
               className="flex-1 rounded-xl"
               onPress={() => handleRestartChoice(false)}
             >
-              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">No</ButtonText>
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                No
+              </ButtonText>
             </Button>
-            <Button action="primary" className="flex-1 rounded-xl" onPress={() => handleRestartChoice(true)}>
-              <ButtonText className="text-background-0 dark:text-[#0A1628]">Yes</ButtonText>
+            <Button
+              action="primary"
+              className="flex-1 rounded-xl"
+              onPress={() => handleRestartChoice(true)}
+            >
+              <ButtonText className="text-background-0 dark:text-[#0A1628]">
+                Yes
+              </ButtonText>
             </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
-      <Modal isOpen={showConfirmPrompt} onClose={handleCloseConfirmPrompt} size="md">
+      <Modal
+        isOpen={showConfirmPrompt}
+        onClose={handleCloseConfirmPrompt}
+        size="md"
+      >
         <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
         <ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-5">
           <ModalHeader className="flex-row items-center gap-3 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
             <Box className="h-10 w-10 rounded-2xl bg-[#38BDF8]/15 dark:bg-[#0EA5E9]/20 items-center justify-center">
-              <ArrowUpCircle size={18} className="text-[#0284C7] dark:text-[#38BDF8]" />
+              <ArrowUpCircle
+                size={18}
+                className="text-[#0284C7] dark:text-[#38BDF8]"
+              />
             </Box>
             <VStack className="flex-1">
-              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+              <Heading
+                size="lg"
+                className="text-typography-900 dark:text-[#E8EBF0]"
+              >
                 Are you sure you want to update?
               </Heading>
               <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
@@ -646,7 +704,7 @@ export default function UpdatesScreen() {
                   <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
                     Restart after update
                   </Text>
-                  <Text className="text-sm text-typography-700 dark:text-typography-300">
+                  <Text className="text-sm text-typography-700 dark:text-[#8A94A8]">
                     {pendingReboot ? "Yes" : "No"}
                   </Text>
                 </VStack>
@@ -660,10 +718,18 @@ export default function UpdatesScreen() {
               className="flex-1 rounded-xl"
               onPress={handleCloseConfirmPrompt}
             >
-              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                Cancel
+              </ButtonText>
             </Button>
-            <Button action="primary" className="flex-1 rounded-xl" onPress={handleConfirmUpdate}>
-              <ButtonText className="text-background-0 dark:text-[#0A1628]">Update</ButtonText>
+            <Button
+              action="primary"
+              className="flex-1 rounded-xl"
+              onPress={handleConfirmUpdate}
+            >
+              <ButtonText className="text-background-0 dark:text-[#0A1628]">
+                Update
+              </ButtonText>
             </Button>
           </ModalFooter>
         </ModalContent>

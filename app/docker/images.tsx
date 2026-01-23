@@ -73,10 +73,10 @@ const ImageCard = ({ img, onRemove, removingId }: { img: DockerImage; onRemove: 
 				</HStack>
 				<HStack space="md" className="items-center">
 					<Badge variant="outline" size="sm" className="border-outline-300 dark:border-[#243247]">
-						<BadgeText className="text-xs text-typography-600 dark:text-typography-300">{formatBytes(img.size)}</BadgeText>
+						<BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">{formatBytes(img.size)}</BadgeText>
 					</Badge>
 					<Badge variant="outline" size="sm" className="border-outline-300 dark:border-[#243247]">
-						<BadgeText className="text-xs text-typography-600 dark:text-typography-300">{formatDate(img.created)}</BadgeText>
+						<BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">{formatDate(img.created)}</BadgeText>
 					</Badge>
 					<Button
 						size="sm"
@@ -96,7 +96,7 @@ const ImageCard = ({ img, onRemove, removingId }: { img: DockerImage; onRemove: 
 					<HStack className="flex-wrap gap-2">
 						{Object.entries(img.labels).map(([key, value]) => (
 							<Badge key={`${img.id}-${key}`} size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-								<BadgeText className="text-xs text-typography-600 dark:text-typography-300">
+								<BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">
 									{key}: {value}
 								</BadgeText>
 							</Badge>
@@ -321,11 +321,11 @@ export default function DockerImagesScreen() {
 						refreshControl={refreshControl}
 					>
 						{isLoading ? (
-							<Text className="text-typography-500 dark:text-typography-300">Loading...</Text>
+							<Text className="text-typography-500 dark:text-[#8A94A8]">Loading...</Text>
 						) : error ? (
 							<Text className="text-[#EF4444]">{error}</Text>
 						) : images.length === 0 ? (
-							<Text className="text-typography-500 dark:text-typography-300">No images found.</Text>
+							<Text className="text-typography-500 dark:text-[#8A94A8]">No images found.</Text>
 						) : (
 							<VStack className="gap-3">
 								{images.map((img) => (

@@ -651,7 +651,7 @@ export default function SmartDiskScreen() {
           />
         }
       >
-        <Box className="p-4 pt-16 web:p-10 web:max-w-6xl web:mx-auto web:w-full">
+        <Box className="p-4 pt-16 web:p-20 web:max-w-6xl web:mx-auto web:w-full">
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
@@ -1214,7 +1214,7 @@ export default function SmartDiskScreen() {
                     action="primary"
                     onPress={requestStartSelfTest}
                     isDisabled={savingAction === "selftest-start"}
-                    className="rounded-xl"
+                    className="rounded-xl dark:bg-[#5EEAD4]"
                   >
                     {savingAction === "selftest-start" ? (
                       <ButtonSpinner />
@@ -1228,7 +1228,9 @@ export default function SmartDiskScreen() {
                     variant="outline"
                     onPress={handleCancelSelfTest}
                     isDisabled={savingAction === "selftest-cancel"}
-                    className={outlineButtonClass}
+                    className={
+                      "rounded-xl border-error-300 dark:border-error-700 bg-background-0 dark:bg-red-900/20 dark:hover:bg-red-900/30"
+                    }
                   >
                     {savingAction === "selftest-cancel" ? (
                       <ButtonSpinner />
@@ -1236,10 +1238,12 @@ export default function SmartDiskScreen() {
                       <ButtonIcon
                         as={XCircle}
                         size="sm"
-                        className={dangerOutlineIconClass}
+                        className={"text-error-600 dark:text-error-700"}
                       />
                     )}
-                    <ButtonText className={dangerOutlineTextClass}>
+                    <ButtonText
+                      className={"text-error-700 dark:text-error-700"}
+                    >
                       Cancel
                     </ButtonText>
                   </Button>
@@ -1285,7 +1289,7 @@ export default function SmartDiskScreen() {
                     variant="outline"
                     onPress={() => requestReallocAction("full")}
                     isDisabled={savingAction === "realloc-full"}
-                    className="rounded-xl"
+                    className="rounded-xl dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]"
                   >
                     {savingAction === "realloc-full" ? (
                       <ButtonSpinner />
@@ -1319,7 +1323,9 @@ export default function SmartDiskScreen() {
                     variant="outline"
                     onPress={() => requestReallocAction("cancel")}
                     isDisabled={savingAction === "realloc-cancel"}
-                    className={outlineButtonClass}
+                    className={
+                      "rounded-xl border-error-300 dark:border-error-700 bg-background-0 dark:bg-red-900/20 dark:hover:bg-red-900/30"
+                    }
                   >
                     {savingAction === "realloc-cancel" ? (
                       <ButtonSpinner />
@@ -1327,10 +1333,12 @@ export default function SmartDiskScreen() {
                       <ButtonIcon
                         as={Trash2}
                         size="sm"
-                        className={dangerOutlineIconClass}
+                        className={"text-error-600 dark:text-error-700"}
                       />
                     )}
-                    <ButtonText className={dangerOutlineTextClass}>
+                    <ButtonText
+                      className={"text-error-700 dark:text-error-700"}
+                    >
                       Cancel
                     </ButtonText>
                   </Button>
@@ -1596,7 +1604,7 @@ export default function SmartDiskScreen() {
               action="primary"
               onPress={handleSaveSchedule}
               isDisabled={savingAction?.startsWith("schedule")}
-              className="rounded-xl"
+              className="rounded-xl dark:bg-[#5EEAD4]"
             >
               {savingAction?.startsWith("schedule") ? (
                 <ButtonSpinner />

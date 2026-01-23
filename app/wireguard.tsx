@@ -390,7 +390,7 @@ export default function WireGuardScreen() {
     <Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{paddingBottom: 100}}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing || (isLoading && peers.length === 0)}
@@ -401,26 +401,31 @@ export default function WireGuardScreen() {
           />
         }
       >
-        <Box className="p-4 pt-16 web:p-10 web:max-w-7xl web:mx-auto web:w-full">
+        <Box className="p-4 pt-16 web:p-20 web:max-w-7xl web:mx-auto web:w-full">
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
-            style={{ fontFamily: "Inter_700Bold" }}
+            style={{fontFamily: "Inter_700Bold"}}
           >
             WireGuard VPN
           </Heading>
           <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl mb-3">
-            Configure and manage the WireGuard VPN for secure cluster access with end-to-end encryption.
+            Configure and manage the WireGuard VPN for secure cluster access
+            with end-to-end encryption.
           </Text>
           <Button
             size="xs"
             className="self-start rounded-xl bg-typography-900 dark:bg-[#0A1628] dark:border dark:border-[#2A3B52] mb-6"
-            style={isDarkMode ? { backgroundColor: "#0A1628", borderColor: "#2A3B52" } : undefined}
+            style={
+              isDarkMode
+                ? {backgroundColor: "#0A1628", borderColor: "#2A3B52"}
+                : undefined
+            }
             onPress={() => setShowLocalConnectModal(true)}
           >
             <ButtonText
               className="text-background-0 dark:text-[#E8EBF0]"
-              style={{ fontFamily: "Inter_600SemiBold" }}
+              style={{fontFamily: "Inter_600SemiBold"}}
             >
               Connect locally
             </ButtonText>
@@ -430,7 +435,7 @@ export default function WireGuardScreen() {
             <Box className="p-3 mb-4 rounded-lg border border-[#FCA5A5] bg-[#FEF2F2] dark:bg-[#2A1212]">
               <Text
                 className="text-[#B91C1C] dark:text-[#FCA5A5]"
-                style={{ fontFamily: "Inter_500Medium" }}
+                style={{fontFamily: "Inter_500Medium"}}
               >
                 {error}
               </Text>
@@ -442,7 +447,7 @@ export default function WireGuardScreen() {
               <Box className="p-6 web:rounded-2xl web:bg-background-0/80 dark:web:bg-[#151F30]/80 mt-6">
                 <Text
                   className="text-typography-600 dark:text-[#8A94A8] text-center"
-                  style={{ fontFamily: "Inter_500Medium" }}
+                  style={{fontFamily: "Inter_500Medium"}}
                 >
                   Loading VPN information...
                 </Text>
@@ -451,19 +456,23 @@ export default function WireGuardScreen() {
               // Empty State
               <Box className="p-12 web:rounded-2xl web:bg-background-0/80 dark:web:bg-[#151F30]/80 mt-6">
                 <VStack className="items-center gap-6">
-                  <Shield size={64} className="text-[#CBD5E1] dark:text-[#64748B]" />
+                  <Shield
+                    size={64}
+                    className="text-[#CBD5E1] dark:text-[#64748B]"
+                  />
                   <Heading
                     size="xl"
                     className="text-typography-900 dark:text-[#E8EBF0] text-center"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
+                    style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     No VPN Configured
                   </Heading>
                   <Text
                     className="text-typography-600 dark:text-[#8A94A8] text-center max-w-md"
-                    style={{ fontFamily: "Inter_400Regular" }}
+                    style={{fontFamily: "Inter_400Regular"}}
                   >
-                    Set up a WireGuard VPN to securely connect to your cluster from anywhere.
+                    Set up a WireGuard VPN to securely connect to your cluster
+                    from anywhere.
                   </Text>
                   <Button
                     size="lg"
@@ -471,7 +480,10 @@ export default function WireGuardScreen() {
                     onPress={() => setShowCreateVpnModal(true)}
                   >
                     <ButtonIcon as={Plus} className={primaryButtonTextClass} />
-                    <ButtonText className={primaryButtonTextClass} style={{ fontFamily: "Inter_600SemiBold" }}>
+                    <ButtonText
+                      className={primaryButtonTextClass}
+                      style={{fontFamily: "Inter_600SemiBold"}}
+                    >
                       Create VPN
                     </ButtonText>
                   </Button>
@@ -481,16 +493,15 @@ export default function WireGuardScreen() {
           ) : (
             // VPN Configurada
             <VStack className="gap-6 mt-6">
-
               {/* Card de Peers */}
-              <Box className="rounded-2xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#151F30] overflow-hidden web:shadow-md dark:web:shadow-none">
+              <Box className="rounded-2xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] overflow-hidden web:shadow-md dark:web:shadow-none">
                 {/* Header */}
                 <Box className="border-b border-outline-100 dark:border-[#2A3B52] p-6">
                   <HStack className="justify-between items-start gap-4 flex-col web:flex-row web:items-center">
                     <Heading
                       size="lg"
                       className="text-typography-900 dark:text-[#E8EBF0]"
-                      style={{ fontFamily: "Inter_700Bold" }}
+                      style={{fontFamily: "Inter_700Bold"}}
                     >
                       Peers ({peers.length})
                     </Heading>
@@ -499,8 +510,14 @@ export default function WireGuardScreen() {
                       className={`rounded-xl w-full web:w-auto ${primaryButtonClass}`}
                       onPress={() => setShowAddPeerModal(true)}
                     >
-                      <ButtonIcon as={Plus} className={primaryButtonTextClass} />
-                      <ButtonText className={primaryButtonTextClass} style={{ fontFamily: "Inter_600SemiBold" }}>
+                      <ButtonIcon
+                        as={Plus}
+                        className={primaryButtonTextClass}
+                      />
+                      <ButtonText
+                        className={primaryButtonTextClass}
+                        style={{fontFamily: "Inter_600SemiBold"}}
+                      >
                         Add Peer
                       </ButtonText>
                     </Button>
@@ -512,7 +529,7 @@ export default function WireGuardScreen() {
                   <Box className="p-8">
                     <Text
                       className="text-center text-typography-600 dark:text-[#8A94A8]"
-                      style={{ fontFamily: "Inter_400Regular" }}
+                      style={{fontFamily: "Inter_400Regular"}}
                     >
                       No peers configured
                     </Text>
@@ -524,31 +541,31 @@ export default function WireGuardScreen() {
                       <HStack className="bg-background-50 dark:bg-[#0A1628] px-6 py-3 border-b border-outline-100 dark:border-[#1E2F47]">
                         <Text
                           className="flex-1 min-w-[120px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                          style={{ fontFamily: "Inter_600SemiBold" }}
+                          style={{fontFamily: "Inter_600SemiBold"}}
                         >
                           NAME
                         </Text>
                         <Text
                           className="w-[120px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                          style={{ fontFamily: "Inter_600SemiBold" }}
+                          style={{fontFamily: "Inter_600SemiBold"}}
                         >
                           IP
                         </Text>
                         <Text
                           className="flex-1 min-w-[200px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                          style={{ fontFamily: "Inter_600SemiBold" }}
+                          style={{fontFamily: "Inter_600SemiBold"}}
                         >
                           PUBLIC KEY
                         </Text>
                         <Text
                           className="w-[140px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                          style={{ fontFamily: "Inter_600SemiBold" }}
+                          style={{fontFamily: "Inter_600SemiBold"}}
                         >
                           ALLOWED IPS
                         </Text>
                         <Text
                           className="w-[80px] text-xs text-[#9AA4B8] dark:text-[#8A94A8] text-right"
-                          style={{ fontFamily: "Inter_600SemiBold" }}
+                          style={{fontFamily: "Inter_600SemiBold"}}
                         >
                           ACTIONS
                         </Text>
@@ -558,34 +575,37 @@ export default function WireGuardScreen() {
                       {peers.map((peer, index) => (
                         <HStack
                           key={peer.id}
-                          className={`px-6 py-4 items-center ${index !== peers.length - 1
-                            ? "border-b border-outline-100 dark:border-[#1E2F47]"
-                            : ""
-                            }`}
+                          className={`px-6 py-4 items-center ${
+                            index !== peers.length - 1
+                              ? "border-b border-outline-100 dark:border-[#1E2F47]"
+                              : ""
+                          }`}
                         >
                           <Text
                             className="flex-1 min-w-[120px] text-sm text-typography-900 dark:text-[#E8EBF0]"
-                            style={{ fontFamily: "Inter_500Medium" }}
+                            style={{fontFamily: "Inter_500Medium"}}
                           >
                             {peer.name}
                           </Text>
                           <Text
                             className="w-[120px] text-sm text-typography-600 dark:text-[#8A94A8]"
-                            style={{ fontFamily: "Inter_400Regular" }}
+                            style={{fontFamily: "Inter_400Regular"}}
                           >
                             {peer.client_ip?.split("/")[0] ?? "—"}
                           </Text>
                           <HStack className="flex-1 min-w-[200px] items-center gap-2">
                             <Text
                               className="flex-1 text-sm text-typography-600 dark:text-[#8A94A8]"
-                              style={{ fontFamily: "Inter_400Regular" }}
+                              style={{fontFamily: "Inter_400Regular"}}
                             >
                               {truncateMiddle(peer.public_key, 30)}
                             </Text>
                             <Button
                               variant="link"
                               size="xs"
-                              onPress={() => copyToClipboard(peer.public_key, "Public Key")}
+                              onPress={() =>
+                                copyToClipboard(peer.public_key, "Public Key")
+                              }
                               className="mr-2"
                             >
                               <ButtonIcon
@@ -597,7 +617,7 @@ export default function WireGuardScreen() {
                           </HStack>
                           <Text
                             className="w-[140px] text-sm text-typography-600 dark:text-[#8A94A8]"
-                            style={{ fontFamily: "Inter_400Regular" }}
+                            style={{fontFamily: "Inter_400Regular"}}
                           >
                             {formatAllowedIps(peer)}
                           </Text>
@@ -605,14 +625,18 @@ export default function WireGuardScreen() {
                             <Button
                               variant="outline"
                               size="xs"
-                              className="rounded-xl border-red-500"
+                              className="rounded-xl border-error-300 dark:border-error-700 bg-background-0 dark:bg-red-900/20 dark:hover:bg-red-900/30"
                               onPress={() => handleDeletePeer(peer)}
                               isDisabled={deletingPeerId === peer.id}
                             >
                               {deletingPeerId === peer.id ? (
                                 <ButtonSpinner className="text-red-500" />
                               ) : (
-                                <ButtonIcon as={Trash2} size="xs" className="text-red-500" />
+                                <ButtonIcon
+                                  as={Trash2}
+                                  size="xs"
+                                  className="text-error-600 dark:text-error-700"
+                                />
                               )}
                             </Button>
                           </HStack>
@@ -632,7 +656,7 @@ export default function WireGuardScreen() {
                             <VStack className="gap-1 flex-1">
                               <Text
                                 className="text-base text-typography-900 dark:text-[#E8EBF0]"
-                                style={{ fontFamily: "Inter_600SemiBold" }}
+                                style={{fontFamily: "Inter_600SemiBold"}}
                               >
                                 {peer.name}
                               </Text>
@@ -651,17 +675,25 @@ export default function WireGuardScreen() {
                                 <ButtonSpinner className="text-red-500" />
                               ) : (
                                 <>
-                                  <ButtonIcon as={Trash2} size="xs" className="text-red-500" />
-                                  <ButtonText className="text-red-500 text-xs">Delete</ButtonText>
+                                  <ButtonIcon
+                                    as={Trash2}
+                                    size="xs"
+                                    className="text-red-500"
+                                  />
+                                  <ButtonText className="text-red-500 text-xs">
+                                    Delete
+                                  </ButtonText>
                                 </>
                               )}
                             </Button>
                           </HStack>
                           <VStack className="gap-2">
-                            <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Public key</Text>
+                            <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+                              Public key
+                            </Text>
                             <HStack className="items-center gap-2">
                               <Text
-                                className="flex-1 text-sm text-typography-700 dark:text-typography-300"
+                                className="flex-1 text-sm text-typography-700 dark:text-[#8A94A8]"
                                 numberOfLines={2}
                               >
                                 {truncateMiddle(peer.public_key, 36)}
@@ -670,19 +702,23 @@ export default function WireGuardScreen() {
                                 variant="outline"
                                 size="xs"
                                 className="rounded-xl"
-                                onPress={() => copyToClipboard(peer.public_key, "Public Key")}
+                                onPress={() =>
+                                  copyToClipboard(peer.public_key, "Public Key")
+                                }
                               >
                                 <ButtonIcon
                                   as={Copy}
                                   size="xs"
-                                  className="text-typography-700 dark:text-typography-300"
+                                  className="text-typography-700 dark:text-[#8A94A8]"
                                 />
                               </Button>
                             </HStack>
                           </VStack>
                           <VStack className="gap-1">
-                            <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Allowed IPs</Text>
-                            <Text className="text-sm text-typography-700 dark:text-typography-300">
+                            <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+                              Allowed IPs
+                            </Text>
+                            <Text className="text-sm text-typography-700 dark:text-[#8A94A8]">
                               {formatAllowedIps(peer)}
                             </Text>
                           </VStack>
@@ -698,14 +734,17 @@ export default function WireGuardScreen() {
       </ScrollView>
 
       {/* Modal: Create VPN */}
-      <Modal isOpen={showCreateVpnModal} onClose={() => setShowCreateVpnModal(false)}>
+      <Modal
+        isOpen={showCreateVpnModal}
+        onClose={() => setShowCreateVpnModal(false)}
+      >
         <ModalBackdrop className="bg-black/60" />
-        <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] shadow-2xl max-w-lg p-6">
+        <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828] shadow-2xl max-w-lg p-6">
           <ModalHeader className="pb-4">
             <Heading
               size="lg"
               className="text-typography-900 dark:text-[#E8EBF0]"
-              style={{ fontFamily: "Inter_700Bold" }}
+              style={{fontFamily: "Inter_700Bold"}}
             >
               Create WireGuard VPN
             </Heading>
@@ -715,20 +754,25 @@ export default function WireGuardScreen() {
             <VStack className="gap-5">
               {/* Info Box Azul */}
               <HStack className="bg-[#EFF6FF] dark:bg-[#1E3A8A20] p-4 rounded-lg gap-3 items-start">
-                <Info size={20} className="text-[#1E3A8A] dark:text-[#60A5FA] mt-0.5" />
+                <Info
+                  size={20}
+                  className="text-[#1E3A8A] dark:text-[#60A5FA] mt-0.5"
+                />
                 <Text
                   className="flex-1 text-sm text-[#1E3A8A] dark:text-[#93C5FD]"
-                  style={{ fontFamily: "Inter_400Regular" }}
+                  style={{fontFamily: "Inter_400Regular"}}
                 >
-                  Public and private keys will be generated automatically and the WireGuard interface will be initialized.
+                  Public and private keys will be generated automatically and
+                  the WireGuard interface will be initialized.
                 </Text>
               </HStack>
 
               <Text
                 className="text-sm text-typography-600 dark:text-[#8A94A8]"
-                style={{ fontFamily: "Inter_400Regular" }}
+                style={{fontFamily: "Inter_400Regular"}}
               >
-                After it is created, use the add peer button to generate client configurations.
+                After it is created, use the add peer button to generate client
+                configurations.
               </Text>
             </VStack>
           </ModalBody>
@@ -741,7 +785,7 @@ export default function WireGuardScreen() {
               >
                 <ButtonText
                   className="text-typography-700 dark:text-[#E8EBF0]"
-                  style={{ fontFamily: "Inter_500Medium" }}
+                  style={{fontFamily: "Inter_500Medium"}}
                 >
                   Cancel
                 </ButtonText>
@@ -756,7 +800,7 @@ export default function WireGuardScreen() {
                 ) : null}
                 <ButtonText
                   className={primaryButtonTextClass}
-                  style={{ fontFamily: "Inter_600SemiBold" }}
+                  style={{fontFamily: "Inter_600SemiBold"}}
                 >
                   {creatingVpn ? "Creating..." : "Create"}
                 </ButtonText>
@@ -767,14 +811,17 @@ export default function WireGuardScreen() {
       </Modal>
 
       {/* Modal: Add Peer */}
-      <Modal isOpen={showAddPeerModal} onClose={() => setShowAddPeerModal(false)}>
+      <Modal
+        isOpen={showAddPeerModal}
+        onClose={() => setShowAddPeerModal(false)}
+      >
         <ModalBackdrop className="bg-black/60" />
-        <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] shadow-2xl max-w-lg p-6">
+        <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828] shadow-2xl max-w-lg p-6">
           <ModalHeader className="pb-4">
             <Heading
               size="lg"
               className="text-typography-900 dark:text-[#E8EBF0]"
-              style={{ fontFamily: "Inter_700Bold" }}
+              style={{fontFamily: "Inter_700Bold"}}
             >
               Add Peer
             </Heading>
@@ -784,10 +831,13 @@ export default function WireGuardScreen() {
             <VStack className="gap-5">
               {/* Info Box Azul */}
               <HStack className="bg-[#EFF6FF] dark:bg-[#1E3A8A20] p-4 rounded-lg gap-3 items-start">
-                <Info size={20} className="text-[#1E3A8A] dark:text-[#60A5FA] mt-0.5" />
+                <Info
+                  size={20}
+                  className="text-[#1E3A8A] dark:text-[#60A5FA] mt-0.5"
+                />
                 <Text
                   className="flex-1 text-sm text-[#1E3A8A] dark:text-[#93C5FD]"
-                  style={{ fontFamily: "Inter_400Regular" }}
+                  style={{fontFamily: "Inter_400Regular"}}
                 >
                   A key pair will be generated automatically for this peer.
                 </Text>
@@ -795,7 +845,7 @@ export default function WireGuardScreen() {
 
               <Text
                 className="text-sm text-typography-600 dark:text-[#8A94A8]"
-                style={{ fontFamily: "Inter_400Regular" }}
+                style={{fontFamily: "Inter_400Regular"}}
               >
                 The IP will be assigned automatically when generating the peer.
               </Text>
@@ -803,9 +853,10 @@ export default function WireGuardScreen() {
               <VStack className="gap-2">
                 <Text
                   className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                  style={{ fontFamily: "Inter_500Medium" }}
+                  style={{fontFamily: "Inter_500Medium"}}
                 >
-                  Peer Name <Text className="text-red-500 dark:text-[#f87171]">*</Text>
+                  Peer Name{" "}
+                  <Text className="text-red-500 dark:text-[#f87171]">*</Text>
                 </Text>
                 <Input
                   variant="outline"
@@ -823,16 +874,19 @@ export default function WireGuardScreen() {
               <VStack className="gap-2">
                 <Text
                   className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                  style={{ fontFamily: "Inter_500Medium" }}
+                  style={{fontFamily: "Inter_500Medium"}}
                 >
-                  Server endpoint <Text className="text-red-500 dark:text-[#f87171]">*</Text>
+                  Server endpoint{" "}
+                  <Text className="text-red-500 dark:text-[#f87171]">*</Text>
                 </Text>
                 <Input
                   variant="outline"
                   className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]"
                 >
                   <InputField
-                    placeholder={suggestedEndpoint || "e.g.: yourdomain.com:51512"}
+                    placeholder={
+                      suggestedEndpoint || "e.g.: yourdomain.com:51512"
+                    }
                     value={formPeerEndpoint}
                     onChangeText={setFormPeerEndpoint}
                     className="text-typography-900 dark:text-[#E8EBF0]"
@@ -843,7 +897,7 @@ export default function WireGuardScreen() {
               <VStack className="gap-2">
                 <Text
                   className="text-sm text-typography-700 dark:text-[#E8EBF0]"
-                  style={{ fontFamily: "Inter_500Medium" }}
+                  style={{fontFamily: "Inter_500Medium"}}
                 >
                   Keepalive (seconds)
                 </Text>
@@ -861,9 +915,10 @@ export default function WireGuardScreen() {
                 </Input>
                 <Text
                   className="text-xs text-typography-500 dark:text-[#8A94A8]"
-                  style={{ fontFamily: "Inter_400Regular" }}
+                  style={{fontFamily: "Inter_400Regular"}}
                 >
-                  Use 0 to disable or leave blank to use the recommended default.
+                  Use 0 to disable or leave blank to use the recommended
+                  default.
                 </Text>
               </VStack>
             </VStack>
@@ -877,7 +932,7 @@ export default function WireGuardScreen() {
               >
                 <ButtonText
                   className="text-typography-700 dark:text-[#E8EBF0] text-center"
-                  style={{ fontFamily: "Inter_500Medium" }}
+                  style={{fontFamily: "Inter_500Medium"}}
                 >
                   Cancel
                 </ButtonText>
@@ -892,7 +947,7 @@ export default function WireGuardScreen() {
                 ) : null}
                 <ButtonText
                   className={`${primaryButtonTextClass} text-center`}
-                  style={{ fontFamily: "Inter_600SemiBold" }}
+                  style={{fontFamily: "Inter_600SemiBold"}}
                 >
                   {creatingPeer ? "Adding..." : "Add"}
                 </ButtonText>
@@ -903,15 +958,25 @@ export default function WireGuardScreen() {
       </Modal>
 
       {/* Modal: Confirm delete peer */}
-      <Modal isOpen={!!confirmDeletePeer} onClose={handleCloseDeleteModal} size="md">
+      <Modal
+        isOpen={!!confirmDeletePeer}
+        onClose={handleCloseDeleteModal}
+        size="md"
+      >
         <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
         <ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-5">
           <ModalHeader className="flex-row items-center gap-3 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
             <Box className="h-10 w-10 rounded-2xl bg-error-500/10 dark:bg-error-900/20 items-center justify-center">
-              <Trash2 size={18} className="text-error-600 dark:text-error-400" />
+              <Trash2
+                size={18}
+                className="text-error-600 dark:text-error-400"
+              />
             </Box>
             <VStack className="flex-1">
-              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+              <Heading
+                size="lg"
+                className="text-typography-900 dark:text-[#E8EBF0]"
+              >
                 Delete peer?
               </Heading>
               <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
@@ -948,7 +1013,9 @@ export default function WireGuardScreen() {
               onPress={handleCloseDeleteModal}
               isDisabled={Boolean(deletingPeerId)}
             >
-              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                Cancel
+              </ButtonText>
             </Button>
             <Button
               action="negative"
@@ -959,7 +1026,9 @@ export default function WireGuardScreen() {
               {deletingPeerId ? (
                 <ButtonSpinner />
               ) : (
-                <ButtonText className="text-background-0 dark:text-[#0A1628]">Delete</ButtonText>
+                <ButtonText className="text-background-0 dark:text-[#0A1628]">
+                  Delete
+                </ButtonText>
               )}
             </Button>
           </ModalFooter>
@@ -967,14 +1036,17 @@ export default function WireGuardScreen() {
       </Modal>
 
       {/* Modal: Local Connection Instructions */}
-      <Modal isOpen={showLocalConnectModal} onClose={() => setShowLocalConnectModal(false)}>
+      <Modal
+        isOpen={showLocalConnectModal}
+        onClose={() => setShowLocalConnectModal(false)}
+      >
         <ModalBackdrop className="bg-black/60" />
-        <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#151F30] shadow-2xl max-w-2xl p-6">
+        <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828] shadow-2xl max-w-2xl p-6">
           <ModalHeader className="pb-4">
             <Heading
               size="lg"
               className="text-typography-900 dark:text-[#E8EBF0]"
-              style={{ fontFamily: "Inter_700Bold" }}
+              style={{fontFamily: "Inter_700Bold"}}
             >
               Connect locally
             </Heading>
@@ -983,13 +1055,16 @@ export default function WireGuardScreen() {
           <ModalBody className="py-4">
             <VStack className="gap-5">
               <HStack className="bg-[#EFF6FF] dark:bg-[#1E3A8A20] p-4 rounded-lg gap-3 items-start">
-                <Info size={20} className="text-[#1E3A8A] dark:text-[#60A5FA] mt-0.5" />
+                <Info
+                  size={20}
+                  className="text-[#1E3A8A] dark:text-[#60A5FA] mt-0.5"
+                />
                 <Text
                   className="flex-1 text-sm text-[#1E3A8A] dark:text-[#93C5FD]"
-                  style={{ fontFamily: "Inter_400Regular" }}
+                  style={{fontFamily: "Inter_400Regular"}}
                 >
-                  If you are on the local network, open wg0.conf and replace domain.com with the master's
-                  local IP (e.g., 192.168.1.198).
+                  If you are on the local network, open wg0.conf and replace
+                  domain.com with the master's local IP (e.g., 192.168.1.198).
                 </Text>
               </HStack>
 
@@ -997,7 +1072,7 @@ export default function WireGuardScreen() {
                 <Box className="flex flex-col gap-2">
                   <Text
                     className="text-[11px] font-semibold uppercase text-typography-500 dark:text-[#8A94A8] tracking-wide"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
+                    style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     Before
                   </Text>
@@ -1013,7 +1088,7 @@ export default function WireGuardScreen() {
                 <Box className="flex flex-col gap-2">
                   <Text
                     className="text-[11px] font-semibold uppercase text-typography-500 dark:text-[#8A94A8] tracking-wide"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
+                    style={{fontFamily: "Inter_600SemiBold"}}
                   >
                     After
                   </Text>
@@ -1033,12 +1108,16 @@ export default function WireGuardScreen() {
             <HStack className="justify-end w-full">
               <Button
                 className="rounded-xl px-6 py-2.5 bg-typography-900 dark:bg-[#0A1628] dark:border dark:border-[#2A3B52]"
-                style={isDarkMode ? { backgroundColor: "#0A1628", borderColor: "#2A3B52" } : undefined}
+                style={
+                  isDarkMode
+                    ? {backgroundColor: "#0A1628", borderColor: "#2A3B52"}
+                    : undefined
+                }
                 onPress={() => setShowLocalConnectModal(false)}
               >
                 <ButtonText
                   className="text-background-0 dark:text-[#E8EBF0]"
-                  style={{ fontFamily: "Inter_600SemiBold" }}
+                  style={{fontFamily: "Inter_600SemiBold"}}
                 >
                   Close
                 </ButtonText>

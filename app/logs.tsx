@@ -209,7 +209,7 @@ const makeStyles = (theme: Theme) =>
       marginRight: 8,
     },
     button: {
-      backgroundColor: theme.accent,
+      backgroundColor: "#5EEAD4",
       paddingHorizontal: 14,
       paddingVertical: 10,
       borderRadius: 10,
@@ -220,7 +220,7 @@ const makeStyles = (theme: Theme) =>
       marginTop: 10,
     },
     buttonText: {
-      color: theme.accentText,
+      color: "#0A1628",
       fontWeight: "600",
     },
     headerRow: {

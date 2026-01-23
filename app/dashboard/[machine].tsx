@@ -568,7 +568,7 @@ export default function MachineDetailsScreen() {
 							{series.map((s) => (
 								<HStack key={s.label} className="items-center gap-1">
 									<Box className="w-3 h-3 rounded-full" style={{ backgroundColor: s.color }} />
-									<Text className="text-xs text-typography-600 dark:text-typography-300">{s.label}</Text>
+									<Text className="text-xs text-typography-600 dark:text-[#8A94A8]">{s.label}</Text>
 								</HStack>
 							))}
 						</HStack>
@@ -642,7 +642,7 @@ export default function MachineDetailsScreen() {
 	if (!machineName) {
 		return (
 			<Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0 items-center justify-center">
-				<Text className="text-typography-600 dark:text-typography-300">No machine selected.</Text>
+				<Text className="text-typography-600 dark:text-[#8A94A8]">No machine selected.</Text>
 			</Box>
 		);
 	}
@@ -779,7 +779,7 @@ export default function MachineDetailsScreen() {
 											style={{ width: `${Math.min(100, Math.max(0, core.usage))}%` }}
 										/>
 									</Box>
-									<Text className="text-xs text-typography-500 dark:text-typography-300">Temp: {core.temp ? `${core.temp}ºC` : "—"}</Text>
+									<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Temp: {core.temp ? `${core.temp}ºC` : "—"}</Text>
 								</Box>
 							))}
 							{!cpuCores.length ? <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">No CPU data.</Text> : null}
@@ -825,14 +825,14 @@ export default function MachineDetailsScreen() {
 												<Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
 													{d.mountPoint || d.device || "Disk"}
 												</Text>
-												<Text className="text-xs text-typography-500 dark:text-typography-300">{d.fstype || "—"}</Text>
+												<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">{d.fstype || "—"}</Text>
 											</VStack>
 											<Text className="text-sm text-typography-600 dark:text-typography-950">{formatPercent(percent)}</Text>
 										</HStack>
 										<Box className="h-2 rounded-full bg-background-200 dark:bg-[#1A2637] overflow-hidden mb-1">
 											<Box className="h-2 rounded-full bg-primary-500" style={{ width: `${Math.min(100, Math.max(0, percent))}%` }} />
 										</Box>
-										<Text className="text-xs text-typography-500 dark:text-typography-300">
+										<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
 											{formatBytes(used)} / {formatBytes(total)} • Temp {d.temperatureC ?? "—"}ºC
 										</Text>
 									</Box>
@@ -856,7 +856,7 @@ export default function MachineDetailsScreen() {
 									<HStack key={stat.name} className="items-center justify-between rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
 										<VStack className="gap-1">
 											<Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">{stat.name}</Text>
-											<Text className="text-xs text-typography-500 dark:text-typography-300">{stat.packetsRecv} rx / {stat.packetsSent} tx</Text>
+											<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">{stat.packetsRecv} rx / {stat.packetsSent} tx</Text>
 										</VStack>
 										<HStack className="items-center gap-2">
 											<Icon as={SignalHigh} size={ICON_SIZE_SM} className="text-primary-700 dark:text-[#5EEAD4]" />
@@ -920,7 +920,7 @@ export default function MachineDetailsScreen() {
 					<ModalBody className="pb-6">
 						<VStack className="items-center gap-3">
 							<Spinner size="large" color="#3B82F6" />
-							<Text className="text-sm text-typography-600 dark:text-typography-300">Fetching metrics...</Text>
+							<Text className="text-sm text-typography-600 dark:text-[#8A94A8]">Fetching metrics...</Text>
 						</VStack>
 					</ModalBody>
 				</ModalContent>
