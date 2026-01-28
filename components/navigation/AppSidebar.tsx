@@ -47,6 +47,7 @@ import {
   PcCase,
   SunMedium,
   KeyRound,
+  Lock,
   EthernetPort,
   Layers,
   PlugZap,
@@ -150,6 +151,7 @@ const MENU_ITEMS: MenuItem[] = [
     children: [
       {label: "404", route: "/404", icon: TriangleAlert},
       {label: "Certificates", route: "/certificates", icon: ShieldCheck},
+      {label: "Access Lists", route: "/access-lists", icon: Lock},
       {label: "Proxy", route: "/proxy", icon: GitFork},
       {label: "Redirection", route: "/redirection", icon: ArrowLeftRight},
       {label: "Streams", route: "/streams", icon: ChevronsLeftRightEllipsis},

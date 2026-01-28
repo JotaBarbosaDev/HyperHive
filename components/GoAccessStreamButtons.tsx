@@ -16,6 +16,7 @@ const GoAccessStreamButtons: React.FC = () => {
 	const ALLOWED_PATHS = [
 		"/404",
 		"/certificates",
+		"/access-lists",
 		"/redirection",
 		"/streams",
 		"/proxy",

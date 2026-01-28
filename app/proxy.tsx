@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/form-control";
 import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
 import { ProxyHost, ProxyPayload, ProxyLocation } from "@/types/proxy";
+import { AccessList } from "@/types/access-list";
 import {
   createProxyHost,
   deleteProxyHost,
@@ -57,6 +58,7 @@ import {
   setupFrontEnd,
   listProxyHosts,
 } from "@/services/proxy";
+import { listAccessLists } from "@/services/access-lists";
 import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
 import { Badge as IconBadge } from "@/components/ui/badge";
 import { Pressable } from "@/components/ui/pressable";
@@ -135,6 +137,8 @@ export default function ProxyHostsScreen() {
   const [domainsInput, setDomainsInput] = React.useState("");
   const [domainsList, setDomainsList] = React.useState<string[]>([]);
   const [locations, setLocations] = React.useState<ProxyLocation[]>([]);
+  const [accessLists, setAccessLists] = React.useState<AccessList[]>([]);
+  const [loadingAccessLists, setLoadingAccessLists] = React.useState(false);
   const [editingHost, setEditingHost] = React.useState<ProxyHost | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [togglingId, setTogglingId] = React.useState<number | null>(null);
@@ -200,6 +204,19 @@ export default function ProxyHostsScreen() {
     [showToast]
   );
 
+  const loadAccessLists = React.useCallback(async () => {
+    setLoadingAccessLists(true);
+    try {
+      const data = await listAccessLists();
+      setAccessLists(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Failed to load access lists", err);
+      showToast("Error loading", "Unable to fetch access lists.", "error");
+    } finally {
+      setLoadingAccessLists(false);
+    }
+  }, [showToast]);
+
   React.useEffect(() => {
     loadHosts();
   }, [loadHosts]);
@@ -222,6 +239,7 @@ export default function ProxyHostsScreen() {
     setDomainsInput("");
     setDomainsList([]);
     setLocations([]);
+    void loadAccessLists();
     void refreshCertificates();
     setFormTab("details");
     setModalOpen(true);
@@ -258,6 +276,7 @@ export default function ProxyHostsScreen() {
     setDomainsInput((host.domain_names ?? []).join(", "));
     setDomainsList(host.domain_names ?? []);
     setLocations(host.locations ?? []);
+    void loadAccessLists();
     void refreshCertificates();
     setFormTab("details");
     setModalOpen(true);
@@ -297,11 +316,13 @@ export default function ProxyHostsScreen() {
       showToast("Destination host required", "Provide the destination host.", "error");
       return;
     }
+    const accessListValue = form.access_list_id ?? "0";
+    const accessListId = typeof accessListValue === "string" ? Number(accessListValue) || 0 : Number(accessListValue) || 0;
     const payload: ProxyPayload = {
       ...form,
       domain_names: unique,
       locations,
-      access_list_id: "0",
+      access_list_id: accessListId,
       certificate_id: Number(form.certificate_id) || 0,
       forward_port: Number(form.forward_port) || 80,
     };
@@ -957,6 +978,51 @@ export default function ProxyHostsScreen() {
                           />
                         </Input>
                       </HStack>
+                    </FormControl>
+
+                    <FormControl>
+                      <FormControlLabel>
+                        <FormControlLabelText>Access List</FormControlLabelText>
+                      </FormControlLabel>
+                      <Select
+                        selectedValue={String(form.access_list_id ?? "0")}
+                        onValueChange={(val) => setForm((prev) => ({ ...prev, access_list_id: String(val) }))}
+                      >
+                        <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] h-11 px-4">
+                          <Text className="text-typography-900 dark:text-[#E8EBF0]">
+                            {String(form.access_list_id ?? "0") === "0"
+                              ? "No Access List"
+                              : accessLists.find((list) => String(list.id) === String(form.access_list_id))?.name ?? "Select"}
+                          </Text>
+                          <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-[#8A94A8]" />
+                        </SelectTrigger>
+                        <SelectPortal>
+                          <SelectBackdropContent />
+                          <SelectContent className="max-h-72 bg-background-0 dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52] rounded-2xl">
+                            <SelectDragIndicatorWrapper>
+                              <SelectDragIndicator />
+                            </SelectDragIndicatorWrapper>
+                            <SelectItem label="No Access List" value="0" className="text-base text-typography-900 dark:text-[#E8EBF0]">
+                              No Access List
+                            </SelectItem>
+                            {accessLists.map((list) => (
+                              <SelectItem
+                                key={list.id}
+                                label={list.name}
+                                value={String(list.id)}
+                                className="text-base text-typography-900 dark:text-[#E8EBF0]"
+                              >
+                                {list.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </SelectPortal>
+                      </Select>
+                      <FormControlHelper>
+                        <FormControlHelperText>
+                          {loadingAccessLists ? "Loading access lists..." : "Select an access list to apply authentication rules."}
+                        </FormControlHelperText>
+                      </FormControlHelper>
                     </FormControl>
 
                     <VStack className="gap-3">
