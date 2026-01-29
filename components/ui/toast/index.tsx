@@ -167,6 +167,7 @@ const Toast = React.forwardRef<React.ComponentRef<typeof Root>, IToastProps>(
         className={toastStyle({ variant, action, class: className })}
         context={{ variant, action }}
         {...props}
+        pointerEvents="none"
       />
     );
   }
@@ -221,6 +222,8 @@ const ToastTitle = React.forwardRef<
           action: parentAction,
         },
       })}
+      pointerEvents="none"
+      selectable={false}
     >
       {children}
     </Text>
@@ -247,6 +250,8 @@ const ToastDescription = React.forwardRef<
           variant: parentVariant,
         },
       })}
+      pointerEvents="none"
+      selectable={false}
     />
   );
 });

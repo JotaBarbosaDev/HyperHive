@@ -85,7 +85,7 @@ export const ToastList = () => {
         return (
           <View
             key={position}
-            pointerEvents="box-none"
+            pointerEvents="none"
             style={{
               justifyContent: "center",
               margin: "auto",
@@ -96,7 +96,7 @@ export const ToastList = () => {
             {toastInfo[position].map((toast: any) => {
               return (
                 <SafeAreaProvider key={toast.id} initialMetrics={initialWindowMetrics}>
-                  <SafeAreaView pointerEvents="box-none">
+                  <SafeAreaView pointerEvents="none">
                     <OverlayAnimatePresence
                       visible={visibleToasts[toast.id]}
                       AnimatePresence={AnimatePresence}
@@ -120,10 +120,11 @@ export const ToastList = () => {
                           duration: 150,
                         }}
                         key={toast.id}
-                        pointerEvents="box-none"
+                        pointerEvents="none"
                         {...toast.config?.containerStyle}
                       >
                         <View
+                          pointerEvents="none"
                           style={{
                             bottom:
                               ["bottom", "bottom-left", "bottom-right"].includes(position) &&
