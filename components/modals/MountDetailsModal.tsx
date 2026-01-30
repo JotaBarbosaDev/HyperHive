@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/modal";
 import {Badge, BadgeText} from "@/components/ui/badge";
 import {Box} from "@/components/ui/box";
-import {Button, ButtonSpinner, ButtonText} from "@/components/ui/button";
+import {Button, ButtonIcon, ButtonSpinner, ButtonText} from "@/components/ui/button";
 import {Heading} from "@/components/ui/heading";
 import {Icon} from "@/components/ui/icon";
 import {Text} from "@/components/ui/text";
@@ -18,6 +18,7 @@ import {Divider} from "@/components/ui/divider";
 import {Mount} from "@/types/mount";
 import {Laptop, Download, HardDrive, RotateCw, Check, AlertCircle} from "lucide-react-native";
 import {remountNfs} from "@/services/hyperhive";
+import {Platform, ScrollView} from "react-native";
 
 export type MountDetailsModalProps = {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export type MountDetailsModalProps = {
 };
 
 export function MountDetailsModal({isOpen, mount, onClose}: MountDetailsModalProps) {
+  const isNative = Platform.OS !== "web";
   const {
     NfsShare: {MachineName, FolderPath, Source, Target, Name, HostNormalMount, Id},
     Status,
@@ -88,10 +90,166 @@ export function MountDetailsModal({isOpen, mount, onClose}: MountDetailsModalPro
     }
   }, [Id, toast]);
 
+  const detailsContent = (
+    <Box className="space-y-5 pb-2">
+      <Box className="flex flex-col gap-3 mb-4 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
+        <Text
+          className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide"
+          style={{fontFamily: "Inter_700Bold"}}
+        >
+          Machine
+        </Text>
+        <Box className="flex items-center gap-2">
+          <Icon
+            className="text-typography-600 dark:text-[#8A94A8]"
+            as={Laptop}
+            size="sm"
+          />
+          <Text
+            className="text-sm text-typography-900 dark:text-[#E8EBF0] font-semibold web:text-base"
+            style={{fontFamily: "Inter_600SemiBold"}}
+          >
+            {MachineName}
+          </Text>
+        </Box>
+      </Box>
+      <Box className="flex flex-col gap-3 mb-4 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
+        <Text
+          className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide"
+          style={{fontFamily: "Inter_700Bold"}}
+        >
+          Folder Path
+        </Text>
+        <Text
+          className="text-sm text-typography-900 dark:text-[#E8EBF0] web:text-base break-all"
+          style={{fontFamily: "Inter_400Regular"}}
+        >
+          {FolderPath}
+        </Text>
+      </Box>
+      <Box className="grid grid-cols-1 web:grid-cols-2 gap-4">
+        <Box className="flex flex-col gap-3 mb-4 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
+          <Text
+            className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide"
+            style={{fontFamily: "Inter_700Bold"}}
+          >
+            Source
+          </Text>
+          <Text
+            className="text-sm text-typography-900 dark:text-[#E8EBF0] web:text-base break-all"
+            style={{fontFamily: "Inter_400Regular"}}
+          >
+            {Source || "-"}
+          </Text>
+        </Box>
+        <Box className="flex flex-col gap-3 mb-4 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
+          <Text
+            className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide"
+            style={{fontFamily: "Inter_700Bold"}}
+          >
+            Target
+          </Text>
+          <Text
+            className="text-sm text-typography-900 dark:text-[#E8EBF0] web:text-base break-all"
+            style={{fontFamily: "Inter_400Regular"}}
+          >
+            {Target || "-"}
+          </Text>
+        </Box>
+      </Box>
+      <Box className="flex flex-col gap-3 mb-4 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
+        <Text
+          className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide"
+          style={{fontFamily: "Inter_700Bold"}}
+        >
+          Storage Information
+        </Text>
+        <Box className="grid grid-cols-3 gap-4 flex-row justify-between">
+          <Box className="flex flex-col items-center gap-1.5">
+            <Icon
+              className="text-typography-500 dark:text-[#8A94A8]"
+              as={HardDrive}
+              size="sm"
+            />
+            <Text
+              className="text-[9px] font-medium uppercase text-typography-500 dark:text-[#8A94A8]"
+              style={{fontFamily: "Inter_500Medium"}}
+            >
+              Used
+            </Text>
+            <Text
+              className="text-sm text-typography-900 dark:text-[#E8EBF0] font-bold"
+              style={{fontFamily: "Inter_700Bold"}}
+            >
+              {isNaN(usageUsedGB) ? "0" : usageUsedGB} GB
+            </Text>
+          </Box>
+          <Box className="flex flex-col items-center gap-1.5">
+            <Icon
+              className="text-typography-500 dark:text-[#8A94A8]"
+              as={Download}
+              size="sm"
+            />
+            <Text
+              className="text-[9px] font-medium uppercase text-typography-500 dark:text-[#8A94A8]"
+              style={{fontFamily: "Inter_500Medium"}}
+            >
+              Free
+            </Text>
+            <Text
+              className="text-sm text-typography-900 dark:text-[#E8EBF0] font-bold"
+              style={{fontFamily: "Inter_700Bold"}}
+            >
+              {isNaN(Status.spaceFreeGB)
+                ? "0"
+                : Status.spaceFreeGB.toFixed(2)}{" "}
+              GB
+            </Text>
+          </Box>
+          <Box className="flex flex-col items-center gap-1.5">
+            <Icon
+              className="text-typography-500 dark:text-[#8A94A8]"
+              as={HardDrive}
+              size="sm"
+            />
+            <Text
+              className="text-[9px] font-medium uppercase text-typography-500 dark:text-[#8A94A8]"
+              style={{fontFamily: "Inter_500Medium"}}
+            >
+              Total
+            </Text>
+            <Text
+              className="text-sm text-typography-900 dark:text-[#E8EBF0] font-bold"
+              style={{fontFamily: "Inter_700Bold"}}
+            >
+              {isNaN(usageTotalGB) ? "0" : usageTotalGB} GB
+            </Text>
+          </Box>
+        </Box>
+      </Box>
+      <Box className="flex flex-col gap-3 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
+        <Text
+          className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide"
+          style={{fontFamily: "Inter_700Bold"}}
+        >
+          Host Normal Mount
+        </Text>
+        <Text
+          className="text-sm text-typography-900 dark:text-[#E8EBF0] font-semibold web:text-base"
+          style={{fontFamily: "Inter_600SemiBold"}}
+        >
+          {HostNormalMount ? "Enabled" : "Disabled"}
+        </Text>
+      </Box>
+    </Box>
+  );
+
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <ModalBackdrop className="bg-background-950/50 dark:bg-black/70" />
-      <ModalContent className="max-w-[340px] web:max-w-[540px] p-5 web:p-8 rounded-2xl dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52]">
+      <ModalContent
+        className={`max-w-[340px] web:max-w-[540px] p-5 web:p-8 rounded-2xl dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52] ${isNative ? "max-h-[90%]" : ""}`}
+      >
         <ModalHeader className="pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
           <Box className="flex flex-row items-start justify-between w-full">
             <Box className="flex-1 min-w-0 pr-3">
@@ -133,156 +291,17 @@ export function MountDetailsModal({isOpen, mount, onClose}: MountDetailsModalPro
             </Badge>
           </Box>
         </ModalHeader>
-        <ModalBody className="pt-6 space-y-5">
-          <Box className="flex flex-col gap-3 mb-4 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
-            <Text
-              className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide"
-              style={{fontFamily: "Inter_700Bold"}}
+        <ModalBody className="pt-6">
+          {isNative ? (
+            <ScrollView
+              showsVerticalScrollIndicator
+              contentContainerStyle={{ paddingBottom: 8 }}
             >
-              Machine
-            </Text>
-            <Box className="flex items-center gap-2">
-              <Icon
-                className="text-typography-600 dark:text-[#8A94A8]"
-                as={Laptop}
-                size="sm"
-              />
-              <Text
-                className="text-sm text-typography-900 dark:text-[#E8EBF0] font-semibold web:text-base"
-                style={{fontFamily: "Inter_600SemiBold"}}
-              >
-                {MachineName}
-              </Text>
-            </Box>
-          </Box>
-          <Box className="flex flex-col gap-3 mb-4 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
-            <Text
-              className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide"
-              style={{fontFamily: "Inter_700Bold"}}
-            >
-              Folder Path
-            </Text>
-            <Text
-              className="text-sm text-typography-900 dark:text-[#E8EBF0] web:text-base break-all"
-              style={{fontFamily: "Inter_400Regular"}}
-            >
-              {FolderPath}
-            </Text>
-          </Box>
-          <Box className="grid grid-cols-1 web:grid-cols-2 gap-4">
-            <Box className="flex flex-col gap-3 mb-4 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
-              <Text
-                className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide"
-                style={{fontFamily: "Inter_700Bold"}}
-              >
-                Source
-              </Text>
-              <Text
-                className="text-sm text-typography-900 dark:text-[#E8EBF0] web:text-base break-all"
-                style={{fontFamily: "Inter_400Regular"}}
-              >
-                {Source || "-"}
-              </Text>
-            </Box>
-            <Box className="flex flex-col gap-3 mb-4 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
-              <Text
-                className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide"
-                style={{fontFamily: "Inter_700Bold"}}
-              >
-                Target
-              </Text>
-              <Text
-                className="text-sm text-typography-900 dark:text-[#E8EBF0] web:text-base break-all"
-                style={{fontFamily: "Inter_400Regular"}}
-              >
-                {Target || "-"}
-              </Text>
-            </Box>
-          </Box>
-          <Box className="flex flex-col gap-3 mb-4 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
-            <Text
-              className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide"
-              style={{fontFamily: "Inter_700Bold"}}
-            >
-              Storage Information
-            </Text>
-            <Box className="grid grid-cols-3 gap-4 flex-row justify-between">
-              <Box className="flex flex-col items-center gap-1.5">
-                <Icon
-                  className="text-typography-500 dark:text-[#8A94A8]"
-                  as={HardDrive}
-                  size="sm"
-                />
-                <Text
-                  className="text-[9px] font-medium uppercase text-typography-500 dark:text-[#8A94A8]"
-                  style={{fontFamily: "Inter_500Medium"}}
-                >
-                  Used
-                </Text>
-                <Text
-                  className="text-sm text-typography-900 dark:text-[#E8EBF0] font-bold"
-                  style={{fontFamily: "Inter_700Bold"}}
-                >
-                  {isNaN(usageUsedGB) ? "0" : usageUsedGB} GB
-                </Text>
-              </Box>
-              <Box className="flex flex-col items-center gap-1.5">
-                <Icon
-                  className="text-typography-500 dark:text-[#8A94A8]"
-                  as={Download}
-                  size="sm"
-                />
-                <Text
-                  className="text-[9px] font-medium uppercase text-typography-500 dark:text-[#8A94A8]"
-                  style={{fontFamily: "Inter_500Medium"}}
-                >
-                  Free
-                </Text>
-                <Text
-                  className="text-sm text-typography-900 dark:text-[#E8EBF0] font-bold"
-                  style={{fontFamily: "Inter_700Bold"}}
-                >
-                  {isNaN(Status.spaceFreeGB)
-                    ? "0"
-                    : Status.spaceFreeGB.toFixed(2)}{" "}
-                  GB
-                </Text>
-              </Box>
-              <Box className="flex flex-col items-center gap-1.5">
-                <Icon
-                  className="text-typography-500 dark:text-[#8A94A8]"
-                  as={HardDrive}
-                  size="sm"
-                />
-                <Text
-                  className="text-[9px] font-medium uppercase text-typography-500 dark:text-[#8A94A8]"
-                  style={{fontFamily: "Inter_500Medium"}}
-                >
-                  Total
-                </Text>
-                <Text
-                  className="text-sm text-typography-900 dark:text-[#E8EBF0] font-bold"
-                  style={{fontFamily: "Inter_700Bold"}}
-                >
-                  {isNaN(usageTotalGB) ? "0" : usageTotalGB} GB
-                </Text>
-              </Box>
-            </Box>
-          </Box>
-          <Box className="flex flex-col gap-3 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
-            <Text
-              className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide"
-              style={{fontFamily: "Inter_700Bold"}}
-            >
-              Host Normal Mount
-            </Text>
-            <Text
-              className="text-sm text-typography-900 dark:text-[#E8EBF0] font-semibold web:text-base"
-              style={{fontFamily: "Inter_600SemiBold"}}
-            >
-              {HostNormalMount ? "Enabled" : "Disabled"}
-            </Text>
-          </Box>
+              {detailsContent}
+            </ScrollView>
+          ) : (
+            detailsContent
+          )}
         </ModalBody>
         <ModalFooter className="w-full pt-4 border-t border-outline-100 dark:border-[#2A3B52] flex flex-col gap-3 web:flex-row web:gap-2">
           <Button
@@ -293,13 +312,9 @@ export function MountDetailsModal({isOpen, mount, onClose}: MountDetailsModalPro
             onPress={handleRemount}
           >
             {isRemounting ? (
-              <ButtonSpinner size="small" className="mr-2" />
+              <ButtonSpinner size="small" />
             ) : (
-              <Icon
-                as={RotateCw}
-                size="sm"
-                className="mr-2 text-white dark:text-base"
-              />
+              <ButtonIcon as={RotateCw} size="sm" />
             )}
             <ButtonText
               className="font-semibold web:text-base"

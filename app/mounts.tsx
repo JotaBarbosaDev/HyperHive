@@ -81,7 +81,10 @@ export default function MountsScreen() {
               {isRefreshing ? (
                 <ButtonSpinner />
               ) : (
-                <ButtonIcon as={RefreshCw} />
+                <ButtonIcon
+                  as={RefreshCw}
+                  className="text-typography-900 dark:text-[#E8EBF0]"
+                />
               )}
             </Button>
             <Button
