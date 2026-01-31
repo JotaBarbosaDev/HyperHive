@@ -1,5 +1,5 @@
 import React from "react";
-import { Dimensions, LayoutChangeEvent, RefreshControl, ScrollView, useColorScheme } from "react-native";
+import { Dimensions, LayoutChangeEvent, Platform, RefreshControl, ScrollView, useColorScheme } from "react-native";
 import Svg, { Circle, G } from "react-native-svg";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { VictoryAxis, VictoryChart, VictoryLine, VictoryTheme, VictoryTooltip, createContainer } from "victory-native";
@@ -220,6 +220,8 @@ const RANGE_OPTIONS: RangeOption[] = [
 	{ key: "1m", label: "30 days", query: { days: 30, numberOfRows: 120 }, description: "120 points (~6 h)" },
 	{ key: "3m", label: "90 days", query: { months: 3, numberOfRows: 90 }, description: "90 points (~1 day)" },
 ];
+
+const TOOLTIP_CENTER_OFFSET_Y = Platform.OS === "web" ? -44 : -64;
 
 const toSeries = <TInfo,>(entries: HistoryEntry<TInfo>[], selector: (entry: HistoryEntry<TInfo>) => number) => {
 	return entries
@@ -502,6 +504,7 @@ export default function MachineDetailsScreen() {
 								labelComponent={
 									<VictoryTooltip
 										cornerRadius={6}
+										centerOffset={{ y: TOOLTIP_CENTER_OFFSET_Y }}
 										flyoutStyle={{ fill: isDark ? "#0A1628" : "#F8FAFF", stroke: color }}
 										style={{ fill: isDark ? "#E8EBF0" : "#0F172A", fontSize: 10 }}
 									/>
@@ -592,6 +595,7 @@ export default function MachineDetailsScreen() {
 								labelComponent={
 									<VictoryTooltip
 										cornerRadius={6}
+										centerOffset={{ y: TOOLTIP_CENTER_OFFSET_Y }}
 										flyoutStyle={{ fill: isDark ? "#0A1628" : "#F8FAFF", stroke: "#CBD5E1" }}
 										style={{ fill: isDark ? "#E8EBF0" : "#0F172A", fontSize: 10 }}
 									/>
