@@ -42,6 +42,8 @@ export type VirtualMachine = {
   memoryMB: number;
   name: string;
   network: string;
+  hasVnc?: boolean;
+  hasvnc?: boolean;
   novncPort: string;
   novnclink: string;
   spritePort: string;
@@ -218,6 +220,16 @@ export async function setVmLive(vmName: string, enable: boolean) {
     method: "POST",
     token: authToken,
     body: { enable },
+  });
+}
+
+export async function setVmActiveVnc(vmName: string, enable: boolean) {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  const action = enable ? "add" : "remove";
+  await apiFetch<void>(`/virsh/novncvideo/${action}/${encodedVmName}`, {
+    method: "POST",
+    token: authToken,
   });
 }
 

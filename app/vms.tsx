@@ -77,6 +77,7 @@ import {
   removeAllIsos,
   setVmAutostart,
   setVmLive,
+  setVmActiveVnc,
   getCpuDisableFeatures,
   updateCpuXml,
   getVmExportUrl,
@@ -157,6 +158,7 @@ interface VM {
   AllocatedGb: number;
   network: string;
   autoStart: boolean;
+  hasVnc: boolean;
   diskPath: string;
   ip: string[];
   novnclink: string;
@@ -204,6 +206,7 @@ const mapVirtualMachineToVM = (vm: VirtualMachine): VM => ({
   AllocatedGb: vm.AllocatedGb,
   network: vm.network,
   autoStart: vm.autoStart,
+  hasVnc: Boolean((vm as any).hasvnc ?? vm.hasVnc ?? (vm as any).HasVnc),
   diskPath: vm.diskPath,
   ip: vm.ip,
   novnclink: vm.novnclink,
@@ -271,6 +274,8 @@ export default function VirtualMachinesScreen() {
   const autostartInFlightRef = React.useRef<Set<string>>(new Set());
   const vmLiveDesiredRef = React.useRef<Map<string, boolean>>(new Map());
   const vmLiveInFlightRef = React.useRef<Set<string>>(new Set());
+  const activeVncDesiredRef = React.useRef<Map<string, boolean>>(new Map());
+  const activeVncInFlightRef = React.useRef<Set<string>>(new Set());
   const [mountOptions, setMountOptions] = React.useState<Mount[]>([]);
   const [slaveOptions, setSlaveOptions] = React.useState<Slave[]>([]);
   const [cloneOptionsLoading, setCloneOptionsLoading] = React.useState(false);
@@ -538,6 +543,21 @@ export default function VirtualMachinesScreen() {
             : value;
         return typeof num === "number" && Number.isFinite(num) ? num : undefined;
       };
+      const toBoolean = (value: any): boolean | undefined => {
+        if (typeof value === "boolean") {
+          return value;
+        }
+        if (typeof value === "string") {
+          const normalized = value.trim().toLowerCase();
+          if (normalized === "true") {
+            return true;
+          }
+          if (normalized === "false") {
+            return false;
+          }
+        }
+        return undefined;
+      };
 
       let parsed = payload;
       try {
@@ -588,6 +608,7 @@ export default function VirtualMachinesScreen() {
           setIfDefined("diskPath", info.diskPath);
           setIfDefined("ip", info.ip);
           setIfDefined("network", info.network);
+          setIfDefined("hasVnc", toBoolean(info.hasvnc ?? info.hasVnc ?? info.HasVnc) as any);
           setIfDefined("DefinedCPUS", toFiniteNumber(info.DefinedCPUS) as any);
           setIfDefined("DefinedRam", toFiniteNumber(info.DefinedRam) as any);
           setIfDefined("AllocatedGb", toFiniteNumber(info.AllocatedGb) as any);
@@ -632,6 +653,7 @@ export default function VirtualMachinesScreen() {
             AllocatedGb: (patch.AllocatedGb as number) ?? 0,
             network: (patch.network as string) ?? "",
             autoStart: false,
+            hasVnc: false,
             diskPath: (patch.diskPath as string) ?? "",
             ip: (patch.ip as string[]) ?? [],
             novnclink: "",
@@ -1093,6 +1115,65 @@ export default function VirtualMachinesScreen() {
         });
       } finally {
         vmLiveInFlightRef.current.delete(vmName);
+      }
+    })();
+  };
+
+  const handleToggleActiveVnc = (vm: VM, checked: boolean) => {
+    const vmName = vm.name;
+    const previousValue = vm.hasVnc;
+    const updateLocalActiveVnc = (value: boolean) => {
+      setVms((prev) => prev.map((v) => (v.name === vmName ? { ...v, hasVnc: value } : v)));
+      setSelectedVm((prev) => (prev?.name === vmName ? { ...prev, hasVnc: value } : prev));
+      setDetailsVm((prev) => (prev?.name === vmName ? { ...prev, hasVnc: value } : prev));
+    };
+
+    updateLocalActiveVnc(checked);
+    Haptics.selectionAsync();
+
+    activeVncDesiredRef.current.set(vmName, checked);
+    if (activeVncInFlightRef.current.has(vmName)) {
+      return;
+    }
+
+    activeVncInFlightRef.current.add(vmName);
+    void (async () => {
+      let lastApplied: boolean | undefined;
+      try {
+        while (true) {
+          const desired = activeVncDesiredRef.current.get(vmName);
+          if (desired === undefined) {
+            break;
+          }
+          activeVncDesiredRef.current.delete(vmName);
+          if (lastApplied !== undefined && desired === lastApplied) {
+            continue;
+          }
+          await setVmActiveVnc(vmName, desired);
+          lastApplied = desired;
+        }
+
+        if (lastApplied !== undefined) {
+          showToastMessage(`Active VNC ${lastApplied ? "enabled" : "disabled"}`);
+          void fetchAndSetVms().catch((error) => {
+            console.warn("Error refreshing VMs after Active VNC update:", error);
+          });
+        }
+      } catch (error) {
+        console.error("Error updating Active VNC:", error);
+        activeVncDesiredRef.current.delete(vmName);
+        const fallbackValue = lastApplied ?? previousValue;
+        updateLocalActiveVnc(fallbackValue);
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to update Active VNC.";
+        showToastMessage("Active VNC update failed", message, "error");
+        void fetchAndSetVms().catch((err) => {
+          console.warn("Error refreshing VMs after Active VNC update failure:", err);
+        });
+      } finally {
+        activeVncInFlightRef.current.delete(vmName);
       }
     })();
   };
@@ -2856,6 +2937,23 @@ export default function VirtualMachinesScreen() {
                 <Pressable
                   onPress={() => {
                     if (!selectedVm) return;
+                    handleToggleActiveVnc(selectedVm, !selectedVm.hasVnc);
+                    setShowActionsheet(false);
+                  }}
+                  className="px-3 py-3 hover:bg-background-50 dark:hover:bg-[#1E2F47] rounded-md"
+                >
+                  <HStack className="items-center gap-2">
+                    {selectedVm?.hasVnc && (
+                      <Check size={16} className="text-typography-900 dark:text-[#E8EBF0]" />
+                    )}
+                    <Text className="text-typography-900 dark:text-[#E8EBF0]">
+                      Active VNC
+                    </Text>
+                  </HStack>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    if (!selectedVm) return;
                     handleToggleVmLive(selectedVm, !selectedVm.isLive);
                     setShowActionsheet(false);
                   }}
@@ -3116,6 +3214,17 @@ export default function VirtualMachinesScreen() {
                 <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">
                   {(selectedVm?.autoStart ? "✓ " : "") +
                     "Auto-start on boot"}
+                </ActionsheetItemText>
+              </ActionsheetItem>
+              <ActionsheetItem
+                onPress={() => {
+                  if (!selectedVm) return;
+                  handleToggleActiveVnc(selectedVm, !selectedVm.hasVnc);
+                  setShowActionsheet(false);
+                }}
+              >
+                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">
+                  {(selectedVm?.hasVnc ? "✓ " : "") + "Active VNC"}
                 </ActionsheetItemText>
               </ActionsheetItem>
               <ActionsheetItem

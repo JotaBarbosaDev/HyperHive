@@ -64,6 +64,7 @@ import {
   Box as BoxIcon,
   Database,
   GitBranch,
+  Gpu,
 } from "lucide-react-native";
 import { usePathname, useRouter } from "expo-router";
 import { clearAuthToken } from "@/services/auth-storage";
@@ -116,6 +117,7 @@ const MENU_ITEMS: MenuItem[] = [
     iconProps: { size: "md" },
     children: [
       {label: "Virtual Machines", route: "/vms", icon: ServerCog},
+      {label: "GPUs", route: "/gpus", icon: Gpu, iconProps: { size: "md" }},
       {label: "Backups", route: "/backups", icon: DatabaseBackup},
       {label: "Auto-Backups", route: "/autobackups", icon: History},
     ],
