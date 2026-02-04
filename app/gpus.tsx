@@ -36,7 +36,7 @@ import { attachGpuToVm, detachGpuFromVm, listHostGpus } from "@/services/pci";
 import { getAllVMs, VirtualMachine } from "@/services/vms-client";
 import { Machine } from "@/types/machine";
 import { PciGpu } from "@/types/pci";
-import { ChevronDown, Cpu, PlugZap, RefreshCcw, X } from "lucide-react-native";
+import { ChevronDown, Cpu, PlugZap, RefreshCcw, X, Zap, Activity, Server, HardDrive, CircuitBoard } from "lucide-react-native";
 
 const toTrimmedString = (value: unknown): string | null => {
   if (typeof value !== "string") {
@@ -336,9 +336,31 @@ export default function GpusScreen() {
         </Heading>
 
         <HStack className="items-center justify-between flex-wrap gap-3">
-          <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
-            Manage GPU passthrough on the selected machine.
-          </Text>
+          <VStack className="gap-2 flex-1">
+            <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base">
+              Manage GPU passthrough on the selected machine.
+            </Text>
+            <VStack className="gap-1">
+              <Text className="text-xs text-typography-500 dark:text-[#6B7B95]">
+                • Enable IOMMU/VT-d in BIOS
+              </Text>
+              <Text className="text-xs text-typography-500 dark:text-[#6B7B95]">
+                • Add <Text className="font-mono">intel_iommu=on</Text> or <Text className="font-mono">amd_iommu=on</Text> to kernel parameters
+              </Text>
+              <Text className="text-xs text-typography-500 dark:text-[#6B7B95]">
+                • Load <Text className="font-mono">vfio-pci</Text> modules
+              </Text>
+              <Text className="text-xs text-typography-500 dark:text-[#6B7B95]">
+                • Ensure GPU is in isolated IOMMU group
+              </Text>
+              <Text className="text-xs text-typography-500 dark:text-[#6B7B95]">
+                • Power off VM before attaching/detaching GPUs
+              </Text>
+              <Text className="text-xs text-typography-500 dark:text-[#6B7B95]">
+                • Install GPU drivers in guest OS after first boot
+              </Text>
+            </VStack>
+          </VStack>
           <Button
             variant="outline"
             className="rounded-xl"
@@ -350,11 +372,10 @@ export default function GpusScreen() {
           </Button>
         </HStack>
 
-        <VStack className="mt-5 gap-4">
-          <HStack className="gap-3 flex-wrap items-end">
-            <Box className="min-w-[180px]">
-              <Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Machine</Text>
-              <Select
+        <VStack className="mt-6 gap-5">
+          <Box className="min-w-[180px]">
+            <Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-2 font-medium">Select Machine</Text>
+            <Select
                 selectedValue={selectedMachine ?? undefined}
                 onValueChange={setSelectedMachine as any}
                 isDisabled={isLoadingMachines || machines.length === 0}
@@ -382,32 +403,32 @@ export default function GpusScreen() {
               {machinesError ? (
                 <Text className="text-[12px] text-[#EF4444] mt-1">{machinesError}</Text>
               ) : null}
+          </Box>
+
+          <HStack className="gap-4 flex-wrap">
+            <Box className="flex-1 min-w-[140px] p-4 rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] shadow-sm">
+              <Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1.5 font-medium">Machine</Text>
+              <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]" numberOfLines={1}>
+                {selectedMachineLabel}
+              </Text>
             </Box>
-
-            <HStack className="gap-3 flex-wrap">
-              <Box className="p-3 rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
-                <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Machine</Text>
-                <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
-                  {selectedMachineLabel}
-                </Text>
-              </Box>
-              <Box className="p-3 rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
-                <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">GPUs</Text>
-                <Text className="text-xl font-semibold text-typography-900 dark:text-[#E8EBF0]">{gpus.length}</Text>
-              </Box>
-              <Box className="p-3 rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
-                <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Attached</Text>
-                <Text className="text-xl font-semibold text-typography-900 dark:text-[#E8EBF0]">{attachedCount}</Text>
-              </Box>
-            </HStack>
+            <Box className="flex-1 min-w-[120px] p-4 rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] shadow-sm">
+              <Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1.5 font-medium">Total GPUs</Text>
+              <Text className="text-2xl font-bold text-typography-900 dark:text-[#E8EBF0]">{gpus.length}</Text>
+            </Box>
+            <Box className="flex-1 min-w-[120px] p-4 rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] shadow-sm">
+              <Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1.5 font-medium">Attached</Text>
+              <Text className="text-2xl font-bold text-typography-900 dark:text-[#E8EBF0]">{attachedCount}</Text>
+            </Box>
           </HStack>
+        </VStack>
 
-          <ScrollView
-            className="flex-1"
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 72 }}
-            refreshControl={refreshControl}
-          >
+        <ScrollView
+          className="flex-1 mt-6"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 72 }}
+          refreshControl={refreshControl}
+        >
             {isLoading ? (
               <Text className="text-typography-500 dark:text-[#8A94A8]">Loading GPUs...</Text>
             ) : error ? (
@@ -415,7 +436,7 @@ export default function GpusScreen() {
             ) : gpus.length === 0 ? (
               <Text className="text-typography-500 dark:text-[#8A94A8]">No GPUs found on this machine.</Text>
             ) : (
-              <Box className="flex flex-col gap-4 web:grid web:grid-cols-2 web:gap-5 web:xl:grid-cols-3">
+              <Box className="flex flex-col gap-4 web:grid web:grid-cols-2 web:gap-6 web:xl:grid-cols-3">
                 {gpus.map((gpu, index) => {
                   const address = toTrimmedString(gpu.address) ?? "unknown";
                   const vendor = toTrimmedString(gpu.vendor) ?? "Unknown vendor";
@@ -434,12 +455,12 @@ export default function GpusScreen() {
                   return (
                     <Box
                       key={`${address}-${gpu.node_name ?? index}`}
-                      className="rounded-3xl border border-outline-100 bg-background-0 p-5 shadow-soft-3 min-h-[280px] dark:border-[#2A3B52] dark:bg-[#0E1524]"
+                      className="rounded-2xl border border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524] p-6 shadow-md"
                     >
                       <VStack className="gap-4">
                         <HStack className="items-start justify-between gap-3">
-                          <Box className="w-10 h-10 rounded-2xl bg-background-50 dark:bg-[#1A2637] items-center justify-center">
-                            <Cpu className="text-typography-500 dark:text-[#5EEAD4]" />
+                          <Box className="w-10 h-10 rounded-xl bg-background-50 dark:bg-[#1A2637] items-center justify-center">
+                            <Cpu size={20} className="text-typography-500 dark:text-[#5EEAD4]" />
                           </Box>
                           <Badge
                             variant={isAttached ? "solid" : "outline"}
@@ -462,14 +483,14 @@ export default function GpusScreen() {
                           </Badge>
                         </HStack>
 
-                        <VStack className="gap-1">
-                          <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                        <VStack className="gap-1.5">
+                          <Text className="text-lg font-bold text-typography-900 dark:text-[#E8EBF0]">
                             {vendor}
                           </Text>
                           <Text className="text-sm text-typography-600 dark:text-[#8A94A8]" numberOfLines={2}>
                             {product}
                           </Text>
-                          <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">{address}</Text>
+                          <Text className="text-xs text-typography-500 dark:text-[#8A94A8] font-mono">{address}</Text>
                         </VStack>
 
                         <VStack className="gap-2">
@@ -527,31 +548,37 @@ export default function GpusScreen() {
               </Box>
             )}
           </ScrollView>
-        </VStack>
       </Box>
 
       <Modal isOpen={!!attachModalGpu} onClose={closeAttachModal} size="md">
         <ModalBackdrop />
-        <ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
-          <ModalHeader className="flex-row items-center justify-between">
-            <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
-              Attach GPU
-            </Heading>
+        <ModalContent className="rounded-3xl border-2 border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-5">
+          <ModalHeader className="flex-row items-center justify-between pb-4">
+            <HStack className="items-center gap-3">
+              <Box className="w-10 h-10 rounded-xl bg-primary-500/20 dark:bg-primary-400/30 items-center justify-center">
+                <PlugZap size={20} className="text-primary-600 dark:text-primary-400" />
+              </Box>
+              <Heading size="xl" className="text-typography-900 dark:text-[#E8EBF0]">
+                Attach GPU to VM
+              </Heading>
+            </HStack>
             <ModalCloseButton onPress={closeAttachModal} />
           </ModalHeader>
           <ModalBody>
-            <VStack className="gap-3">
-              <Text className="text-typography-600 dark:text-[#8A94A8]">
-                Confirm attaching GPU {toTrimmedString(attachModalGpu?.address) ?? "N/A"} to a VM.
-              </Text>
+            <VStack className="gap-4">
+              <Box className="p-4 rounded-xl bg-background-50 dark:bg-[#0E1524] border border-outline-100 dark:border-[#1F2A3C]">
+                <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
+                  You are about to attach GPU <Text className="font-mono font-semibold text-typography-900 dark:text-[#E8EBF0]">{toTrimmedString(attachModalGpu?.address) ?? "N/A"}</Text> to a virtual machine.
+                </Text>
+              </Box>
               <Box>
-                <Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">VM</Text>
+                <Text className="text-xs font-semibold text-typography-500 dark:text-[#8A94A8] mb-2 uppercase tracking-wider">Select Virtual Machine</Text>
                 <Select
                   selectedValue={attachVmName || undefined}
                   onValueChange={(value) => setAttachVmName(value)}
                   isDisabled={machineVmNames.length === 0}
                 >
-                  <SelectTrigger className="rounded-xl border border-outline-200 dark:border-[#1F2A3C]">
+                  <SelectTrigger className="rounded-xl border-2 border-outline-200 dark:border-[#1F2A3C] bg-background-50 dark:bg-[#0A1628]">
                     <SelectInput placeholder={machineVmNames.length ? "Select VM" : "No VMs on this machine"} />
                     <SelectIcon as={ChevronDown} className="text-typography-500" />
                   </SelectTrigger>
@@ -570,13 +597,13 @@ export default function GpusScreen() {
               </Box>
             </VStack>
           </ModalBody>
-          <ModalFooter className="flex-row gap-3">
+          <ModalFooter className="flex-row gap-3 pt-5">
             <Button variant="outline" action="secondary" className="flex-1 rounded-xl" onPress={closeAttachModal}>
               <ButtonText>Cancel</ButtonText>
             </Button>
             <Button
               action="primary"
-              className="flex-1 rounded-xl"
+              className="flex-1 rounded-xl bg-primary-600 dark:bg-primary-500"
               onPress={handleAttachConfirm}
               isDisabled={!toTrimmedString(attachVmName) || !toTrimmedString(attachModalGpu?.address) || !!actionInProgress}
             >
@@ -585,7 +612,7 @@ export default function GpusScreen() {
               ) : (
                 <ButtonIcon as={PlugZap} />
               )}
-              <ButtonText>Attach</ButtonText>
+              <ButtonText className="font-semibold">Attach GPU</ButtonText>
             </Button>
           </ModalFooter>
         </ModalContent>
@@ -593,26 +620,33 @@ export default function GpusScreen() {
 
       <Modal isOpen={!!detachModalGpu} onClose={closeDetachModal} size="md">
         <ModalBackdrop />
-        <ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
-          <ModalHeader className="flex-row items-center justify-between">
-            <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
-              Detach GPU
-            </Heading>
+        <ModalContent className="rounded-3xl border-2 border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-5">
+          <ModalHeader className="flex-row items-center justify-between pb-4">
+            <HStack className="items-center gap-3">
+              <Box className="w-10 h-10 rounded-xl bg-error-500/20 dark:bg-error-400/30 items-center justify-center">
+                <X size={20} className="text-error-600 dark:text-error-400" />
+              </Box>
+              <Heading size="xl" className="text-typography-900 dark:text-[#E8EBF0]">
+                Detach GPU from VM
+              </Heading>
+            </HStack>
             <ModalCloseButton onPress={closeDetachModal} />
           </ModalHeader>
           <ModalBody>
-            <VStack className="gap-3">
-              <Text className="text-typography-600 dark:text-[#8A94A8]">
-                Confirm detaching GPU {toTrimmedString(detachModalGpu?.address) ?? "N/A"}.
-              </Text>
+            <VStack className="gap-4">
+              <Box className="p-4 rounded-xl bg-error-50 dark:bg-error-950/30 border border-error-200 dark:border-error-800">
+                <Text className="text-sm text-error-700 dark:text-error-300">
+                  You are about to detach GPU <Text className="font-mono font-semibold">{toTrimmedString(detachModalGpu?.address) ?? "N/A"}</Text> from a virtual machine. This action may affect the VM's performance.
+                </Text>
+              </Box>
               <Box>
-                <Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">VM</Text>
+                <Text className="text-xs font-semibold text-typography-500 dark:text-[#8A94A8] mb-2 uppercase tracking-wider">Select Virtual Machine</Text>
                 <Select
                   selectedValue={detachVmName || undefined}
                   onValueChange={(value) => setDetachVmName(value)}
                   isDisabled={detachModalVmOptions.length === 0}
                 >
-                  <SelectTrigger className="rounded-xl border border-outline-200 dark:border-[#1F2A3C]">
+                  <SelectTrigger className="rounded-xl border-2 border-outline-200 dark:border-[#1F2A3C] bg-background-50 dark:bg-[#0A1628]">
                     <SelectInput placeholder="Select VM" />
                     <SelectIcon as={ChevronDown} className="text-typography-500" />
                   </SelectTrigger>
@@ -631,7 +665,7 @@ export default function GpusScreen() {
               </Box>
             </VStack>
           </ModalBody>
-          <ModalFooter className="flex-row gap-3">
+          <ModalFooter className="flex-row gap-3 pt-5">
             <Button variant="outline" action="secondary" className="flex-1 rounded-xl" onPress={closeDetachModal}>
               <ButtonText>Cancel</ButtonText>
             </Button>
@@ -653,7 +687,7 @@ export default function GpusScreen() {
               ) : (
                 <ButtonIcon as={X} />
               )}
-              <ButtonText>Detach</ButtonText>
+              <ButtonText className="font-semibold">Detach GPU</ButtonText>
             </Button>
           </ModalFooter>
         </ModalContent>
