@@ -140,7 +140,6 @@ export default function GpusScreen() {
   const [attachModalGpu, setAttachModalGpu] = React.useState<PciGpu | null>(null);
   const [detachModalGpu, setDetachModalGpu] = React.useState<PciGpu | null>(null);
   const [attachVmName, setAttachVmName] = React.useState("");
-  const [detachVmName, setDetachVmName] = React.useState("");
   const [actionInProgress, setActionInProgress] = React.useState<string | null>(null);
 
   const refreshControlTint = colorScheme === "dark" ? "#F8FAFC" : "#0F172A";
@@ -249,8 +248,6 @@ export default function GpusScreen() {
   };
 
   const openDetachModal = (gpu: PciGpu) => {
-    const attachedVmNames = resolveAttachedVmNames(gpu);
-    setDetachVmName(attachedVmNames[0] ?? machineVmNames[0] ?? "");
     setDetachModalGpu(gpu);
   };
 
@@ -261,7 +258,6 @@ export default function GpusScreen() {
 
   const closeDetachModal = () => {
     setDetachModalGpu(null);
-    setDetachVmName("");
   };
 
   const handleAttachConfirm = async () => {
@@ -287,8 +283,7 @@ export default function GpusScreen() {
 
   const handleDetachConfirm = async () => {
     if (!selectedMachine || !detachModalGpu) return;
-    const fallbackVm = resolveAttachedVmNames(detachModalGpu)[0] ?? null;
-    const vmName = toTrimmedString(detachVmName) ?? fallbackVm;
+    const vmName = resolveAttachedVmNames(detachModalGpu)[0] ?? null;
     const gpuRef = toTrimmedString(detachModalGpu.address);
     if (!vmName || !gpuRef || actionInProgress) return;
 
@@ -309,10 +304,7 @@ export default function GpusScreen() {
 
   if (isChecking || !token) return null;
 
-  const detachModalVmOptions = uniqueSortedValues([
-    ...(detachModalGpu ? resolveAttachedVmNames(detachModalGpu) : []),
-    ...machineVmNames,
-  ]);
+  const detachModalTargetVm = detachModalGpu ? resolveAttachedVmNames(detachModalGpu)[0] ?? null : null;
 
   const refreshControl = (
     <RefreshControl
@@ -449,8 +441,7 @@ export default function GpusScreen() {
                   const isBusy =
                     actionInProgress === `attach:${address}` || actionInProgress === `detach:${address}`;
                   const canAttach = machineVmNames.length > 0 && address !== "unknown";
-                  const detachVmOptions = uniqueSortedValues([...attachedVmNames, ...machineVmNames]);
-                  const canDetach = detachVmOptions.length > 0 && address !== "unknown";
+                  const canDetach = attachedVmNames.length > 0 && address !== "unknown";
 
                   return (
                     <Box
@@ -634,34 +625,22 @@ export default function GpusScreen() {
           </ModalHeader>
           <ModalBody>
             <VStack className="gap-4">
-              <Box className="p-4 rounded-xl bg-error-50 dark:bg-error-950/30 border border-error-200 dark:border-error-800">
-                <Text className="text-sm text-error-700 dark:text-error-300">
-                  You are about to detach GPU <Text className="font-mono font-semibold">{toTrimmedString(detachModalGpu?.address) ?? "N/A"}</Text> from a virtual machine. This action may affect the VM's performance.
-                </Text>
-              </Box>
-              <Box>
-                <Text className="text-xs font-semibold text-typography-500 dark:text-[#8A94A8] mb-2 uppercase tracking-wider">Select Virtual Machine</Text>
-                <Select
-                  selectedValue={detachVmName || undefined}
-                  onValueChange={(value) => setDetachVmName(value)}
-                  isDisabled={detachModalVmOptions.length === 0}
-                >
-                  <SelectTrigger className="rounded-xl border-2 border-outline-200 dark:border-[#1F2A3C] bg-background-50 dark:bg-[#0A1628]">
-                    <SelectInput placeholder="Select VM" />
-                    <SelectIcon as={ChevronDown} className="text-typography-500" />
-                  </SelectTrigger>
-                  <SelectPortal>
-                    <SelectBackdropContent />
-                    <SelectContent>
-                      <SelectDragIndicatorWrapper>
-                        <SelectDragIndicator />
-                      </SelectDragIndicatorWrapper>
-                      {detachModalVmOptions.map((vmName) => (
-                        <SelectItem key={vmName} label={vmName} value={vmName} />
-                      ))}
-                    </SelectContent>
-                  </SelectPortal>
-                </Select>
+              <Box className="p-4 rounded-xl bg-background-50 dark:bg-[#0E1524] border border-outline-100 dark:border-[#1F2A3C]">
+                <VStack className="gap-2">
+                  <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
+                    You are about to detach GPU{" "}
+                    <Text className="font-mono font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                      {toTrimmedString(detachModalGpu?.address) ?? "N/A"}
+                    </Text>
+                    .
+                  </Text>
+                  <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
+                    VM target:{" "}
+                    <Text className="font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                      {detachModalTargetVm ?? "Unable to resolve VM"}
+                    </Text>
+                  </Text>
+                </VStack>
               </Box>
             </VStack>
           </ModalBody>
@@ -674,10 +653,7 @@ export default function GpusScreen() {
               className="flex-1 rounded-xl"
               onPress={handleDetachConfirm}
               isDisabled={
-                !(
-                  toTrimmedString(detachVmName) ||
-                  (detachModalGpu ? resolveAttachedVmNames(detachModalGpu)[0] : null)
-                ) ||
+                !detachModalTargetVm ||
                 !toTrimmedString(detachModalGpu?.address) ||
                 !!actionInProgress
               }

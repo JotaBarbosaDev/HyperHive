@@ -254,10 +254,10 @@ export default function DockerImagesScreen() {
 
 	return (
 		<Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
-			<Box className="p-4 pt-16 web:p-10 web:max-w-7xl web:mx-auto web:w-full gap-4">
+			<Box className="p-6 pt-16 web:p-10 web:max-w-7xl web:mx-auto web:w-full gap-5">
 				<Heading
 					size="2xl"
-					className="text-typography-900 dark:text-[#E8EBF0] mb-2 web:text-4xl"
+					className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
 					style={{ fontFamily: "Inter_700Bold" }}
 				>
 					Docker Images
@@ -303,11 +303,11 @@ export default function DockerImagesScreen() {
 						</Box>
 
 						<HStack className="gap-3 flex-wrap">
-							<Box className="p-3 rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
+							<Box className="p-4 rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
 								<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Images</Text>
 								<Text className="text-xl font-semibold text-typography-900 dark:text-[#E8EBF0]">{images.length}</Text>
 							</Box>
-							<Box className="p-3 rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
+							<Box className="p-4 rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
 								<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Disk usage</Text>
 								<Text className="text-xl font-semibold text-typography-900 dark:text-[#E8EBF0]">{formatBytes(totalSize)}</Text>
 							</Box>
@@ -338,7 +338,7 @@ export default function DockerImagesScreen() {
 			</Box>
 			<Modal isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} size="lg">
 				<ModalBackdrop />
-				<ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
+				<ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-6">
 					<ModalHeader className="flex-row items-center justify-between">
 						<Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">Pull image</Heading>
 						<ModalCloseButton onPress={() => setIsAddOpen(false)} />

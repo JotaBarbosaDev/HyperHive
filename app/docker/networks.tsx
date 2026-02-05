@@ -256,10 +256,10 @@ export default function DockerNetworksScreen() {
 
 	return (
 		<Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
-			<Box className="p-4 pt-16 web:p-10 web:max-w-7xl web:mx-auto web:w-full gap-4">
+			<Box className="p-6 pt-16 web:p-10 web:max-w-7xl web:mx-auto web:w-full gap-5">
 				<Heading
 					size="2xl"
-					className="text-typography-900 dark:text-[#E8EBF0] mb-2 web:text-4xl"
+					className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
 					style={{ fontFamily: "Inter_700Bold" }}
 				>
 					Docker Networks
@@ -304,7 +304,7 @@ export default function DockerNetworksScreen() {
 							) : null}
 						</Box>
 						<HStack className="gap-3 flex-wrap">
-							<Box className="p-3 rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
+							<Box className="p-4 rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
 								<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Networks</Text>
 								<Text className="text-xl font-semibold text-typography-900 dark:text-[#E8EBF0]">{networks.length}</Text>
 							</Box>
@@ -335,7 +335,7 @@ export default function DockerNetworksScreen() {
 			</Box>
 			<Modal isOpen={isCreateOpen} onClose={closeCreateModal} size="lg">
 				<ModalBackdrop />
-				<ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
+				<ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-6">
 					<ModalHeader className="flex-row items-center justify-between">
 						<VStack className="gap-1 flex-1">
 							<Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">Create network</Heading>
