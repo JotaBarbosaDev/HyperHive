@@ -477,7 +477,7 @@ export default function LogsScreen() {
       return (
         log.message.toLowerCase().includes(term) ||
         log.machine.toLowerCase().includes(term) ||
-        log.timestamp.toLowerCase().includes(term)
+        String(log.timestamp).toLowerCase().includes(term)
       );
     });
   }, [logs, showInfo, showDebug, isMachineSelected, search]);
