@@ -368,33 +368,33 @@ export default function GpusScreen() {
           <Box className="min-w-[180px]">
             <Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-2 font-medium">Select Machine</Text>
             <Select
-                selectedValue={selectedMachine ?? undefined}
-                onValueChange={setSelectedMachine as any}
-                isDisabled={isLoadingMachines || machines.length === 0}
-              >
-                <SelectTrigger className="w-52 rounded-xl border border-outline-200 dark:border-[#1F2A3C]">
-                  <SelectInput placeholder={isLoadingMachines ? "Loading..." : "Select machine"} />
-                  <SelectIcon as={ChevronDown} className="text-typography-500" />
-                </SelectTrigger>
-                <SelectPortal>
-                  <SelectBackdropContent />
-                  <SelectContent>
-                    <SelectDragIndicatorWrapper>
-                      <SelectDragIndicator />
-                    </SelectDragIndicatorWrapper>
-                    {machines.map((machine: Machine) => (
-                      <SelectItem
-                        key={machine.MachineName}
-                        label={machine.MachineName}
-                        value={machine.MachineName}
-                      />
-                    ))}
-                  </SelectContent>
-                </SelectPortal>
-              </Select>
-              {machinesError ? (
-                <Text className="text-[12px] text-[#EF4444] mt-1">{machinesError}</Text>
-              ) : null}
+              selectedValue={selectedMachine ?? undefined}
+              onValueChange={setSelectedMachine as any}
+              isDisabled={isLoadingMachines || machines.length === 0}
+            >
+              <SelectTrigger className="w-52 rounded-xl border border-outline-200 dark:border-[#1F2A3C]">
+                <SelectInput placeholder={isLoadingMachines ? "Loading..." : "Select machine"} />
+                <SelectIcon as={ChevronDown} className="text-typography-500" />
+              </SelectTrigger>
+              <SelectPortal>
+                <SelectBackdropContent />
+                <SelectContent>
+                  <SelectDragIndicatorWrapper>
+                    <SelectDragIndicator />
+                  </SelectDragIndicatorWrapper>
+                  {machines.map((machine: Machine) => (
+                    <SelectItem
+                      key={machine.MachineName}
+                      label={machine.MachineName}
+                      value={machine.MachineName}
+                    />
+                  ))}
+                </SelectContent>
+              </SelectPortal>
+            </Select>
+            {machinesError ? (
+              <Text className="text-[12px] text-[#EF4444] mt-1">{machinesError}</Text>
+            ) : null}
           </Box>
 
           <HStack className="gap-4 flex-wrap">
@@ -421,124 +421,124 @@ export default function GpusScreen() {
           contentContainerStyle={{ paddingBottom: 72 }}
           refreshControl={refreshControl}
         >
-            {isLoading ? (
-              <Text className="text-typography-500 dark:text-[#8A94A8]">Loading GPUs...</Text>
-            ) : error ? (
-              <Text className="text-[#EF4444]">{error}</Text>
-            ) : gpus.length === 0 ? (
-              <Text className="text-typography-500 dark:text-[#8A94A8]">No GPUs found on this machine.</Text>
-            ) : (
-              <Box className="flex flex-col gap-4 web:grid web:grid-cols-2 web:gap-6 web:xl:grid-cols-3">
-                {gpus.map((gpu, index) => {
-                  const address = toTrimmedString(gpu.address) ?? "unknown";
-                  const vendor = toTrimmedString(gpu.vendor) ?? "Unknown vendor";
-                  const product = toTrimmedString(gpu.product) ?? "Unknown product";
-                  const attachedVmNames = resolveAttachedVmNames(gpu);
-                  const isAttached = attachedVmNames.length > 0;
-                  const attachedVmLabel = isAttached
-                    ? `${attachedVmNames.length > 1 ? "VMs" : "VM"}: ${attachedVmNames.join(", ")}`
-                    : "Host";
-                  const isBusy =
-                    actionInProgress === `attach:${address}` || actionInProgress === `detach:${address}`;
-                  const canAttach = machineVmNames.length > 0 && address !== "unknown";
-                  const canDetach = attachedVmNames.length > 0 && address !== "unknown";
+          {isLoading ? (
+            <Text className="text-typography-500 dark:text-[#8A94A8]">Loading GPUs...</Text>
+          ) : error ? (
+            <Text className="text-[#EF4444]">{error}</Text>
+          ) : gpus.length === 0 ? (
+            <Text className="text-typography-500 dark:text-[#8A94A8]">No GPUs found on this machine.</Text>
+          ) : (
+            <Box className="flex flex-col gap-4 web:grid web:grid-cols-2 web:gap-6 web:xl:grid-cols-3">
+              {gpus.map((gpu, index) => {
+                const address = toTrimmedString(gpu.address) ?? "unknown";
+                const vendor = toTrimmedString(gpu.vendor) ?? "Unknown vendor";
+                const product = toTrimmedString(gpu.product) ?? "Unknown product";
+                const attachedVmNames = resolveAttachedVmNames(gpu);
+                const isAttached = attachedVmNames.length > 0;
+                const attachedVmLabel = isAttached
+                  ? `${attachedVmNames.length > 1 ? "VMs" : "VM"}: ${attachedVmNames.join(", ")}`
+                  : "Host";
+                const isBusy =
+                  actionInProgress === `attach:${address}` || actionInProgress === `detach:${address}`;
+                const canAttach = machineVmNames.length > 0 && address !== "unknown";
+                const canDetach = attachedVmNames.length > 0 && address !== "unknown";
 
-                  return (
-                    <Box
-                      key={`${address}-${gpu.node_name ?? index}`}
-                      className="rounded-2xl border border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524] p-6 shadow-md"
-                    >
-                      <VStack className="gap-4">
-                        <HStack className="items-start justify-between gap-3">
-                          <Box className="w-10 h-10 rounded-xl bg-background-50 dark:bg-[#1A2637] items-center justify-center">
-                            <Cpu size={20} className="text-typography-500 dark:text-[#5EEAD4]" />
-                          </Box>
-                          <Badge
-                            variant={isAttached ? "solid" : "outline"}
-                            size="sm"
+                return (
+                  <Box
+                    key={`${address}-${gpu.node_name ?? index}`}
+                    className="rounded-2xl border border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524] p-6 shadow-md"
+                  >
+                    <VStack className="gap-4">
+                      <HStack className="items-start justify-between gap-3">
+                        <Box className="w-10 h-10 rounded-xl bg-background-50 dark:bg-[#1A2637] items-center justify-center">
+                          <Cpu size={20} className="text-typography-500 dark:text-[#5EEAD4]" />
+                        </Box>
+                        <Badge
+                          variant={isAttached ? "solid" : "outline"}
+                          size="sm"
+                          className={
+                            isAttached
+                              ? "border-transparent bg-primary-600"
+                              : "border-outline-300 dark:border-[#243247]"
+                          }
+                        >
+                          <BadgeText
                             className={
                               isAttached
-                                ? "border-transparent bg-primary-600"
-                                : "border-outline-300 dark:border-[#243247]"
+                                ? "text-background-0"
+                                : "text-typography-600 dark:text-[#8A94A8]"
                             }
                           >
-                            <BadgeText
-                              className={
-                                isAttached
-                                  ? "text-background-0"
-                                  : "text-typography-600 dark:text-[#8A94A8]"
-                              }
-                            >
-                              {attachedVmLabel}
-                            </BadgeText>
-                          </Badge>
-                        </HStack>
+                            {attachedVmLabel}
+                          </BadgeText>
+                        </Badge>
+                      </HStack>
 
-                        <VStack className="gap-1.5">
-                          <Text className="text-lg font-bold text-typography-900 dark:text-[#E8EBF0]">
-                            {vendor}
-                          </Text>
-                          <Text className="text-sm text-typography-600 dark:text-[#8A94A8]" numberOfLines={2}>
-                            {product}
-                          </Text>
-                          <Text className="text-xs text-typography-500 dark:text-[#8A94A8] font-mono">{address}</Text>
-                        </VStack>
-
-                        <VStack className="gap-2">
-                          <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">
-                            Node: {toTrimmedString(gpu.node_name) ?? "N/A"}
-                          </Text>
-                          <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">
-                            IOMMU: {gpu.iommu_group ?? "N/A"} | BUS: {formatBusValue(gpu.bus)} | NUMA:{" "}
-                            {formatNumaNode(gpu.numa_node)}
-                          </Text>
-                          <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">
-                            VID: {toTrimmedString(gpu.vendor_id) ?? "N/A"} | PID:{" "}
-                            {toTrimmedString(gpu.product_id) ?? "N/A"}
-                          </Text>
-                        </VStack>
-
-                        <HStack className="justify-end pt-1">
-                          {isAttached ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              action="negative"
-                              className="rounded-xl"
-                              onPress={() => openDetachModal(gpu)}
-                              isDisabled={!canDetach || isBusy}
-                            >
-                              {actionInProgress === `detach:${address}` ? (
-                                <ButtonSpinner />
-                              ) : (
-                                <ButtonIcon as={X} />
-                              )}
-                              <ButtonText>Detach</ButtonText>
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="rounded-xl"
-                              onPress={() => openAttachModal(gpu)}
-                              isDisabled={!canAttach || isBusy}
-                            >
-                              {actionInProgress === `attach:${address}` ? (
-                                <ButtonSpinner />
-                              ) : (
-                                <ButtonIcon as={PlugZap} />
-                              )}
-                              <ButtonText>Attach</ButtonText>
-                            </Button>
-                          )}
-                        </HStack>
+                      <VStack className="gap-1.5">
+                        <Text className="text-lg font-bold text-typography-900 dark:text-[#E8EBF0]">
+                          {vendor}
+                        </Text>
+                        <Text className="text-sm text-typography-600 dark:text-[#8A94A8]" numberOfLines={2}>
+                          {product}
+                        </Text>
+                        <Text className="text-xs text-typography-500 dark:text-[#8A94A8] font-mono">{address}</Text>
                       </VStack>
-                    </Box>
-                  );
-                })}
-              </Box>
-            )}
-          </ScrollView>
+
+                      <VStack className="gap-2">
+                        <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">
+                          Node: {toTrimmedString(gpu.node_name) ?? "N/A"}
+                        </Text>
+                        <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">
+                          IOMMU: {gpu.iommu_group ?? "N/A"} | BUS: {formatBusValue(gpu.bus)} | NUMA:{" "}
+                          {formatNumaNode(gpu.numa_node)}
+                        </Text>
+                        <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">
+                          VID: {toTrimmedString(gpu.vendor_id) ?? "N/A"} | PID:{" "}
+                          {toTrimmedString(gpu.product_id) ?? "N/A"}
+                        </Text>
+                      </VStack>
+
+                      <HStack className="justify-end pt-1">
+                        {isAttached ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            action="negative"
+                            className="rounded-xl"
+                            onPress={() => openDetachModal(gpu)}
+                            isDisabled={!canDetach || isBusy}
+                          >
+                            {actionInProgress === `detach:${address}` ? (
+                              <ButtonSpinner />
+                            ) : (
+                              <ButtonIcon as={X} />
+                            )}
+                            <ButtonText>Detach</ButtonText>
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-xl"
+                            onPress={() => openAttachModal(gpu)}
+                            isDisabled={!canAttach || isBusy}
+                          >
+                            {actionInProgress === `attach:${address}` ? (
+                              <ButtonSpinner />
+                            ) : (
+                              <ButtonIcon as={PlugZap} />
+                            )}
+                            <ButtonText>Attach</ButtonText>
+                          </Button>
+                        )}
+                      </HStack>
+                    </VStack>
+                  </Box>
+                );
+              })}
+            </Box>
+          )}
+        </ScrollView>
       </Box>
 
       <Modal isOpen={!!attachModalGpu} onClose={closeAttachModal} size="md">

@@ -15,10 +15,11 @@ import { Platform } from "react-native";
 import { Heading } from '@/components/ui/heading';
 import CreateVmModal from "@/components/modals/CreateVmModal";
 import ImportVmModal from "@/components/modals/ImportVmModal";
+import CpuPinningModal from "@/components/modals/CpuPinningModal";
 import { ensureHyperHiveWebsocket, subscribeToHyperHiveWebsocket } from "@/services/websocket-client";
 import { useAppTheme } from "@/hooks/useAppTheme";
 import * as Clipboard from "expo-clipboard";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as WebBrowser from "expo-web-browser";
 import {
@@ -128,6 +129,7 @@ import {
   Lock,
   X,
   ChevronDown,
+  Pin,
 } from "lucide-react-native";
 
 const usePrimaryButtonStyles = () => {
@@ -136,13 +138,13 @@ const usePrimaryButtonStyles = () => {
   const primaryButtonClass = isWeb
     ? "bg-typography-900 dark:bg-[#2DD4BF]"
     : resolvedMode === "dark"
-    ? "bg-[#2DD4BF]"
-    : "bg-typography-900";
+      ? "bg-[#2DD4BF]"
+      : "bg-typography-900";
   const primaryButtonTextClass = isWeb
     ? "text-background-0 dark:text-[#0A1628]"
     : resolvedMode === "dark"
-    ? "text-[#0A1628]"
-    : "text-background-0";
+      ? "text-[#0A1628]"
+      : "text-background-0";
   return { primaryButtonClass, primaryButtonTextClass, resolvedMode, isWeb };
 };
 
@@ -227,18 +229,18 @@ export default function VirtualMachinesScreen() {
   const cardIconButtonClass = isWeb
     ? "p-3 rounded-lg border border-outline-200 bg-background-0 dark:bg-[#0F1A2E] web:hover:border-primary-500 web:hover:bg-primary-50 web:transition-all web:duration-150 disabled:opacity-50"
     : resolvedMode === "dark"
-    ? "p-3 rounded-lg border border-outline-200 bg-[#0F1A2E] disabled:opacity-50"
-    : "p-3 rounded-lg border border-outline-200 bg-background-0 disabled:opacity-50";
+      ? "p-3 rounded-lg border border-outline-200 bg-[#0F1A2E] disabled:opacity-50"
+      : "p-3 rounded-lg border border-outline-200 bg-background-0 disabled:opacity-50";
   const cardDangerButtonClass = isWeb
     ? "p-3 rounded-lg border border-outline-200 bg-background-0 dark:bg-[#0F1A2E] web:hover:border-red-500 web:hover:bg-red-50 web:transition-all web:duration-150 disabled:opacity-50"
     : resolvedMode === "dark"
-    ? "p-3 rounded-lg border border-outline-200 bg-[#0F1A2E] disabled:opacity-50"
-    : "p-3 rounded-lg border border-outline-200 bg-background-0 disabled:opacity-50";
+      ? "p-3 rounded-lg border border-outline-200 bg-[#0F1A2E] disabled:opacity-50"
+      : "p-3 rounded-lg border border-outline-200 bg-background-0 disabled:opacity-50";
   const cardMenuIconClass = isWeb
     ? "text-[#9AA4B8] dark:text-[#8A94A8]"
     : resolvedMode === "dark"
-    ? "text-[#8A94A8]"
-    : "text-[#9AA4B8]";
+      ? "text-[#8A94A8]"
+      : "text-[#9AA4B8]";
   const cardIconColor = resolvedMode === "dark" ? "#E8EBF0" : "#0F172A";
   const cardMenuIconColor = resolvedMode === "dark" ? "#8A94A8" : "#9AA4B8";
   const cardDangerIconColor = "#DC2626";
@@ -255,9 +257,9 @@ export default function VirtualMachinesScreen() {
   const [confirmAction, setConfirmAction] = React.useState<
     | null
     | {
-        type: "delete" | "force-shutdown" | "shutdown" | "restart" | "pause";
-        vm: VM;
-      }
+      type: "delete" | "force-shutdown" | "shutdown" | "restart" | "pause";
+      vm: VM;
+    }
   >(null);
   const [openCreate, setOpenCreate] = React.useState(false);
   const [openImport, setOpenImport] = React.useState(false);
@@ -267,6 +269,7 @@ export default function VirtualMachinesScreen() {
   const [moveDiskVm, setMoveDiskVm] = React.useState<VM | null>(null);
   const [backupVm, setBackupVm] = React.useState<VM | null>(null);
   const [updateCpuVm, setUpdateCpuVm] = React.useState<VM | null>(null);
+  const [cpuPinVm, setCpuPinVm] = React.useState<VM | null>(null);
   const [restoreVm, setRestoreVm] = React.useState<VM | null>(null);
   const [changeVncVm, setChangeVncVm] = React.useState<VM | null>(null);
   const [pendingVmNames, setPendingVmNames] = React.useState<Set<string>>(new Set());
@@ -2214,6 +2217,16 @@ export default function VirtualMachinesScreen() {
             </AlertDialogContent>
           </AlertDialog>
 
+          {/* Modal: CPU Pinning */}
+          {cpuPinVm && (
+            <CpuPinningModal
+              isOpen={!!cpuPinVm}
+              onClose={() => setCpuPinVm(null)}
+              vmName={cpuPinVm.name}
+              machineName={cpuPinVm.machineName}
+            />
+          )}
+
           {/* Modal: Importar VM */}
           <ImportVmModal
             showModal={openImport}
@@ -3004,6 +3017,19 @@ export default function VirtualMachinesScreen() {
                 <Pressable
                   onPress={() => {
                     if (!selectedVm) return;
+                    setCpuPinVm(selectedVm);
+                    setShowActionsheet(false);
+                  }}
+                  className="px-3 py-3 hover:bg-background-50 dark:hover:bg-[#1E2F47] rounded-md"
+                >
+                  <HStack className="items-center gap-3">
+                    <Pin size={18} className="text-typography-700 dark:text-[#E8EBF0]" />
+                    <Text className="text-typography-900 dark:text-[#E8EBF0]">Edit CPU Pinning</Text>
+                  </HStack>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    if (!selectedVm) return;
                     setChangeVncVm(selectedVm);
                     setShowActionsheet(false);
                   }}
@@ -3265,6 +3291,16 @@ export default function VirtualMachinesScreen() {
               >
                 <ActionsheetIcon as={Cpu} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
                 <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">Update CPU XML</ActionsheetItemText>
+              </ActionsheetItem>
+              <ActionsheetItem
+                onPress={() => {
+                  if (!selectedVm) return;
+                  setCpuPinVm(selectedVm);
+                  setShowActionsheet(false);
+                }}
+              >
+                <ActionsheetIcon as={Pin} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
+                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">Edit CPU Pinning</ActionsheetItemText>
               </ActionsheetItem>
               <ActionsheetItem
                 onPress={() => {
@@ -3563,8 +3599,8 @@ function EditVmForm({
                     key={`mem-${gb}`}
                     onPress={() => setMemory(mb)}
                     className={`px-3 py-2 rounded-full border ${memory === mb
-                        ? "border-primary-500 bg-primary-50/20"
-                        : "border-outline-200 bg-background-0"
+                      ? "border-primary-500 bg-primary-50/20"
+                      : "border-outline-200 bg-background-0"
                       }`}
                   >
                     <Text className="text-xs font-medium text-typography-700">
@@ -3609,10 +3645,10 @@ function EditVmForm({
                     setDisk(gb);
                   }}
                   className={`px-3 py-2 rounded-full border ${disk === gb
-                      ? "border-primary-500 bg-primary-50/20"
-                      : gb < minDiskGb
-                        ? "border-outline-100 bg-background-0 opacity-40"
-                        : "border-outline-200 bg-background-0"
+                    ? "border-primary-500 bg-primary-50/20"
+                    : gb < minDiskGb
+                      ? "border-outline-100 bg-background-0 opacity-40"
+                      : "border-outline-200 bg-background-0"
                     }`}
                 >
                   <Text className="text-xs font-medium text-typography-700">
