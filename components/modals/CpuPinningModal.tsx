@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
-import { ScrollView, Platform } from "react-native";
+import { Platform } from "react-native";
 import {
   Modal,
   ModalBackdrop,
@@ -323,7 +323,7 @@ export default function CpuPinningModal({
     <>
       <Modal isOpen={isOpen} onClose={onClose} size="lg">
         <ModalBackdrop />
-        <ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] max-h-[90%]">
+        <ModalContent className="w-[88%] max-w-[340px] web:max-w-[640px] max-h-[82%] web:max-h-[88vh] rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] px-4 py-4 web:px-6 web:py-6">
           <ModalHeader className="flex-row items-center gap-3 pb-2">
             <Cpu
               size={20}
@@ -340,11 +340,13 @@ export default function CpuPinningModal({
 
           <Divider className="bg-outline-100 dark:bg-[#1E2F47]" />
 
-          <ModalBody>
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-            >
+          <ModalBody
+            className="mt-3 mb-0 flex-1"
+            showsVerticalScrollIndicator
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+            contentContainerStyle={{ paddingBottom: 8 }}
+          >
               {/* ── Loading ─────────────────────────────────────────────── */}
               {loading && (
                 <VStack className="items-center justify-center py-12 gap-3">
@@ -374,12 +376,12 @@ export default function CpuPinningModal({
               {!loading && !error && (
                 <VStack className="gap-5 py-2">
                   {/* VM info banner */}
-                  <HStack className="items-center gap-2">
+                  <HStack className="items-center gap-2 flex-wrap">
                     <Badge
                       action="muted"
                       className="rounded-lg bg-outline-50 dark:bg-[#162236]"
                     >
-                      <BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">
+                      <BadgeText numberOfLines={1} className="text-xs text-typography-600 dark:text-[#8A94A8]">
                         VM: {vmName}
                       </BadgeText>
                     </Badge>
@@ -387,7 +389,7 @@ export default function CpuPinningModal({
                       action="muted"
                       className="rounded-lg bg-outline-50 dark:bg-[#162236]"
                     >
-                      <BadgeText className="text-xs text-typography-600 dark:text-[#8A94A8]">
+                      <BadgeText numberOfLines={1} className="text-xs text-typography-600 dark:text-[#8A94A8]">
                         Host: {machineName}
                       </BadgeText>
                     </Badge>
@@ -468,8 +470,8 @@ export default function CpuPinningModal({
                   </FormControl>
 
                   {/* ─ Core start / end ─ */}
-                  <HStack className="gap-3">
-                    <FormControl className="flex-1">
+                  <HStack className="gap-3 flex-col web:flex-row">
+                    <FormControl className="w-full web:flex-1">
                       <FormControlLabel>
                         <FormControlLabelText className="text-typography-900 dark:text-[#E8EBF0]">
                           Core Start
@@ -490,7 +492,7 @@ export default function CpuPinningModal({
                         />
                       </Input>
                     </FormControl>
-                    <FormControl className="flex-1">
+                    <FormControl className="w-full web:flex-1">
                       <FormControlLabel>
                         <FormControlLabelText className="text-typography-900 dark:text-[#E8EBF0]">
                           Core End
@@ -542,7 +544,7 @@ export default function CpuPinningModal({
                             >
                               <Box
                                 className={`
-                                  items-center justify-center rounded-lg w-12 h-12 border
+                                  items-center justify-center rounded-lg w-10 h-10 web:w-12 web:h-12 border
                                   ${isSelected
                                     ? "bg-[#2DD4BF]/20 border-[#2DD4BF] dark:bg-[#2DD4BF]/30 dark:border-[#2DD4BF]"
                                     : "bg-background-50 dark:bg-[#162236] border-outline-200 dark:border-[#2A3B52]"
@@ -596,49 +598,48 @@ export default function CpuPinningModal({
                   )}
                 </VStack>
               )}
-            </ScrollView>
           </ModalBody>
 
           {/* ── Footer ───────────────────────────────────────────────── */}
           {!loading && !error && (
             <>
               <Divider className="bg-outline-100 dark:bg-[#1E2F47]" />
-              <ModalFooter className="flex-row gap-3 pt-3">
-                {/* Remove pinning — only if currently pinned */}
-                {pinning?.hasPinning && (
+              <ModalFooter className="w-full pt-3">
+                <Box className="w-full flex-col gap-3 web:flex-row web:items-center">
+                  {/* Remove pinning — only if currently pinned */}
+                  {pinning?.hasPinning && (
+                    <Button
+                      variant="outline"
+                      action="negative"
+                      className="w-full web:w-auto rounded-xl web:mr-auto"
+                      onPress={() => setShowRemoveConfirm(true)}
+                      isDisabled={saving}
+                    >
+                      <ButtonText>Remove Pinning</ButtonText>
+                    </Button>
+                  )}
+
                   <Button
                     variant="outline"
-                    action="negative"
-                    className="rounded-xl"
-                    onPress={() => setShowRemoveConfirm(true)}
+                    action="secondary"
+                    className="w-full web:w-auto rounded-xl"
+                    onPress={onClose}
                     isDisabled={saving}
                   >
-                    <ButtonText>Remove Pinning</ButtonText>
+                    <ButtonText>Cancel</ButtonText>
                   </Button>
-                )}
 
-                <Box className="flex-1" />
-
-                <Button
-                  variant="outline"
-                  action="secondary"
-                  className="rounded-xl"
-                  onPress={onClose}
-                  isDisabled={saving}
-                >
-                  <ButtonText>Cancel</ButtonText>
-                </Button>
-
-                <Button
-                  className={`rounded-xl ${primaryButtonClass}`}
-                  onPress={handleSave}
-                  isDisabled={!isFormValid || saving}
-                >
-                  {saving && <ButtonSpinner className="mr-2" />}
-                  <ButtonText className={primaryButtonTextClass}>
-                    {saving ? "Saving…" : "Save"}
-                  </ButtonText>
-                </Button>
+                  <Button
+                    className={`w-full web:w-auto rounded-xl ${primaryButtonClass}`}
+                    onPress={handleSave}
+                    isDisabled={!isFormValid || saving}
+                  >
+                    {saving && <ButtonSpinner className="mr-2" />}
+                    <ButtonText className={primaryButtonTextClass}>
+                      {saving ? "Saving…" : "Save"}
+                    </ButtonText>
+                  </Button>
+                </Box>
               </ModalFooter>
             </>
           )}
