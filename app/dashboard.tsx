@@ -379,7 +379,7 @@ export default function DashboardScreen() {
         <Box className="w-9 h-9 rounded-xl bg-primary-50/70 dark:bg-[#12213A] items-center justify-center shrink-0">
           <Icon
             as={(props) =>
-              React.createElement(icon, {...props, strokeWidth: 1.5})
+              React.createElement(icon, { ...props, strokeWidth: 1.5 })
             }
             size={ICON_SIZE_MD}
             className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80 flex-none"
@@ -389,7 +389,7 @@ export default function DashboardScreen() {
       <Heading
         size="xl"
         className="text-typography-900 dark:text-[#E8EBF0]"
-        style={{fontFamily: "Inter_700Bold"}}
+        style={{ fontFamily: "Inter_700Bold" }}
       >
         {value}
       </Heading>
@@ -406,20 +406,19 @@ export default function DashboardScreen() {
       <ScrollView
         refreshControl={refreshControl}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{paddingBottom: 40}}
+        contentContainerStyle={{ paddingBottom: 40 }}
       >
         <Box className="p-4 pt-16 web:p-20 web:max-w-7xl web:mx-auto web:w-full">
           <VStack className="gap-2 mb-6">
             <Heading
               size="2xl"
               className="text-typography-900 dark:text-[#E8EBF0] web:text-4xl"
-              style={{fontFamily: "Inter_700Bold"}}
+              style={{ fontFamily: "Inter_700Bold" }}
             >
               Cluster Dashboard
             </Heading>
             <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
-              Overview of all nodes with CPU, RAM, disk, and recent activity.
-              Tap "View details" to open per-machine charts.
+              Real-time monitoring of your cluster infrastructure. View CPU, memory, disk usage, and system health across all connected nodes.
             </Text>
             {error ? (
               <Box className="mt-2 p-3 rounded-xl border border-error-300 dark:border-error-700 bg-error-50 dark:bg-error-900/30">
@@ -496,15 +495,15 @@ export default function DashboardScreen() {
                 usagePercent={
                   overallTotals.diskTotals.total
                     ? (overallTotals.diskTotals.used /
-                        overallTotals.diskTotals.total) *
-                      100
+                      overallTotals.diskTotals.total) *
+                    100
                     : 0
                 }
                 usedGB={bytesToGb(overallTotals.diskTotals.used)}
                 totalGB={bytesToGb(overallTotals.diskTotals.total)}
                 freeGB={bytesToGb(
                   overallTotals.diskTotals.total -
-                    overallTotals.diskTotals.used,
+                  overallTotals.diskTotals.used,
                 )}
               />
               <VStack className="gap-2 flex-1 min-w-[220px]">
@@ -745,10 +744,10 @@ export default function DashboardScreen() {
                         <Text className="text-lg font-semibold text-typography-900 dark:text-[#E8EBF0]">
                           {averageCpuTemp(snap.cpu)
                             ? `${averageCpuTemp(snap.cpu).toFixed(
-                                1,
-                              )}ºC avg / ${maxCpuTemp(snap.cpu).toFixed(
-                                1,
-                              )}ºC max`
+                              1,
+                            )}ºC avg / ${maxCpuTemp(snap.cpu).toFixed(
+                              1,
+                            )}ºC max`
                             : "—"}
                         </Text>
                         <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
@@ -780,11 +779,10 @@ export default function DashboardScreen() {
         <ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-5">
           <ModalHeader className="flex-row items-center gap-3 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
             <Box
-              className={`h-10 w-10 rounded-2xl items-center justify-center ${
-                pendingPowerAction?.action === "shutdown"
+              className={`h-10 w-10 rounded-2xl items-center justify-center ${pendingPowerAction?.action === "shutdown"
                   ? "bg-error-500/10 dark:bg-error-900/20"
                   : "bg-primary-500/10 dark:bg-[#0F766E]/20"
-              }`}
+                }`}
             >
               {pendingPowerAction?.action === "shutdown" ? (
                 <Power
@@ -861,11 +859,10 @@ export default function DashboardScreen() {
         <ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-5">
           <ModalHeader className="flex-row items-center gap-3 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
             <Box
-              className={`h-10 w-10 rounded-2xl items-center justify-center ${
-                pendingPowerAction?.action === "shutdown"
+              className={`h-10 w-10 rounded-2xl items-center justify-center ${pendingPowerAction?.action === "shutdown"
                   ? "bg-error-500/10 dark:bg-error-900/20"
                   : "bg-primary-500/10 dark:bg-[#0F766E]/20"
-              }`}
+                }`}
             >
               {pendingPowerAction?.action === "shutdown" ? (
                 <Power
