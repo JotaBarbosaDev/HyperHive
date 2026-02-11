@@ -365,20 +365,38 @@ export default function GpusScreen() {
         </HStack>
 
         <VStack className="mt-6 gap-5">
-          <Box className="min-w-[180px]">
-            <Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-2 font-medium">Select Machine</Text>
+          <Box className="min-w-[240px] max-w-[420px] rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-3.5 shadow-sm">
+            <HStack className="items-center justify-between mb-2.5">
+              <HStack className="items-center gap-2.5">
+                <Box className="h-8 w-8 rounded-lg items-center justify-center bg-primary-50 dark:bg-[#13253D] border border-primary-200 dark:border-[#214066]">
+                  <Server size={15} className="text-primary-600 dark:text-[#60A5FA]" />
+                </Box>
+                <VStack className="gap-0.5">
+                  <Text className="text-xs text-typography-500 dark:text-[#8A94A8] font-medium">Target machine</Text>
+                  <Text className="text-[11px] text-typography-400 dark:text-[#6B7B95]">
+                    {isLoadingMachines ? "Loading hosts..." : `${machines.length} host${machines.length === 1 ? "" : "s"} available`}
+                  </Text>
+                </VStack>
+              </HStack>
+            </HStack>
+
             <Select
               selectedValue={selectedMachine ?? undefined}
               onValueChange={setSelectedMachine as any}
               isDisabled={isLoadingMachines || machines.length === 0}
             >
-              <SelectTrigger className="w-52 rounded-xl border border-outline-200 dark:border-[#1F2A3C]">
-                <SelectInput placeholder={isLoadingMachines ? "Loading..." : "Select machine"} />
-                <SelectIcon as={ChevronDown} className="text-typography-500" />
+              <SelectTrigger className="w-full h-12 rounded-xl border border-outline-300 dark:border-[#29405F] bg-background-0 dark:bg-[#0D1B31] px-3 gap-2 data-[focus=true]:border-primary-500 data-[focus=true]:dark:border-[#60A5FA]">
+                <SelectInput
+                  className="flex-1 px-0 text-sm font-semibold text-typography-900 dark:text-[#E8EBF0] placeholder:text-typography-500 dark:placeholder:text-[#8A94A8]"
+                  placeholder={isLoadingMachines ? "Loading..." : "Select machine"}
+                />
+                <Box className="h-7 w-7 rounded-md items-center justify-center bg-background-100 dark:bg-[#13243B] border border-outline-200 dark:border-[#2B466B]">
+                  <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-[#93C5FD]" />
+                </Box>
               </SelectTrigger>
               <SelectPortal>
                 <SelectBackdropContent />
-                <SelectContent>
+                <SelectContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
                   <SelectDragIndicatorWrapper>
                     <SelectDragIndicator />
                   </SelectDragIndicatorWrapper>
@@ -387,13 +405,14 @@ export default function GpusScreen() {
                       key={machine.MachineName}
                       label={machine.MachineName}
                       value={machine.MachineName}
+                      className="rounded-lg mx-1 my-0.5"
                     />
                   ))}
                 </SelectContent>
               </SelectPortal>
             </Select>
             {machinesError ? (
-              <Text className="text-[12px] text-[#EF4444] mt-1">{machinesError}</Text>
+              <Text className="text-[12px] text-[#EF4444] mt-2">{machinesError}</Text>
             ) : null}
           </Box>
 
