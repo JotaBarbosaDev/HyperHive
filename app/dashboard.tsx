@@ -55,8 +55,8 @@ type MachineSnapshot = {
   disk?: DiskInfo | null;
 };
 
-const ICON_SIZE_SM = 16;
-const ICON_SIZE_MD = 18;
+const ICON_SIZE_SM = "sm";
+const ICON_SIZE_MD = "md";
 
 const formatBytes = (value?: number) => {
   if (value == null || !Number.isFinite(value)) return "—";
@@ -129,7 +129,7 @@ const computeDiskTotals = (disk?: DiskInfo | null) => {
       const total = Number(item.total ?? 0);
       const free = Number(item.free ?? 0);
       const usedFromField = Number(item.used ?? 0);
-      const used = Number.isFinite(total - free) && total && free ? total - free : usedFromField;
+      const used = Number.isFinite(total - free) && total > 0 && free >= 0 ? total - free : usedFromField;
       if (Number.isFinite(total)) acc.total += total;
       if (Number.isFinite(used)) acc.used += used;
       return acc;
