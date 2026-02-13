@@ -129,9 +129,13 @@ const computeDiskTotals = (disk?: DiskInfo | null) => {
       const total = Number(item.total ?? 0);
       const free = Number(item.free ?? 0);
       const usedFromField = Number(item.used ?? 0);
-      const used = Number.isFinite(total - free) && total > 0 && free >= 0 ? total - free : usedFromField;
+      const usedFromMath =
+        Number.isFinite(total) && Number.isFinite(free) && total > 0 && free >= 0 && free <= total
+          ? total - free
+          : NaN;
+      const used = Number.isFinite(usedFromMath) ? usedFromMath : usedFromField;
       if (Number.isFinite(total)) acc.total += total;
-      if (Number.isFinite(used)) acc.used += used;
+      if (Number.isFinite(used)) acc.used += Math.max(0, used);
       return acc;
     },
     { total: 0, used: 0 }
@@ -259,9 +263,16 @@ export default function DashboardScreen() {
   }, [isChecking, isLoadingMachines, sortedMachines.length, loadSnapshots]);
 
   const overallTotals = React.useMemo(() => {
+    const cpuSnapshots = snapshots.filter((snap) => (snap.cpu?.cores?.length ?? 0) > 0);
+    const tempSnapshots = snapshots.filter((snap) =>
+      (snap.cpu?.cores ?? []).some((core) => {
+        const temp = Number(core.temp);
+        return Number.isFinite(temp);
+      })
+    );
     const totalCores = snapshots.reduce((acc, snap) => acc + (snap.cpu?.cores?.length ?? 0), 0);
-    const totalCpuUsage = snapshots.reduce((acc, snap) => acc + averageCpuUsage(snap.cpu), 0);
-    const avgCpuUsage = snapshots.length ? totalCpuUsage / snapshots.length : 0;
+    const totalCpuUsage = cpuSnapshots.reduce((acc, snap) => acc + averageCpuUsage(snap.cpu), 0);
+    const avgCpuUsage = cpuSnapshots.length ? totalCpuUsage / cpuSnapshots.length : 0;
 
     const totalRamMb = snapshots.reduce((acc, snap) => acc + (snap.mem?.totalMb ?? 0), 0);
     const usedRamMb = snapshots.reduce((acc, snap) => acc + (snap.mem?.usedMb ?? 0), 0);
@@ -277,8 +288,8 @@ export default function DashboardScreen() {
       { total: 0, used: 0 }
     );
 
-    const avgTemp = snapshots.reduce((acc, snap) => acc + averageCpuTemp(snap.cpu), 0);
-    const temp = snapshots.length ? avgTemp / snapshots.length : 0;
+    const avgTemp = tempSnapshots.reduce((acc, snap) => acc + averageCpuTemp(snap.cpu), 0);
+    const temp = tempSnapshots.length ? avgTemp / tempSnapshots.length : 0;
 
     return { totalCores, avgCpuUsage, totalRamMb, usedRamMb, ramUsagePercent, diskTotals, temp };
   }, [snapshots]);
