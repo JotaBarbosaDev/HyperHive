@@ -233,6 +233,44 @@ export async function setVmActiveVnc(vmName: string, enable: boolean) {
   });
 }
 
+export type VmBallooningStatus = {
+  enabled: boolean;
+  has_memballoon: boolean;
+  memballoon_model: string | null;
+};
+
+export async function getVmBallooning(vmName: string): Promise<VmBallooningStatus> {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  const response = await apiFetch<any>(`/virsh/ballooning/${encodedVmName}`, {
+    token: authToken,
+  });
+
+  const enabled = response?.enabled;
+  const hasMemballoon = response?.has_memballoon ?? response?.hasMemballoon;
+  const memballoonModel = response?.memballoon_model ?? response?.memballoonModel;
+
+  if (typeof enabled !== "boolean" || typeof hasMemballoon !== "boolean") {
+    throw new Error("Invalid ballooning status response.");
+  }
+
+  return {
+    enabled,
+    has_memballoon: hasMemballoon,
+    memballoon_model: typeof memballoonModel === "string" ? memballoonModel : null,
+  };
+}
+
+export async function setVmBallooning(vmName: string, enable: boolean) {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  await apiFetch<void>(`/virsh/ballooning/${encodedVmName}`, {
+    method: "POST",
+    token: authToken,
+    body: { enable },
+  });
+}
+
 export async function cloneVm(
   vmName: string,
   destNfs: string,

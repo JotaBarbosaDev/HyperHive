@@ -79,6 +79,8 @@ import {
   setVmAutostart,
   setVmLive,
   setVmActiveVnc,
+  getVmBallooning,
+  setVmBallooning,
   getCpuDisableFeatures,
   updateCpuXml,
   getVmExportUrl,
@@ -183,6 +185,14 @@ type MachineResourceSnapshot = {
   totalVcpus: number | null;
 };
 
+type VmBallooningUiState = {
+  hasLoaded: boolean;
+  isLoading: boolean;
+  enabled: boolean;
+  hasMemballoon: boolean;
+  error: string | null;
+};
+
 // Estados das VMs
 const VM_STATES: Record<VmState, VMState> = {
   [VmState.UNKNOWN]: { label: "Unknown", color: "bg-gray-400", badgeVariant: "outline" },
@@ -279,6 +289,11 @@ export default function VirtualMachinesScreen() {
   const vmLiveInFlightRef = React.useRef<Set<string>>(new Set());
   const activeVncDesiredRef = React.useRef<Map<string, boolean>>(new Map());
   const activeVncInFlightRef = React.useRef<Set<string>>(new Set());
+  const ballooningDesiredRef = React.useRef<Map<string, boolean>>(new Map());
+  const ballooningInFlightRef = React.useRef<Set<string>>(new Set());
+  const [ballooningStatusByVm, setBallooningStatusByVm] = React.useState<
+    Record<string, VmBallooningUiState>
+  >({});
   const [mountOptions, setMountOptions] = React.useState<Mount[]>([]);
   const [slaveOptions, setSlaveOptions] = React.useState<Slave[]>([]);
   const [cloneOptionsLoading, setCloneOptionsLoading] = React.useState(false);
@@ -326,6 +341,27 @@ export default function VirtualMachinesScreen() {
   );
   const detailsVmNfsName = detailsVm ? getNfsNameByDiskPath(detailsVm.diskPath) : null;
   const isExportingSelectedVm = selectedVm ? exportingVm === selectedVm.name : false;
+  const selectedVmBallooningState = selectedVm ? ballooningStatusByVm[selectedVm.name] : undefined;
+  const selectedVmBallooningLoaded = Boolean(selectedVmBallooningState?.hasLoaded);
+  const selectedVmBallooningLoading = Boolean(selectedVmBallooningState?.isLoading);
+  const selectedVmBallooningUnsupported =
+    selectedVmBallooningLoaded && selectedVmBallooningState?.hasMemballoon === false;
+  const selectedVmBallooningEnabled =
+    selectedVmBallooningLoaded &&
+    !selectedVmBallooningUnsupported &&
+    Boolean(selectedVmBallooningState?.enabled);
+  const selectedVmBallooningToggleDisabled =
+    !selectedVm ||
+    selectedVmBallooningLoading ||
+    !selectedVmBallooningLoaded ||
+    selectedVmBallooningUnsupported;
+  const selectedVmBallooningLabel = selectedVmBallooningUnsupported
+    ? "Ballooning (unsupported)"
+    : selectedVmBallooningState?.error && !selectedVmBallooningLoaded
+      ? "Ballooning (unavailable)"
+      : !selectedVmBallooningLoaded
+        ? "Ballooning (loading...)"
+        : "Ballooning";
 
   const showToastMessage = React.useCallback(
     (
@@ -350,6 +386,63 @@ export default function VirtualMachinesScreen() {
       });
     },
     [toast]
+  );
+
+  const loadVmBallooningStatus = React.useCallback(
+    async (vmName: string, options?: { silent?: boolean }) => {
+      setBallooningStatusByVm((prev) => {
+        const current = prev[vmName];
+        return {
+          ...prev,
+          [vmName]: {
+            hasLoaded: current?.hasLoaded ?? false,
+            isLoading: true,
+            enabled: current?.enabled ?? false,
+            hasMemballoon: current?.hasMemballoon ?? true,
+            error: null,
+          },
+        };
+      });
+
+      try {
+        const status = await getVmBallooning(vmName);
+        setBallooningStatusByVm((prev) => ({
+          ...prev,
+          [vmName]: {
+            hasLoaded: true,
+            isLoading: false,
+            enabled: status.enabled,
+            hasMemballoon: status.has_memballoon,
+            error: null,
+          },
+        }));
+      } catch (error) {
+        console.error("Error loading ballooning status:", error);
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to load ballooning status.";
+
+        setBallooningStatusByVm((prev) => {
+          const current = prev[vmName];
+          return {
+            ...prev,
+            [vmName]: {
+              hasLoaded: current?.hasLoaded ?? false,
+              isLoading: false,
+              enabled: current?.enabled ?? false,
+              hasMemballoon: current?.hasMemballoon ?? true,
+              error: message,
+            },
+          };
+        });
+
+        if (!options?.silent) {
+          showToastMessage("Ballooning status failed", message, "error");
+        }
+      }
+    },
+    [showToastMessage]
   );
 
   const downloadTextFile = React.useCallback(
@@ -963,6 +1056,13 @@ export default function VirtualMachinesScreen() {
     return () => clearInterval(interval);
   }, [fetchAndSetVms]);
 
+  React.useEffect(() => {
+    if (!showActionsheet || !selectedVm) {
+      return;
+    }
+    void loadVmBallooningStatus(selectedVm.name, { silent: true });
+  }, [showActionsheet, selectedVm?.name, loadVmBallooningStatus]);
+
   const handleVmAction = async (vmName: string, action: string) => {
     setLoadingVm(vmName);
     Haptics.selectionAsync();
@@ -1177,6 +1277,81 @@ export default function VirtualMachinesScreen() {
         });
       } finally {
         activeVncInFlightRef.current.delete(vmName);
+      }
+    })();
+  };
+
+  const handleToggleBallooning = (vm: VM, checked: boolean) => {
+    const vmName = vm.name;
+    const currentState = ballooningStatusByVm[vmName];
+    if (!currentState?.hasLoaded || currentState.hasMemballoon === false) {
+      return;
+    }
+
+    const previousValue = currentState.enabled;
+    const updateLocalBallooning = (value: boolean) => {
+      setBallooningStatusByVm((prev) => {
+        const current = prev[vmName] ?? {
+          hasLoaded: true,
+          isLoading: false,
+          enabled: previousValue,
+          hasMemballoon: true,
+          error: null,
+        };
+        return {
+          ...prev,
+          [vmName]: {
+            ...current,
+            hasLoaded: true,
+            enabled: value,
+            error: null,
+          },
+        };
+      });
+    };
+
+    updateLocalBallooning(checked);
+    Haptics.selectionAsync();
+
+    ballooningDesiredRef.current.set(vmName, checked);
+    if (ballooningInFlightRef.current.has(vmName)) {
+      return;
+    }
+
+    ballooningInFlightRef.current.add(vmName);
+    void (async () => {
+      let lastApplied: boolean | undefined;
+      try {
+        while (true) {
+          const desired = ballooningDesiredRef.current.get(vmName);
+          if (desired === undefined) {
+            break;
+          }
+          ballooningDesiredRef.current.delete(vmName);
+          if (lastApplied !== undefined && desired === lastApplied) {
+            continue;
+          }
+          await setVmBallooning(vmName, desired);
+          lastApplied = desired;
+        }
+
+        if (lastApplied !== undefined) {
+          showToastMessage(`Ballooning ${lastApplied ? "enabled" : "disabled"}`);
+          void loadVmBallooningStatus(vmName, { silent: true });
+        }
+      } catch (error) {
+        console.error("Error updating ballooning:", error);
+        ballooningDesiredRef.current.delete(vmName);
+        const fallbackValue = lastApplied ?? previousValue;
+        updateLocalBallooning(fallbackValue);
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to update ballooning.";
+        showToastMessage("Ballooning update failed", message, "error");
+        void loadVmBallooningStatus(vmName, { silent: true });
+      } finally {
+        ballooningInFlightRef.current.delete(vmName);
       }
     })();
   };
@@ -2965,6 +3140,27 @@ export default function VirtualMachinesScreen() {
                   </HStack>
                 </Pressable>
                 <Pressable
+                  disabled={selectedVmBallooningToggleDisabled}
+                  onPress={() => {
+                    if (!selectedVm || !selectedVmBallooningLoaded) return;
+                    handleToggleBallooning(selectedVm, !selectedVmBallooningEnabled);
+                    setShowActionsheet(false);
+                  }}
+                  className={`px-3 py-3 rounded-md ${selectedVmBallooningToggleDisabled
+                    ? "opacity-60"
+                    : "hover:bg-background-50 dark:hover:bg-[#1E2F47]"
+                    }`}
+                >
+                  <HStack className="items-center gap-2">
+                    {selectedVmBallooningEnabled && (
+                      <Check size={16} className="text-typography-900 dark:text-[#E8EBF0]" />
+                    )}
+                    <Text className="text-typography-900 dark:text-[#E8EBF0]">
+                      {selectedVmBallooningLabel}
+                    </Text>
+                  </HStack>
+                </Pressable>
+                <Pressable
                   onPress={() => {
                     if (!selectedVm) return;
                     handleToggleVmLive(selectedVm, !selectedVm.isLive);
@@ -3251,6 +3447,18 @@ export default function VirtualMachinesScreen() {
               >
                 <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">
                   {(selectedVm?.hasVnc ? "✓ " : "") + "Active VNC"}
+                </ActionsheetItemText>
+              </ActionsheetItem>
+              <ActionsheetItem
+                isDisabled={selectedVmBallooningToggleDisabled}
+                onPress={() => {
+                  if (!selectedVm || !selectedVmBallooningLoaded) return;
+                  handleToggleBallooning(selectedVm, !selectedVmBallooningEnabled);
+                  setShowActionsheet(false);
+                }}
+              >
+                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">
+                  {(selectedVmBallooningEnabled ? "✓ " : "") + selectedVmBallooningLabel}
                 </ActionsheetItemText>
               </ActionsheetItem>
               <ActionsheetItem
