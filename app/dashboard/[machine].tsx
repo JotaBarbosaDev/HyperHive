@@ -138,14 +138,27 @@ const PercentGauge = ({ value, isDark, size = GAUGE_SIZE, strokeWidth = GAUGE_ST
 
 const computeDiskTotals = (info?: DiskInfo) => {
 	if (!info?.disks?.length) return { used: 0, total: 0 };
+	const seenBtrfsMountPoints = new Set<string>();
 	return info.disks.reduce(
 		(acc, disk) => {
+			const fstype = String(disk.fstype ?? "").trim().toLowerCase();
+			const mountPoint = String(disk.mountPoint ?? "").trim().toLowerCase();
 			const total = Number(disk.total ?? 0);
 			const free = Number(disk.free ?? 0);
 			const used = Number.isFinite(total - free) && total && free ? total - free : Number(disk.used ?? 0);
+
+			// BTRFS multi-device arrays may list one row per member device for the same mounted volume.
+			// Deduplicate by mount point to avoid counting the same volume multiple times.
+			if (fstype === "btrfs" && mountPoint) {
+				if (seenBtrfsMountPoints.has(mountPoint)) {
+					return acc;
+				}
+				seenBtrfsMountPoints.add(mountPoint);
+			}
+
 			return {
-				used: acc.used + (Number.isFinite(used) ? used : 0),
-				total: acc.total + (Number.isFinite(total) ? total : 0),
+				used: acc.used + (Number.isFinite(used) ? Math.max(0, Math.min(total || Infinity, used)) : 0),
+				total: acc.total + (Number.isFinite(total) ? Math.max(0, total) : 0),
 			};
 		},
 		{ used: 0, total: 0 }

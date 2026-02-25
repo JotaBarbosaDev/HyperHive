@@ -10,6 +10,7 @@ import { Badge, BadgeText } from "@/components/ui/badge";
 import { Button, ButtonIcon, ButtonSpinner, ButtonText } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Pressable } from "@/components/ui/pressable";
+import { Tooltip, TooltipContent, TooltipText } from "@/components/ui/tooltip";
 import {
   Modal,
   ModalBackdrop,
@@ -72,8 +73,30 @@ type PendingCpuProfileSelection = {
   profile: TunedAdmProfile;
 };
 
+type DiskUsageEntry = {
+  key: string;
+  device: string;
+  mountPoint: string;
+  fstype: string;
+  total: number;
+  used: number;
+  free: number;
+};
+
 const ICON_SIZE_SM = "sm";
 const ICON_SIZE_MD = "md";
+const DISK_BREAKDOWN_PALETTE = [
+  { used: "#2563EB", free: "#BFDBFE" },
+  { used: "#059669", free: "#A7F3D0" },
+  { used: "#D97706", free: "#FDE68A" },
+  { used: "#E11D48", free: "#FDA4AF" },
+  { used: "#7C3AED", free: "#C4B5FD" },
+  { used: "#0891B2", free: "#A5F3FC" },
+  { used: "#65A30D", free: "#D9F99D" },
+  { used: "#EA580C", free: "#FDBA74" },
+  { used: "#4F46E5", free: "#C7D2FE" },
+  { used: "#0F766E", free: "#99F6E4" },
+] as const;
 
 const resolveActiveCpuProfileName = (
   payload?: Pick<TunedAdmProfilesResponse, "profiles" | "currentActiveProfile"> | null
@@ -190,12 +213,35 @@ const IGNORED_DISK_FS_TYPES = new Set([
   "tracefs",
 ]);
 
-const shouldIncludeDiskInTotals = (item: NonNullable<DiskInfo["disks"]>[number]) => {
+const IGNORED_SYSTEM_MOUNTS_EXACT = new Set([
+  "/",
+  "/boot",
+  "/boot/efi",
+  "/efi",
+  "/home",
+  "/opt",
+  "/tmp",
+  "/usr",
+  "/var",
+]);
+
+const IGNORED_SYSTEM_MOUNTS_PREFIX = [
+  "/boot/",
+  "/efi/",
+  "/home/",
+  "/opt/",
+  "/tmp/",
+  "/usr/",
+  "/var/",
+];
+
+const shouldIncludeDiskUsageItem = (item: NonNullable<DiskInfo["disks"]>[number]) => {
   const fstype = String(item.fstype ?? "").trim().toLowerCase();
-  const device = String(item.device ?? "").trim().toLowerCase();
   const mountPoint = String(item.mountPoint ?? "").trim().toLowerCase();
+  const device = String(item.device ?? "").trim().toLowerCase();
 
   if (!fstype || IGNORED_DISK_FS_TYPES.has(fstype)) return false;
+  if (!mountPoint) return false;
 
   if (
     device.startsWith("/dev/loop") ||
@@ -208,60 +254,77 @@ const shouldIncludeDiskInTotals = (item: NonNullable<DiskInfo["disks"]>[number])
     return false;
   }
 
-  if (
-    mountPoint === "/proc" ||
-    mountPoint === "/sys" ||
-    mountPoint.startsWith("/proc/") ||
-    mountPoint.startsWith("/sys/")
-  ) {
-    return false;
-  }
+  if (IGNORED_SYSTEM_MOUNTS_EXACT.has(mountPoint)) return false;
+  if (IGNORED_SYSTEM_MOUNTS_PREFIX.some((prefix) => mountPoint.startsWith(prefix))) return false;
 
   return true;
 };
 
-const computeDiskTotals = (disk?: DiskInfo | null) => {
-  if (!disk?.disks?.length) {
-    return { total: 0, used: 0 };
-  }
-  const seenCapacityKeys = new Set<string>();
-  let totalSum = 0;
-  let usedSum = 0;
+const getDiskUsageEntries = (disk?: DiskInfo | null): DiskUsageEntry[] => {
+  if (!disk?.disks?.length) return [];
+
+  const seenBtrfsMountPoints = new Set<string>();
+  const entries: DiskUsageEntry[] = [];
 
   for (const item of disk.disks) {
-    if (!shouldIncludeDiskInTotals(item)) {
+    if (!shouldIncludeDiskUsageItem(item)) {
       continue;
     }
 
+    const fstype = String(item.fstype ?? "").trim().toLowerCase();
+    const mountPoint = String(item.mountPoint ?? "").trim();
+    const mountPointKey = mountPoint.toLowerCase();
+    const device = String(item.device ?? "").trim();
     const total = Number(item.total ?? 0);
-    const free = Number(item.free ?? 0);
+    const freeFromField = Number(item.free ?? 0);
     const usedFromField = Number(item.used ?? 0);
 
     if (!Number.isFinite(total) || total <= 0) {
       continue;
     }
 
-    const sourceKey = String(item.device ?? "").trim() || String(item.mountPoint ?? "").trim();
-    const dedupeKey = `${sourceKey}|${String(item.fstype ?? "").trim()}|${Math.round(total)}`;
-    if (sourceKey && seenCapacityKeys.has(dedupeKey)) {
-      continue;
-    }
-    if (sourceKey) {
-      seenCapacityKeys.add(dedupeKey);
+    // BTRFS multi-device volumes can show one row per member device for the same mounted volume.
+    // Deduplicate by mount point so the volume capacity isn't counted twice.
+    if (fstype === "btrfs" && mountPointKey) {
+      if (seenBtrfsMountPoints.has(mountPointKey)) {
+        continue;
+      }
+      seenBtrfsMountPoints.add(mountPointKey);
     }
 
     const usedFromMath =
-      Number.isFinite(free) && free >= 0 && free <= total
-        ? total - free
+      Number.isFinite(freeFromField) && freeFromField >= 0 && freeFromField <= total
+        ? total - freeFromField
         : NaN;
-    const rawUsed = Number.isFinite(usedFromMath) ? usedFromMath : usedFromField;
-    const used = Number.isFinite(rawUsed) ? Math.min(total, Math.max(0, rawUsed)) : 0;
+    const usedRaw = Number.isFinite(usedFromMath) ? usedFromMath : usedFromField;
+    const used = Number.isFinite(usedRaw) ? Math.max(0, Math.min(total, usedRaw)) : 0;
+    const free = Math.max(0, total - used);
+    const keyBase = fstype === "btrfs" && mountPoint ? mountPoint : device || mountPoint || "disk";
 
-    totalSum += total;
-    usedSum += used;
+    entries.push({
+      key: `${keyBase}|${fstype}|${Math.round(total)}`,
+      device,
+      mountPoint,
+      fstype,
+      total,
+      used,
+      free,
+    });
   }
 
-  return { total: totalSum, used: usedSum };
+  return entries;
+};
+
+const computeDiskTotals = (disk?: DiskInfo | null) => {
+  const entries = getDiskUsageEntries(disk);
+  return entries.reduce(
+    (acc, item) => {
+      acc.total += item.total;
+      acc.used += item.used;
+      return acc;
+    },
+    { total: 0, used: 0 }
+  );
 };
 
 const averageCpuUsage = (cpu?: CpuInfo | null) => {
@@ -498,11 +561,22 @@ export default function DashboardScreen() {
     const usedRamMb = snapshots.reduce((acc, snap) => acc + (snap.mem?.usedMb ?? 0), 0);
     const ramUsagePercent = totalRamMb ? (usedRamMb / totalRamMb) * 100 : 0;
 
-    const diskTotals = snapshots.reduce(
-      (acc, snap) => {
-        const totals = computeDiskTotals(snap.disk);
-        acc.total += totals.total;
-        acc.used += totals.used;
+    const diskBreakdown = snapshots
+      .flatMap((snap) =>
+        getDiskUsageEntries(snap.disk).map((entry) => ({
+          ...entry,
+          machineName: snap.machine.MachineName,
+          label:
+            `${snap.machine.MachineName} • ${entry.mountPoint || entry.device || "disk"}`,
+          subtitle: [entry.device || null, entry.fstype || null].filter(Boolean).join(" • "),
+        }))
+      )
+      .sort((a, b) => b.total - a.total);
+
+    const diskTotals = diskBreakdown.reduce(
+      (acc, item) => {
+        acc.total += item.total;
+        acc.used += item.used;
         return acc;
       },
       { total: 0, used: 0 }
@@ -511,7 +585,7 @@ export default function DashboardScreen() {
     const avgTemp = tempSnapshots.reduce((acc, snap) => acc + averageCpuTemp(snap.cpu), 0);
     const temp = tempSnapshots.length ? avgTemp / tempSnapshots.length : 0;
 
-    return { totalCores, avgCpuUsage, totalRamMb, usedRamMb, ramUsagePercent, diskTotals, temp };
+    return { totalCores, avgCpuUsage, totalRamMb, usedRamMb, ramUsagePercent, diskTotals, diskBreakdown, temp };
   }, [snapshots]);
 
   const refreshControl = (
@@ -909,6 +983,142 @@ export default function DashboardScreen() {
                 </Box>
               </VStack>
             </HStack>
+
+            {overallTotals.diskBreakdown.length ? (
+              <VStack className="mt-4 gap-3">
+                <VStack className="gap-1.5">
+                  <Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#5EEAD4] tracking-[0.08em]">
+                    Volume breakdown
+                  </Text>
+                  <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+                    One bar split by volume. Hover a section to see machine, device, mount and usage details.
+                  </Text>
+                </VStack>
+
+                <Box className="h-5 rounded-full bg-background-100 dark:bg-[#132032] overflow-hidden border border-outline-100 dark:border-[#243247]">
+                  <HStack className="h-full w-full">
+                    {overallTotals.diskBreakdown.map((item, index) => {
+                      const colors = DISK_BREAKDOWN_PALETTE[index % DISK_BREAKDOWN_PALETTE.length];
+                      const widthPercent = overallTotals.diskTotals.total
+                        ? (item.total / overallTotals.diskTotals.total) * 100
+                        : 0;
+                      const usedPercent = item.total ? (item.used / item.total) * 100 : 0;
+                      const freePercent = item.total ? (item.free / item.total) * 100 : 0;
+                      const clusterShare = overallTotals.diskTotals.total
+                        ? (item.total / overallTotals.diskTotals.total) * 100
+                        : 0;
+
+                      return (
+                        <Tooltip
+                          key={`cluster-disk-segment-${item.machineName}-${item.key}`}
+                          placement="top"
+                          offset={8}
+                          trigger={(triggerProps) => (
+                            <Box
+                              className="h-full"
+                              style={{
+                                width: `${Math.max(widthPercent, 0)}%`,
+                                minWidth: widthPercent > 0 ? 4 : 0,
+                                borderRightWidth: 1,
+                                borderRightColor: colorScheme === "dark" ? "#0A1628" : "#FFFFFF",
+                              }}
+                            >
+                              <Pressable
+                                {...triggerProps}
+                                className="h-full w-full"
+                                accessibilityRole="button"
+                                accessibilityLabel={`${item.label} disk usage segment`}
+                              >
+                                <HStack className="h-full w-full">
+                                  <Box
+                                    className="h-full"
+                                    style={{
+                                      width: `${Math.max(0, Math.min(100, usedPercent))}%`,
+                                      backgroundColor: colors.used,
+                                    }}
+                                  />
+                                  <Box
+                                    className="h-full"
+                                    style={{
+                                      width: `${Math.max(0, Math.min(100, freePercent))}%`,
+                                      backgroundColor: colors.free,
+                                    }}
+                                  />
+                                </HStack>
+                              </Pressable>
+                            </Box>
+                          )}
+                        >
+                          <TooltipContent className="mx-3 web:mx-0 max-w-[300px] px-4 py-3 rounded-xl border border-outline-200 dark:border-[#2A3647] bg-background-900 dark:bg-[#E8EBF0]">
+                            <VStack className="gap-2">
+                              <VStack className="gap-0.5">
+                                <Text className="text-sm font-semibold text-typography-50 dark:text-[#0A1628]">
+                                  {item.label}
+                                </Text>
+                                <TooltipText className="text-typography-100 dark:text-[#1F2937] text-xs leading-5">
+                                  {item.subtitle || "—"}
+                                </TooltipText>
+                              </VStack>
+                              <HStack className="gap-4 flex-wrap">
+                                <VStack className="gap-0.5">
+                                  <Text className="text-[10px] uppercase tracking-wide text-typography-200 dark:text-[#475569]">
+                                    Total
+                                  </Text>
+                                  <Text className="text-xs font-semibold text-typography-50 dark:text-[#0A1628]">
+                                    {formatGbCompact(item.total)}
+                                  </Text>
+                                </VStack>
+                                <VStack className="gap-0.5">
+                                  <Text className="text-[10px] uppercase tracking-wide text-typography-200 dark:text-[#475569]">
+                                    Used
+                                  </Text>
+                                  <Text className="text-xs font-semibold" style={{ color: colors.used }}>
+                                    {formatGbCompact(item.used)} ({formatPercent(usedPercent)})
+                                  </Text>
+                                </VStack>
+                                <VStack className="gap-0.5">
+                                  <Text className="text-[10px] uppercase tracking-wide text-typography-200 dark:text-[#475569]">
+                                    Free
+                                  </Text>
+                                  <Text className="text-xs font-semibold" style={{ color: colors.free }}>
+                                    {formatGbCompact(item.free)} ({formatPercent(freePercent)})
+                                  </Text>
+                                </VStack>
+                                <VStack className="gap-0.5">
+                                  <Text className="text-[10px] uppercase tracking-wide text-typography-200 dark:text-[#475569]">
+                                    Cluster share
+                                  </Text>
+                                  <Text className="text-xs font-semibold text-typography-50 dark:text-[#0A1628]">
+                                    {formatPercent(clusterShare)}
+                                  </Text>
+                                </VStack>
+                              </HStack>
+                            </VStack>
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })}
+                  </HStack>
+                </Box>
+                <HStack className="items-center gap-3 flex-wrap">
+                  <HStack className="items-center gap-1.5">
+                    <Box className="w-2.5 h-2.5 rounded-full bg-[#0EA5E9]" />
+                    <Text className="text-[11px] text-typography-500 dark:text-[#8A94A8]">
+                      Darker tone = used
+                    </Text>
+                  </HStack>
+                  <HStack className="items-center gap-1.5">
+                    <Box className="w-2.5 h-2.5 rounded-full bg-[#BAE6FD]" />
+                    <Text className="text-[11px] text-typography-500 dark:text-[#8A94A8]">
+                      Lighter tone = free
+                    </Text>
+                  </HStack>
+                  <Text className="text-[11px] text-typography-500 dark:text-[#8A94A8]">
+                    Hover (web) or tap a section to inspect details.
+                  </Text>
+                </HStack>
+              </VStack>
+            ) : null}
           </Box>
 
           <Box className="mt-8">
