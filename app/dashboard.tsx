@@ -7,8 +7,9 @@ import { Heading } from "@/components/ui/heading";
 import { VStack } from "@/components/ui/vstack";
 import { HStack } from "@/components/ui/hstack";
 import { Badge, BadgeText } from "@/components/ui/badge";
-import { Button, ButtonIcon, ButtonText } from "@/components/ui/button";
+import { Button, ButtonIcon, ButtonSpinner, ButtonText } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { Pressable } from "@/components/ui/pressable";
 import {
   Modal,
   ModalBackdrop,
@@ -23,18 +24,23 @@ import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useMachines } from "@/hooks/useMachines";
 import { useSelectedMachine } from "@/hooks/useSelectedMachine";
 import {
+  applyTunedAdmProfile,
   getCpuInfo,
   getDiskInfo,
   getMachineUptime,
   getMemInfo,
+  getTunedAdmProfiles,
   restartMachine,
   shutdownMachine,
+  TunedAdmProfile,
+  TunedAdmProfilesResponse,
 } from "@/services/hyperhive";
 import { CpuInfo, DiskInfo, MemInfo, UptimeInfo } from "@/types/metrics";
 import { Machine } from "@/types/machine";
 import { MountUsageGauge } from "@/components/mount/MountUsageGauge";
 import {
   Activity,
+  ChevronRight,
   Clock3,
   Cpu,
   HardDrive,
@@ -55,8 +61,45 @@ type MachineSnapshot = {
   disk?: DiskInfo | null;
 };
 
+type MachineCpuProfileState = {
+  profiles: TunedAdmProfile[];
+  currentActiveProfile: string;
+  error: string | null;
+};
+
+type PendingCpuProfileSelection = {
+  machineName: string;
+  profile: TunedAdmProfile;
+};
+
 const ICON_SIZE_SM = "sm";
 const ICON_SIZE_MD = "md";
+
+const resolveActiveCpuProfileName = (
+  payload?: Pick<TunedAdmProfilesResponse, "profiles" | "currentActiveProfile"> | null
+) => {
+  if (!payload) return "";
+  const fromField = typeof payload.currentActiveProfile === "string"
+    ? payload.currentActiveProfile.trim()
+    : "";
+  if (fromField) return fromField;
+  const active = (payload.profiles ?? []).find((profile) => profile?.active)?.name;
+  return typeof active === "string" ? active : "";
+};
+
+const normalizeCpuProfilesPayload = (
+  payload: TunedAdmProfilesResponse
+): Pick<MachineCpuProfileState, "profiles" | "currentActiveProfile"> => {
+  const activeProfileName = resolveActiveCpuProfileName(payload);
+  const profiles = Array.isArray(payload.profiles) ? payload.profiles : [];
+  return {
+    profiles: profiles.map((profile) => ({
+      ...profile,
+      active: activeProfileName ? profile.name === activeProfileName : Boolean(profile.active),
+    })),
+    currentActiveProfile: activeProfileName,
+  };
+};
 
 const formatBytes = (value?: number) => {
   if (value == null || !Number.isFinite(value)) return "—";
@@ -120,26 +163,105 @@ const parseUptime = (uptime?: string) => {
   return parts.length ? parts.join(" ") : uptime;
 };
 
+const IGNORED_DISK_FS_TYPES = new Set([
+  "autofs",
+  "binfmt_misc",
+  "cgroup",
+  "cgroup2",
+  "configfs",
+  "debugfs",
+  "devpts",
+  "devtmpfs",
+  "efivarfs",
+  "fusectl",
+  "hugetlbfs",
+  "mqueue",
+  "nsfs",
+  "overlay",
+  "proc",
+  "pstore",
+  "ramfs",
+  "rpc_pipefs",
+  "securityfs",
+  "selinuxfs",
+  "squashfs",
+  "sysfs",
+  "tmpfs",
+  "tracefs",
+]);
+
+const shouldIncludeDiskInTotals = (item: NonNullable<DiskInfo["disks"]>[number]) => {
+  const fstype = String(item.fstype ?? "").trim().toLowerCase();
+  const device = String(item.device ?? "").trim().toLowerCase();
+  const mountPoint = String(item.mountPoint ?? "").trim().toLowerCase();
+
+  if (!fstype || IGNORED_DISK_FS_TYPES.has(fstype)) return false;
+
+  if (
+    device.startsWith("/dev/loop") ||
+    device.startsWith("/dev/zram") ||
+    device === "tmpfs" ||
+    device === "devtmpfs" ||
+    device === "overlay" ||
+    device === "udev"
+  ) {
+    return false;
+  }
+
+  if (
+    mountPoint === "/proc" ||
+    mountPoint === "/sys" ||
+    mountPoint.startsWith("/proc/") ||
+    mountPoint.startsWith("/sys/")
+  ) {
+    return false;
+  }
+
+  return true;
+};
+
 const computeDiskTotals = (disk?: DiskInfo | null) => {
   if (!disk?.disks?.length) {
     return { total: 0, used: 0 };
   }
-  return disk.disks.reduce(
-    (acc, item) => {
-      const total = Number(item.total ?? 0);
-      const free = Number(item.free ?? 0);
-      const usedFromField = Number(item.used ?? 0);
-      const usedFromMath =
-        Number.isFinite(total) && Number.isFinite(free) && total > 0 && free >= 0 && free <= total
-          ? total - free
-          : NaN;
-      const used = Number.isFinite(usedFromMath) ? usedFromMath : usedFromField;
-      if (Number.isFinite(total)) acc.total += total;
-      if (Number.isFinite(used)) acc.used += Math.max(0, used);
-      return acc;
-    },
-    { total: 0, used: 0 }
-  );
+  const seenCapacityKeys = new Set<string>();
+  let totalSum = 0;
+  let usedSum = 0;
+
+  for (const item of disk.disks) {
+    if (!shouldIncludeDiskInTotals(item)) {
+      continue;
+    }
+
+    const total = Number(item.total ?? 0);
+    const free = Number(item.free ?? 0);
+    const usedFromField = Number(item.used ?? 0);
+
+    if (!Number.isFinite(total) || total <= 0) {
+      continue;
+    }
+
+    const sourceKey = String(item.device ?? "").trim() || String(item.mountPoint ?? "").trim();
+    const dedupeKey = `${sourceKey}|${String(item.fstype ?? "").trim()}|${Math.round(total)}`;
+    if (sourceKey && seenCapacityKeys.has(dedupeKey)) {
+      continue;
+    }
+    if (sourceKey) {
+      seenCapacityKeys.add(dedupeKey);
+    }
+
+    const usedFromMath =
+      Number.isFinite(free) && free >= 0 && free <= total
+        ? total - free
+        : NaN;
+    const rawUsed = Number.isFinite(usedFromMath) ? usedFromMath : usedFromField;
+    const used = Number.isFinite(rawUsed) ? Math.min(total, Math.max(0, rawUsed)) : 0;
+
+    totalSum += total;
+    usedSum += used;
+  }
+
+  return { total: totalSum, used: usedSum };
 };
 
 const averageCpuUsage = (cpu?: CpuInfo | null) => {
@@ -183,6 +305,18 @@ export default function DashboardScreen() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [cpuProfilesByMachine, setCpuProfilesByMachine] = React.useState<
+    Record<string, MachineCpuProfileState>
+  >({});
+  const [cpuProfilesLoadingByMachine, setCpuProfilesLoadingByMachine] = React.useState<
+    Record<string, boolean>
+  >({});
+  const [cpuProfilesApplyingByMachine, setCpuProfilesApplyingByMachine] = React.useState<
+    Record<string, boolean>
+  >({});
+  const [cpuProfilePickerMachineName, setCpuProfilePickerMachineName] = React.useState<string | null>(null);
+  const [pendingCpuProfileSelection, setPendingCpuProfileSelection] =
+    React.useState<PendingCpuProfileSelection | null>(null);
   const [pendingPowerAction, setPendingPowerAction] = React.useState<{
     machineName: string;
     action: "restart" | "shutdown";
@@ -245,11 +379,97 @@ export default function DashboardScreen() {
     [sortedMachines]
   );
 
+  const loadCpuProfiles = React.useCallback(async (machineNames: string[]) => {
+    if (!machineNames.length) {
+      setCpuProfilesByMachine({});
+      setCpuProfilesLoadingByMachine({});
+      setCpuProfilesApplyingByMachine({});
+      return;
+    }
+
+    console.log("[dashboard][tunedadm] loading profiles for machines:", machineNames);
+
+    const allowedMachines = new Set(machineNames);
+    setCpuProfilesLoadingByMachine((prev) => {
+      const next = { ...prev };
+      for (const key of Object.keys(next)) {
+        if (!allowedMachines.has(key)) {
+          delete next[key];
+        }
+      }
+      for (const machineName of machineNames) {
+        next[machineName] = true;
+      }
+      return next;
+    });
+
+    const results = await Promise.all(
+      machineNames.map(async (machineName) => {
+        try {
+          console.log(`[dashboard][tunedadm] GET start -> ${machineName}`);
+          const response = await getTunedAdmProfiles(machineName);
+          console.log(`[dashboard][tunedadm] GET response <- ${machineName}`, response);
+          const normalized = normalizeCpuProfilesPayload(response);
+          console.log(`[dashboard][tunedadm] normalized <- ${machineName}`, normalized);
+          return {
+            machineName,
+            state: {
+              profiles: normalized.profiles,
+              currentActiveProfile: normalized.currentActiveProfile,
+              error: null,
+            } as MachineCpuProfileState,
+          };
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Unable to load CPU profiles.";
+          console.log(`[dashboard][tunedadm] GET error <- ${machineName}`, err);
+          return {
+            machineName,
+            state: {
+              profiles: [],
+              currentActiveProfile: "",
+              error: message,
+            } as MachineCpuProfileState,
+          };
+        }
+      })
+    );
+
+    setCpuProfilesByMachine(() => {
+      const next: Record<string, MachineCpuProfileState> = {};
+      for (const result of results) {
+        next[result.machineName] = result.state;
+      }
+      console.log("[dashboard][tunedadm] state snapshot (all machines):", next);
+      return next;
+    });
+
+    setCpuProfilesLoadingByMachine((prev) => {
+      const next = { ...prev };
+      for (const key of Object.keys(next)) {
+        if (!allowedMachines.has(key)) {
+          delete next[key];
+        }
+      }
+      for (const machineName of machineNames) {
+        next[machineName] = false;
+      }
+      return next;
+    });
+  }, []);
+
+  const refreshDashboardData = React.useCallback(
+    async (mode: "initial" | "refresh" = "initial") => {
+      const machineNames = sortedMachines.map((machine) => machine.MachineName);
+      await Promise.all([loadSnapshots(mode), loadCpuProfiles(machineNames)]);
+    },
+    [loadSnapshots, loadCpuProfiles, sortedMachines]
+  );
+
   React.useEffect(() => {
     if (!isChecking && !isLoadingMachines) {
-      loadSnapshots("initial");
+      refreshDashboardData("initial");
     }
-  }, [isChecking, isLoadingMachines, loadSnapshots]);
+  }, [isChecking, isLoadingMachines, refreshDashboardData]);
 
   // Soft update a cada 5 segundos
   React.useEffect(() => {
@@ -297,7 +517,7 @@ export default function DashboardScreen() {
   const refreshControl = (
     <RefreshControl
       refreshing={isRefreshing}
-      onRefresh={() => loadSnapshots("refresh")}
+      onRefresh={() => refreshDashboardData("refresh")}
       tintColor={colorScheme === "dark" ? "#E8EBF0" : "#0F172A"}
       progressBackgroundColor={colorScheme === "dark" ? "#0E1524" : "#E2E8F0"}
     />
@@ -320,6 +540,162 @@ export default function DashboardScreen() {
     },
     [toast]
   );
+
+  const handleCpuProfileChange = React.useCallback(
+    async (machineName: string, nextProfileName: string) => {
+      const profileName = nextProfileName?.trim?.() ?? "";
+      if (!profileName) {
+        console.log("[dashboard][tunedadm] ignored empty profile change", {
+          machineName,
+          nextProfileName,
+        });
+        return;
+      }
+
+      const currentState = cpuProfilesByMachine[machineName];
+      const currentProfileName =
+        currentState?.currentActiveProfile || resolveActiveCpuProfileName(currentState);
+
+      console.log("[dashboard][tunedadm] profile change requested", {
+        machineName,
+        nextProfileName: profileName,
+        currentProfileName,
+        currentState,
+        isApplying: Boolean(cpuProfilesApplyingByMachine[machineName]),
+      });
+
+      if (profileName === currentProfileName || cpuProfilesApplyingByMachine[machineName]) {
+        console.log("[dashboard][tunedadm] profile change skipped", {
+          machineName,
+          profileName,
+          reason:
+            profileName === currentProfileName ? "same_profile" : "already_applying",
+        });
+        return;
+      }
+
+      setCpuProfilesApplyingByMachine((prev) => ({
+        ...prev,
+        [machineName]: true,
+      }));
+
+      try {
+        const response = await applyTunedAdmProfile(machineName, profileName);
+        console.log(`[dashboard][tunedadm] POST response <- ${machineName}`, response);
+        const appliedProfileName =
+          (typeof response.currentActiveProfile === "string"
+            ? response.currentActiveProfile.trim()
+            : "") || profileName;
+
+        setCpuProfilesByMachine((prev) => {
+          const previous = prev[machineName];
+          const previousProfiles = previous?.profiles ?? [];
+          const profiles = previousProfiles.map((profile) => ({
+            ...profile,
+            active: profile.name === appliedProfileName,
+          }));
+
+          return {
+            ...prev,
+            [machineName]: {
+              profiles,
+              currentActiveProfile: appliedProfileName,
+              error: null,
+            },
+          };
+        });
+
+        showPowerToast(`CPU profile applied on ${machineName}: ${appliedProfileName}`, "success");
+      } catch (err) {
+        console.log(`[dashboard][tunedadm] POST error <- ${machineName}`, err);
+        const message = err instanceof Error ? err.message : "Unable to apply CPU profile.";
+        showPowerToast(message, "error");
+      } finally {
+        setCpuProfilesApplyingByMachine((prev) => ({
+          ...prev,
+          [machineName]: false,
+        }));
+      }
+    },
+    [cpuProfilesApplyingByMachine, cpuProfilesByMachine, showPowerToast]
+  );
+
+  React.useEffect(() => {
+    if (!Object.keys(cpuProfilesByMachine).length) return;
+    console.log("[dashboard][tunedadm] descriptions by machine", cpuProfilesByMachine);
+  }, [cpuProfilesByMachine]);
+
+  const cpuProfilePickerState = cpuProfilePickerMachineName
+    ? cpuProfilesByMachine[cpuProfilePickerMachineName]
+    : null;
+  const cpuProfilePickerProfiles = cpuProfilePickerState?.profiles ?? [];
+  const cpuProfilePickerCurrentActive =
+    cpuProfilePickerState?.currentActiveProfile ||
+    resolveActiveCpuProfileName(cpuProfilePickerState);
+  const isCpuProfilePickerLoading = cpuProfilePickerMachineName
+    ? Boolean(cpuProfilesLoadingByMachine[cpuProfilePickerMachineName])
+    : false;
+  const isCpuProfilePickerApplying = cpuProfilePickerMachineName
+    ? Boolean(cpuProfilesApplyingByMachine[cpuProfilePickerMachineName])
+    : false;
+  const pendingCpuProfileIsApplying = pendingCpuProfileSelection
+    ? Boolean(cpuProfilesApplyingByMachine[pendingCpuProfileSelection.machineName])
+    : false;
+  const pendingCpuProfileCurrentActive = pendingCpuProfileSelection
+    ? cpuProfilesByMachine[pendingCpuProfileSelection.machineName]?.currentActiveProfile ||
+      resolveActiveCpuProfileName(cpuProfilesByMachine[pendingCpuProfileSelection.machineName])
+    : "";
+
+  const openCpuProfilePicker = React.useCallback(
+    (machineName: string) => {
+      console.log("[dashboard][tunedadm] open profile picker", {
+        machineName,
+        hasState: Boolean(cpuProfilesByMachine[machineName]),
+      });
+      setCpuProfilePickerMachineName(machineName);
+      if (!cpuProfilesByMachine[machineName] && !cpuProfilesLoadingByMachine[machineName]) {
+        void loadCpuProfiles([machineName]);
+      }
+    },
+    [cpuProfilesByMachine, cpuProfilesLoadingByMachine, loadCpuProfiles]
+  );
+
+  const closeCpuProfilePicker = React.useCallback(() => {
+    console.log("[dashboard][tunedadm] close profile picker", {
+      machineName: cpuProfilePickerMachineName,
+    });
+    setCpuProfilePickerMachineName(null);
+  }, [cpuProfilePickerMachineName]);
+
+  const closeCpuProfileConfirmPrompt = React.useCallback(() => {
+    console.log("[dashboard][tunedadm] close profile confirm", pendingCpuProfileSelection);
+    setPendingCpuProfileSelection(null);
+  }, [pendingCpuProfileSelection]);
+
+  const handleSelectCpuProfileCandidate = React.useCallback(
+    (machineName: string, profile: TunedAdmProfile) => {
+      console.log("[dashboard][tunedadm] picker selection", {
+        machineName,
+        profile,
+      });
+      setCpuProfilePickerMachineName(null);
+      setPendingCpuProfileSelection({ machineName, profile });
+    },
+    []
+  );
+
+  const handleConfirmCpuProfileSelection = React.useCallback(async () => {
+    if (!pendingCpuProfileSelection) {
+      return;
+    }
+
+    console.log("[dashboard][tunedadm] confirm profile apply", pendingCpuProfileSelection);
+    await handleCpuProfileChange(
+      pendingCpuProfileSelection.machineName,
+      pendingCpuProfileSelection.profile.name
+    );
+    setPendingCpuProfileSelection(null);
+  }, [handleCpuProfileChange, pendingCpuProfileSelection]);
 
   const openPowerPrompt = (machineName: string, action: "restart" | "shutdown") => {
     if (powerActioning) {
@@ -489,7 +865,7 @@ export default function DashboardScreen() {
                 variant="outline"
                 action="default"
                 className="rounded-xl border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E]"
-                onPress={() => loadSnapshots("refresh")}
+                onPress={() => refreshDashboardData("refresh")}
                 isDisabled={isLoading || isRefreshing}
               >
                 <ButtonIcon
@@ -568,10 +944,38 @@ export default function DashboardScreen() {
                 const addr = (snap.machine as any).Addr ?? "";
                 const isPowerActioning =
                   powerActioning?.machineName === snap.machine.MachineName;
+                const machineName = snap.machine.MachineName;
+                const cpuProfileState = cpuProfilesByMachine[machineName];
+                const cpuProfiles = cpuProfileState?.profiles ?? [];
+                const currentCpuProfileName =
+                  cpuProfileState?.currentActiveProfile || resolveActiveCpuProfileName(cpuProfileState);
+                const currentCpuProfile =
+                  cpuProfiles.find((profile) => profile.name === currentCpuProfileName) ||
+                  cpuProfiles.find((profile) => profile.active);
+                const isCpuProfilesLoading = Boolean(cpuProfilesLoadingByMachine[machineName]);
+                const isCpuProfileApplying = Boolean(cpuProfilesApplyingByMachine[machineName]);
+                const cpuProfilePlaceholder =
+                  isCpuProfilesLoading && !cpuProfiles.length
+                    ? "Loading profiles..."
+                    : cpuProfileState?.error
+                      ? "Profiles unavailable"
+                      : cpuProfiles.length
+                        ? "Select profile"
+                        : "No profiles";
+                const cpuProfileHint = isCpuProfileApplying
+                  ? "Applying CPU profile..."
+                  : cpuProfileState?.error
+                    ? "Unable to load tuned profiles for this machine."
+                    : currentCpuProfile?.description ||
+                      (currentCpuProfileName
+                        ? `Active profile: ${currentCpuProfileName}`
+                        : isCpuProfilesLoading
+                          ? "Loading tuned profiles..."
+                          : "No tuned profiles found.");
 
                 return (
                   <Box
-                    key={snap.machine.MachineName}
+                    key={machineName}
                     className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4"
                   >
                     <HStack className="items-start justify-between gap-3">
@@ -682,7 +1086,7 @@ export default function DashboardScreen() {
                     </HStack>
 
                     <HStack className="mt-4 gap-3 flex-wrap">
-                      <Box className="flex-1 min-w-[160px] rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
+                      <Box className="flex-1 min-w-[220px] rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
                         <HStack className="items-center justify-between mb-2">
                           <Text className="text-xs text-typography-600 dark:text-[#5EEAD4] uppercase font-semibold tracking-[0.08em]">
                             CPU
@@ -699,6 +1103,52 @@ export default function DashboardScreen() {
                         <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
                           {snap.cpu?.cores?.length ?? 0} cores
                         </Text>
+                        <VStack className="gap-1.5 mt-3">
+                          <Text className="text-[10px] uppercase font-semibold tracking-[0.08em] text-typography-500 dark:text-[#8A94A8]">
+                            CPU profile
+                          </Text>
+                          <Pressable
+                            onPress={() => openCpuProfilePicker(machineName)}
+                            disabled={isCpuProfileApplying}
+                            className="rounded-lg"
+                          >
+                            <HStack className="min-h-10 rounded-lg border border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0A1628] px-2.5 py-2 items-center gap-2">
+                              <VStack className="flex-1 gap-0.5">
+                                <Text
+                                  className="text-xs font-semibold text-typography-900 dark:text-[#E8EBF0]"
+                                  numberOfLines={1}
+                                >
+                                  {currentCpuProfileName || cpuProfilePlaceholder}
+                                </Text>
+                                <Text
+                                  className="text-[10px] text-typography-500 dark:text-[#8A94A8]"
+                                  numberOfLines={1}
+                                >
+                                  {isCpuProfileApplying
+                                    ? "Applying..."
+                                    : isCpuProfilesLoading
+                                      ? "Loading profiles..."
+                                      : "Open profiles"}
+                                </Text>
+                              </VStack>
+                              <Box className="h-6 w-6 rounded-md items-center justify-center bg-background-100 dark:bg-[#13243B] border border-outline-200 dark:border-[#2B466B]">
+                                {isCpuProfileApplying || isCpuProfilesLoading ? (
+                                  <ButtonSpinner className="text-typography-500 dark:text-[#93C5FD]" />
+                                ) : (
+                                  <ChevronRight
+                                    size={14}
+                                    className="text-typography-500 dark:text-[#93C5FD]"
+                                  />
+                                )}
+                              </Box>
+                            </HStack>
+                          </Pressable>
+                          <Text
+                            className="text-[11px] leading-4 text-typography-500 dark:text-[#8A94A8]"
+                          >
+                            {cpuProfileHint}
+                          </Text>
+                        </VStack>
                       </Box>
 
                       <Box className="flex-1 min-w-[160px] rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
@@ -781,6 +1231,229 @@ export default function DashboardScreen() {
           </Box>
         </Box>
       </ScrollView>
+      <Modal
+        isOpen={Boolean(cpuProfilePickerMachineName)}
+        onClose={closeCpuProfilePicker}
+        size="lg"
+      >
+        <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+        <ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-5">
+          <ModalHeader className="flex-row items-center gap-3 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
+            <Box className="h-10 w-10 rounded-2xl items-center justify-center bg-primary-500/10 dark:bg-[#0F766E]/20">
+              <Activity size={18} className="text-[#0F766E] dark:text-[#5EEAD4]" />
+            </Box>
+            <VStack className="flex-1">
+              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+                CPU Profiles
+              </Heading>
+              <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
+                {cpuProfilePickerMachineName
+                  ? `${cpuProfilePickerMachineName} • tuned-adm profiles`
+                  : "Select a machine"}
+              </Text>
+            </VStack>
+            <ModalCloseButton onPress={closeCpuProfilePicker} />
+          </ModalHeader>
+          <ModalBody className="pt-5">
+            <VStack className="gap-3">
+              <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] p-4">
+                <VStack className="gap-1">
+                  <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
+                    Active profile
+                  </Text>
+                  <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                    {cpuProfilePickerCurrentActive || "—"}
+                  </Text>
+                </VStack>
+              </Box>
+
+              {cpuProfilePickerState?.error ? (
+                <Box className="rounded-xl border border-error-300 dark:border-error-700 bg-error-50 dark:bg-error-900/20 p-3">
+                  <Text className="text-sm text-error-700 dark:text-error-200">
+                    {cpuProfilePickerState.error}
+                  </Text>
+                </Box>
+              ) : null}
+
+              {isCpuProfilePickerLoading && !cpuProfilePickerProfiles.length ? (
+                <HStack className="items-center gap-2">
+                  <ButtonSpinner />
+                  <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
+                    Loading CPU profiles...
+                  </Text>
+                </HStack>
+              ) : null}
+
+              {cpuProfilePickerProfiles.length ? (
+                <ScrollView
+                  className="max-h-[360px]"
+                  showsVerticalScrollIndicator={false}
+                >
+                  <VStack className="gap-2 pr-1">
+                    {cpuProfilePickerProfiles.map((profile) => {
+                      const isActiveProfile =
+                        profile.name === cpuProfilePickerCurrentActive || Boolean(profile.active);
+                      const isDisabledProfile = isCpuProfilePickerApplying || isActiveProfile;
+
+                      return (
+                        <Pressable
+                          key={`cpu-profile-picker-${cpuProfilePickerMachineName}-${profile.name}`}
+                          onPress={() =>
+                            cpuProfilePickerMachineName
+                              ? handleSelectCpuProfileCandidate(cpuProfilePickerMachineName, profile)
+                              : undefined
+                          }
+                          disabled={isDisabledProfile}
+                          className="rounded-xl"
+                        >
+                          <Box
+                            className={`rounded-xl border p-3 ${
+                              isActiveProfile
+                                ? "border-primary-300 dark:border-[#2B466B] bg-primary-50/60 dark:bg-[#102338]"
+                                : "border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524]"
+                            }`}
+                          >
+                            <HStack className="items-start justify-between gap-2">
+                              <VStack className="flex-1 gap-1">
+                                <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                                  {profile.name}
+                                </Text>
+                                <Text className="text-xs leading-4 text-typography-600 dark:text-[#8A94A8]">
+                                  {profile.description?.trim() || "No description provided."}
+                                </Text>
+                              </VStack>
+                              {isActiveProfile ? (
+                                <Badge
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-primary-300 dark:border-[#2B466B] bg-primary-50/70 dark:bg-[#13243B]"
+                                >
+                                  <BadgeText className="text-xs text-typography-700 dark:text-[#93C5FD]">
+                                    Active
+                                  </BadgeText>
+                                </Badge>
+                              ) : null}
+                            </HStack>
+                          </Box>
+                        </Pressable>
+                      );
+                    })}
+                  </VStack>
+                </ScrollView>
+              ) : !isCpuProfilePickerLoading && !cpuProfilePickerState?.error ? (
+                <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
+                  No CPU profiles available for this machine.
+                </Text>
+              ) : null}
+
+              <Text className="text-[11px] text-typography-500 dark:text-[#8A94A8]">
+                Tap a profile to open confirmation before applying. The active profile is shown only for reference.
+              </Text>
+            </VStack>
+          </ModalBody>
+          <ModalFooter className="flex-row gap-3 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
+            <Button
+              variant="outline"
+              action="secondary"
+              className="flex-1 rounded-xl"
+              onPress={closeCpuProfilePicker}
+            >
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                Close
+              </ButtonText>
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      <Modal
+        isOpen={Boolean(pendingCpuProfileSelection)}
+        onClose={closeCpuProfileConfirmPrompt}
+        size="md"
+      >
+        <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+        <ModalContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-5">
+          <ModalHeader className="flex-row items-center gap-3 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
+            <Box className="h-10 w-10 rounded-2xl items-center justify-center bg-primary-500/10 dark:bg-[#0F766E]/20">
+              <Cpu size={18} className="text-[#0F766E] dark:text-[#5EEAD4]" />
+            </Box>
+            <VStack className="flex-1">
+              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+                Apply CPU Profile?
+              </Heading>
+              <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
+                This will run `tuned-adm` on the selected machine.
+              </Text>
+            </VStack>
+            <ModalCloseButton onPress={closeCpuProfileConfirmPrompt} />
+          </ModalHeader>
+          <ModalBody className="pt-5">
+            <VStack className="gap-3">
+              <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] p-4">
+                <VStack className="gap-3">
+                  <VStack className="gap-1">
+                    <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
+                      Machine
+                    </Text>
+                    <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                      {pendingCpuProfileSelection?.machineName ?? "—"}
+                    </Text>
+                  </VStack>
+                  <VStack className="gap-1">
+                    <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
+                      Current profile
+                    </Text>
+                    <Text className="text-sm text-typography-700 dark:text-[#E8EBF0]">
+                      {pendingCpuProfileCurrentActive || "—"}
+                    </Text>
+                  </VStack>
+                  <VStack className="gap-1">
+                    <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
+                      New profile
+                    </Text>
+                    <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                      {pendingCpuProfileSelection?.profile.name ?? "—"}
+                    </Text>
+                  </VStack>
+                  <VStack className="gap-1">
+                    <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
+                      Description
+                    </Text>
+                    <Text className="text-sm leading-5 text-typography-700 dark:text-[#8A94A8]">
+                      {pendingCpuProfileSelection?.profile.description?.trim() || "No description provided."}
+                    </Text>
+                  </VStack>
+                </VStack>
+              </Box>
+            </VStack>
+          </ModalBody>
+          <ModalFooter className="flex-row gap-3 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
+            <Button
+              variant="outline"
+              action="secondary"
+              className="flex-1 rounded-xl"
+              onPress={closeCpuProfileConfirmPrompt}
+              isDisabled={pendingCpuProfileIsApplying}
+            >
+              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+                Cancel
+              </ButtonText>
+            </Button>
+            <Button
+              action="primary"
+              className="flex-1 rounded-xl"
+              onPress={() => {
+                void handleConfirmCpuProfileSelection();
+              }}
+              isDisabled={pendingCpuProfileIsApplying}
+            >
+              {pendingCpuProfileIsApplying ? <ButtonSpinner /> : null}
+              <ButtonText className="text-background-0 dark:text-[#0A1628]">
+                Apply
+              </ButtonText>
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
       <Modal
         isOpen={showPowerNowPrompt}
         onClose={closePowerNowPrompt}

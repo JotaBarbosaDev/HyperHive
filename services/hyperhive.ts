@@ -47,6 +47,23 @@ export type HistoryQueryParams = {
   numberOfRows?: number;
 };
 
+export type TunedAdmProfile = {
+  name: string;
+  description?: string;
+  active?: boolean;
+};
+
+export type TunedAdmProfilesResponse = {
+  profiles: TunedAdmProfile[];
+  currentActiveProfile?: string | null;
+};
+
+export type TunedAdmApplyResponse = {
+  ok?: boolean;
+  message?: string;
+  currentActiveProfile?: string | null;
+};
+
 const ensureApiBaseUrl = async () => {
   let baseUrl = getApiBaseUrl();
   if (baseUrl) {
@@ -200,6 +217,29 @@ export async function getCpuInfo(machineName: string): Promise<CpuInfo> {
   const authToken = await resolveToken();
   const encodedMachine = encodeMachine(machineName);
   return apiFetch<CpuInfo>(`/info/cpu/${encodedMachine}`, { token: authToken });
+}
+
+export async function getTunedAdmProfiles(machineName: string): Promise<TunedAdmProfilesResponse> {
+  const authToken = await resolveToken();
+  const encodedMachine = encodeMachine(machineName);
+  return apiFetch<TunedAdmProfilesResponse>(`/virsh/tunedadm/${encodedMachine}`, {
+    token: authToken,
+  });
+}
+
+export async function applyTunedAdmProfile(
+  machineName: string,
+  profile: string
+): Promise<TunedAdmApplyResponse> {
+  const authToken = await resolveToken();
+  const encodedMachine = encodeMachine(machineName);
+  return apiFetch<TunedAdmApplyResponse>(`/virsh/tunedadm/${encodedMachine}`, {
+    method: "POST",
+    token: authToken,
+    body: {
+      profile,
+    },
+  });
 }
 
 export async function getMemInfo(machineName: string): Promise<MemInfo> {
