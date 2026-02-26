@@ -35,6 +35,7 @@ import {
 import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
 import { AlertDialog, AlertDialogBackdrop, AlertDialogContent, AlertDialogHeader, AlertDialogBody, AlertDialogFooter, AlertDialogCloseButton } from "@/components/ui/alert-dialog";
 import { Input, InputField } from "@/components/ui/input";
+import { Textarea, TextareaInput } from "@/components/ui/textarea";
 import {
   Select,
   SelectTrigger,
@@ -84,6 +85,8 @@ import {
   getCpuDisableFeatures,
   updateCpuXml,
   getVmExportUrl,
+  getVmXml,
+  updateVmXml,
 } from "@/services/vms-client";
 import { listMounts, getCpuInfo, getMemInfo } from "@/services/hyperhive";
 import { createBackup } from "@/services/backups";
@@ -279,6 +282,7 @@ export default function VirtualMachinesScreen() {
   const [moveDiskVm, setMoveDiskVm] = React.useState<VM | null>(null);
   const [backupVm, setBackupVm] = React.useState<VM | null>(null);
   const [updateCpuVm, setUpdateCpuVm] = React.useState<VM | null>(null);
+  const [editVmXmlVm, setEditVmXmlVm] = React.useState<VM | null>(null);
   const [cpuPinVm, setCpuPinVm] = React.useState<VM | null>(null);
   const [restoreVm, setRestoreVm] = React.useState<VM | null>(null);
   const [changeVncVm, setChangeVncVm] = React.useState<VM | null>(null);
@@ -2890,6 +2894,51 @@ export default function VirtualMachinesScreen() {
             </ModalContent>
           </Modal>
 
+          {/* Modal: Edit VM XML */}
+          <Modal isOpen={!!editVmXmlVm} onClose={() => setEditVmXmlVm(null)} size="full">
+            <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+            <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] shadow-soft-2 w-full web:max-w-5xl max-h-[92vh]">
+              <ModalHeader className="border-b border-outline-100 dark:border-[#2A3B52]">
+                <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
+                  Edit VM XML
+                </Heading>
+                <ModalCloseButton />
+              </ModalHeader>
+              <ModalBody className="max-h-[calc(92vh-84px)]">
+                {editVmXmlVm && (
+                  <EditVmXmlForm
+                    vm={editVmXmlVm}
+                    primaryButtonClass={primaryButtonClass}
+                    primaryButtonTextClass={primaryButtonTextClass}
+                    onCancel={() => setEditVmXmlVm(null)}
+                    onSave={async ({ machineName, vmXml }) => {
+                      try {
+                        await updateVmXml(editVmXmlVm.name, {
+                          machine_name: machineName || undefined,
+                          vm_xml: vmXml,
+                        });
+                        await fetchAndSetVms();
+                        setEditVmXmlVm(null);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        showToastMessage("VM XML updated");
+                      } catch (error) {
+                        console.error("Error updating VM XML:", error);
+                        const description =
+                          error instanceof ApiError && typeof error.data === "string"
+                            ? error.data
+                            : error instanceof Error
+                              ? error.message
+                              : "Unable to update VM XML.";
+                        showToastMessage("Error updating VM XML", description, "error");
+                        throw error instanceof Error ? error : new Error(description);
+                      }
+                    }}
+                  />
+                )}
+              </ModalBody>
+            </ModalContent>
+          </Modal>
+
           {/* Modal: Update CPU XML */}
           <Modal isOpen={!!updateCpuVm} onClose={() => setUpdateCpuVm(null)}>
             <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
@@ -3213,6 +3262,19 @@ export default function VirtualMachinesScreen() {
                 <Pressable
                   onPress={() => {
                     if (!selectedVm) return;
+                    setEditVmXmlVm(selectedVm);
+                    setShowActionsheet(false);
+                  }}
+                  className="px-3 py-3 hover:bg-background-50 dark:hover:bg-[#1E2F47] rounded-md"
+                >
+                  <HStack className="items-center gap-3">
+                    <Server size={18} className="text-typography-700 dark:text-[#E8EBF0]" />
+                    <Text className="text-typography-900 dark:text-[#E8EBF0]">Edit VM XML</Text>
+                  </HStack>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    if (!selectedVm) return;
                     setCpuPinVm(selectedVm);
                     setShowActionsheet(false);
                   }}
@@ -3499,6 +3561,16 @@ export default function VirtualMachinesScreen() {
               >
                 <ActionsheetIcon as={Cpu} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
                 <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">Update CPU XML</ActionsheetItemText>
+              </ActionsheetItem>
+              <ActionsheetItem
+                onPress={() => {
+                  if (!selectedVm) return;
+                  setEditVmXmlVm(selectedVm);
+                  setShowActionsheet(false);
+                }}
+              >
+                <ActionsheetIcon as={Server} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
+                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">Edit VM XML</ActionsheetItemText>
               </ActionsheetItem>
               <ActionsheetItem
                 onPress={() => {
@@ -4722,6 +4794,238 @@ function BackupVmForm({
         >
           {saving ? <ButtonSpinner className="mr-2" /> : null}
           <ButtonText className={`${primaryButtonTextClass}`}>Start Backup</ButtonText>
+        </Button>
+      </HStack>
+    </VStack>
+  );
+}
+
+function EditVmXmlForm({
+  vm,
+  onCancel,
+  onSave,
+  primaryButtonClass,
+  primaryButtonTextClass,
+}: {
+  vm: VM;
+  onCancel: () => void;
+  onSave: (payload: { machineName: string; vmXml: string }) => Promise<void>;
+  primaryButtonClass: string;
+  primaryButtonTextClass: string;
+}) {
+  const [machineName, setMachineName] = React.useState("");
+  const [vmXmlText, setVmXmlText] = React.useState("");
+  const [initialMachineName, setInitialMachineName] = React.useState("");
+  const [initialVmXmlText, setInitialVmXmlText] = React.useState("");
+  const [hasLoaded, setHasLoaded] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+  const [reloading, setReloading] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const loadXml = React.useCallback(
+    async (options?: { machineName?: string; isReload?: boolean }) => {
+      const isReload = Boolean(options?.isReload);
+      if (isReload) {
+        setReloading(true);
+      } else {
+        setLoading(true);
+        setHasLoaded(false);
+      }
+      setError(null);
+
+      try {
+        const response = await getVmXml(vm.name, options?.machineName);
+        const resolvedMachine = (response.machine_name ?? "").trim();
+        setMachineName(resolvedMachine);
+        setVmXmlText(response.vm_xml ?? "");
+        setInitialMachineName(resolvedMachine);
+        setInitialVmXmlText(response.vm_xml ?? "");
+        setHasLoaded(true);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Error loading VM XML.");
+      } finally {
+        if (isReload) {
+          setReloading(false);
+        } else {
+          setLoading(false);
+        }
+      }
+    },
+    [vm.name]
+  );
+
+  React.useEffect(() => {
+    void loadXml();
+  }, [loadXml]);
+
+  const normalizedMachineName = machineName.trim();
+  const normalizedInitialMachineName = initialMachineName.trim();
+  const hasVmXmlContent = vmXmlText.trim().length > 0;
+  const isDirty =
+    hasLoaded &&
+    (vmXmlText !== initialVmXmlText || normalizedMachineName !== normalizedInitialMachineName);
+  const lineCount = vmXmlText.length > 0 ? vmXmlText.split(/\r?\n/).length : 0;
+  const charCount = vmXmlText.length;
+  const saveDisabled = loading || reloading || saving || !hasVmXmlContent;
+  const reloadDisabled = loading || reloading || saving;
+
+  const handleReload = async () => {
+    await loadXml({
+      machineName: normalizedMachineName || undefined,
+      isReload: true,
+    });
+  };
+
+  const handleReset = () => {
+    setMachineName(initialMachineName);
+    setVmXmlText(initialVmXmlText);
+    setError(null);
+  };
+
+  const handleSubmit = async () => {
+    if (saveDisabled) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave({
+        machineName: normalizedMachineName,
+        vmXml: vmXmlText,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error updating VM XML.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <VStack className="gap-4">
+      <VStack className="gap-2">
+        <HStack className="items-center justify-between flex-wrap gap-2">
+          <Text className="flex-1 min-w-0 text-typography-700 dark:text-[#8A94A8]">
+            Edit the domain XML for <Text className="font-semibold">{vm.name}</Text>.
+          </Text>
+          <Badge
+            className={`px-2 py-1 rounded-full ${isDirty
+              ? "bg-amber-50 border border-amber-200"
+              : "bg-background-50 border border-outline-200 dark:border-[#2A3B52]"
+              }`}
+          >
+            <BadgeText className={`text-xs ${isDirty ? "text-amber-700" : "text-typography-600 dark:text-[#8A94A8]"}`}>
+              {isDirty ? "Unsaved changes" : "Synced"}
+            </BadgeText>
+          </Badge>
+        </HStack>
+        <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+          Use <Text className="font-mono">machine_name</Text> only if you want to target a specific slave. If empty, the API resolves it automatically.
+        </Text>
+      </VStack>
+
+      <HStack className="gap-2 items-end flex-wrap">
+        <FormControl className="flex-1 w-full web:w-auto min-w-0 web:min-w-[220px]">
+          <FormControlLabel>
+            <FormControlLabelText className="text-sm font-semibold text-typography-800 dark:text-[#E8EBF0]">
+              Machine name (optional)
+            </FormControlLabelText>
+          </FormControlLabel>
+          <Input variant="outline" className="rounded-md border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524]">
+            <InputField
+              value={machineName}
+              onChangeText={setMachineName}
+              placeholder={vm.machineName || "slave-01"}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </Input>
+        </FormControl>
+
+        <Button
+          variant="outline"
+          className="rounded-md px-4 py-2 h-auto min-h-[42px] border-outline-200 dark:border-[#2A3B52]"
+          onPress={() => {
+            void handleReload();
+          }}
+          disabled={reloadDisabled}
+        >
+          {reloading ? <ButtonSpinner className="mr-2" /> : <ButtonIcon as={RefreshCw} className="mr-2" />}
+          <ButtonText className="text-typography-900 dark:text-[#E8EBF0] text-xs web:text-sm text-center">
+            {reloading ? "Reloading..." : "Reload XML"}
+          </ButtonText>
+        </Button>
+
+        {isDirty ? (
+          <Button
+            variant="outline"
+            className="rounded-md px-4 py-2 h-auto min-h-[42px] border-outline-200 dark:border-[#2A3B52]"
+            onPress={handleReset}
+            disabled={loading || reloading || saving}
+          >
+            <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Reset</ButtonText>
+          </Button>
+        ) : null}
+      </HStack>
+
+      <HStack className="items-center justify-between flex-wrap gap-2">
+        <Text className="flex-1 min-w-0 text-xs text-typography-500 dark:text-[#8A94A8]">
+          {hasLoaded && normalizedInitialMachineName
+            ? `Loaded from ${normalizedInitialMachineName}`
+            : loading
+              ? "Loading XML..."
+              : "VM XML"}
+        </Text>
+        <Text className="text-xs text-typography-500 dark:text-[#8A94A8] font-mono shrink-0">
+          {lineCount} lines · {charCount} chars
+        </Text>
+      </HStack>
+
+      <Textarea
+        size="md"
+        className="rounded-xl min-h-[360px] overflow-hidden border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]"
+        isDisabled={loading || saving}
+      >
+        <TextareaInput
+          value={vmXmlText}
+          onChangeText={setVmXmlText}
+          placeholder={loading ? "Loading VM XML..." : "<domain>...</domain>"}
+          autoCapitalize="none"
+          autoCorrect={false}
+          spellCheck={false}
+          multiline
+          numberOfLines={18}
+          scrollEnabled
+          style={Platform.OS === "web" ? ({ whiteSpace: "pre-wrap", overflowWrap: "anywhere" } as any) : undefined}
+          className="w-full min-w-0 flex-1 font-mono text-xs web:text-sm text-typography-900 dark:text-[#E8EBF0]"
+        />
+      </Textarea>
+
+      {error ? (
+        <HStack className="items-start gap-2 rounded-lg border border-error-300 dark:border-error-700 bg-error-50 dark:bg-error-900/20 px-3 py-2">
+          <AlertCircle size={16} className="text-error-600 dark:text-error-400 mt-0.5" />
+          <Text className="text-sm text-error-700 dark:text-error-200 flex-1">{error}</Text>
+        </HStack>
+      ) : null}
+
+      <HStack className="justify-end gap-2 mt-1">
+        <Button
+          variant="outline"
+          className="rounded-md px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
+          onPress={onCancel}
+          disabled={saving}
+        >
+          <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
+        </Button>
+        <Button
+          className={`rounded-md px-4 py-2 ${primaryButtonClass}`}
+          onPress={() => {
+            void handleSubmit();
+          }}
+          disabled={saveDisabled}
+        >
+          {saving ? <ButtonSpinner className="mr-2" /> : null}
+          <ButtonText className={`${primaryButtonTextClass}`}>
+            {saving ? "Saving..." : "Save VM XML"}
+          </ButtonText>
         </Button>
       </HStack>
     </VStack>

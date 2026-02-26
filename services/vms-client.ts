@@ -487,3 +487,56 @@ export async function updateCpuXml(vmName: string, payload: { machine_name: stri
     },
   });
 }
+
+export type VmXmlResponse = {
+  vm_xml: string;
+  machine_name: string;
+};
+
+export async function getVmXml(vmName: string, machineName?: string) {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  const normalizedMachineName = machineName?.trim();
+  const params = new URLSearchParams();
+  if (normalizedMachineName) {
+    params.set("machine_name", normalizedMachineName);
+  }
+  const query = params.toString();
+  const response = await apiFetch<any>(
+    `/virsh/vmxml/${encodedVmName}${query ? `?${query}` : ""}`,
+    {
+      method: "GET",
+      token: authToken,
+    }
+  );
+
+  const vmXml = response?.vm_xml ?? response?.vmXml;
+  const resolvedMachineName = response?.machine_name ?? response?.machineName;
+
+  if (typeof vmXml !== "string") {
+    throw new Error("Invalid VM XML response.");
+  }
+
+  return {
+    vm_xml: vmXml,
+    machine_name:
+      typeof resolvedMachineName === "string" ? resolvedMachineName : normalizedMachineName ?? "",
+  } satisfies VmXmlResponse;
+}
+
+export async function updateVmXml(
+  vmName: string,
+  payload: { machine_name?: string; vm_xml: string }
+) {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  const normalizedMachineName = payload.machine_name?.trim();
+  return apiFetch<void>(`/virsh/updatevmxml/${encodedVmName}`, {
+    method: "POST",
+    token: authToken,
+    body: {
+      machine_name: normalizedMachineName || undefined,
+      vm_xml: payload.vm_xml,
+    },
+  });
+}
