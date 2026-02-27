@@ -3,6 +3,7 @@ import { loadAuthToken } from "./auth-storage";
 import { setAuthToken, triggerUnauthorized } from "./api-client";
 import { getApiBaseUrl, setApiBaseUrl } from "@/config/apiConfig";
 import { loadApiBaseUrl } from "./auth-storage";
+import { normalizeOptionalTemplateId } from "@/utils/xml-template";
 
 export type Slave = {
   Addr: string;
@@ -156,24 +157,39 @@ export async function migrateVM(
   });
 }
 
-export async function coldMigrateVM(vmName: string, targetMachineName: string) {
+export async function coldMigrateVM(
+  vmName: string,
+  targetMachineName: string,
+  options?: { template_id?: number }
+) {
   const authToken = await resolveToken();
   const encodedVmName = encodeURIComponent(vmName);
   const encodedTarget = encodeURIComponent(targetMachineName);
+  const templateId = normalizeOptionalTemplateId(options?.template_id);
   return apiFetch<void>(`/virsh/coldMigrate/${encodedVmName}/${encodedTarget}`, {
     method: "POST",
     token: authToken,
+    body: templateId ? { template_id: templateId } : undefined,
   });
 }
 
-export async function moveDisk(vmName: string, destNfsId: string, newName: string) {
+export async function moveDisk(
+  vmName: string,
+  destNfsId: string,
+  newName: string,
+  options?: { template_id?: number }
+) {
   const authToken = await resolveToken();
   const encodedVmName = encodeURIComponent(vmName);
   const encodedNfs = encodeURIComponent(destNfsId);
+  const templateId = normalizeOptionalTemplateId(options?.template_id);
   return apiFetch<void>(`/virsh/moveDisk/${encodedVmName}/${encodedNfs}`, {
     method: "POST",
     token: authToken,
-    body: { new_name: newName },
+    body: {
+      new_name: newName,
+      ...(templateId ? { template_id: templateId } : {}),
+    },
   });
 }
 
@@ -271,22 +287,64 @@ export async function setVmBallooning(vmName: string, enable: boolean) {
   });
 }
 
+export type VmHugepagesStatus = {
+  enabled: boolean;
+  has_hugepages: boolean;
+  memory_locked: boolean;
+};
+
+export async function getVmHugepages(vmName: string): Promise<VmHugepagesStatus> {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  const response = await apiFetch<any>(`/virsh/hugepages/${encodedVmName}`, {
+    token: authToken,
+  });
+
+  const enabled = response?.enabled ?? response?.Enabled;
+  const hasHugepages = response?.has_hugepages ?? response?.hasHugepages;
+  const memoryLocked = response?.memory_locked ?? response?.memoryLocked;
+  const normalizedEnabled = typeof enabled === "boolean" ? enabled : undefined;
+  const normalizedHasHugepages =
+    typeof hasHugepages === "boolean" ? hasHugepages : undefined;
+
+  return {
+    enabled: normalizedEnabled ?? normalizedHasHugepages ?? false,
+    has_hugepages: normalizedHasHugepages ?? normalizedEnabled ?? false,
+    memory_locked: typeof memoryLocked === "boolean" ? memoryLocked : false,
+  };
+}
+
+export async function setVmHugepages(vmName: string, enable: boolean) {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  await apiFetch<void>(`/virsh/hugepages/${encodedVmName}`, {
+    method: "POST",
+    token: authToken,
+    body: { enable },
+  });
+}
+
 export async function cloneVm(
   vmName: string,
   destNfs: string,
   destMachineName: string,
-  newName: string
+  newName: string,
+  options?: { template_id?: number }
 ) {
   const authToken = await resolveToken();
   const encodedVm = encodeURIComponent(vmName);
   const encodedNfs = encodeURIComponent(destNfs);
   const encodedMachine = encodeURIComponent(destMachineName);
+  const templateId = normalizeOptionalTemplateId(options?.template_id);
   return apiFetch<void>(
     `/virsh/cloneVM/${encodedVm}/${encodedNfs}/${encodedMachine}`,
     {
       method: "POST",
       token: authToken,
-      body: { new_name: newName },
+      body: {
+        new_name: newName,
+        ...(templateId ? { template_id: templateId } : {}),
+      },
     }
   );
 }
@@ -352,14 +410,20 @@ export type CreateVmPayload = {
   cpu_xml: string;
   auto_start: boolean;
   is_windows: boolean;
+  template_id?: number;
 };
 
 export async function createVm(payload: CreateVmPayload) {
   const authToken = await resolveToken();
+  const templateId = normalizeOptionalTemplateId(payload.template_id);
+  const { template_id: _templateId, ...restPayload } = payload;
   return apiFetch<void>("/virsh/createvm", {
     method: "POST",
     token: authToken,
-    body: payload,
+    body: {
+      ...restPayload,
+      ...(templateId ? { template_id: templateId } : {}),
+    },
   });
 }
 
@@ -373,6 +437,7 @@ export type ImportVmPayload = {
   VNC_password?: string;
   cpu_xml: string;
   live: boolean;
+  template_id?: number;
 };
 
 export type ImportVmFile = Blob | ArrayBuffer | ArrayBufferView;
@@ -399,6 +464,11 @@ export async function importVm(
 
   if (payload.VNC_password !== undefined) {
     params.append("VNC_password", payload.VNC_password);
+  }
+
+  const templateId = normalizeOptionalTemplateId(payload.template_id);
+  if (templateId) {
+    params.append("template_id", String(templateId));
   }
 
   const url = `${normalizedBase}/virsh/import?${params.toString()}`;
@@ -539,4 +609,133 @@ export async function updateVmXml(
       vm_xml: payload.vm_xml,
     },
   });
+}
+
+export type NodeIrqbalanceStatus = {
+  enabled: boolean;
+  active: boolean;
+  unitName: string;
+};
+
+export type NodeIrqbalanceUpdateResponse = {
+  ok: boolean;
+  message?: string;
+  enabled: boolean;
+  active: boolean;
+  unitName: string;
+};
+
+export async function getNodeIrqbalanceStatus(machineName: string): Promise<NodeIrqbalanceStatus> {
+  const authToken = await resolveToken();
+  const encodedMachineName = encodeURIComponent(machineName);
+  return apiFetch<NodeIrqbalanceStatus>(`/virsh/irqbalance/${encodedMachineName}`, {
+    method: "GET",
+    token: authToken,
+  });
+}
+
+export async function setNodeIrqbalanceStatus(
+  machineName: string,
+  enabled: boolean
+): Promise<NodeIrqbalanceUpdateResponse> {
+  const authToken = await resolveToken();
+  const encodedMachineName = encodeURIComponent(machineName);
+  return apiFetch<NodeIrqbalanceUpdateResponse>(`/virsh/irqbalance/${encodedMachineName}`, {
+    method: "POST",
+    token: authToken,
+    body: { enabled },
+  });
+}
+
+export type NodeHostHugepagesStatus = {
+  enabled: boolean;
+  rebootRequired: boolean;
+  message: string;
+  pageSize: string;
+  pageCount: number;
+  activePageSize: string;
+  activePageCount: number;
+  defaultHugepagesz: string;
+  hugepagesz: string;
+  hugepages: string;
+  activeDefaultHugepagesz: string;
+  activeHugepagesz: string;
+  activeHugepages: string;
+};
+
+export type NodeHostHugepagesUpdatePayload = {
+  page_size: string;
+  page_count: number;
+};
+
+const toHugepagesCount = (value: unknown) => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.max(0, Math.trunc(value));
+  }
+  if (typeof value === "string") {
+    const parsed = Number.parseInt(value.trim(), 10);
+    return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+  }
+  return 0;
+};
+
+const toHugepagesString = (value: unknown) => {
+  return typeof value === "string" ? value : "";
+};
+
+const normalizeNodeHostHugepagesStatus = (response: any): NodeHostHugepagesStatus => ({
+  enabled: Boolean(response?.enabled ?? response?.Enabled),
+  rebootRequired: Boolean(response?.rebootRequired ?? response?.reboot_required),
+  message: toHugepagesString(response?.message ?? response?.Message),
+  pageSize: toHugepagesString(response?.pageSize ?? response?.page_size),
+  pageCount: toHugepagesCount(response?.pageCount ?? response?.page_count),
+  activePageSize: toHugepagesString(response?.activePageSize ?? response?.active_page_size),
+  activePageCount: toHugepagesCount(response?.activePageCount ?? response?.active_page_count),
+  defaultHugepagesz: toHugepagesString(response?.defaultHugepagesz ?? response?.default_hugepagesz),
+  hugepagesz: toHugepagesString(response?.hugepagesz ?? response?.hugepages_z),
+  hugepages: toHugepagesString(response?.hugepages),
+  activeDefaultHugepagesz: toHugepagesString(
+    response?.activeDefaultHugepagesz ?? response?.active_default_hugepagesz
+  ),
+  activeHugepagesz: toHugepagesString(response?.activeHugepagesz ?? response?.active_hugepages_z),
+  activeHugepages: toHugepagesString(response?.activeHugepages ?? response?.active_hugepages),
+});
+
+export async function getNodeHostHugepagesStatus(
+  machineName: string
+): Promise<NodeHostHugepagesStatus> {
+  const authToken = await resolveToken();
+  const encodedMachineName = encodeURIComponent(machineName);
+  const response = await apiFetch<any>(`/virsh/hosthugepages/${encodedMachineName}`, {
+    method: "GET",
+    token: authToken,
+  });
+  return normalizeNodeHostHugepagesStatus(response);
+}
+
+export async function setNodeHostHugepagesStatus(
+  machineName: string,
+  payload: NodeHostHugepagesUpdatePayload,
+  method: "POST" | "PUT" = "POST"
+): Promise<NodeHostHugepagesStatus> {
+  const authToken = await resolveToken();
+  const encodedMachineName = encodeURIComponent(machineName);
+  const response = await apiFetch<any>(`/virsh/hosthugepages/${encodedMachineName}`, {
+    method,
+    token: authToken,
+    body: payload,
+  });
+  return normalizeNodeHostHugepagesStatus(response);
+}
+
+export async function deleteNodeHostHugepagesStatus(
+  machineName: string
+): Promise<NodeHostHugepagesStatus> {
+  const authToken = await resolveToken();
+  const encodedMachineName = encodeURIComponent(machineName);
+  const response = await apiFetch<any>(`/virsh/hosthugepages/${encodedMachineName}`, {
+    method: "DELETE",
+    token: authToken,
+  });
+  return normalizeNodeHostHugepagesStatus(response);
 }

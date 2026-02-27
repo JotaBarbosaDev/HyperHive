@@ -117,6 +117,7 @@ const MENU_ITEMS: MenuItem[] = [
     iconProps: { size: "md" },
     children: [
       {label: "Virtual Machines", route: "/vms", icon: ServerCog},
+      {label: "XML Templates", route: "/vms-xml-templates", icon: FileText},
       {label: "GPUs", route: "/gpus", icon: Gpu, iconProps: { size: "md" }},
       {label: "Backups", route: "/backups", icon: DatabaseBackup},
       {label: "Auto-Backups", route: "/autobackups", icon: History},
@@ -238,7 +239,10 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
       if (!route) {
         return false;
       }
-      return route === "/mounts" ? pathname === "/mounts" : Boolean(pathname?.startsWith(route));
+      if (!pathname) {
+        return false;
+      }
+      return pathname === route || pathname.startsWith(`${route}/`);
     },
     [pathname]
   );

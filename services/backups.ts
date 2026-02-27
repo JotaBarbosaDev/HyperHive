@@ -1,5 +1,6 @@
 import { apiFetch } from "./api-client";
 import { resolveToken, ensureApiBaseUrl } from "./vms-client";
+import { normalizeOptionalTemplateId } from "@/utils/xml-template";
 
 export type BackupApiItem = Record<string, unknown>;
 
@@ -13,6 +14,7 @@ export type UseBackupPayload = {
   nfs_share_id: number;
   cpu_xml: string;
   live: boolean;
+  template_id?: number;
 };
 
 export async function listBackups(): Promise<BackupApiItem[]> {
@@ -45,12 +47,15 @@ export async function useBackup(
 ): Promise<unknown> {
   const token = await resolveToken();
   const encodedId = encodeURIComponent(String(backupId));
+  const templateId = normalizeOptionalTemplateId(payload.template_id);
+  const { template_id: _templateId, ...restPayload } = payload;
   return apiFetch(`/virsh/useBackup/${encodedId}`, {
     method: "POST",
     token,
     body: {
-      ...payload,
-      live: Boolean(payload.live),
+      ...restPayload,
+      live: Boolean(restPayload.live),
+      ...(templateId ? { template_id: templateId } : {}),
     },
   });
 }

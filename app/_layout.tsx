@@ -79,6 +79,7 @@ const ROUTE_TITLE_MAP: Record<string, string> = {
   "/mounts": "NFS",
   "/isos": "ISOs",
   "/vms": "Virtual Machines",
+  "/vms-xml-templates": "XML Templates",
   "/gpus": "GPUs",
   "/backups": "Backups",
   "/autobackups": "Auto-Backups",

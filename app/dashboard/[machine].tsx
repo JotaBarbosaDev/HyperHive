@@ -11,9 +11,24 @@ import { VStack } from "@/components/ui/vstack";
 import { Badge, BadgeText } from "@/components/ui/badge";
 import { Button, ButtonIcon, ButtonText } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { Input, InputField } from "@/components/ui/input";
 import { Pressable } from "@/components/ui/pressable";
 import { Modal, ModalBackdrop, ModalBody, ModalContent, ModalHeader } from "@/components/ui/modal";
+import {
+	Select,
+	SelectBackdrop as SelectBackdropContent,
+	SelectContent,
+	SelectDragIndicator,
+	SelectDragIndicatorWrapper,
+	SelectIcon,
+	SelectInput,
+	SelectItem,
+	SelectPortal,
+	SelectTrigger,
+} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
+import CoreIsolationModal from "@/components/modals/CoreIsolationModal";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useMachines } from "@/hooks/useMachines";
 import {
@@ -27,9 +42,18 @@ import {
 	getNetworkHistory,
 	getNetworkInfo,
 } from "@/services/hyperhive";
+import { ApiError } from "@/services/api-client";
+import {
+	deleteNodeHostHugepagesStatus,
+	getNodeHostHugepagesStatus,
+	getNodeIrqbalanceStatus,
+	NodeHostHugepagesStatus,
+	setNodeHostHugepagesStatus,
+	setNodeIrqbalanceStatus,
+} from "@/services/vms-client";
 import { CpuInfo, DiskInfo, HistoryEntry, MemInfo, NetworkInfo, UptimeInfo } from "@/types/metrics";
 import { Machine } from "@/types/machine";
-import { ArrowLeft, BarChart3, ChevronDown, Clock3, Cpu, HardDrive, MemoryStick, Network, SignalHigh, ThermometerSun } from "lucide-react-native";
+import { ArrowLeft, BarChart3, ChevronDown, Clock3, Cpu, HardDrive, MemoryStick, Network, RefreshCcw, SignalHigh, ThermometerSun } from "lucide-react-native";
 
 const ICON_SIZE_SM = 16;
 const ICON_SIZE_MD = 18;
@@ -226,6 +250,24 @@ type RangeOption = {
 	description: string;
 };
 
+type IrqbalanceUiState = {
+	hasLoaded: boolean;
+	isLoading: boolean;
+	isUpdating: boolean;
+	enabled: boolean;
+	active: boolean;
+	unitName: string | null;
+	error: string | null;
+};
+
+type HostHugepagesUiState = {
+	hasLoaded: boolean;
+	isLoading: boolean;
+	isUpdating: boolean;
+	data: NodeHostHugepagesStatus | null;
+	error: string | null;
+};
+
 const RANGE_OPTIONS: RangeOption[] = [
 	{ key: "1h", label: "Last hour", query: { hours: 1, numberOfRows: 30 }, description: "30 points (~2 min)" },
 	{ key: "1d", label: "24 hours", query: { hours: 24, numberOfRows: 48 }, description: "48 points (~30 min)" },
@@ -235,6 +277,66 @@ const RANGE_OPTIONS: RangeOption[] = [
 ];
 
 const TOOLTIP_CENTER_OFFSET_Y = Platform.OS === "web" ? -44 : -64;
+const HOST_HUGEPAGES_PAGE_SIZES = ["2M", "1G"] as const;
+const DEFAULT_HOST_HUGEPAGES_PAGE_SIZE = "1G";
+
+const isHostHugepagesPageSize = (value: string): value is (typeof HOST_HUGEPAGES_PAGE_SIZES)[number] =>
+	HOST_HUGEPAGES_PAGE_SIZES.includes(value as (typeof HOST_HUGEPAGES_PAGE_SIZES)[number]);
+
+const pickHostHugepagesPageSize = (status?: NodeHostHugepagesStatus | null) => {
+	const candidates = [
+		status?.pageSize,
+		status?.hugepagesz,
+		status?.defaultHugepagesz,
+		status?.activePageSize,
+		status?.activeHugepagesz,
+		status?.activeDefaultHugepagesz,
+	];
+	for (const candidate of candidates) {
+		const normalized = typeof candidate === "string" ? candidate.trim().toUpperCase() : "";
+		if (isHostHugepagesPageSize(normalized)) {
+			return normalized;
+		}
+	}
+	return DEFAULT_HOST_HUGEPAGES_PAGE_SIZE;
+};
+
+const formatHugepagesSummary = (pageSize?: string, pageCount?: number) => {
+	const size = typeof pageSize === "string" ? pageSize.trim() : "";
+	const count = typeof pageCount === "number" && Number.isFinite(pageCount) ? Math.max(0, Math.trunc(pageCount)) : 0;
+	if (!size && count <= 0) return "Disabled";
+	if (!size) return `${count}`;
+	if (count <= 0) return size;
+	return `${size} x ${count}`;
+};
+
+const parseHugepagesPageSizeToBytes = (pageSize?: string) => {
+	const raw = typeof pageSize === "string" ? pageSize.trim().toUpperCase() : "";
+	const match = raw.match(/^(\d+)\s*([KMGT])B?$/);
+	if (!match) return 0;
+	const amount = Number.parseInt(match[1], 10);
+	if (!Number.isFinite(amount) || amount <= 0) return 0;
+	const unit = match[2];
+	const multiplierByUnit: Record<string, number> = {
+		K: 1024,
+		M: 1024 ** 2,
+		G: 1024 ** 3,
+		T: 1024 ** 4,
+	};
+	return amount * (multiplierByUnit[unit] ?? 0);
+};
+
+const calculateHugepagesTotalBytes = (pageSize?: string, pageCount?: number) => {
+	const perPageBytes = parseHugepagesPageSizeToBytes(pageSize);
+	const count = typeof pageCount === "number" && Number.isFinite(pageCount) ? Math.max(0, Math.trunc(pageCount)) : 0;
+	return perPageBytes > 0 && count > 0 ? perPageBytes * count : 0;
+};
+
+const formatHugepagesCapacity = (pageSize?: string, pageCount?: number) => {
+	const totalBytes = calculateHugepagesTotalBytes(pageSize, pageCount);
+	if (!totalBytes) return "0 B";
+	return `${formatBytes(totalBytes)} (${new Intl.NumberFormat("en-US").format(totalBytes)} B)`;
+};
 
 const toSeries = <TInfo,>(entries: HistoryEntry<TInfo>[], selector: (entry: HistoryEntry<TInfo>) => number) => {
 	return entries
@@ -267,6 +369,19 @@ const formatPointLabel = (x: Date, y: number, unit?: string) => {
 };
 
 const formatPointLabelWithSeries = (series: string, x: Date, y: number, unit?: string) => `${series}\n${formatPointLabel(x, y, unit)}`;
+
+const getApiErrorMessage = (error: unknown, fallback: string) => {
+	if (error instanceof ApiError) {
+		const data = error.data;
+		if (data && typeof data === "object" && "message" in data && typeof (data as any).message === "string") {
+			return (data as any).message as string;
+		}
+	}
+	if (error instanceof Error && error.message) {
+		return error.message;
+	}
+	return fallback;
+};
 
 // Typed alias to satisfy TS when using the composite container.
 const ZoomVoronoiContainer: React.ComponentType<any> = createContainer("zoom", "voronoi") as React.ComponentType<any>;
@@ -313,6 +428,25 @@ export default function MachineDetailsScreen() {
 	const [error, setError] = React.useState<string | null>(null);
 	const [cpuCoresWidth, setCpuCoresWidth] = React.useState<number | null>(null);
 	const [isCpuCoresExpanded, setIsCpuCoresExpanded] = React.useState(false);
+	const [irqbalance, setIrqbalance] = React.useState<IrqbalanceUiState>({
+		hasLoaded: false,
+		isLoading: false,
+		isUpdating: false,
+		enabled: false,
+		active: false,
+		unitName: "irqbalance.service",
+		error: null,
+	});
+	const [hostHugepages, setHostHugepages] = React.useState<HostHugepagesUiState>({
+		hasLoaded: false,
+		isLoading: false,
+		isUpdating: false,
+		data: null,
+		error: null,
+	});
+	const [hostHugepagesPageSize, setHostHugepagesPageSize] = React.useState<string>(DEFAULT_HOST_HUGEPAGES_PAGE_SIZE);
+	const [hostHugepagesPageCountInput, setHostHugepagesPageCountInput] = React.useState<string>("");
+	const [isCoreIsolationModalOpen, setIsCoreIsolationModalOpen] = React.useState(false);
 
 	const selectedRange = React.useMemo(() => RANGE_OPTIONS.find((r) => r.key === rangeKey) ?? RANGE_OPTIONS[0], [rangeKey]);
 
@@ -320,6 +454,88 @@ export default function MachineDetailsScreen() {
 		const found = machines.find((m) => m.MachineName === machineName) ?? null;
 		setMachine(found);
 	}, [machineName, machines]);
+
+	const syncHostHugepagesFormFromStatus = React.useCallback((status: NodeHostHugepagesStatus) => {
+		setHostHugepagesPageSize(pickHostHugepagesPageSize(status));
+		const countCandidate =
+			status.pageCount > 0
+				? status.pageCount
+				: status.activePageCount > 0
+					? status.activePageCount
+					: 0;
+		setHostHugepagesPageCountInput(countCandidate > 0 ? String(countCandidate) : "");
+	}, []);
+
+	const loadIrqbalance = React.useCallback(
+		async () => {
+			if (!machineName) return;
+
+			setIrqbalance((prev) => ({
+				...prev,
+				isLoading: true,
+				error: null,
+			}));
+
+			try {
+				const status = await getNodeIrqbalanceStatus(machineName);
+				setIrqbalance({
+					hasLoaded: true,
+					isLoading: false,
+					isUpdating: false,
+					enabled: Boolean(status.enabled),
+					active: Boolean(status.active),
+					unitName:
+						typeof status.unitName === "string" && status.unitName.trim().length > 0
+							? status.unitName
+							: "irqbalance.service",
+					error: null,
+				});
+			} catch (err) {
+				console.warn("Failed to load irqbalance status:", err);
+				const message = getApiErrorMessage(err, "Failed to load irqbalance status.");
+				setIrqbalance((prev) => ({
+					...prev,
+					isLoading: false,
+					error: message,
+				}));
+			}
+		},
+		[machineName]
+	);
+
+	const loadHostHugepages = React.useCallback(
+		async () => {
+			if (!machineName) return;
+
+			setHostHugepages((prev) => ({
+				...prev,
+				isLoading: true,
+				error: null,
+			}));
+
+			try {
+				const status = await getNodeHostHugepagesStatus(machineName);
+				setHostHugepages((prev) => ({
+					...prev,
+					hasLoaded: true,
+					isLoading: false,
+					isUpdating: false,
+					data: status,
+					error: null,
+				}));
+				syncHostHugepagesFormFromStatus(status);
+			} catch (err) {
+				console.warn("Failed to load host hugepages status:", err);
+				const message = getApiErrorMessage(err, "Failed to load host hugepages status.");
+				setHostHugepages((prev) => ({
+					...prev,
+					isLoading: false,
+					error: message,
+				}));
+			}
+		},
+		[machineName, syncHostHugepagesFormFromStatus]
+	);
 
 	const fetchData = React.useCallback(
 		async (mode: "initial" | "refresh" = "initial", showLoading: boolean = true) => {
@@ -393,6 +609,18 @@ export default function MachineDetailsScreen() {
 
 	React.useEffect(() => {
 		if (!isChecking && !isLoadingMachines && machineName) {
+			void loadIrqbalance();
+		}
+	}, [isChecking, isLoadingMachines, machineName, loadIrqbalance]);
+
+	React.useEffect(() => {
+		if (!isChecking && !isLoadingMachines && machineName) {
+			void loadHostHugepages();
+		}
+	}, [isChecking, isLoadingMachines, machineName, loadHostHugepages]);
+
+	React.useEffect(() => {
+		if (!isChecking && !isLoadingMachines && machineName) {
 			fetchData("refresh");
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -437,6 +665,155 @@ export default function MachineDetailsScreen() {
 		}
 	}, [isChecking, isLoadingMachines, machineName, selectedRange]);
 
+	const handleRefresh = React.useCallback(async () => {
+		await Promise.all([fetchData("refresh"), loadIrqbalance(), loadHostHugepages()]);
+	}, [fetchData, loadIrqbalance, loadHostHugepages]);
+
+	const handleToggleIrqbalance = React.useCallback(
+		async (enabled: boolean) => {
+			if (!machineName) return;
+			if (!irqbalance.hasLoaded || irqbalance.isLoading || irqbalance.isUpdating) return;
+
+			const previous = { ...irqbalance };
+			setIrqbalance((prev) => ({
+				...prev,
+				isUpdating: true,
+				error: null,
+				enabled,
+				active: enabled,
+			}));
+
+			try {
+				const response = await setNodeIrqbalanceStatus(machineName, enabled);
+				setIrqbalance({
+					hasLoaded: true,
+					isLoading: false,
+					isUpdating: false,
+					enabled: Boolean(response.enabled),
+					active: Boolean(response.active),
+					unitName:
+						typeof response.unitName === "string" && response.unitName.trim().length > 0
+							? response.unitName
+							: previous.unitName ?? "irqbalance.service",
+					error: null,
+				});
+			} catch (err) {
+				console.error("Failed to update irqbalance:", err);
+				const message = getApiErrorMessage(err, "Failed to update irqbalance.");
+				setIrqbalance({
+					...previous,
+					isUpdating: false,
+					error: message,
+				});
+				void loadIrqbalance();
+			}
+		},
+		[irqbalance, loadIrqbalance, machineName]
+	);
+
+	const handleApplyHostHugepages = React.useCallback(
+		async (method: "POST" | "PUT" = "POST") => {
+			if (!machineName) return;
+			if (hostHugepages.isLoading || hostHugepages.isUpdating) return;
+
+			const pageSize = hostHugepagesPageSize.trim().toUpperCase();
+			if (!isHostHugepagesPageSize(pageSize)) {
+				setHostHugepages((prev) => ({
+					...prev,
+					error: "Invalid hugepages page size.",
+				}));
+				return;
+			}
+
+			const parsedCount = Number.parseInt(hostHugepagesPageCountInput.trim(), 10);
+			if (!Number.isFinite(parsedCount) || parsedCount <= 0) {
+				setHostHugepages((prev) => ({
+					...prev,
+					error: "Page count must be a positive integer.",
+				}));
+				return;
+			}
+
+			setHostHugepages((prev) => ({
+				...prev,
+				isUpdating: true,
+				error: null,
+			}));
+
+			try {
+				const status = await setNodeHostHugepagesStatus(
+					machineName,
+					{
+						page_size: pageSize,
+						page_count: parsedCount,
+					},
+					method
+				);
+				setHostHugepages({
+					hasLoaded: true,
+					isLoading: false,
+					isUpdating: false,
+					data: status,
+					error: null,
+				});
+				syncHostHugepagesFormFromStatus(status);
+			} catch (err) {
+				console.error("Failed to update host hugepages:", err);
+				const message = getApiErrorMessage(err, "Failed to update host hugepages.");
+				setHostHugepages((prev) => ({
+					...prev,
+					isUpdating: false,
+					error: message,
+				}));
+				void loadHostHugepages();
+			}
+		},
+		[
+			hostHugepages.isLoading,
+			hostHugepages.isUpdating,
+			hostHugepagesPageCountInput,
+			hostHugepagesPageSize,
+			loadHostHugepages,
+			machineName,
+			syncHostHugepagesFormFromStatus,
+		]
+	);
+
+	const handleRemoveHostHugepages = React.useCallback(
+		async () => {
+			if (!machineName) return;
+			if (hostHugepages.isLoading || hostHugepages.isUpdating) return;
+
+			setHostHugepages((prev) => ({
+				...prev,
+				isUpdating: true,
+				error: null,
+			}));
+
+			try {
+				const status = await deleteNodeHostHugepagesStatus(machineName);
+				setHostHugepages({
+					hasLoaded: true,
+					isLoading: false,
+					isUpdating: false,
+					data: status,
+					error: null,
+				});
+				syncHostHugepagesFormFromStatus(status);
+			} catch (err) {
+				console.error("Failed to remove host hugepages:", err);
+				const message = getApiErrorMessage(err, "Failed to remove host hugepages.");
+				setHostHugepages((prev) => ({
+					...prev,
+					isUpdating: false,
+					error: message,
+				}));
+				void loadHostHugepages();
+			}
+		},
+		[hostHugepages.isLoading, hostHugepages.isUpdating, loadHostHugepages, machineName, syncHostHugepagesFormFromStatus]
+	);
+
 	const diskTotals = React.useMemo(() => computeDiskTotals(disk ?? undefined), [disk]);
 	const cpuAvg = React.useMemo(() => averageCpuUsage(cpu), [cpu]);
 	const tempAvg = React.useMemo(() => averageCpuTemp(cpu), [cpu]);
@@ -478,6 +855,41 @@ export default function MachineDetailsScreen() {
 	}, [cpuHistory, memHistory, diskHistory, networkHistory]);
 
 	const isDark = colorScheme === "dark";
+	const hostHugepagesStatus = hostHugepages.data;
+	const hostHugepagesControlsDisabled =
+		!hostHugepages.hasLoaded || hostHugepages.isLoading || hostHugepages.isUpdating;
+	const hostHugepagesRemoveDisabled =
+		hostHugepagesControlsDisabled || !hostHugepagesStatus?.enabled;
+	const hostHugepagesSelectedPageCount = Number.parseInt(hostHugepagesPageCountInput.trim(), 10);
+	const hostHugepagesConfiguredLabel = hostHugepagesStatus?.enabled
+		? formatHugepagesSummary(hostHugepagesStatus.pageSize, hostHugepagesStatus.pageCount)
+		: "Disabled";
+	const hostHugepagesActiveLabel = formatHugepagesSummary(
+		hostHugepagesStatus?.activePageSize,
+		hostHugepagesStatus?.activePageCount
+	);
+	const hostHugepagesSelectedCapacityLabel =
+		Number.isFinite(hostHugepagesSelectedPageCount) && hostHugepagesSelectedPageCount > 0
+			? formatHugepagesCapacity(hostHugepagesPageSize, hostHugepagesSelectedPageCount)
+			: "Enter page count";
+	const hostHugepagesConfiguredCapacityLabel = formatHugepagesCapacity(
+		hostHugepagesStatus?.pageSize,
+		hostHugepagesStatus?.pageCount
+	);
+	const hostHugepagesActiveCapacityLabel = formatHugepagesCapacity(
+		hostHugepagesStatus?.activePageSize,
+		hostHugepagesStatus?.activePageCount
+	);
+	const hostHugepagesStatusText =
+		hostHugepages.error
+			? hostHugepages.error
+			: hostHugepages.isUpdating
+				? "Applying hugepages configuration..."
+				: hostHugepagesStatus?.message?.trim()
+					? hostHugepagesStatus.message.trim()
+					: hostHugepagesStatus?.rebootRequired
+						? "A reboot is required for the configured hugepages to become active."
+						: "Configure host hugepages defaults for VM workloads on this node.";
 	const handleCpuCoresLayout = React.useCallback((event: LayoutChangeEvent) => {
 		const width = event.nativeEvent.layout.width;
 		if (!Number.isFinite(width) || width <= 0) return;
@@ -652,9 +1064,7 @@ export default function MachineDetailsScreen() {
 		[colorScheme, isDark, selectedRange.key, chartWidth]
 	);
 
-	const refreshControl = (
-		<RefreshControl refreshing={isRefreshing} onRefresh={() => fetchData("refresh")} tintColor="#0F172A" />
-	);
+	const refreshControl = <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor="#0F172A" />;
 
 	if (!machineName) {
 		return (
@@ -767,6 +1177,256 @@ export default function MachineDetailsScreen() {
 							<Text className="text-sm text-typography-600 dark:text-[#8A94A8]">Online since {formatRelative((machine as any)?.EntryTime)}</Text>
 						</Box>
 					</HStack>
+
+					<Box className="mt-4 rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
+						<HStack className="items-center justify-between mb-3">
+							<VStack className="gap-1">
+								<Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
+									Host Controls
+								</Heading>
+								<Text className="text-xs text-typography-600 dark:text-[#8A94A8]">
+									Service tuning and CPU isolation controls for this node.
+								</Text>
+							</VStack>
+							<Cpu size={ICON_SIZE_SM} className="text-primary-700 dark:text-[#5EEAD4]" />
+						</HStack>
+
+						<HStack className="gap-4 flex-wrap">
+							<Box className="flex-1 min-w-[260px] rounded-2xl border border-outline-200 dark:border-[#243247] bg-background-50 dark:bg-[#0E1A2B] p-4">
+							<HStack className="items-center justify-between mb-2">
+								<Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#5EEAD4] tracking-[0.08em]">
+									irqbalance
+								</Text>
+								<Pressable
+									onPress={() => void loadIrqbalance()}
+									disabled={irqbalance.isUpdating}
+									className="p-2 rounded-lg border border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0E1A2B]"
+								>
+									<RefreshCcw size={ICON_SIZE_SM} className="text-primary-700 dark:text-[#5EEAD4]" />
+								</Pressable>
+							</HStack>
+							<VStack className="gap-3">
+								<HStack className="items-center justify-between gap-3">
+									<VStack className="gap-2 flex-1">
+										<HStack className="items-center gap-2 flex-wrap">
+											<Badge
+												size="sm"
+												variant="outline"
+												className={
+													irqbalance.isLoading && !irqbalance.hasLoaded
+														? "border-outline-300 dark:border-[#243247]"
+														: irqbalance.error && !irqbalance.hasLoaded
+															? "border-error-300 dark:border-error-700"
+															: irqbalance.enabled
+																? "border-success-300 dark:border-success-700"
+																: "border-warning-300 dark:border-warning-700"
+												}
+											>
+												<BadgeText className="text-xs text-typography-600 dark:text-typography-950">
+													{irqbalance.isLoading && !irqbalance.hasLoaded
+														? "Loading"
+														: irqbalance.error && !irqbalance.hasLoaded
+															? "Unavailable"
+															: irqbalance.enabled
+																? "Enabled"
+																: "Disabled"}
+												</BadgeText>
+											</Badge>
+											{irqbalance.hasLoaded ? (
+												<Badge size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
+													<BadgeText className="text-xs text-typography-600 dark:text-typography-950">
+														{irqbalance.active ? "Active" : "Inactive"}
+													</BadgeText>
+												</Badge>
+											) : null}
+										</HStack>
+										<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+											{irqbalance.error
+												? irqbalance.error
+												: irqbalance.isUpdating
+													? "Applying change..."
+													: `Unit: ${irqbalance.unitName ?? "irqbalance.service"}`}
+										</Text>
+									</VStack>
+									<VStack className="items-end gap-2">
+										{irqbalance.isUpdating ? <Spinner color={isDark ? "#5EEAD4" : "#0F172A"} /> : null}
+										<Switch
+											value={irqbalance.hasLoaded ? irqbalance.enabled : false}
+											disabled={!irqbalance.hasLoaded || irqbalance.isLoading || irqbalance.isUpdating}
+											onValueChange={(value) => {
+												void handleToggleIrqbalance(value);
+											}}
+										/>
+									</VStack>
+								</HStack>
+								<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+									Enable or disable the `irqbalance` service on this node.
+								</Text>
+							</VStack>
+						</Box>
+
+						<Box className="flex-1 min-w-[260px] rounded-2xl border border-outline-200 dark:border-[#243247] bg-background-50 dark:bg-[#0E1A2B] p-4">
+							<HStack className="items-center justify-between mb-2">
+								<Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#5EEAD4] tracking-[0.08em]">
+									Core Isolation
+								</Text>
+								<Cpu size={ICON_SIZE_SM} className="text-primary-700 dark:text-[#5EEAD4]" />
+							</HStack>
+							<VStack className="gap-3">
+								<Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
+									Select and isolate physical CPU cores for this host. Maximum 50% of cores per socket.
+								</Text>
+								<Button
+									size="sm"
+									variant="outline"
+									className="rounded-xl self-start"
+									onPress={() => setIsCoreIsolationModalOpen(true)}
+								>
+									<ButtonText>Isolate Cores</ButtonText>
+								</Button>
+							</VStack>
+						</Box>
+						<Box className="flex-1 min-w-[300px] rounded-2xl border border-outline-200 dark:border-[#243247] bg-background-50 dark:bg-[#0E1A2B] p-4">
+							<HStack className="items-center justify-between mb-2">
+								<Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#5EEAD4] tracking-[0.08em]">
+									Host Hugepages
+								</Text>
+								<Pressable
+									onPress={() => void loadHostHugepages()}
+									disabled={hostHugepages.isUpdating}
+									className="p-2 rounded-lg border border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0E1A2B]"
+								>
+									<RefreshCcw size={ICON_SIZE_SM} className="text-primary-700 dark:text-[#5EEAD4]" />
+								</Pressable>
+							</HStack>
+							<VStack className="gap-3">
+								<HStack className="items-center gap-2 flex-wrap">
+									<Badge
+										size="sm"
+										variant="outline"
+										className={
+											hostHugepages.isLoading && !hostHugepages.hasLoaded
+												? "border-outline-300 dark:border-[#243247]"
+												: hostHugepages.error && !hostHugepages.hasLoaded
+													? "border-error-300 dark:border-error-700"
+													: hostHugepagesStatus?.enabled
+														? "border-success-300 dark:border-success-700"
+														: "border-warning-300 dark:border-warning-700"
+										}
+									>
+										<BadgeText className="text-xs text-typography-600 dark:text-typography-950">
+											{hostHugepages.isLoading && !hostHugepages.hasLoaded
+												? "Loading"
+												: hostHugepages.error && !hostHugepages.hasLoaded
+													? "Unavailable"
+													: hostHugepagesStatus?.enabled
+														? "Enabled"
+														: "Disabled"}
+										</BadgeText>
+									</Badge>
+									{hostHugepagesStatus?.rebootRequired ? (
+										<Badge size="sm" variant="outline" className="border-warning-300 dark:border-warning-700">
+											<BadgeText className="text-xs text-typography-600 dark:text-typography-950">
+												Reboot required
+											</BadgeText>
+										</Badge>
+									) : null}
+									{hostHugepages.isUpdating ? (
+										<Badge size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
+											<BadgeText className="text-xs text-typography-600 dark:text-typography-950">
+												Applying
+											</BadgeText>
+										</Badge>
+									) : null}
+								</HStack>
+
+								<HStack className="gap-2 flex-wrap items-end">
+									<Box className="flex-1 min-w-[120px]">
+										<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Page Size</Text>
+										<Select
+											selectedValue={hostHugepagesPageSize}
+											onValueChange={(value) => setHostHugepagesPageSize(value)}
+											isDisabled={hostHugepagesControlsDisabled}
+										>
+											<SelectTrigger className="rounded-xl">
+												<SelectInput placeholder="Select size" value={hostHugepagesPageSize} />
+												<SelectIcon />
+											</SelectTrigger>
+											<SelectPortal>
+												<SelectBackdropContent />
+												<SelectContent>
+													<SelectDragIndicatorWrapper>
+														<SelectDragIndicator />
+													</SelectDragIndicatorWrapper>
+													{HOST_HUGEPAGES_PAGE_SIZES.map((sizeOption) => (
+														<SelectItem
+															key={sizeOption}
+															label={sizeOption}
+															value={sizeOption}
+														/>
+													))}
+												</SelectContent>
+											</SelectPortal>
+										</Select>
+									</Box>
+									<Box className="w-[132px]">
+										<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Page Count</Text>
+										<Input className="rounded-xl" isDisabled={hostHugepagesControlsDisabled}>
+											<InputField
+												value={hostHugepagesPageCountInput}
+												onChangeText={setHostHugepagesPageCountInput}
+												placeholder="e.g. 8"
+												keyboardType={Platform.OS === "ios" ? "number-pad" : "numeric"}
+											/>
+										</Input>
+									</Box>
+								</HStack>
+
+								<HStack className="items-center gap-2 flex-wrap">
+									<Button
+										size="sm"
+										variant="outline"
+										className="rounded-xl"
+										isDisabled={hostHugepagesControlsDisabled}
+										onPress={() => {
+											void handleApplyHostHugepages("POST");
+										}}
+									>
+										<ButtonText>Apply</ButtonText>
+									</Button>
+									<Button
+										size="sm"
+										variant="outline"
+										className="rounded-xl"
+										isDisabled={hostHugepagesRemoveDisabled}
+										onPress={() => {
+											void handleRemoveHostHugepages();
+										}}
+									>
+										<ButtonText>Remove</ButtonText>
+									</Button>
+									{hostHugepages.isUpdating ? <Spinner color={isDark ? "#5EEAD4" : "#0F172A"} /> : null}
+								</HStack>
+
+								<VStack className="gap-1">
+									<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+										Selected capacity: {hostHugepagesSelectedCapacityLabel}
+									</Text>
+									<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+										Configured: {hostHugepagesConfiguredLabel} ({hostHugepagesConfiguredCapacityLabel})
+									</Text>
+									<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+										Active: {hostHugepagesActiveLabel} ({hostHugepagesActiveCapacityLabel})
+									</Text>
+								</VStack>
+
+								<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+									{hostHugepagesStatusText}
+								</Text>
+							</VStack>
+						</Box>
+						</HStack>
+					</Box>
 
 					<Box className="mt-6 rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
 						<HStack className="items-center justify-between mb-3">
@@ -942,6 +1602,12 @@ export default function MachineDetailsScreen() {
 					</ModalBody>
 				</ModalContent>
 			</Modal>
+
+			<CoreIsolationModal
+				isOpen={isCoreIsolationModalOpen}
+				onClose={() => setIsCoreIsolationModalOpen(false)}
+				machineName={machineName}
+			/>
 		</Box>
 	);
 }

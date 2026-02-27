@@ -82,6 +82,8 @@ import {
   setVmActiveVnc,
   getVmBallooning,
   setVmBallooning,
+  getVmHugepages,
+  setVmHugepages,
   getCpuDisableFeatures,
   updateCpuXml,
   getVmExportUrl,
@@ -90,10 +92,12 @@ import {
 } from "@/services/vms-client";
 import { listMounts, getCpuInfo, getMemInfo } from "@/services/hyperhive";
 import { createBackup } from "@/services/backups";
+import { listXmlTemplates, XmlTemplate } from "@/services/xml-templates-client";
 import { Mount } from "@/types/mount";
 import { ApiError } from "@/services/api-client";
 import { apiFetch } from "@/services/api-client";
 import { getApiBaseUrl } from "@/config/apiConfig";
+import { XML_TEMPLATE_NONE_OPTION_LABEL, XML_TEMPLATE_NONE_OPTION_VALUE, normalizeOptionalTemplateId } from "@/utils/xml-template";
 let Haptics: any;
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -196,6 +200,15 @@ type VmBallooningUiState = {
   error: string | null;
 };
 
+type VmHugepagesUiState = {
+  hasLoaded: boolean;
+  isLoading: boolean;
+  enabled: boolean;
+  hasHugepages: boolean;
+  memoryLocked: boolean;
+  error: string | null;
+};
+
 // Estados das VMs
 const VM_STATES: Record<VmState, VMState> = {
   [VmState.UNKNOWN]: { label: "Unknown", color: "bg-gray-400", badgeVariant: "outline" },
@@ -274,6 +287,7 @@ export default function VirtualMachinesScreen() {
       vm: VM;
     }
   >(null);
+  const [deleteVmConfirmName, setDeleteVmConfirmName] = React.useState("");
   const [openCreate, setOpenCreate] = React.useState(false);
   const [openImport, setOpenImport] = React.useState(false);
   const [editVm, setEditVm] = React.useState<VM | null>(null);
@@ -295,11 +309,17 @@ export default function VirtualMachinesScreen() {
   const activeVncInFlightRef = React.useRef<Set<string>>(new Set());
   const ballooningDesiredRef = React.useRef<Map<string, boolean>>(new Map());
   const ballooningInFlightRef = React.useRef<Set<string>>(new Set());
+  const hugepagesDesiredRef = React.useRef<Map<string, boolean>>(new Map());
+  const hugepagesInFlightRef = React.useRef<Set<string>>(new Set());
   const [ballooningStatusByVm, setBallooningStatusByVm] = React.useState<
     Record<string, VmBallooningUiState>
   >({});
+  const [hugepagesStatusByVm, setHugepagesStatusByVm] = React.useState<
+    Record<string, VmHugepagesUiState>
+  >({});
   const [mountOptions, setMountOptions] = React.useState<Mount[]>([]);
   const [slaveOptions, setSlaveOptions] = React.useState<Slave[]>([]);
+  const [xmlTemplateOptions, setXmlTemplateOptions] = React.useState<XmlTemplate[]>([]);
   const [cloneOptionsLoading, setCloneOptionsLoading] = React.useState(false);
   const [deletingVm, setDeletingVm] = React.useState<string | null>(null);
   const [migratingVm, setMigratingVm] = React.useState<string | null>(null);
@@ -366,6 +386,27 @@ export default function VirtualMachinesScreen() {
       : !selectedVmBallooningLoaded
         ? "Ballooning (loading...)"
         : "Ballooning";
+  const selectedVmHugepagesState = selectedVm ? hugepagesStatusByVm[selectedVm.name] : undefined;
+  const selectedVmHugepagesLoaded = Boolean(selectedVmHugepagesState?.hasLoaded);
+  const selectedVmHugepagesLoading = Boolean(selectedVmHugepagesState?.isLoading);
+  const selectedVmHugepagesEnabled =
+    selectedVmHugepagesLoaded && Boolean(selectedVmHugepagesState?.enabled);
+  const selectedVmHugepagesToggleDisabled =
+    !selectedVm ||
+    selectedVmHugepagesLoading ||
+    !selectedVmHugepagesLoaded;
+  const selectedVmHugepagesLabel = selectedVmHugepagesState?.error && !selectedVmHugepagesLoaded
+    ? "Hugepages (unavailable)"
+    : !selectedVmHugepagesLoaded
+      ? "Hugepages (loading...)"
+      : "Hugepages";
+  const isDeleteConfirmNameMatch =
+    confirmAction?.type !== "delete" ||
+    deleteVmConfirmName === confirmAction.vm.name;
+
+  React.useEffect(() => {
+    setDeleteVmConfirmName("");
+  }, [confirmAction?.type, confirmAction?.vm.name]);
 
   const showToastMessage = React.useCallback(
     (
@@ -443,6 +484,66 @@ export default function VirtualMachinesScreen() {
 
         if (!options?.silent) {
           showToastMessage("Ballooning status failed", message, "error");
+        }
+      }
+    },
+    [showToastMessage]
+  );
+
+  const loadVmHugepagesStatus = React.useCallback(
+    async (vmName: string, options?: { silent?: boolean }) => {
+      setHugepagesStatusByVm((prev) => {
+        const current = prev[vmName];
+        return {
+          ...prev,
+          [vmName]: {
+            hasLoaded: current?.hasLoaded ?? false,
+            isLoading: true,
+            enabled: current?.enabled ?? false,
+            hasHugepages: current?.hasHugepages ?? false,
+            memoryLocked: current?.memoryLocked ?? false,
+            error: null,
+          },
+        };
+      });
+
+      try {
+        const status = await getVmHugepages(vmName);
+        setHugepagesStatusByVm((prev) => ({
+          ...prev,
+          [vmName]: {
+            hasLoaded: true,
+            isLoading: false,
+            enabled: status.enabled,
+            hasHugepages: status.has_hugepages,
+            memoryLocked: status.memory_locked,
+            error: null,
+          },
+        }));
+      } catch (error) {
+        console.error("Error loading hugepages status:", error);
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to load hugepages status.";
+
+        setHugepagesStatusByVm((prev) => {
+          const current = prev[vmName];
+          return {
+            ...prev,
+            [vmName]: {
+              hasLoaded: current?.hasLoaded ?? false,
+              isLoading: false,
+              enabled: current?.enabled ?? false,
+              hasHugepages: current?.hasHugepages ?? false,
+              memoryLocked: current?.memoryLocked ?? false,
+              error: message,
+            },
+          };
+        });
+
+        if (!options?.silent) {
+          showToastMessage("Hugepages status failed", message, "error");
         }
       }
     },
@@ -799,11 +900,20 @@ export default function VirtualMachinesScreen() {
     const fetchCloneOptions = async () => {
       setCloneOptionsLoading(true);
       try {
-        const [mountsResp, slavesResp] = await Promise.all([listMounts(), listSlaves()]);
+        const [mountsResp, slavesResp, xmlTemplatesResp] = await Promise.all([
+          listMounts(),
+          listSlaves(),
+          listXmlTemplates().catch((err) => {
+            console.warn("Error loading XML templates:", err);
+            return [] as XmlTemplate[];
+          }),
+        ]);
         const mounts = Array.isArray(mountsResp) ? mountsResp : [];
         const slaves = Array.isArray(slavesResp) ? slavesResp : [];
+        const templates = Array.isArray(xmlTemplatesResp) ? xmlTemplatesResp : [];
         setMountOptions(mounts);
         setSlaveOptions(slaves);
+        setXmlTemplateOptions(templates);
       } catch (error) {
         console.error("Error loading NFS/Slaves:", error);
         toast.show({
@@ -1065,7 +1175,8 @@ export default function VirtualMachinesScreen() {
       return;
     }
     void loadVmBallooningStatus(selectedVm.name, { silent: true });
-  }, [showActionsheet, selectedVm?.name, loadVmBallooningStatus]);
+    void loadVmHugepagesStatus(selectedVm.name, { silent: true });
+  }, [showActionsheet, selectedVm?.name, loadVmBallooningStatus, loadVmHugepagesStatus]);
 
   const handleVmAction = async (vmName: string, action: string) => {
     setLoadingVm(vmName);
@@ -1356,6 +1467,83 @@ export default function VirtualMachinesScreen() {
         void loadVmBallooningStatus(vmName, { silent: true });
       } finally {
         ballooningInFlightRef.current.delete(vmName);
+      }
+    })();
+  };
+
+  const handleToggleHugepages = (vm: VM, checked: boolean) => {
+    const vmName = vm.name;
+    const currentState = hugepagesStatusByVm[vmName];
+    if (!currentState?.hasLoaded) {
+      return;
+    }
+
+    const previousValue = currentState.enabled;
+    const updateLocalHugepages = (value: boolean) => {
+      setHugepagesStatusByVm((prev) => {
+        const current = prev[vmName] ?? {
+          hasLoaded: true,
+          isLoading: false,
+          enabled: previousValue,
+          hasHugepages: previousValue,
+          memoryLocked: false,
+          error: null,
+        };
+        return {
+          ...prev,
+          [vmName]: {
+            ...current,
+            hasLoaded: true,
+            enabled: value,
+            hasHugepages: value,
+            error: null,
+          },
+        };
+      });
+    };
+
+    updateLocalHugepages(checked);
+    Haptics.selectionAsync();
+
+    hugepagesDesiredRef.current.set(vmName, checked);
+    if (hugepagesInFlightRef.current.has(vmName)) {
+      return;
+    }
+
+    hugepagesInFlightRef.current.add(vmName);
+    void (async () => {
+      let lastApplied: boolean | undefined;
+      try {
+        while (true) {
+          const desired = hugepagesDesiredRef.current.get(vmName);
+          if (desired === undefined) {
+            break;
+          }
+          hugepagesDesiredRef.current.delete(vmName);
+          if (lastApplied !== undefined && desired === lastApplied) {
+            continue;
+          }
+          await setVmHugepages(vmName, desired);
+          lastApplied = desired;
+        }
+
+        if (lastApplied !== undefined) {
+          showToastMessage(`Hugepages ${lastApplied ? "enabled" : "disabled"}`);
+          void loadVmHugepagesStatus(vmName, { silent: true });
+        }
+      } catch (error) {
+        console.error("Error updating hugepages:", error);
+        hugepagesDesiredRef.current.delete(vmName);
+        const fallbackValue = lastApplied ?? previousValue;
+        updateLocalHugepages(fallbackValue);
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to update hugepages.";
+        showToastMessage("Hugepages update failed", message, "error");
+        void loadVmHugepagesStatus(vmName, { silent: true });
+      } finally {
+        hugepagesInFlightRef.current.delete(vmName);
       }
     })();
   };
@@ -2303,17 +2491,37 @@ export default function VirtualMachinesScreen() {
                 <AlertDialogCloseButton />
               </AlertDialogHeader>
               <AlertDialogBody className="py-4">
-                <Text className="text-typography-700 dark:text-[#8A94A8]">
-                  {confirmAction?.type === "delete"
-                    ? `Are you sure you want to delete VM ${confirmAction?.vm.name}?`
-                    : confirmAction?.type === "force-shutdown"
-                      ? `Force shutdown of ${confirmAction?.vm.name}?`
-                      : confirmAction?.type === "shutdown"
-                        ? `Shutdown ${confirmAction?.vm.name}?`
-                        : confirmAction?.type === "restart"
-                          ? `Restart ${confirmAction?.vm.name}?`
-                          : `Pause ${confirmAction?.vm.name}?`}
-                </Text>
+                <VStack className="gap-3">
+                  <Text className="text-typography-700 dark:text-[#8A94A8]">
+                    {confirmAction?.type === "delete"
+                      ? `Are you sure you want to delete VM ${confirmAction?.vm.name}?`
+                      : confirmAction?.type === "force-shutdown"
+                        ? `Force shutdown of ${confirmAction?.vm.name}?`
+                        : confirmAction?.type === "shutdown"
+                          ? `Shutdown ${confirmAction?.vm.name}?`
+                          : confirmAction?.type === "restart"
+                            ? `Restart ${confirmAction?.vm.name}?`
+                            : `Pause ${confirmAction?.vm.name}?`}
+                  </Text>
+                  {confirmAction?.type === "delete" ? (
+                    <VStack className="gap-2">
+                      <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+                        Type the VM name to confirm deletion: {confirmAction.vm.name}
+                      </Text>
+                      <Input
+                        variant="outline"
+                        className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
+                      >
+                        <InputField
+                          value={deleteVmConfirmName}
+                          onChangeText={setDeleteVmConfirmName}
+                          placeholder={confirmAction.vm.name}
+                          className="text-typography-900 dark:text-[#E8EBF0]"
+                        />
+                      </Input>
+                    </VStack>
+                  ) : null}
+                </VStack>
               </AlertDialogBody>
               <AlertDialogFooter className="border-t border-outline-100 dark:border-[#2A3B52] pt-3">
                 <Button
@@ -2330,6 +2538,9 @@ export default function VirtualMachinesScreen() {
                       Haptics.NotificationFeedbackType.Warning
                     );
                     if (confirmAction.type === "delete") {
+                      if (!isDeleteConfirmNameMatch) {
+                        return;
+                      }
                       try {
                         setDeletingVm(confirmAction.vm.name);
                         await deleteVM(confirmAction.vm.name);
@@ -2387,7 +2598,7 @@ export default function VirtualMachinesScreen() {
                     }
                   }}
                   className={`rounded-xl px-4 py-2 ${primaryButtonClass}`}
-                  disabled={Boolean(deletingVm)}
+                  disabled={Boolean(deletingVm) || !isDeleteConfirmNameMatch}
                 >
                   {deletingVm ? <ButtonSpinner className="mr-2" /> : null}
                   <ButtonText className={`${primaryButtonTextClass}`}>Confirm</ButtonText>
@@ -2540,12 +2751,15 @@ export default function VirtualMachinesScreen() {
                     vm={cloneVm}
                     mountOptions={mountOptions}
                     slaveOptions={slaveOptions}
+                    xmlTemplateOptions={xmlTemplateOptions}
                     loadingOptions={cloneOptionsLoading}
                     primaryButtonClass={primaryButtonClass}
                     primaryButtonTextClass={primaryButtonTextClass}
-                    onClone={async ({ newName, destMachine, destNfs }) => {
+                    onClone={async ({ newName, destMachine, destNfs, templateId }) => {
                       try {
-                        await cloneVmApi(cloneVm.name, destNfs, destMachine, newName);
+                        await cloneVmApi(cloneVm.name, destNfs, destMachine, newName, {
+                          template_id: templateId,
+                        });
                         setCloneVm(null);
                         await fetchAndSetVms();
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -2626,10 +2840,12 @@ export default function VirtualMachinesScreen() {
                         ? slaveOptions.map((s) => s.MachineName)
                         : Object.keys(vmsBySlave)
                     }
+                    xmlTemplateOptions={xmlTemplateOptions}
+                    optionsLoading={cloneOptionsLoading}
                     loading={migratingVm === migrateVm.name}
                     primaryButtonClass={primaryButtonClass}
                     primaryButtonTextClass={primaryButtonTextClass}
-                    onMigrate={async ({ targetSlave, mode, live, timeout }) => {
+                    onMigrate={async ({ targetSlave, mode, live, timeout, templateId }) => {
                       setMigratingVm(migrateVm.name);
                       try {
                         if (mode === "hot") {
@@ -2642,7 +2858,9 @@ export default function VirtualMachinesScreen() {
                             timeout: timeoutToSend,
                           });
                         } else {
-                          await coldMigrateVM(migrateVm.name, targetSlave);
+                          await coldMigrateVM(migrateVm.name, targetSlave, {
+                            template_id: templateId,
+                          });
                         }
                         await fetchAndSetVms();
                         setMigrateVm(null);
@@ -2720,13 +2938,16 @@ export default function VirtualMachinesScreen() {
                   <MoveDiskForm
                     vm={moveDiskVm}
                     mountOptions={mountOptions}
+                    xmlTemplateOptions={xmlTemplateOptions}
                     loadingOptions={cloneOptionsLoading}
                     primaryButtonClass={primaryButtonClass}
                     primaryButtonTextClass={primaryButtonTextClass}
                     onCancel={() => setMoveDiskVm(null)}
-                    onMove={async ({ destNfsId, newName }) => {
+                    onMove={async ({ destNfsId, newName, templateId }) => {
                       try {
-                        await moveDisk(moveDiskVm.name, destNfsId, newName);
+                        await moveDisk(moveDiskVm.name, destNfsId, newName, {
+                          template_id: templateId,
+                        });
                         await fetchAndSetVms();
                         setMoveDiskVm(null);
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -3210,6 +3431,27 @@ export default function VirtualMachinesScreen() {
                   </HStack>
                 </Pressable>
                 <Pressable
+                  disabled={selectedVmHugepagesToggleDisabled}
+                  onPress={() => {
+                    if (!selectedVm || !selectedVmHugepagesLoaded) return;
+                    handleToggleHugepages(selectedVm, !selectedVmHugepagesEnabled);
+                    setShowActionsheet(false);
+                  }}
+                  className={`px-3 py-3 rounded-md ${selectedVmHugepagesToggleDisabled
+                    ? "opacity-60"
+                    : "hover:bg-background-50 dark:hover:bg-[#1E2F47]"
+                    }`}
+                >
+                  <HStack className="items-center gap-2">
+                    {selectedVmHugepagesEnabled && (
+                      <Check size={16} className="text-typography-900 dark:text-[#E8EBF0]" />
+                    )}
+                    <Text className="text-typography-900 dark:text-[#E8EBF0]">
+                      {selectedVmHugepagesLabel}
+                    </Text>
+                  </HStack>
+                </Pressable>
+                <Pressable
                   onPress={() => {
                     if (!selectedVm) return;
                     handleToggleVmLive(selectedVm, !selectedVm.isLive);
@@ -3521,6 +3763,18 @@ export default function VirtualMachinesScreen() {
               >
                 <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">
                   {(selectedVmBallooningEnabled ? "✓ " : "") + selectedVmBallooningLabel}
+                </ActionsheetItemText>
+              </ActionsheetItem>
+              <ActionsheetItem
+                isDisabled={selectedVmHugepagesToggleDisabled}
+                onPress={() => {
+                  if (!selectedVm || !selectedVmHugepagesLoaded) return;
+                  handleToggleHugepages(selectedVm, !selectedVmHugepagesEnabled);
+                  setShowActionsheet(false);
+                }}
+              >
+                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">
+                  {(selectedVmHugepagesEnabled ? "✓ " : "") + selectedVmHugepagesLabel}
                 </ActionsheetItemText>
               </ActionsheetItem>
               <ActionsheetItem
@@ -4045,6 +4299,7 @@ function CloneVmForm({
   vm,
   mountOptions,
   slaveOptions,
+  xmlTemplateOptions,
   loadingOptions,
   onClone,
   primaryButtonClass,
@@ -4053,14 +4308,21 @@ function CloneVmForm({
   vm: VM;
   mountOptions: Mount[];
   slaveOptions: Slave[];
+  xmlTemplateOptions: XmlTemplate[];
   loadingOptions: boolean;
-  onClone: (payload: { newName: string; destNfs: string; destMachine: string }) => Promise<void>;
+  onClone: (payload: {
+    newName: string;
+    destNfs: string;
+    destMachine: string;
+    templateId?: number;
+  }) => Promise<void>;
   primaryButtonClass: string;
   primaryButtonTextClass: string;
 }) {
   const [newName, setNewName] = React.useState(vm.name + "-clone");
   const [destMachine, setDestMachine] = React.useState(vm.machineName);
   const [destNfs, setDestNfs] = React.useState<string>("");
+  const [xmlTemplateId, setXmlTemplateId] = React.useState<string>(XML_TEMPLATE_NONE_OPTION_VALUE);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -4085,6 +4347,13 @@ function CloneVmForm({
       ? `${Name.trim()} (${MachineName})`
       : `${MachineName} (${selected.NfsShare.Id})`;
   }, [destNfs, mountOptions]);
+  const selectedXmlTemplateLabel = React.useMemo(() => {
+    if (xmlTemplateId === XML_TEMPLATE_NONE_OPTION_VALUE) {
+      return XML_TEMPLATE_NONE_OPTION_LABEL;
+    }
+    const selected = xmlTemplateOptions.find((template) => String(template.id) === xmlTemplateId);
+    return selected ? `#${selected.id} - ${selected.name}` : undefined;
+  }, [xmlTemplateId, xmlTemplateOptions]);
 
   const sanitizedName = newName.trim();
   const nameError =
@@ -4101,7 +4370,12 @@ function CloneVmForm({
     setSaving(true);
     setError(null);
     try {
-      await onClone({ newName: sanitizedName, destNfs, destMachine });
+      await onClone({
+        newName: sanitizedName,
+        destNfs,
+        destMachine,
+        templateId: normalizeOptionalTemplateId(xmlTemplateId),
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error cloning VM.");
     } finally {
@@ -4194,6 +4468,48 @@ function CloneVmForm({
         </Select>
       </FormControl>
 
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText className="text-sm font-semibold text-typography-800">
+            XML Template (optional)
+          </FormControlLabelText>
+        </FormControlLabel>
+        <Select
+          selectedValue={xmlTemplateId}
+          onValueChange={setXmlTemplateId}
+          isDisabled={loadingOptions}
+        >
+          <SelectTrigger>
+            <SelectInput
+              placeholder={loadingOptions ? "Loading..." : "Use default behavior"}
+              value={selectedXmlTemplateLabel}
+            />
+            <SelectIcon />
+          </SelectTrigger>
+          <SelectPortal>
+            <SelectBackdrop />
+            <SelectContent>
+              <SelectItem label={XML_TEMPLATE_NONE_OPTION_LABEL} value={XML_TEMPLATE_NONE_OPTION_VALUE} />
+              {xmlTemplateOptions.map((template) => (
+                <SelectItem
+                  key={template.id}
+                  label={`#${template.id} - ${template.name}`}
+                  value={String(template.id)}
+                />
+              ))}
+              {!loadingOptions && xmlTemplateOptions.length === 0 ? (
+                <SelectItem label="No XML templates available" value="__none-available" isDisabled />
+              ) : null}
+            </SelectContent>
+          </SelectPortal>
+        </Select>
+        <FormControlHelper>
+          <FormControlHelperText className="text-xs text-typography-500">
+            If selected, `template_id` is sent in the clone request body.
+          </FormControlHelperText>
+        </FormControlHelper>
+      </FormControl>
+
       {error && (
         <HStack className="items-start gap-2 rounded-lg border border-error-300 dark:border-error-700 bg-error-50 dark:bg-error-900/20 px-3 py-2">
           <AlertCircle size={16} className="text-error-600 dark:text-error-400 mt-0.5" />
@@ -4218,6 +4534,8 @@ function CloneVmForm({
 function MigrateVmForm({
   vm,
   slaveChoices,
+  xmlTemplateOptions,
+  optionsLoading,
   onMigrate,
   loading,
   primaryButtonClass,
@@ -4225,11 +4543,14 @@ function MigrateVmForm({
 }: {
   vm: VM;
   slaveChoices: string[];
+  xmlTemplateOptions: XmlTemplate[];
+  optionsLoading: boolean;
   onMigrate: (payload: {
     targetSlave: string;
     mode: "hot" | "cold";
     live?: boolean;
     timeout?: number;
+    templateId?: number;
   }) => Promise<void>;
   loading: boolean;
   primaryButtonClass: string;
@@ -4244,8 +4565,16 @@ function MigrateVmForm({
   );
   const [live, setLive] = React.useState(true);
   const [timeout, setTimeoutValue] = React.useState("500");
+  const [xmlTemplateId, setXmlTemplateId] = React.useState<string>(XML_TEMPLATE_NONE_OPTION_VALUE);
   const [error, setError] = React.useState<string | null>(null);
   const isHot = mode === "hot";
+  const selectedXmlTemplateLabel = React.useMemo(() => {
+    if (xmlTemplateId === XML_TEMPLATE_NONE_OPTION_VALUE) {
+      return XML_TEMPLATE_NONE_OPTION_LABEL;
+    }
+    const selected = xmlTemplateOptions.find((template) => String(template.id) === xmlTemplateId);
+    return selected ? `#${selected.id} - ${selected.name}` : undefined;
+  }, [xmlTemplateId, xmlTemplateOptions]);
 
   const handleSubmit = async () => {
     setError(null);
@@ -4268,6 +4597,7 @@ function MigrateVmForm({
         mode,
         live,
         timeout: parsedTimeout,
+        templateId: isHot ? undefined : normalizeOptionalTemplateId(xmlTemplateId),
       });
     } catch (err) {
       const message =
@@ -4398,6 +4728,44 @@ function MigrateVmForm({
           </FormControlHelperText>
         </FormControlHelper>
       </FormControl>
+      {!isHot && (
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText className="text-sm font-semibold text-typography-800">
+              XML Template (optional)
+            </FormControlLabelText>
+          </FormControlLabel>
+          <Select selectedValue={xmlTemplateId} onValueChange={setXmlTemplateId} isDisabled={loading || optionsLoading}>
+            <SelectTrigger>
+              <SelectInput
+                placeholder={optionsLoading ? "Loading..." : "Use default behavior"}
+                value={selectedXmlTemplateLabel}
+              />
+              <SelectIcon />
+            </SelectTrigger>
+            <SelectPortal>
+              <SelectBackdrop />
+              <SelectContent>
+                <SelectDragIndicatorWrapper>
+                  <SelectDragIndicator />
+                </SelectDragIndicatorWrapper>
+                <SelectItem label={XML_TEMPLATE_NONE_OPTION_LABEL} value={XML_TEMPLATE_NONE_OPTION_VALUE} />
+                {xmlTemplateOptions.map((template) => (
+                  <SelectItem key={template.id} label={`#${template.id} - ${template.name}`} value={String(template.id)} />
+                ))}
+                {!optionsLoading && xmlTemplateOptions.length === 0 ? (
+                  <SelectItem label="No XML templates available" value="__none-available" isDisabled />
+                ) : null}
+              </SelectContent>
+            </SelectPortal>
+          </Select>
+          <FormControlHelper>
+            <FormControlHelperText className="text-xs text-typography-500">
+              Applied only to cold migration (`/virsh/coldMigrate/...`).
+            </FormControlHelperText>
+          </FormControlHelper>
+        </FormControl>
+      )}
       {error && (
         <Text className="text-sm text-error-600 dark:text-error-400">{error}</Text>
       )}
@@ -4506,6 +4874,7 @@ function ChangeVncPasswordForm({
 function MoveDiskForm({
   vm,
   mountOptions,
+  xmlTemplateOptions,
   loadingOptions,
   onCancel,
   onMove,
@@ -4514,20 +4883,29 @@ function MoveDiskForm({
 }: {
   vm: VM;
   mountOptions: Mount[];
+  xmlTemplateOptions: XmlTemplate[];
   loadingOptions: boolean;
   onCancel: () => void;
-  onMove: (payload: { destNfsId: string; newName: string }) => Promise<void>;
+  onMove: (payload: { destNfsId: string; newName: string; templateId?: number }) => Promise<void>;
   primaryButtonClass: string;
   primaryButtonTextClass: string;
 }) {
   const [newName, setNewName] = React.useState(vm.name);
   const [destNfsId, setDestNfsId] = React.useState<string>("");
+  const [xmlTemplateId, setXmlTemplateId] = React.useState<string>(XML_TEMPLATE_NONE_OPTION_VALUE);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const selectedNfsLabel = React.useMemo(() => {
     const current = mountOptions.find((mount) => String(mount.NfsShare.Id) === destNfsId);
     return current ? `${current.NfsShare.Name} (${current.NfsShare.MachineName})` : undefined;
   }, [destNfsId, mountOptions]);
+  const selectedXmlTemplateLabel = React.useMemo(() => {
+    if (xmlTemplateId === XML_TEMPLATE_NONE_OPTION_VALUE) {
+      return XML_TEMPLATE_NONE_OPTION_LABEL;
+    }
+    const selected = xmlTemplateOptions.find((template) => String(template.id) === xmlTemplateId);
+    return selected ? `#${selected.id} - ${selected.name}` : undefined;
+  }, [xmlTemplateId, xmlTemplateOptions]);
 
   React.useEffect(() => {
     setNewName(vm.name);
@@ -4552,7 +4930,11 @@ function MoveDiskForm({
       return;
     }
     try {
-      await onMove({ destNfsId, newName: normalizedName });
+      await onMove({
+        destNfsId,
+        newName: normalizedName,
+        templateId: normalizeOptionalTemplateId(xmlTemplateId),
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error moving disk.");
     } finally {
@@ -4628,6 +5010,47 @@ function MoveDiskForm({
         <FormControlHelper>
           <FormControlHelperText className="text-xs text-typography-500">
             The new disk file name that will be created on the selected NFS.
+          </FormControlHelperText>
+        </FormControlHelper>
+      </FormControl>
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText className="text-sm font-semibold text-typography-800">
+            XML Template (optional)
+          </FormControlLabelText>
+        </FormControlLabel>
+        <Select
+          selectedValue={xmlTemplateId}
+          onValueChange={setXmlTemplateId}
+          isDisabled={loadingOptions}
+        >
+          <SelectTrigger>
+            <SelectInput
+              placeholder={loadingOptions ? "Loading..." : "Use default behavior"}
+              value={selectedXmlTemplateLabel}
+            />
+            <SelectIcon />
+          </SelectTrigger>
+          <SelectPortal>
+            <SelectBackdrop />
+            <SelectContent>
+              <SelectDragIndicatorWrapper>
+                <SelectDragIndicator />
+              </SelectDragIndicatorWrapper>
+              <SelectItem label={XML_TEMPLATE_NONE_OPTION_LABEL} value={XML_TEMPLATE_NONE_OPTION_VALUE} />
+              {xmlTemplateOptions.map((template) => (
+                <SelectItem key={template.id} label={`#${template.id} - ${template.name}`} value={String(template.id)} />
+              ))}
+              {!loadingOptions && xmlTemplateOptions.length === 0 ? (
+                <SelectItem label="No XML templates available" value="__none-available" isDisabled />
+              ) : null}
+            </SelectContent>
+          </SelectPortal>
+        </Select>
+        <FormControlHelper>
+          <FormControlHelperText className="text-xs text-typography-500">
+            Sends `template_id` in the move disk request body only when selected.
           </FormControlHelperText>
         </FormControlHelper>
       </FormControl>

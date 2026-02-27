@@ -20,6 +20,8 @@ import { getAllVMs, listSlaves, VirtualMachine, Slave, getCpuDisableFeatures } f
 import { listMounts } from "@/services/hyperhive";
 import { Mount } from "@/types/mount";
 import { StableTextInput } from "@/components/ui/stable-text-input";
+import { listXmlTemplates, XmlTemplate } from "@/services/xml-templates-client";
+import { XML_TEMPLATE_NONE_OPTION_LABEL, XML_TEMPLATE_NONE_OPTION_VALUE } from "@/utils/xml-template";
 
 // Interfaces TypeScript
 type BackupStatus = "complete" | "partial" | "failed" | string;
@@ -62,6 +64,7 @@ export default function BackupsScreen() {
   const [restoreNfsShare, setRestoreNfsShare] = React.useState<string>("");
   const [restoreCpuXml, setRestoreCpuXml] = React.useState("");
   const [restoreLive, setRestoreLive] = React.useState(false);
+  const [restoreTemplateId, setRestoreTemplateId] = React.useState<string>(XML_TEMPLATE_NONE_OPTION_VALUE);
   const [restoring, setRestoring] = React.useState(false);
   const [selectedSlaves, setSelectedSlaves] = React.useState<string[]>([]);
   const [currentSlaveSelect, setCurrentSlaveSelect] = React.useState("");
@@ -77,6 +80,7 @@ export default function BackupsScreen() {
   const [nfsShares, setNfsShares] = React.useState<Record<number, string>>({});
   const [vmOptions, setVmOptions] = React.useState<VirtualMachine[]>([]);
   const [machineOptions, setMachineOptions] = React.useState<Slave[]>([]);
+  const [xmlTemplateOptions, setXmlTemplateOptions] = React.useState<XmlTemplate[]>([]);
   const [loadingOptions, setLoadingOptions] = React.useState(false);
 
   const showToastMessage = React.useCallback(
@@ -214,10 +218,14 @@ export default function BackupsScreen() {
   const loadOptions = React.useCallback(async () => {
     setLoadingOptions(true);
     try {
-      const [mounts, vms, slaves] = await Promise.all([
+      const [mounts, vms, slaves, templates] = await Promise.all([
         listMounts().catch(() => [] as Mount[]),
         getAllVMs().catch(() => [] as VirtualMachine[]),
         listSlaves().catch(() => [] as Slave[]),
+        listXmlTemplates().catch((err) => {
+          console.warn("Failed to list XML templates for restore:", err);
+          return [] as XmlTemplate[];
+        }),
       ]);
       if (Array.isArray(mounts)) {
         const mapped: Record<number, string> = {};
@@ -238,6 +246,9 @@ export default function BackupsScreen() {
       }
       if (Array.isArray(slaves)) {
         setMachineOptions(slaves);
+      }
+      if (Array.isArray(templates)) {
+        setXmlTemplateOptions(templates);
       }
     } catch (err) {
       console.error("Error loading backup dependencies", err);
@@ -309,6 +320,7 @@ export default function BackupsScreen() {
     setRestoreNfsShare(defaultNfs);
     setRestoreCpuXml(vmMatch?.CPUXML ?? "");
     setRestoreLive(false);
+    setRestoreTemplateId(XML_TEMPLATE_NONE_OPTION_VALUE);
     setSelectedSlaves([]);
     setCurrentSlaveSelect("");
   }, [restoreBackup, vmOptions, machineOptions, nfsShares]);
@@ -387,6 +399,15 @@ export default function BackupsScreen() {
     return nfsShares[id] || `NFS #${id}`;
   };
   const restoreNfsLabel = restoreNfsShare ? getNfsName(Number(restoreNfsShare)) : "";
+  const restoreTemplateLabel =
+    restoreTemplateId === XML_TEMPLATE_NONE_OPTION_VALUE
+      ? XML_TEMPLATE_NONE_OPTION_LABEL
+      : (() => {
+          const selected = xmlTemplateOptions.find(
+            (template) => String(template.id) === restoreTemplateId
+          );
+          return selected ? `#${selected.id} - ${selected.name}` : "";
+        })();
   const createNfsLabel = createNfsId ? getNfsName(Number(createNfsId)) : "";
   const quickRestoreMemoryGb = [2, 4, 8, 12, 32];
   const availableSlaves = React.useMemo(
@@ -458,6 +479,7 @@ export default function BackupsScreen() {
     setRestoreNfsShare("");
     setRestoreCpuXml("");
     setRestoreLive(false);
+    setRestoreTemplateId(XML_TEMPLATE_NONE_OPTION_VALUE);
     setSelectedSlaves([]);
     setCurrentSlaveSelect("");
   }, []);
@@ -512,6 +534,7 @@ export default function BackupsScreen() {
         nfs_share_id: Number.isFinite(nfsId) ? nfsId : 0,
         cpu_xml: restoreCpuXml ?? "",
         live: restoreLive,
+        template_id: Number(restoreTemplateId),
       });
       showToastMessage("Restore started");
       setRestoreBackup(null);
@@ -1195,16 +1218,56 @@ export default function BackupsScreen() {
                         >
                           Network
                         </Text>
-                        <Input
-                          variant="outline"
-                          className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
+                        <Select
+                          selectedValue={
+                            restoreNetwork === "default" || restoreNetwork === "512rede"
+                              ? restoreNetwork
+                              : "outro"
+                          }
+                          onValueChange={(value) => {
+                            if (value === "outro") {
+                              setRestoreNetwork("");
+                            } else {
+                              setRestoreNetwork(value);
+                            }
+                          }}
                         >
-                          <InputField
-                            value={restoreNetwork}
-                            onChangeText={setRestoreNetwork}
-                            className="text-typography-900 dark:text-[#E8EBF0]"
-                          />
-                        </Input>
+                          <SelectTrigger
+                            variant="outline"
+                            size="md"
+                            className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
+                          >
+                            <SelectInput
+                              placeholder="Select network"
+                              className="text-typography-900 dark:text-[#E8EBF0]"
+                            />
+                            <SelectIcon as={ChevronDownIcon} className="mr-3 text-typography-600 dark:text-[#8A94A8]" />
+                          </SelectTrigger>
+                          <SelectPortal>
+                            <SelectBackdropContent />
+                            <SelectContent className="bg-background-0 dark:bg-[#0E1828]">
+                              <SelectDragIndicatorWrapper>
+                                <SelectDragIndicator />
+                              </SelectDragIndicatorWrapper>
+                              <SelectItem label="default" value="default" />
+                              <SelectItem label="512rede" value="512rede" />
+                              <SelectItem label="other..." value="outro" />
+                            </SelectContent>
+                          </SelectPortal>
+                        </Select>
+                        {restoreNetwork !== "default" && restoreNetwork !== "512rede" && (
+                          <Input
+                            variant="outline"
+                            className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
+                          >
+                            <InputField
+                              value={restoreNetwork}
+                              onChangeText={setRestoreNetwork}
+                              placeholder="Enter the network name"
+                              className="text-typography-900 dark:text-[#E8EBF0]"
+                            />
+                          </Input>
+                        )}
                       </VStack>
 
                       <VStack className="gap-2">
@@ -1263,6 +1326,54 @@ export default function BackupsScreen() {
                             </SelectContent>
                           </SelectPortal>
                         </Select>
+                      </VStack>
+
+                      <VStack className="gap-2">
+                        <Text
+                          className="text-sm text-typography-700 dark:text-[#8A94A8]"
+                          style={{ fontFamily: "Inter_600SemiBold" }}
+                        >
+                          XML Template (optional)
+                        </Text>
+                        <Select
+                          selectedValue={restoreTemplateId}
+                          onValueChange={setRestoreTemplateId}
+                          isDisabled={loadingOptions}
+                        >
+                          <SelectTrigger variant="outline" size="md" className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]">
+                            <SelectInput
+                              placeholder={loadingOptions ? "Loading..." : "Use default behavior"}
+                              value={restoreTemplateLabel}
+                              className="text-typography-900 dark:text-[#E8EBF0]"
+                            />
+                            <SelectIcon className="mr-3 text-typography-500 dark:text-[#8A94A8]" as={ChevronDownIcon} />
+                          </SelectTrigger>
+                          <SelectPortal>
+                            <SelectBackdropContent />
+                            <SelectContent className="bg-background-0 dark:bg-[#0E1828]">
+                              <SelectDragIndicatorWrapper>
+                                <SelectDragIndicator />
+                              </SelectDragIndicatorWrapper>
+                              <SelectItem
+                                label={XML_TEMPLATE_NONE_OPTION_LABEL}
+                                value={XML_TEMPLATE_NONE_OPTION_VALUE}
+                              />
+                              {xmlTemplateOptions.map((template) => (
+                                <SelectItem
+                                  key={template.id}
+                                  label={`#${template.id} - ${template.name}`}
+                                  value={String(template.id)}
+                                />
+                              ))}
+                              {!loadingOptions && xmlTemplateOptions.length === 0 ? (
+                                <SelectItem label="No XML templates available" value="__none-available" isDisabled />
+                              ) : null}
+                            </SelectContent>
+                          </SelectPortal>
+                        </Select>
+                        <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+                          Applied when restoring via `useBackup` if a template is selected.
+                        </Text>
                       </VStack>
 
                     </VStack>
@@ -1526,7 +1637,8 @@ export default function BackupsScreen() {
                   restoring ||
                   !restoreMachine ||
                   !restoreVmName ||
-                  !restoreNfsShare
+                  !restoreNfsShare ||
+                  !restoreNetwork.trim()
                 }
                 onPress={handleRestoreSubmit}
               >

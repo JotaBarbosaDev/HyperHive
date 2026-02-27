@@ -39,6 +39,8 @@ import { listMounts } from "@/services/hyperhive";
 import { Mount } from "@/types/mount";
 import { Badge, BadgeText } from "@/components/ui/badge";
 import { Progress, ProgressFilledTrack } from "@/components/ui/progress";
+import { listXmlTemplates, XmlTemplate } from "@/services/xml-templates-client";
+import { XML_TEMPLATE_NONE_OPTION_LABEL, XML_TEMPLATE_NONE_OPTION_VALUE } from "@/utils/xml-template";
 
 type ImportVmModalProps = {
   showModal: boolean;
@@ -59,6 +61,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
   const [vncPassword, setVncPassword] = useState("");
   const [live, setLive] = useState(false);
   const [cpuXml, setCpuXml] = useState("");
+  const [xmlTemplateId, setXmlTemplateId] = useState<string>(XML_TEMPLATE_NONE_OPTION_VALUE);
 
   const [selectedSlaves, setSelectedSlaves] = useState<string[]>([]);
   const [currentSlaveSelect, setCurrentSlaveSelect] = useState("");
@@ -66,6 +69,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
 
   const [slaveOptions, setSlaveOptions] = useState<Slave[]>([]);
   const [mountOptions, setMountOptions] = useState<Mount[]>([]);
+  const [xmlTemplateOptions, setXmlTemplateOptions] = useState<XmlTemplate[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [importing, setImporting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
@@ -89,20 +93,35 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
     () => slaveOptions.map((s) => s.MachineName).filter((s) => !selectedSlaves.includes(s)),
     [selectedSlaves, slaveOptions]
   );
+  const selectedXmlTemplateLabel = useMemo(() => {
+    if (xmlTemplateId === XML_TEMPLATE_NONE_OPTION_VALUE) {
+      return XML_TEMPLATE_NONE_OPTION_LABEL;
+    }
+    const selected = xmlTemplateOptions.find((template) => String(template.id) === xmlTemplateId);
+    return selected ? `#${selected.id} - ${selected.name}` : undefined;
+  }, [xmlTemplateId, xmlTemplateOptions]);
 
   useEffect(() => {
     if (!showModal) {
       return;
     }
-    if (slaveOptions.length > 0 && mountOptions.length > 0) {
+    if (slaveOptions.length > 0 && mountOptions.length > 0 && xmlTemplateOptions.length > 0) {
       return;
     }
     const fetchOptions = async () => {
       setLoadingOptions(true);
       try {
-        const [fetchedMounts, fetchedSlaves] = await Promise.all([listMounts(), listSlaves()]);
+        const [fetchedMounts, fetchedSlaves, fetchedXmlTemplates] = await Promise.all([
+          listMounts(),
+          listSlaves(),
+          listXmlTemplates().catch((err) => {
+            console.warn("Failed to list XML templates:", err);
+            return [] as XmlTemplate[];
+          }),
+        ]);
         setMountOptions(fetchedMounts);
         setSlaveOptions(fetchedSlaves);
+        setXmlTemplateOptions(Array.isArray(fetchedXmlTemplates) ? fetchedXmlTemplates : []);
       } catch (error) {
         console.error("Erro ao carregar NFS/Slaves:", error);
         toast.show({
@@ -120,7 +139,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
     };
 
     fetchOptions();
-  }, [showModal, slaveOptions.length, mountOptions.length, toast]);
+  }, [showModal, slaveOptions.length, mountOptions.length, xmlTemplateOptions.length, toast]);
 
   const handleGetMutualCPUs = async () => {
     if (selectedSlaves.length === 0) {
@@ -182,6 +201,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
     setNetwork("default");
     setVncPassword("");
     setLive(false);
+    setXmlTemplateId(XML_TEMPLATE_NONE_OPTION_VALUE);
     setCpuXml("");
     setSelectedSlaves([]);
     setCurrentSlaveSelect("");
@@ -233,6 +253,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
           VNC_password: vncPassword || undefined,
           cpu_xml: cpuXml || DEFAULT_CPU_XML,
           live,
+          template_id: Number(xmlTemplateId),
         },
         selectedFile,
         {
@@ -381,6 +402,52 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                       </SelectContent>
                     </SelectPortal>
                   </Select>
+                </VStack>
+
+                <VStack className="gap-2">
+                  <Text
+                    className="text-sm text-typography-700 dark:text-[#8A94A8]"
+                    style={{fontFamily: "Inter_600SemiBold"}}
+                  >
+                    XML Template (optional)
+                  </Text>
+                  <Select
+                    selectedValue={xmlTemplateId}
+                    onValueChange={setXmlTemplateId}
+                    isDisabled={loadingOptions}
+                  >
+                    <SelectTrigger variant="outline" size="md">
+                      <SelectInput
+                        placeholder={loadingOptions ? "Loading..." : "Use default behavior"}
+                        value={selectedXmlTemplateLabel}
+                      />
+                      <SelectIcon className="mr-3" as={ChevronDown} />
+                    </SelectTrigger>
+                    <SelectPortal>
+                      <SelectBackdrop />
+                      <SelectContent>
+                        <SelectItem
+                          label={XML_TEMPLATE_NONE_OPTION_LABEL}
+                          value={XML_TEMPLATE_NONE_OPTION_VALUE}
+                          className="text-typography-900 dark:text-[#E8EBF0]"
+                        />
+                        {xmlTemplateOptions.map((template) => (
+                          <SelectItem
+                            key={template.id}
+                            label={`#${template.id} - ${template.name}`}
+                            value={String(template.id)}
+                            className="text-typography-900 dark:text-[#E8EBF0]"
+                          />
+                        ))}
+                        {!loadingOptions && xmlTemplateOptions.length === 0 ? (
+                          <SelectItem label="No XML templates available" value="__none-available" isDisabled />
+                        ) : null}
+                      </SelectContent>
+                    </SelectPortal>
+                  </Select>
+                  <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+                    For import, `template_id` is sent as a query parameter only when selected.
+                  </Text>
                 </VStack>
 
                 <VStack className="gap-2">

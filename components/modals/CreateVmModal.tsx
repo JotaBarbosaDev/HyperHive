@@ -38,6 +38,8 @@ import { useToast, Toast, ToastTitle, ToastDescription } from "@/components/ui/t
 import { createVm, listIsos, listSlaves, IsoApiResponse, Slave, getCpuDisableFeatures } from "@/services/vms-client";
 import { listMounts } from "@/services/hyperhive";
 import { Mount } from "@/types/mount";
+import { listXmlTemplates, XmlTemplate } from "@/services/xml-templates-client";
+import { XML_TEMPLATE_NONE_OPTION_LABEL, XML_TEMPLATE_NONE_OPTION_VALUE } from "@/utils/xml-template";
 
 // Try/catch para lidar com expo-clipboard
 let Clipboard: any;
@@ -79,6 +81,7 @@ export default function CreateVmModal({
   const [nfsShare, setNfsShare] = useState("");
   const [network, setNetwork] = useState("default");
   const [vncPassword, setVncPassword] = useState("");
+  const [xmlTemplateId, setXmlTemplateId] = useState<string>(XML_TEMPLATE_NONE_OPTION_VALUE);
 
   // Estados de checkboxes
   const [autoStart, setAutoStart] = useState(false);
@@ -93,6 +96,7 @@ export default function CreateVmModal({
   const [isoOptions, setIsoOptions] = useState<IsoApiResponse>([]);
   const [mountOptions, setMountOptions] = useState<Mount[]>([]);
   const [slaveOptions, setSlaveOptions] = useState<Slave[]>([]);
+  const [xmlTemplateOptions, setXmlTemplateOptions] = useState<XmlTemplate[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [creating, setCreating] = useState(false);
   const quickMemoryGb = [2, 4, 8, 16, 32, 64];
@@ -103,19 +107,31 @@ export default function CreateVmModal({
   const availableSlaves = slaveOptions
     .map((s) => s.MachineName)
     .filter((s) => !selectedSlaves.includes(s));
+  const selectedXmlTemplateLabel = React.useMemo(() => {
+    if (xmlTemplateId === XML_TEMPLATE_NONE_OPTION_VALUE) {
+      return XML_TEMPLATE_NONE_OPTION_LABEL;
+    }
+    const selected = xmlTemplateOptions.find((template) => String(template.id) === xmlTemplateId);
+    return selected ? `#${selected.id} - ${selected.name}` : undefined;
+  }, [xmlTemplateId, xmlTemplateOptions]);
 
   useEffect(() => {
     const fetchOptions = async () => {
       setLoadingOptions(true);
       try {
-        const [fetchedIsos, fetchedMounts, fetchedSlaves] = await Promise.all([
+        const [fetchedIsos, fetchedMounts, fetchedSlaves, fetchedXmlTemplates] = await Promise.all([
           listIsos(),
           listMounts(),
           listSlaves(),
+          listXmlTemplates().catch((err) => {
+            console.warn("Failed to list XML templates:", err);
+            return [] as XmlTemplate[];
+          }),
         ]);
         setIsoOptions(fetchedIsos);
         setMountOptions(fetchedMounts);
         setSlaveOptions(fetchedSlaves);
+        setXmlTemplateOptions(Array.isArray(fetchedXmlTemplates) ? fetchedXmlTemplates : []);
       } catch (err) {
         console.error("Failed to list ISOs or mounts:", err);
         toast.show({
@@ -138,10 +154,10 @@ export default function CreateVmModal({
       }
     };
 
-    if (showModal && isoOptions.length === 0 && mountOptions.length === 0) {
+    if (showModal && (isoOptions.length === 0 && mountOptions.length === 0 || xmlTemplateOptions.length === 0)) {
       fetchOptions();
     }
-  }, [showModal, isoOptions.length, mountOptions.length, toast]);
+  }, [showModal, isoOptions.length, mountOptions.length, xmlTemplateOptions.length, toast]);
 
   const handleGetMutualCPUs = async () => {
     if (selectedSlaves.length === 0) {
@@ -240,6 +256,7 @@ export default function CreateVmModal({
           "<cpu mode='custom' match='exact'> <model fallback='allow'>Broadwell-IBRS</model> <vendor>Intel</vendor></cpu>",
         auto_start: autoStart,
         is_windows: isWindows,
+        template_id: Number(xmlTemplateId),
       };
 
       await createVm(vmData);
@@ -273,6 +290,7 @@ export default function CreateVmModal({
       setAutoStart(false);
       setIsWindows(false);
       setLive(false);
+      setXmlTemplateId(XML_TEMPLATE_NONE_OPTION_VALUE);
       setSelectedSlaves([]);
       setCpuXml("");
     } catch (error) {
@@ -668,6 +686,57 @@ export default function CreateVmModal({
                       </SelectContent>
                     </SelectPortal>
                   </Select>
+                </VStack>
+
+                {/* XML Template */}
+                <VStack className="gap-2">
+                  <Text
+                    className="text-sm text-typography-700 dark:text-[#8A94A8]"
+                    style={{fontFamily: "Inter_600SemiBold"}}
+                  >
+                    XML Template (optional)
+                  </Text>
+                  <Select
+                    selectedValue={xmlTemplateId}
+                    onValueChange={setXmlTemplateId}
+                    isDisabled={loadingOptions}
+                  >
+                    <SelectTrigger variant="outline" size="md">
+                      <SelectInput
+                        placeholder={loadingOptions ? "Loading..." : "Use default behavior"}
+                        value={selectedXmlTemplateLabel}
+                      />
+                      <SelectIcon className="mr-3" as={ChevronDownIcon} />
+                    </SelectTrigger>
+                    <SelectPortal>
+                      <SelectBackdrop />
+                      <SelectContent>
+                        <SelectItem
+                          label={XML_TEMPLATE_NONE_OPTION_LABEL}
+                          value={XML_TEMPLATE_NONE_OPTION_VALUE}
+                          className="text-typography-900 dark:text-[#E8EBF0]"
+                        />
+                        {xmlTemplateOptions.map((template) => (
+                          <SelectItem
+                            key={template.id}
+                            label={`#${template.id} - ${template.name}`}
+                            value={String(template.id)}
+                            className="text-typography-900 dark:text-[#E8EBF0]"
+                          />
+                        ))}
+                        {!loadingOptions && xmlTemplateOptions.length === 0 ? (
+                          <SelectItem
+                            label="No XML templates available"
+                            value="__none-available"
+                            isDisabled
+                          />
+                        ) : null}
+                      </SelectContent>
+                    </SelectPortal>
+                  </Select>
+                  <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+                    Sends `template_id` only when a template is selected.
+                  </Text>
                 </VStack>
               </VStack>
 
