@@ -39,7 +39,7 @@ import {
   RefreshCw,
   FileText,
   ChevronRight,
-  Network,
+  Globe,
   Settings,
   Dot,
   MoonStar,
@@ -130,7 +130,7 @@ const MENU_ITEMS: MenuItem[] = [
   },
   {
     label: "DNS",
-    icon: Network,
+    icon: Globe,
     route: "/dns",
   },
   {
