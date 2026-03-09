@@ -56,13 +56,13 @@ const sortAliases = (items: DnsAliasEntry[]) =>
 
 const validateAlias = (value: string) => {
   const normalized = value.trim();
-  if (!normalized || !ALIAS_REGEX.test(normalized)) {
+  if (!normalized || !/^(\*\.)?[A-Za-z0-9._-]+$/.test(normalized)) {
     return false;
   }
   if (normalized.startsWith(".") || normalized.endsWith(".") || normalized.includes("..")) {
     return false;
   }
-  return normalized.includes(".");
+  return true;
 };
 
 const validateIpv4 = (value: string) => IPV4_REGEX.test(value.trim());
@@ -303,9 +303,8 @@ export default function DnsScreen() {
                       return (
                         <HStack
                           key={key}
-                          className={`px-6 py-4 items-center ${
-                            index !== aliases.length - 1 ? "border-b border-outline-100 dark:border-[#1E2F47]" : ""
-                          }`}
+                          className={`px-6 py-4 items-center ${index !== aliases.length - 1 ? "border-b border-outline-100 dark:border-[#1E2F47]" : ""
+                            }`}
                         >
                           <Text className="flex-1 text-sm text-typography-900 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_500Medium" }}>
                             {item.alias}
