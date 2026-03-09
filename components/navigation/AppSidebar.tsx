@@ -129,6 +129,11 @@ const MENU_ITEMS: MenuItem[] = [
     route: "/wireguard",
   },
   {
+    label: "DNS",
+    icon: Network,
+    route: "/dns",
+  },
+  {
     label: "K8 Cluster",
     icon: CloudCog,
     route: "/k8s-cluster",

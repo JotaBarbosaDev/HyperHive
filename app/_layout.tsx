@@ -84,6 +84,7 @@ const ROUTE_TITLE_MAP: Record<string, string> = {
   "/backups": "Backups",
   "/autobackups": "Auto-Backups",
   "/wireguard": "WireGuard VPN",
+  "/dns": "DNS",
   "/updates": "Updates",
   "/logs": "Logs",
   "/404": "404",
