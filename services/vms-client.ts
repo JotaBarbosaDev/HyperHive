@@ -343,15 +343,25 @@ export async function getVmBallooning(vmName: string): Promise<VmBallooningStatu
   const enabled = response?.enabled;
   const hasMemballoon = response?.has_memballoon ?? response?.hasMemballoon;
   const memballoonModel = response?.memballoon_model ?? response?.memballoonModel;
+  const normalizedMemballoonModel =
+    typeof memballoonModel === "string" ? memballoonModel : null;
+  const normalizedEnabled =
+    typeof enabled === "boolean"
+      ? enabled
+      : normalizedMemballoonModel !== null
+        ? normalizedMemballoonModel.toLowerCase() !== "none"
+        : hasMemballoon === false
+          ? false
+          : undefined;
 
-  if (typeof enabled !== "boolean" || typeof hasMemballoon !== "boolean") {
+  if (typeof normalizedEnabled !== "boolean" || typeof hasMemballoon !== "boolean") {
     throw new Error("Invalid ballooning status response.");
   }
 
   return {
-    enabled,
+    enabled: normalizedEnabled,
     has_memballoon: hasMemballoon,
-    memballoon_model: typeof memballoonModel === "string" ? memballoonModel : null,
+    memballoon_model: normalizedMemballoonModel,
   };
 }
 
