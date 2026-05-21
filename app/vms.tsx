@@ -84,6 +84,8 @@ import {
   setVmBallooning,
   getVmHugepages,
   setVmHugepages,
+  listMachineTypes,
+  setVmMachineType,
   getCpuDisableFeatures,
   updateCpuXml,
   getVmExportUrl,
@@ -178,6 +180,7 @@ interface VM {
   currentMemoryUsageMB: number;
   cpuCount: number;
   isLive: boolean;
+  machineType: string;
   realHostMemUsageMB: number;
 }
 
@@ -242,7 +245,11 @@ const mapVirtualMachineToVM = (vm: VirtualMachine): VM => ({
   currentCpuUsage: vm.currentCpuUsage,
   currentMemoryUsageMB: vm.currentMemoryUsageMB,
   cpuCount: vm.cpuCount,
-  isLive: vm.isLive,
+  isLive: Boolean((vm as any).IsLive ?? vm.isLive),
+  machineType: (() => {
+    const raw = (vm as any).MachineType ?? (vm as any).machineType;
+    return typeof raw === "string" ? raw : "";
+  })(),
   realHostMemUsageMB: (() => {
     const raw = (vm as any).RealHostMemUsage ?? (vm as any).realHostMemUsageMB;
     return typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
@@ -759,6 +766,8 @@ export default function VirtualMachinesScreen() {
         }
         return undefined;
       };
+      const toOptionalString = (value: any): string | undefined =>
+        typeof value === "string" ? value : undefined;
 
       let parsed = payload;
       try {
@@ -814,6 +823,7 @@ export default function VirtualMachinesScreen() {
           setIfDefined("DefinedRam", toFiniteNumber(info.DefinedRam) as any);
           setIfDefined("AllocatedGb", toFiniteNumber(info.AllocatedGb) as any);
           setIfDefined("isLive", info.IsLive ?? info.isLive);
+          setIfDefined("machineType", toOptionalString(info.MachineType ?? info.machineType) as any);
           setIfDefined(
             "realHostMemUsageMB",
             toFiniteNumber(info.RealHostMemUsage ?? info.realHostMemUsageMB) as any
@@ -863,6 +873,7 @@ export default function VirtualMachinesScreen() {
             currentMemoryUsageMB: (patch.currentMemoryUsageMB as number) ?? 0,
             cpuCount: (patch.cpuCount as number) ?? 0,
             isLive: (patch.isLive as boolean) ?? false,
+            machineType: (patch.machineType as string) ?? "",
             realHostMemUsageMB: (patch.realHostMemUsageMB as number) ?? 0,
           };
           nextList.push({ ...base, ...patch });
@@ -2397,6 +2408,12 @@ export default function VirtualMachinesScreen() {
                           </Text>
                         </HStack>
                         <HStack className="justify-between">
+                          <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">Machine Type</Text>
+                          <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
+                            {detailsVm.machineType || "Unknown"}
+                          </Text>
+                        </HStack>
+                        <HStack className="justify-between">
                           <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">Disk Path</Text>
                           <Text className="text-sm text-typography-900 dark:text-[#E8EBF0] truncate max-w-[200px]">
                             {detailsVm.diskPath}
@@ -2675,7 +2692,7 @@ export default function VirtualMachinesScreen() {
                         primaryButtonClass={primaryButtonClass}
                         primaryButtonTextClass={primaryButtonTextClass}
                         onCancel={() => setEditVm(null)}
-                        onSave={async ({ vcpu, memory, disk, network }) => {
+                        onSave={async ({ vcpu, memory, disk, network, machineType }) => {
                           try {
                             // Atualizar recursos (CPU, RAM, Disco)
                             await editVmResources(editVm.name, {
@@ -2687,6 +2704,12 @@ export default function VirtualMachinesScreen() {
                             // Atualizar rede se foi alterada
                             if (network !== editVm.network) {
                               await changeVmNetwork(editVm.name, network);
+                            }
+
+                            const nextMachineType = machineType.trim();
+                            const currentMachineType = editVm.machineType.trim();
+                            if (nextMachineType && nextMachineType !== currentMachineType) {
+                              await setVmMachineType(editVm.name, nextMachineType);
                             }
 
                             await fetchAndSetVms();
@@ -2701,7 +2724,7 @@ export default function VirtualMachinesScreen() {
                                   action="success"
                                 >
                                   <ToastTitle size="sm">
-                                    Resources updated
+                                    VM updated
                                   </ToastTitle>
                                 </Toast>
                               ),
@@ -3364,9 +3387,14 @@ export default function VirtualMachinesScreen() {
           <ModalBackdrop />
           <ModalContent className="rounded-lg shadow-lg max-h-[85vh] web:max-h-[90vh] dark:bg-[#0F1A2E]">
             <ModalHeader>
-              <Heading size="md" className="text-gray-900 dark:text-[#E8EBF0]">
-                {selectedVm?.name}
-              </Heading>
+              <VStack className="gap-1">
+                <Heading size="md" className="text-gray-900 dark:text-[#E8EBF0]">
+                  {selectedVm?.name}
+                </Heading>
+                <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+                  Machine type: {selectedVm?.machineType || "Unknown"}
+                </Text>
+              </VStack>
               <ModalCloseButton />
             </ModalHeader>
             <ModalBody className="overflow-y-auto max-h-[calc(85vh-140px)] web:max-h-[calc(90vh-140px)]">
@@ -3475,6 +3503,26 @@ export default function VirtualMachinesScreen() {
                 <Text className="text-xs text-typography-500 dark:text-[#8A94A8] px-3 py-2 font-semibold">
                   OPERATIONS
                 </Text>
+                <Pressable
+                  onPress={() => {
+                    if (!selectedVm) return;
+                    setEditVm(selectedVm);
+                    setShowActionsheet(false);
+                  }}
+                  className="px-3 py-3 hover:bg-background-50 dark:hover:bg-[#1E2F47] rounded-md"
+                >
+                  <HStack className="items-center gap-3">
+                    <Server size={18} className="text-typography-700 dark:text-[#E8EBF0]" />
+                    <VStack className="gap-0.5 flex-1">
+                      <Text className="text-typography-900 dark:text-[#E8EBF0]">
+                        Machine type
+                      </Text>
+                      <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+                        {selectedVm?.machineType || "Unknown"}
+                      </Text>
+                    </VStack>
+                  </HStack>
+                </Pressable>
                 <Pressable
                   onPress={() => {
                     if (!selectedVm) return;
@@ -3722,6 +3770,9 @@ export default function VirtualMachinesScreen() {
                 <Text className="text-lg font-semibold text-typography-900 dark:text-[#E8EBF0]">
                   {selectedVm?.name}
                 </Text>
+                <Text className="text-xs text-typography-500 dark:text-[#8A94A8] mt-1">
+                  Machine type: {selectedVm?.machineType || "Unknown"}
+                </Text>
               </Box>
 
               {/* Configurações label */}
@@ -3794,6 +3845,18 @@ export default function VirtualMachinesScreen() {
               <ActionsheetItem isDisabled>
                 <ActionsheetItemText className="text-xs text-typography-500 dark:text-[#8A94A8]">
                   OPERATIONS
+                </ActionsheetItemText>
+              </ActionsheetItem>
+              <ActionsheetItem
+                onPress={() => {
+                  if (!selectedVm) return;
+                  setEditVm(selectedVm);
+                  setShowActionsheet(false);
+                }}
+              >
+                <ActionsheetIcon as={Server} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
+                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">
+                  Machine type: {selectedVm?.machineType || "Unknown"}
                 </ActionsheetItemText>
               </ActionsheetItem>
               <ActionsheetItem
@@ -4024,7 +4087,13 @@ function EditVmForm({
 }: {
   vm: VM;
   onCancel: () => void;
-  onSave: (values: { vcpu: number; memory: number; disk: number; network: string }) => Promise<void>;
+  onSave: (values: {
+    vcpu: number;
+    memory: number;
+    disk: number;
+    network: string;
+    machineType: string;
+  }) => Promise<void>;
   primaryButtonClass: string;
   primaryButtonTextClass: string;
 }) {
@@ -4032,21 +4101,48 @@ function EditVmForm({
   const [memory, setMemory] = React.useState(vm.DefinedRam);
   const [disk, setDisk] = React.useState(vm.diskSizeGB);
   const [network, setNetwork] = React.useState(vm.network);
+  const [machineType, setMachineType] = React.useState(vm.machineType);
+  const [machineTypeOptions, setMachineTypeOptions] = React.useState<string[]>([]);
+  const [machineTypesLoading, setMachineTypesLoading] = React.useState(false);
+  const [machineTypesError, setMachineTypesError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   const quickMemoriesGb = [2, 4, 8, 16, 32, 64];
   const quickDisksGb = [20, 50, 100, 200, 500];
+  const currentMachineType = vm.machineType.trim();
+  const selectedMachineType = machineType.trim();
+  const machineTypeChanged = selectedMachineType !== currentMachineType;
+  const canEditMachineType = vm.state === VmState.SHUTOFF;
+  const machineTypeSelectOptions = React.useMemo(() => {
+    const seen = new Set<string>();
+    const options: string[] = [];
+    [currentMachineType, ...machineTypeOptions].forEach((option) => {
+      const normalized = option.trim();
+      if (normalized && !seen.has(normalized)) {
+        seen.add(normalized);
+        options.push(normalized);
+      }
+    });
+    return options;
+  }, [currentMachineType, machineTypeOptions]);
   const minDiskGb = vm.diskSizeGB;
   const diskError =
     disk > 0 && disk < minDiskGb
       ? `Disk size can't be less than current size (${minDiskGb} GB).`
       : null;
+  const machineTypeError =
+    machineTypeChanged && !canEditMachineType
+      ? "Machine type can only be changed while the VM is shut off."
+      : machineTypeChanged && selectedMachineType.length === 0
+        ? "Select a machine type."
+        : null;
   const isValid =
     vcpu > 0 &&
     memory > 0 &&
     disk > 0 &&
     !diskError &&
+    !machineTypeError &&
     network.trim().length > 0;
   const formatMemoryLabel = (mb: number) =>
     mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb} MB`;
@@ -4056,12 +4152,53 @@ function EditVmForm({
     setter(Number.isFinite(parsed) ? parsed : 0);
   };
 
+  React.useEffect(() => {
+    let isMounted = true;
+
+    const loadMachineTypes = async () => {
+      if (!vm.machineName) {
+        setMachineTypeOptions([]);
+        setMachineTypesError(null);
+        setMachineTypesLoading(false);
+        return;
+      }
+
+      setMachineTypesLoading(true);
+      setMachineTypesError(null);
+      try {
+        const options = await listMachineTypes(vm.machineName);
+        if (!isMounted) {
+          return;
+        }
+        setMachineTypeOptions(options);
+      } catch (err) {
+        if (!isMounted) {
+          return;
+        }
+        const message =
+          err instanceof Error ? err.message : "Unable to load machine types.";
+        setMachineTypesError(message);
+        setMachineTypeOptions([]);
+      } finally {
+        if (isMounted) {
+          setMachineTypesLoading(false);
+        }
+      }
+    };
+
+    loadMachineTypes();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [vm.machineName]);
+
   const handleSubmit = async () => {
     if (!isValid || saving) return;
     setSaving(true);
     setError(null);
     try {
-      await onSave({ vcpu, memory, disk, network });
+      await onSave({ vcpu, memory, disk, network, machineType: selectedMachineType });
     } catch (err) {
       const message =
         err instanceof TypeError
@@ -4258,6 +4395,71 @@ function EditVmForm({
                 />
               </Input>
             )}
+          </VStack>
+
+          <VStack className="gap-2 web:col-span-2">
+            <Text
+              className="text-sm text-typography-700 dark:text-[#8A94A8]"
+              style={{ fontFamily: "Inter_600SemiBold" }}
+            >
+              Machine type
+            </Text>
+            <Select
+              selectedValue={selectedMachineType}
+              onValueChange={setMachineType}
+              isDisabled={
+                !canEditMachineType ||
+                machineTypesLoading ||
+                machineTypeSelectOptions.length === 0
+              }
+            >
+              <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]">
+                <SelectInput
+                  placeholder={machineTypesLoading ? "Loading machine types..." : "Select machine type"}
+                  value={
+                    selectedMachineType ||
+                    (machineTypesLoading ? "Loading machine types..." : "Unknown")
+                  }
+                  className="text-typography-900 dark:text-[#E8EBF0]"
+                />
+                <SelectIcon as={ChevronDown} className="mr-3" />
+              </SelectTrigger>
+              <SelectPortal>
+                <SelectBackdrop />
+                <SelectContent className="bg-background-0 dark:bg-[#0E1828]">
+                  <SelectDragIndicatorWrapper>
+                    <SelectDragIndicator />
+                  </SelectDragIndicatorWrapper>
+                  {machineTypesLoading ? (
+                    <SelectItem label="Loading..." value="__machine_types_loading__" isDisabled />
+                  ) : machineTypeSelectOptions.length === 0 ? (
+                    <SelectItem label="No machine types available" value="__machine_types_empty__" isDisabled />
+                  ) : (
+                    machineTypeSelectOptions.map((option) => (
+                      <SelectItem
+                        key={option}
+                        label={option}
+                        value={option}
+                        className="text-typography-900 dark:text-[#E8EBF0]"
+                      />
+                    ))
+                  )}
+                </SelectContent>
+              </SelectPortal>
+            </Select>
+            <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+              Current: {currentMachineType || "Unknown"}. Machine type can only be changed while the VM is shut off.
+            </Text>
+            {machineTypesError ? (
+              <Text className="text-xs text-error-600 dark:text-error-400">
+                {machineTypesError}
+              </Text>
+            ) : null}
+            {machineTypeError ? (
+              <Text className="text-xs text-error-600 dark:text-error-400">
+                {machineTypeError}
+              </Text>
+            ) : null}
           </VStack>
         </VStack>
       </VStack>

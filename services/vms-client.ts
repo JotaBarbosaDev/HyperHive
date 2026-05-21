@@ -39,12 +39,14 @@ export type VirtualMachine = {
   diskSizeGB: number;
   ip: string[];
   isLive: boolean;
+  machineType?: string;
   machineName: string;
   memoryMB: number;
   name: string;
   network: string;
   hasVnc?: boolean;
   hasvnc?: boolean;
+  MachineType?: string;
   novncPort: string;
   novnclink: string;
   spritePort: string;
@@ -363,6 +365,35 @@ export async function editVmResources(vmName: string, payload: EditVmPayload) {
     token: authToken,
     body: payload,
   });
+}
+
+export type MachineTypesResponse = {
+  machine_types: string[];
+};
+
+export async function listMachineTypes(machineName: string): Promise<string[]> {
+  const authToken = await resolveToken();
+  const encodedMachineName = encodeURIComponent(machineName);
+  const response = await apiFetch<MachineTypesResponse>(
+    `/virsh/machine_types/${encodedMachineName}`,
+    { token: authToken }
+  );
+  return Array.isArray(response?.machine_types)
+    ? response.machine_types.filter((machineType) => typeof machineType === "string")
+    : [];
+}
+
+export async function setVmMachineType(vmName: string, machineType: string) {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  return apiFetch<{ vm_name: string; machine_type: string }>(
+    `/virsh/machine_type/${encodedVmName}`,
+    {
+      method: "POST",
+      token: authToken,
+      body: { machine_type: machineType },
+    }
+  );
 }
 
 export async function changeVmNetwork(vmName: string, newNetwork: string) {
