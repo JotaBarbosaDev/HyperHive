@@ -251,6 +251,82 @@ export async function setVmActiveVnc(vmName: string, enable: boolean) {
   });
 }
 
+export type VmKvmHiddenStatus = {
+  vm_name: string;
+  hidden: boolean;
+};
+
+export async function getVmKvmHidden(vmName: string): Promise<VmKvmHiddenStatus> {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  const response = await apiFetch<any>(`/virsh/kvm/${encodedVmName}`, {
+    token: authToken,
+  });
+
+  const hidden = response?.hidden ?? response?.Hidden;
+  if (typeof hidden !== "boolean") {
+    throw new Error("Invalid KVM hidden status response.");
+  }
+
+  return {
+    vm_name:
+      typeof response?.vm_name === "string"
+        ? response.vm_name
+        : typeof response?.vmName === "string"
+          ? response.vmName
+          : vmName,
+    hidden,
+  };
+}
+
+export async function setVmKvmHidden(vmName: string, hidden: boolean) {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  await apiFetch<VmKvmHiddenStatus>(`/virsh/kvm/${encodedVmName}`, {
+    method: "POST",
+    token: authToken,
+    body: { hidden },
+  });
+}
+
+export type VmHypervStatus = {
+  vm_name: string;
+  hyperv: boolean;
+};
+
+export async function getVmHyperv(vmName: string): Promise<VmHypervStatus> {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  const response = await apiFetch<any>(`/virsh/hyperv/${encodedVmName}`, {
+    token: authToken,
+  });
+
+  const hyperv = response?.hyperv ?? response?.Hyperv ?? response?.HyperV;
+  if (typeof hyperv !== "boolean") {
+    throw new Error("Invalid Hyper-V status response.");
+  }
+
+  return {
+    vm_name:
+      typeof response?.vm_name === "string"
+        ? response.vm_name
+        : typeof response?.vmName === "string"
+          ? response.vmName
+          : vmName,
+    hyperv,
+  };
+}
+
+export async function setVmHyperv(vmName: string, hyperv: boolean) {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  await apiFetch<VmHypervStatus>(`/virsh/hyperv/${encodedVmName}`, {
+    method: "POST",
+    token: authToken,
+    body: { hyperv },
+  });
+}
+
 export type VmBallooningStatus = {
   enabled: boolean;
   has_memballoon: boolean;

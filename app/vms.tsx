@@ -80,6 +80,10 @@ import {
   setVmAutostart,
   setVmLive,
   setVmActiveVnc,
+  getVmKvmHidden,
+  setVmKvmHidden,
+  getVmHyperv,
+  setVmHyperv,
   getVmBallooning,
   setVmBallooning,
   getVmHugepages,
@@ -212,6 +216,20 @@ type VmHugepagesUiState = {
   error: string | null;
 };
 
+type VmKvmHiddenUiState = {
+  hasLoaded: boolean;
+  isLoading: boolean;
+  hidden: boolean;
+  error: string | null;
+};
+
+type VmHypervUiState = {
+  hasLoaded: boolean;
+  isLoading: boolean;
+  hyperv: boolean;
+  error: string | null;
+};
+
 // Estados das VMs
 const VM_STATES: Record<VmState, VMState> = {
   [VmState.UNKNOWN]: { label: "Unknown", color: "bg-gray-400", badgeVariant: "outline" },
@@ -314,10 +332,20 @@ export default function VirtualMachinesScreen() {
   const vmLiveInFlightRef = React.useRef<Set<string>>(new Set());
   const activeVncDesiredRef = React.useRef<Map<string, boolean>>(new Map());
   const activeVncInFlightRef = React.useRef<Set<string>>(new Set());
+  const kvmHiddenDesiredRef = React.useRef<Map<string, boolean>>(new Map());
+  const kvmHiddenInFlightRef = React.useRef<Set<string>>(new Set());
+  const hypervDesiredRef = React.useRef<Map<string, boolean>>(new Map());
+  const hypervInFlightRef = React.useRef<Set<string>>(new Set());
   const ballooningDesiredRef = React.useRef<Map<string, boolean>>(new Map());
   const ballooningInFlightRef = React.useRef<Set<string>>(new Set());
   const hugepagesDesiredRef = React.useRef<Map<string, boolean>>(new Map());
   const hugepagesInFlightRef = React.useRef<Set<string>>(new Set());
+  const [kvmHiddenStatusByVm, setKvmHiddenStatusByVm] = React.useState<
+    Record<string, VmKvmHiddenUiState>
+  >({});
+  const [hypervStatusByVm, setHypervStatusByVm] = React.useState<
+    Record<string, VmHypervUiState>
+  >({});
   const [ballooningStatusByVm, setBallooningStatusByVm] = React.useState<
     Record<string, VmBallooningUiState>
   >({});
@@ -372,6 +400,34 @@ export default function VirtualMachinesScreen() {
   );
   const detailsVmNfsName = detailsVm ? getNfsNameByDiskPath(detailsVm.diskPath) : null;
   const isExportingSelectedVm = selectedVm ? exportingVm === selectedVm.name : false;
+  const selectedVmKvmHiddenState = selectedVm ? kvmHiddenStatusByVm[selectedVm.name] : undefined;
+  const selectedVmKvmHiddenLoaded = Boolean(selectedVmKvmHiddenState?.hasLoaded);
+  const selectedVmKvmHiddenLoading = Boolean(selectedVmKvmHiddenState?.isLoading);
+  const selectedVmKvmHiddenEnabled =
+    selectedVmKvmHiddenLoaded && Boolean(selectedVmKvmHiddenState?.hidden);
+  const selectedVmKvmHiddenToggleDisabled =
+    !selectedVm ||
+    selectedVmKvmHiddenLoading ||
+    !selectedVmKvmHiddenLoaded;
+  const selectedVmKvmHiddenLabel = selectedVmKvmHiddenState?.error && !selectedVmKvmHiddenLoaded
+    ? "KVM hidden (unavailable)"
+    : !selectedVmKvmHiddenLoaded
+      ? "KVM hidden (loading...)"
+      : "KVM hidden";
+  const selectedVmHypervState = selectedVm ? hypervStatusByVm[selectedVm.name] : undefined;
+  const selectedVmHypervLoaded = Boolean(selectedVmHypervState?.hasLoaded);
+  const selectedVmHypervLoading = Boolean(selectedVmHypervState?.isLoading);
+  const selectedVmHypervEnabled =
+    selectedVmHypervLoaded && Boolean(selectedVmHypervState?.hyperv);
+  const selectedVmHypervToggleDisabled =
+    !selectedVm ||
+    selectedVmHypervLoading ||
+    !selectedVmHypervLoaded;
+  const selectedVmHypervLabel = selectedVmHypervState?.error && !selectedVmHypervLoaded
+    ? "Hyper-V (unavailable)"
+    : !selectedVmHypervLoaded
+      ? "Hyper-V (loading...)"
+      : "Hyper-V";
   const selectedVmBallooningState = selectedVm ? ballooningStatusByVm[selectedVm.name] : undefined;
   const selectedVmBallooningLoaded = Boolean(selectedVmBallooningState?.hasLoaded);
   const selectedVmBallooningLoading = Boolean(selectedVmBallooningState?.isLoading);
@@ -551,6 +607,114 @@ export default function VirtualMachinesScreen() {
 
         if (!options?.silent) {
           showToastMessage("Hugepages status failed", message, "error");
+        }
+      }
+    },
+    [showToastMessage]
+  );
+
+  const loadVmKvmHiddenStatus = React.useCallback(
+    async (vmName: string, options?: { silent?: boolean }) => {
+      setKvmHiddenStatusByVm((prev) => {
+        const current = prev[vmName];
+        return {
+          ...prev,
+          [vmName]: {
+            hasLoaded: current?.hasLoaded ?? false,
+            isLoading: true,
+            hidden: current?.hidden ?? false,
+            error: null,
+          },
+        };
+      });
+
+      try {
+        const status = await getVmKvmHidden(vmName);
+        setKvmHiddenStatusByVm((prev) => ({
+          ...prev,
+          [vmName]: {
+            hasLoaded: true,
+            isLoading: false,
+            hidden: status.hidden,
+            error: null,
+          },
+        }));
+      } catch (error) {
+        console.error("Error loading KVM hidden status:", error);
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to load KVM hidden status.";
+
+        setKvmHiddenStatusByVm((prev) => {
+          const current = prev[vmName];
+          return {
+            ...prev,
+            [vmName]: {
+              hasLoaded: current?.hasLoaded ?? false,
+              isLoading: false,
+              hidden: current?.hidden ?? false,
+              error: message,
+            },
+          };
+        });
+
+        if (!options?.silent) {
+          showToastMessage("KVM hidden status failed", message, "error");
+        }
+      }
+    },
+    [showToastMessage]
+  );
+
+  const loadVmHypervStatus = React.useCallback(
+    async (vmName: string, options?: { silent?: boolean }) => {
+      setHypervStatusByVm((prev) => {
+        const current = prev[vmName];
+        return {
+          ...prev,
+          [vmName]: {
+            hasLoaded: current?.hasLoaded ?? false,
+            isLoading: true,
+            hyperv: current?.hyperv ?? false,
+            error: null,
+          },
+        };
+      });
+
+      try {
+        const status = await getVmHyperv(vmName);
+        setHypervStatusByVm((prev) => ({
+          ...prev,
+          [vmName]: {
+            hasLoaded: true,
+            isLoading: false,
+            hyperv: status.hyperv,
+            error: null,
+          },
+        }));
+      } catch (error) {
+        console.error("Error loading Hyper-V status:", error);
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to load Hyper-V status.";
+
+        setHypervStatusByVm((prev) => {
+          const current = prev[vmName];
+          return {
+            ...prev,
+            [vmName]: {
+              hasLoaded: current?.hasLoaded ?? false,
+              isLoading: false,
+              hyperv: current?.hyperv ?? false,
+              error: message,
+            },
+          };
+        });
+
+        if (!options?.silent) {
+          showToastMessage("Hyper-V status failed", message, "error");
         }
       }
     },
@@ -1185,9 +1349,18 @@ export default function VirtualMachinesScreen() {
     if (!showActionsheet || !selectedVm) {
       return;
     }
+    void loadVmKvmHiddenStatus(selectedVm.name, { silent: true });
+    void loadVmHypervStatus(selectedVm.name, { silent: true });
     void loadVmBallooningStatus(selectedVm.name, { silent: true });
     void loadVmHugepagesStatus(selectedVm.name, { silent: true });
-  }, [showActionsheet, selectedVm?.name, loadVmBallooningStatus, loadVmHugepagesStatus]);
+  }, [
+    showActionsheet,
+    selectedVm?.name,
+    loadVmKvmHiddenStatus,
+    loadVmHypervStatus,
+    loadVmBallooningStatus,
+    loadVmHugepagesStatus,
+  ]);
 
   const handleVmAction = async (vmName: string, action: string) => {
     setLoadingVm(vmName);
@@ -1403,6 +1576,154 @@ export default function VirtualMachinesScreen() {
         });
       } finally {
         activeVncInFlightRef.current.delete(vmName);
+      }
+    })();
+  };
+
+  const handleToggleKvmHidden = (vm: VM, checked: boolean) => {
+    const vmName = vm.name;
+    const currentState = kvmHiddenStatusByVm[vmName];
+    if (!currentState?.hasLoaded) {
+      return;
+    }
+
+    const previousValue = currentState.hidden;
+    const updateLocalKvmHidden = (value: boolean) => {
+      setKvmHiddenStatusByVm((prev) => {
+        const current = prev[vmName] ?? {
+          hasLoaded: true,
+          isLoading: false,
+          hidden: previousValue,
+          error: null,
+        };
+        return {
+          ...prev,
+          [vmName]: {
+            ...current,
+            hasLoaded: true,
+            hidden: value,
+            error: null,
+          },
+        };
+      });
+    };
+
+    updateLocalKvmHidden(checked);
+    Haptics.selectionAsync();
+
+    kvmHiddenDesiredRef.current.set(vmName, checked);
+    if (kvmHiddenInFlightRef.current.has(vmName)) {
+      return;
+    }
+
+    kvmHiddenInFlightRef.current.add(vmName);
+    void (async () => {
+      let lastApplied: boolean | undefined;
+      try {
+        while (true) {
+          const desired = kvmHiddenDesiredRef.current.get(vmName);
+          if (desired === undefined) {
+            break;
+          }
+          kvmHiddenDesiredRef.current.delete(vmName);
+          if (lastApplied !== undefined && desired === lastApplied) {
+            continue;
+          }
+          await setVmKvmHidden(vmName, desired);
+          lastApplied = desired;
+        }
+
+        if (lastApplied !== undefined) {
+          showToastMessage(`KVM hidden ${lastApplied ? "enabled" : "disabled"}`);
+          void loadVmKvmHiddenStatus(vmName, { silent: true });
+        }
+      } catch (error) {
+        console.error("Error updating KVM hidden:", error);
+        kvmHiddenDesiredRef.current.delete(vmName);
+        const fallbackValue = lastApplied ?? previousValue;
+        updateLocalKvmHidden(fallbackValue);
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to update KVM hidden.";
+        showToastMessage("KVM hidden update failed", message, "error");
+        void loadVmKvmHiddenStatus(vmName, { silent: true });
+      } finally {
+        kvmHiddenInFlightRef.current.delete(vmName);
+      }
+    })();
+  };
+
+  const handleToggleHyperv = (vm: VM, checked: boolean) => {
+    const vmName = vm.name;
+    const currentState = hypervStatusByVm[vmName];
+    if (!currentState?.hasLoaded) {
+      return;
+    }
+
+    const previousValue = currentState.hyperv;
+    const updateLocalHyperv = (value: boolean) => {
+      setHypervStatusByVm((prev) => {
+        const current = prev[vmName] ?? {
+          hasLoaded: true,
+          isLoading: false,
+          hyperv: previousValue,
+          error: null,
+        };
+        return {
+          ...prev,
+          [vmName]: {
+            ...current,
+            hasLoaded: true,
+            hyperv: value,
+            error: null,
+          },
+        };
+      });
+    };
+
+    updateLocalHyperv(checked);
+    Haptics.selectionAsync();
+
+    hypervDesiredRef.current.set(vmName, checked);
+    if (hypervInFlightRef.current.has(vmName)) {
+      return;
+    }
+
+    hypervInFlightRef.current.add(vmName);
+    void (async () => {
+      let lastApplied: boolean | undefined;
+      try {
+        while (true) {
+          const desired = hypervDesiredRef.current.get(vmName);
+          if (desired === undefined) {
+            break;
+          }
+          hypervDesiredRef.current.delete(vmName);
+          if (lastApplied !== undefined && desired === lastApplied) {
+            continue;
+          }
+          await setVmHyperv(vmName, desired);
+          lastApplied = desired;
+        }
+
+        if (lastApplied !== undefined) {
+          showToastMessage(`Hyper-V ${lastApplied ? "enabled" : "disabled"}`);
+          void loadVmHypervStatus(vmName, { silent: true });
+        }
+      } catch (error) {
+        console.error("Error updating Hyper-V:", error);
+        hypervDesiredRef.current.delete(vmName);
+        const fallbackValue = lastApplied ?? previousValue;
+        updateLocalHyperv(fallbackValue);
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to update Hyper-V.";
+        showToastMessage("Hyper-V update failed", message, "error");
+        void loadVmHypervStatus(vmName, { silent: true });
+      } finally {
+        hypervInFlightRef.current.delete(vmName);
       }
     })();
   };
@@ -3438,6 +3759,48 @@ export default function VirtualMachinesScreen() {
                   </HStack>
                 </Pressable>
                 <Pressable
+                  disabled={selectedVmKvmHiddenToggleDisabled}
+                  onPress={() => {
+                    if (!selectedVm || !selectedVmKvmHiddenLoaded) return;
+                    handleToggleKvmHidden(selectedVm, !selectedVmKvmHiddenEnabled);
+                    setShowActionsheet(false);
+                  }}
+                  className={`px-3 py-3 rounded-md ${selectedVmKvmHiddenToggleDisabled
+                    ? "opacity-60"
+                    : "hover:bg-background-50 dark:hover:bg-[#1E2F47]"
+                    }`}
+                >
+                  <HStack className="items-center gap-2">
+                    {selectedVmKvmHiddenEnabled && (
+                      <Check size={16} className="text-typography-900 dark:text-[#E8EBF0]" />
+                    )}
+                    <Text className="text-typography-900 dark:text-[#E8EBF0]">
+                      {selectedVmKvmHiddenLabel}
+                    </Text>
+                  </HStack>
+                </Pressable>
+                <Pressable
+                  disabled={selectedVmHypervToggleDisabled}
+                  onPress={() => {
+                    if (!selectedVm || !selectedVmHypervLoaded) return;
+                    handleToggleHyperv(selectedVm, !selectedVmHypervEnabled);
+                    setShowActionsheet(false);
+                  }}
+                  className={`px-3 py-3 rounded-md ${selectedVmHypervToggleDisabled
+                    ? "opacity-60"
+                    : "hover:bg-background-50 dark:hover:bg-[#1E2F47]"
+                    }`}
+                >
+                  <HStack className="items-center gap-2">
+                    {selectedVmHypervEnabled && (
+                      <Check size={16} className="text-typography-900 dark:text-[#E8EBF0]" />
+                    )}
+                    <Text className="text-typography-900 dark:text-[#E8EBF0]">
+                      {selectedVmHypervLabel}
+                    </Text>
+                  </HStack>
+                </Pressable>
+                <Pressable
                   disabled={selectedVmBallooningToggleDisabled}
                   onPress={() => {
                     if (!selectedVm || !selectedVmBallooningLoaded) return;
@@ -3802,6 +4165,30 @@ export default function VirtualMachinesScreen() {
               >
                 <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">
                   {(selectedVm?.hasVnc ? "✓ " : "") + "Active VNC"}
+                </ActionsheetItemText>
+              </ActionsheetItem>
+              <ActionsheetItem
+                isDisabled={selectedVmKvmHiddenToggleDisabled}
+                onPress={() => {
+                  if (!selectedVm || !selectedVmKvmHiddenLoaded) return;
+                  handleToggleKvmHidden(selectedVm, !selectedVmKvmHiddenEnabled);
+                  setShowActionsheet(false);
+                }}
+              >
+                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">
+                  {(selectedVmKvmHiddenEnabled ? "✓ " : "") + selectedVmKvmHiddenLabel}
+                </ActionsheetItemText>
+              </ActionsheetItem>
+              <ActionsheetItem
+                isDisabled={selectedVmHypervToggleDisabled}
+                onPress={() => {
+                  if (!selectedVm || !selectedVmHypervLoaded) return;
+                  handleToggleHyperv(selectedVm, !selectedVmHypervEnabled);
+                  setShowActionsheet(false);
+                }}
+              >
+                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">
+                  {(selectedVmHypervEnabled ? "✓ " : "") + selectedVmHypervLabel}
                 </ActionsheetItemText>
               </ActionsheetItem>
               <ActionsheetItem
