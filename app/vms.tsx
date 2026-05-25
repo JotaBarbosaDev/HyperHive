@@ -95,8 +95,12 @@ import {
   getVmExportUrl,
   getVmXml,
   updateVmXml,
+  listVmAttachedDisks,
+  attachVmDisk,
+  detachVmDisk,
+  VmAttachedDisk,
 } from "@/services/vms-client";
-import { listMounts, getCpuInfo, getMemInfo } from "@/services/hyperhive";
+import { listMounts, getCpuInfo, getMemInfo, listVmDisks, VmDisk } from "@/services/hyperhive";
 import { createBackup } from "@/services/backups";
 import { listXmlTemplates, XmlTemplate } from "@/services/xml-templates-client";
 import { Mount } from "@/types/mount";
@@ -145,6 +149,8 @@ import {
   X,
   ChevronDown,
   Pin,
+  Link,
+  Unlink,
 } from "lucide-react-native";
 
 const usePrimaryButtonStyles = () => {
@@ -319,6 +325,7 @@ export default function VirtualMachinesScreen() {
   const [cloneVm, setCloneVm] = React.useState<VM | null>(null);
   const [migrateVm, setMigrateVm] = React.useState<VM | null>(null);
   const [moveDiskVm, setMoveDiskVm] = React.useState<VM | null>(null);
+  const [manageVmDisksVm, setManageVmDisksVm] = React.useState<VM | null>(null);
   const [backupVm, setBackupVm] = React.useState<VM | null>(null);
   const [updateCpuVm, setUpdateCpuVm] = React.useState<VM | null>(null);
   const [editVmXmlVm, setEditVmXmlVm] = React.useState<VM | null>(null);
@@ -3341,6 +3348,40 @@ export default function VirtualMachinesScreen() {
             </ModalContent>
           </Modal>
 
+          {/* Modal: Manage VM Disks */}
+          <Modal isOpen={!!manageVmDisksVm} onClose={() => setManageVmDisksVm(null)} size="lg">
+            <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+            <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] shadow-soft-2">
+              <ModalHeader className="border-b border-outline-100 dark:border-[#2A3B52]">
+                <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
+                  Manage Vm Disks
+                </Heading>
+                <ModalCloseButton />
+              </ModalHeader>
+              <ModalBody>
+                {manageVmDisksVm && (
+                  <ManageVmDisksForm
+                    vm={manageVmDisksVm}
+                    primaryButtonClass={primaryButtonClass}
+                    primaryButtonTextClass={primaryButtonTextClass}
+                    onChanged={fetchAndSetVms}
+                  />
+                )}
+              </ModalBody>
+              <ModalFooter className="border-t border-outline-100 dark:border-[#2A3B52]">
+                <HStack className="justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    className="rounded-md px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
+                    onPress={() => setManageVmDisksVm(null)}
+                  >
+                    <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Close</ButtonText>
+                  </Button>
+                </HStack>
+              </ModalFooter>
+            </ModalContent>
+          </Modal>
+
           {/* Modal: Backup VM */}
           <Modal isOpen={!!backupVm} onClose={() => setBackupVm(null)}>
             <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
@@ -4000,6 +4041,19 @@ export default function VirtualMachinesScreen() {
                 <Pressable
                   onPress={() => {
                     if (!selectedVm) return;
+                    setManageVmDisksVm(selectedVm);
+                    setShowActionsheet(false);
+                  }}
+                  className="px-3 py-3 hover:bg-background-50 dark:hover:bg-[#1E2F47] rounded-md"
+                >
+                  <HStack className="items-center gap-3">
+                    <Link size={18} className="text-typography-700 dark:text-[#E8EBF0]" />
+                    <Text className="text-typography-900 dark:text-[#E8EBF0]">Manage Vm Disks</Text>
+                  </HStack>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    if (!selectedVm) return;
                     handleOpenBackup(selectedVm);
                     setShowActionsheet(false);
                   }}
@@ -4333,6 +4387,16 @@ export default function VirtualMachinesScreen() {
               >
                 <ActionsheetIcon as={HardDrive} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
                 <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">Move Disk</ActionsheetItemText>
+              </ActionsheetItem>
+              <ActionsheetItem
+                onPress={() => {
+                  if (!selectedVm) return;
+                  setManageVmDisksVm(selectedVm);
+                  setShowActionsheet(false);
+                }}
+              >
+                <ActionsheetIcon as={Link} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
+                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">Manage Vm Disks</ActionsheetItemText>
               </ActionsheetItem>
               <ActionsheetItem
                 onPress={() => {
@@ -5659,6 +5723,302 @@ function MoveDiskForm({
           <ButtonText className={`${primaryButtonTextClass}`}>Move</ButtonText>
         </Button>
       </HStack>
+    </VStack>
+  );
+}
+
+const formatVmDiskSize = (value: unknown) => {
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue)) {
+    return "-";
+  }
+  return `${numberValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} GB`;
+};
+
+function ManageVmDisksForm({
+  vm,
+  onChanged,
+  primaryButtonClass,
+  primaryButtonTextClass,
+}: {
+  vm: VM;
+  onChanged: () => Promise<unknown>;
+  primaryButtonClass: string;
+  primaryButtonTextClass: string;
+}) {
+  const toast = useToast();
+  const [attachedDisks, setAttachedDisks] = React.useState<VmAttachedDisk[]>([]);
+  const [allDisks, setAllDisks] = React.useState<VmDisk[]>([]);
+  const [selectedDiskId, setSelectedDiskId] = React.useState("");
+  const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [detachingId, setDetachingId] = React.useState<number | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const showToast = React.useCallback(
+    (title: string, description?: string, action: "success" | "error" = "success") => {
+      toast.show({
+        placement: "top",
+        render: ({ id }) => (
+          <Toast nativeID={`vm-disk-manage-toast-${id}`} className="px-5 py-3 gap-3 shadow-soft-1" action={action}>
+            <ToastTitle size="sm">{title}</ToastTitle>
+            {description ? <ToastDescription size="sm">{description}</ToastDescription> : null}
+          </Toast>
+        ),
+      });
+    },
+    [toast]
+  );
+
+  const loadData = React.useCallback(
+    async (mode: "initial" | "refresh" = "initial") => {
+      if (mode === "initial") {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
+      setError(null);
+      try {
+        const [attached, disks] = await Promise.all([
+          listVmAttachedDisks(vm.name),
+          listVmDisks(),
+        ]);
+        const normalizedAttached = Array.isArray(attached) ? attached : [];
+        const normalizedDisks = Array.isArray(disks) ? disks : [];
+        setAttachedDisks(normalizedAttached);
+        setAllDisks(normalizedDisks);
+        const attachedIds = new Set(normalizedAttached.map((disk) => disk.id));
+        const firstAvailable = normalizedDisks.find((disk) => {
+          const attachedVmName = String(disk.attached_vm_name ?? "").trim();
+          return !attachedIds.has(disk.id) && !attachedVmName;
+        });
+        setSelectedDiskId(firstAvailable ? String(firstAvailable.id) : "");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unable to load VM disks.";
+        setError(message);
+        showToast("Error loading VM disks", message, "error");
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [showToast, vm.name]
+  );
+
+  React.useEffect(() => {
+    loadData("initial");
+  }, [loadData]);
+
+  const availableDisks = React.useMemo(() => {
+    const attachedIds = new Set(attachedDisks.map((disk) => disk.id));
+    return allDisks.filter((disk) => {
+      const attachedVmName = String(disk.attached_vm_name ?? "").trim();
+      return !attachedIds.has(disk.id) && !attachedVmName;
+    });
+  }, [allDisks, attachedDisks]);
+
+  const selectedDiskLabel = React.useMemo(() => {
+    const selected = availableDisks.find((disk) => String(disk.id) === selectedDiskId);
+    return selected ? `${selected.name} (${formatVmDiskSize(selected.size_gb)}, ${selected.format})` : undefined;
+  }, [availableDisks, selectedDiskId]);
+
+  const handleAttach = async () => {
+    const parsedDiskId = Number(selectedDiskId);
+    if (!Number.isInteger(parsedDiskId) || parsedDiskId <= 0 || saving) {
+      showToast("Select a disk", "Choose a free VM disk to attach.", "error");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      const attached = await attachVmDisk(vm.name, parsedDiskId);
+      setAttachedDisks((current) => [attached, ...current.filter((disk) => disk.id !== attached.id)]);
+      setAllDisks((current) =>
+        current.map((disk) =>
+          disk.id === attached.id
+            ? {
+              ...disk,
+              attached_vm_name: attached.attached_vm_name,
+            }
+            : disk
+        )
+      );
+      setSelectedDiskId("");
+      await onChanged();
+      await loadData("refresh");
+      showToast("VM disk attached", `${attached.name} attached to ${vm.name}.`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to attach VM disk.";
+      setError(message);
+      showToast("Error attaching disk", message, "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDetach = async (disk: VmAttachedDisk) => {
+    if (detachingId !== null) {
+      return;
+    }
+    setDetachingId(disk.id);
+    setError(null);
+    try {
+      await detachVmDisk(vm.name, disk.id);
+      setAttachedDisks((current) => current.filter((item) => item.id !== disk.id));
+      setAllDisks((current) =>
+        current.map((item) =>
+          item.id === disk.id
+            ? {
+              ...item,
+              attached_vm_name: "",
+            }
+            : item
+        )
+      );
+      await onChanged();
+      await loadData("refresh");
+      showToast("VM disk detached", `${disk.name} detached from ${vm.name}.`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to detach VM disk.";
+      setError(message);
+      showToast("Error detaching disk", message, "error");
+    } finally {
+      setDetachingId(null);
+    }
+  };
+
+  return (
+    <VStack className="gap-5">
+      <Text className="text-sm text-typography-700 dark:text-[#8A94A8]">
+        Attach existing VM disks to <Text className="font-semibold text-typography-900 dark:text-[#E8EBF0]">{vm.name}</Text> or detach disks already connected to it.
+      </Text>
+
+      <VStack className="gap-3 rounded-2xl border border-outline-100 dark:border-[#243247] bg-background-50 dark:bg-[#0B1424] p-4">
+        <HStack className="items-center justify-between gap-3">
+          <VStack className="flex-1 gap-1">
+            <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">Attach disk</Text>
+            <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+              Only free VM disks are shown.
+            </Text>
+          </VStack>
+          <Button
+            size="sm"
+            variant="outline"
+            className="rounded-xl border-outline-200 dark:border-[#2A3B52]"
+            onPress={() => loadData("refresh")}
+            disabled={refreshing || loading}
+          >
+            {refreshing ? <ButtonSpinner /> : <ButtonIcon as={RefreshCw} className="text-typography-900 dark:text-[#E8EBF0]" />}
+          </Button>
+        </HStack>
+
+        <HStack className="gap-3 items-end">
+          <Box className="flex-1">
+            <Select
+              selectedValue={selectedDiskId}
+              onValueChange={setSelectedDiskId}
+              isDisabled={loading || saving || availableDisks.length === 0}
+            >
+              <SelectTrigger variant="outline" size="md" className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E]">
+                <SelectInput placeholder={loading ? "Loading..." : "Select VM disk"} value={selectedDiskLabel} />
+                <SelectIcon className="mr-3" as={ChevronDown} />
+              </SelectTrigger>
+              <SelectPortal>
+                <SelectBackdrop />
+                <SelectContent>
+                  <SelectDragIndicatorWrapper>
+                    <SelectDragIndicator />
+                  </SelectDragIndicatorWrapper>
+                  {availableDisks.length === 0 ? (
+                    <SelectItem label={loading ? "Loading..." : "No free VM disks"} value="" isDisabled />
+                  ) : (
+                    availableDisks.map((disk) => (
+                      <SelectItem
+                        key={disk.id}
+                        label={`${disk.name} (${formatVmDiskSize(disk.size_gb)}, ${disk.format})`}
+                        value={String(disk.id)}
+                      />
+                    ))
+                  )}
+                </SelectContent>
+              </SelectPortal>
+            </Select>
+          </Box>
+          <Button
+            className={`rounded-xl px-4 ${primaryButtonClass}`}
+            onPress={handleAttach}
+            disabled={saving || loading || !selectedDiskId}
+          >
+            {saving ? <ButtonSpinner /> : <ButtonIcon as={Link} className={`${primaryButtonTextClass}`} />}
+            <ButtonText className={`${primaryButtonTextClass}`}>Attach</ButtonText>
+          </Button>
+        </HStack>
+      </VStack>
+
+      <VStack className="gap-3">
+        <HStack className="items-center justify-between">
+          <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
+            Attached disks
+          </Text>
+          <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+            {attachedDisks.length} disk{attachedDisks.length === 1 ? "" : "s"}
+          </Text>
+        </HStack>
+
+        {loading ? (
+          <VStack className="gap-2">
+            {Array.from({ length: 2 }).map((_, index) => (
+              <Box key={`attached-disk-loading-${index}`} className="h-20 rounded-xl bg-background-100 dark:bg-[#1A2637] opacity-60" />
+            ))}
+          </VStack>
+        ) : attachedDisks.length === 0 ? (
+          <Box className="rounded-xl border border-outline-100 dark:border-[#243247] bg-background-50 dark:bg-[#0B1424] p-4">
+            <Text className="text-sm text-typography-500 dark:text-[#8A94A8]">No VM disks attached.</Text>
+          </Box>
+        ) : (
+          <VStack className="gap-2">
+            {attachedDisks.map((disk) => (
+              <HStack
+                key={disk.id}
+                className="items-center gap-3 rounded-xl border border-outline-100 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E] p-3"
+              >
+                <Box className="w-10 h-10 rounded-xl bg-[#0EA5E914] dark:bg-[#38BDF81F] items-center justify-center">
+                  <HardDrive size={19} className="text-[#0284C7] dark:text-[#7DD3FC]" />
+                </Box>
+                <VStack className="flex-1 min-w-0 gap-0.5">
+                  <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]" numberOfLines={1}>
+                    {disk.name}
+                  </Text>
+                  <Text className="text-xs text-typography-500 dark:text-[#8A94A8]" numberOfLines={1}>
+                    {formatVmDiskSize(disk.size_gb)} • {disk.format} • {disk.attached_machine_name || vm.machineName}
+                  </Text>
+                  <Text className="text-xs text-typography-500 dark:text-[#8A94A8]" numberOfLines={1}>
+                    {disk.disk_path}
+                  </Text>
+                </VStack>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-xl border-red-500"
+                  onPress={() => handleDetach(disk)}
+                  disabled={detachingId !== null}
+                >
+                  {detachingId === disk.id ? (
+                    <ButtonSpinner />
+                  ) : (
+                    <ButtonIcon as={Unlink} size="sm" className="text-red-500" />
+                  )}
+                  <ButtonText className="text-red-500">Detach</ButtonText>
+                </Button>
+              </HStack>
+            ))}
+          </VStack>
+        )}
+      </VStack>
+
+      {error ? <Text className="text-sm text-error-600 dark:text-error-400">{error}</Text> : null}
     </VStack>
   );
 }

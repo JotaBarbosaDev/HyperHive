@@ -79,6 +79,7 @@ const ROUTE_TITLE_MAP: Record<string, string> = {
   "/mounts": "NFS",
   "/isos": "ISOs",
   "/vms": "Virtual Machines",
+  "/vms-disks": "VMs Disks",
   "/vms-xml-templates": "XML Templates",
   "/gpus": "GPUs",
   "/backups": "Backups",
@@ -103,6 +104,7 @@ const ROUTE_TITLE_MAP: Record<string, string> = {
   "/docker/volumes": "Docker Volumes",
   "/docker/networks": "Docker Networks",
   "/docker/git": "Docker Git",
+  "/notes": "Notes",
 };
 
 const TUTORIAL_STEPS = [

@@ -53,6 +53,19 @@ export type VirtualMachine = {
   state: VmState;
 };
 
+export type VmAttachedDisk = {
+  id: number;
+  name: string;
+  nfs_id: number;
+  disk_path: string;
+  folder_path: string;
+  format: string;
+  size_gb: number;
+  attached_vm_name: string;
+  attached_machine_name?: string;
+  created_at?: string;
+};
+
 export const ensureApiBaseUrl = async () => {
   let baseUrl = getApiBaseUrl();
   if (baseUrl) {
@@ -88,6 +101,34 @@ export async function listSlaves(): Promise<Slave[]> {
 export async function getAllVMs(): Promise<VirtualMachine[]> {
   const authToken = await resolveToken();
   return apiFetch<VirtualMachine[]>("/virsh/getallvms", { token: authToken });
+}
+
+export async function listVmAttachedDisks(vmName: string): Promise<VmAttachedDisk[]> {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  return apiFetch<VmAttachedDisk[]>(`/virsh/vm_disk/${encodedVmName}`, { token: authToken });
+}
+
+export async function attachVmDisk(vmName: string, vmDiskId: number): Promise<VmAttachedDisk> {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  return apiFetch<VmAttachedDisk>(`/virsh/vm_disk/${encodedVmName}`, {
+    method: "POST",
+    token: authToken,
+    body: {
+      vm_disk_id: vmDiskId,
+    },
+  });
+}
+
+export async function detachVmDisk(vmName: string, vmDiskId: number): Promise<VmAttachedDisk> {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  const encodedDiskId = encodeURIComponent(String(vmDiskId));
+  return apiFetch<VmAttachedDisk>(`/virsh/vm_disk/${encodedVmName}/${encodedDiskId}`, {
+    method: "DELETE",
+    token: authToken,
+  });
 }
 
 export async function pauseVM(vmName: string) {

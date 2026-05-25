@@ -65,6 +65,7 @@ import {
   Database,
   GitBranch,
   Gpu,
+  StickyNote,
 } from "lucide-react-native";
 import { usePathname, useRouter } from "expo-router";
 import { clearAuthToken } from "@/services/auth-storage";
@@ -117,6 +118,7 @@ const MENU_ITEMS: MenuItem[] = [
     iconProps: { size: "md" },
     children: [
       {label: "Virtual Machines", route: "/vms", icon: ServerCog},
+      {label: "VMs Disks", route: "/vms-disks", icon: HardDrive},
       {label: "XML Templates", route: "/vms-xml-templates", icon: FileText},
       {label: "GPUs", route: "/gpus", icon: Gpu, iconProps: { size: "md" }},
       {label: "Backups", route: "/backups", icon: DatabaseBackup},
@@ -175,6 +177,11 @@ const MENU_ITEMS: MenuItem[] = [
       {label: "Networks", route: "/docker/networks", icon: WifiPen},
       {label: "Git", route: "/docker/git", icon: GitBranch},
     ],
+  },
+  {
+    label: "Notes",
+    icon: StickyNote,
+    route: "/notes",
   },
 ];
 

@@ -39,6 +39,26 @@ export type DownloadIsoInput = {
   nfsShareId: number;
 };
 
+export type VmDisk = {
+  id: number;
+  name: string;
+  nfs_id: number;
+  disk_path: string;
+  folder_path: string;
+  format: string;
+  size_gb: number;
+  occupied_gb: number;
+  occupied_bytes: number;
+  attached_vm_name: string;
+};
+
+export type CreateVmDiskInput = {
+  name: string;
+  nfs_id: number;
+  size_gb: number;
+  format: string;
+};
+
 export type HistoryQueryParams = {
   months?: number;
   weeks?: number;
@@ -186,6 +206,39 @@ export async function downloadIso(input: DownloadIsoInput): Promise<void> {
 export async function deleteIso(id: string): Promise<void> {
   const authToken = await resolveToken();
   await apiFetch<void>(`/isos/${id}`, {
+    method: "DELETE",
+    token: authToken,
+  });
+}
+
+export async function listVmDisks(): Promise<VmDisk[]> {
+  const authToken = await resolveToken();
+  return apiFetch<VmDisk[]>("/vm-disk/list", { token: authToken });
+}
+
+export async function createVmDisk(input: CreateVmDiskInput): Promise<VmDisk> {
+  const authToken = await resolveToken();
+  return apiFetch<VmDisk>("/vm-disk/create", {
+    method: "POST",
+    token: authToken,
+    body: input,
+  });
+}
+
+export async function growVmDisk(id: number, sizeGb: number): Promise<VmDisk> {
+  const authToken = await resolveToken();
+  return apiFetch<VmDisk>(`/vm-disk/${encodeURIComponent(String(id))}/grow`, {
+    method: "POST",
+    token: authToken,
+    body: {
+      size_gb: sizeGb,
+    },
+  });
+}
+
+export async function deleteVmDisk(id: number): Promise<VmDisk> {
+  const authToken = await resolveToken();
+  return apiFetch<VmDisk>(`/vm-disk/${encodeURIComponent(String(id))}`, {
     method: "DELETE",
     token: authToken,
   });
