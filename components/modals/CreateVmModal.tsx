@@ -251,9 +251,7 @@ export default function CreateVmModal({
         network,
         VNC_password: vncPassword,
         live,
-        cpu_xml:
-          cpuXml ||
-          "<cpu mode='custom' match='exact'> <model fallback='allow'>Broadwell-IBRS</model> <vendor>Intel</vendor></cpu>",
+        cpu_xml: cpuXml || "",
         auto_start: autoStart,
         is_windows: isWindows,
         template_id: Number(xmlTemplateId),

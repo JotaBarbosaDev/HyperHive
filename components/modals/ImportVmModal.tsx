@@ -48,8 +48,7 @@ type ImportVmModalProps = {
   onSuccess?: (importedName?: string) => void;
 };
 
-const DEFAULT_CPU_XML =
-  "<cpu mode='custom' match='exact'> <model fallback='allow'>Broadwell-noTSX-IBRS</model> <vendor>Intel</vendor> </cpu>";
+const DEFAULT_CPU_XML = "";
 
 export default function ImportVmModal({ showModal, setShowModal, onSuccess }: ImportVmModalProps) {
   const [vmName, setVmName] = useState("");
