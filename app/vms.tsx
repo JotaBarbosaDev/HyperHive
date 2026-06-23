@@ -76,6 +76,7 @@ import {
   editVmResources,
   changeVmNetwork,
   changeVncPassword,
+  addSshKey,
   removeAllIsos,
   setVmAutostart,
   setVmLive,
@@ -151,6 +152,7 @@ import {
   Pin,
   Link,
   Unlink,
+  Key,
 } from "lucide-react-native";
 
 const usePrimaryButtonStyles = () => {
@@ -332,6 +334,7 @@ export default function VirtualMachinesScreen() {
   const [cpuPinVm, setCpuPinVm] = React.useState<VM | null>(null);
   const [restoreVm, setRestoreVm] = React.useState<VM | null>(null);
   const [changeVncVm, setChangeVncVm] = React.useState<VM | null>(null);
+  const [addSshKeyVm, setAddSshKeyVm] = React.useState<VM | null>(null);
   const [pendingVmNames, setPendingVmNames] = React.useState<Set<string>>(new Set());
   const autostartDesiredRef = React.useRef<Map<string, boolean>>(new Map());
   const autostartInFlightRef = React.useRef<Set<string>>(new Set());
@@ -3500,6 +3503,70 @@ export default function VirtualMachinesScreen() {
             </ModalContent>
           </Modal>
 
+          {/* Modal: Add SSH Key */}
+          <Modal isOpen={!!addSshKeyVm} onClose={() => setAddSshKeyVm(null)}>
+            <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+            <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] shadow-soft-2">
+              <ModalHeader className="border-b border-outline-100 dark:border-[#2A3B52]">
+                <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
+                  Add SSH Key
+                </Heading>
+                <ModalCloseButton />
+              </ModalHeader>
+              <ModalBody>
+                {addSshKeyVm && (
+                  <AddSshKeyForm
+                    vm={addSshKeyVm}
+                    primaryButtonClass={primaryButtonClass}
+                    primaryButtonTextClass={primaryButtonTextClass}
+                    onCancel={() => setAddSshKeyVm(null)}
+                    onSubmit={async (sshKey) => {
+                      try {
+                        await addSshKey(addSshKeyVm.name, sshKey);
+                        setAddSshKeyVm(null);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        toast.show({
+                          placement: "top",
+                          render: ({ id }) => (
+                            <Toast
+                              nativeID={"toast-" + id}
+                              className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+                              action="success"
+                            >
+                              <ToastTitle size="sm">SSH key added</ToastTitle>
+                            </Toast>
+                          ),
+                        });
+                      } catch (error) {
+                        console.error("Error adding SSH key:", error);
+                        const description =
+                          error instanceof ApiError && error.data
+                            ? String(error.data)
+                            : error instanceof Error
+                              ? error.message
+                              : "Unable to add SSH key.";
+                        toast.show({
+                          placement: "top",
+                          render: ({ id }) => (
+                            <Toast
+                              nativeID={"toast-" + id}
+                              className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
+                              action="error"
+                            >
+                              <ToastTitle size="sm">Error adding SSH key</ToastTitle>
+                              <ToastDescription size="sm">{description}</ToastDescription>
+                            </Toast>
+                          ),
+                        });
+                        throw new Error(description);
+                      }
+                    }}
+                  />
+                )}
+              </ModalBody>
+            </ModalContent>
+          </Modal>
+
           {/* Modal: Edit VM XML */}
           <Modal isOpen={!!editVmXmlVm} onClose={() => setEditVmXmlVm(null)} size="full">
             <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
@@ -4005,6 +4072,19 @@ export default function VirtualMachinesScreen() {
                     <Text className="text-typography-900 dark:text-[#E8EBF0]">Clone VM</Text>
                   </HStack>
                 </Pressable>
+                <Pressable
+                  onPress={() => {
+                    if (!selectedVm) return;
+                    setAddSshKeyVm(selectedVm);
+                    setShowActionsheet(false);
+                  }}
+                  className="px-3 py-3 hover:bg-background-50 dark:hover:bg-[#1E2F47] rounded-md"
+                >
+                  <HStack className="items-center gap-3">
+                    <Key size={18} className="text-typography-700 dark:text-[#E8EBF0]" />
+                    <Text className="text-typography-900 dark:text-[#E8EBF0]">Add SSH Key</Text>
+                  </HStack>
+                </Pressable>
 
                 <Divider className="my-2" />
 
@@ -4359,6 +4439,16 @@ export default function VirtualMachinesScreen() {
               >
                 <ActionsheetIcon as={Copy} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
                 <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">Clone VM</ActionsheetItemText>
+              </ActionsheetItem>
+              <ActionsheetItem
+                onPress={() => {
+                  if (!selectedVm) return;
+                  setAddSshKeyVm(selectedVm);
+                  setShowActionsheet(false);
+                }}
+              >
+                <ActionsheetIcon as={Key} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
+                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">Add SSH Key</ActionsheetItemText>
               </ActionsheetItem>
 
               {/* Migração & Disco */}
@@ -5518,6 +5608,99 @@ function ChangeVncPasswordForm({
         >
           {saving ? <ButtonSpinner className="mr-2" /> : null}
           <ButtonText className={`${primaryButtonTextClass}`}>Update</ButtonText>
+        </Button>
+      </HStack>
+    </VStack>
+  );
+}
+
+function AddSshKeyForm({
+  vm,
+  onCancel,
+  onSubmit,
+  primaryButtonClass,
+  primaryButtonTextClass,
+}: {
+  vm: VM;
+  onCancel: () => void;
+  onSubmit: (sshKey: string) => Promise<void>;
+  primaryButtonClass: string;
+  primaryButtonTextClass: string;
+}) {
+  const [sshKey, setSshKey] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const handleSubmit = async () => {
+    const trimmed = sshKey.trim();
+    if (!trimmed) {
+      setError("SSH key is required.");
+      return;
+    }
+    if (!trimmed.startsWith("ssh-")) {
+      setError("Invalid SSH key format. Expected a key starting with 'ssh-'.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await onSubmit(trimmed);
+      setSshKey("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error adding SSH key.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <VStack className="gap-4">
+      <Text className="text-typography-700 dark:text-[#8A94A8]">
+        Add a public SSH key to <Text className="font-semibold">{vm.name}</Text>.
+      </Text>
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText className="text-sm font-semibold text-typography-800">
+            SSH public key
+          </FormControlLabelText>
+        </FormControlLabel>
+        <Textarea className="rounded-md min-h-[120px]">
+          <TextareaInput
+            value={sshKey}
+            onChangeText={setSshKey}
+            placeholder="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINk...user@example"
+            multiline
+            numberOfLines={4}
+          />
+        </Textarea>
+        <FormControlHelper>
+          <FormControlHelperText className="text-xs text-typography-500">
+            Paste the public key you want to authorize on the VM.
+          </FormControlHelperText>
+        </FormControlHelper>
+      </FormControl>
+
+      {error && (
+        <Text className="text-sm text-error-600 dark:text-error-400">{error}</Text>
+      )}
+
+      <HStack className="justify-end gap-2 mt-2">
+        <Button
+          variant="outline"
+          className="rounded-xl px-4 py-2"
+          onPress={onCancel}
+          disabled={saving}
+        >
+          <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Cancel</ButtonText>
+        </Button>
+        <Button
+          className={`rounded-md px-4 py-2 ${primaryButtonClass}`}
+          onPress={handleSubmit}
+          disabled={saving || !sshKey.trim()}
+        >
+          {saving ? <ButtonSpinner className="mr-2" /> : null}
+          <ButtonText className={`${primaryButtonTextClass}`}>Add</ButtonText>
         </Button>
       </HStack>
     </VStack>

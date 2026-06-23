@@ -543,6 +543,16 @@ export async function changeVncPassword(vmName: string, newPassword: string) {
   });
 }
 
+export async function addSshKey(vmName: string, sshKey: string) {
+  const authToken = await resolveToken();
+  const encodedVmName = encodeURIComponent(vmName);
+  return apiFetch<void>(`/virsh/add_ssh_key/${encodedVmName}`, {
+    method: "POST",
+    token: authToken,
+    body: { ssh_key: sshKey },
+  });
+}
+
 export async function getVmExportUrl(vmName: string) {
   const authToken = await resolveToken();
   const baseUrl = await ensureApiBaseUrl();
