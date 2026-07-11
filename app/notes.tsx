@@ -19,10 +19,18 @@ import { Text } from "@/components/ui/text";
 import { Textarea, TextareaInput } from "@/components/ui/textarea";
 import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
 import { VStack } from "@/components/ui/vstack";
+import {
+  AlertDialog,
+  AlertDialogBackdrop,
+  AlertDialogBody,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+} from "@/components/ui/alert-dialog";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
-import { createNote, getNote, listNotes, updateNote } from "@/services/notes";
+import { createNote, deleteNote, getNote, listNotes, updateNote } from "@/services/notes";
 import { Note } from "@/types/notes";
-import { Edit3, Eye, FileText, Plus, RefreshCw, Save, X } from "lucide-react-native";
+import { AlertTriangle, Edit3, Eye, FileText, Plus, RefreshCw, Save, Trash2, X } from "lucide-react-native";
 
 const summarizeNote = (value: string) => {
   const normalized = value.replace(/\s+/g, " ").trim();
@@ -169,6 +177,7 @@ export default function NotesScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [creating, setCreating] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const [deletingId, setDeletingId] = React.useState<number | null>(null);
   const [openingId, setOpeningId] = React.useState<number | null>(null);
   const [viewingId, setViewingId] = React.useState<number | null>(null);
   const [modalOpen, setModalOpen] = React.useState(false);
@@ -176,6 +185,7 @@ export default function NotesScreen() {
   const [modalMode, setModalMode] = React.useState<"create" | "edit">("create");
   const [editingNote, setEditingNote] = React.useState<Note | null>(null);
   const [previewNote, setPreviewNote] = React.useState<Note | null>(null);
+  const [deleteTarget, setDeleteTarget] = React.useState<Note | null>(null);
   const [formTitle, setFormTitle] = React.useState("");
   const [formText, setFormText] = React.useState("");
 
@@ -343,6 +353,25 @@ export default function NotesScreen() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteTarget) {
+      return;
+    }
+
+    setDeletingId(deleteTarget.id);
+    try {
+      await deleteNote(deleteTarget.id);
+      setNotes((current) => current.filter((note) => note.id !== deleteTarget.id));
+      setDeleteTarget(null);
+      showToast("Note deleted", "The note was deleted successfully.");
+    } catch (err) {
+      console.error("Failed to delete note", err);
+      showToast("Error deleting", "Unable to delete the note.", "error");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   if (isChecking || !token) {
     return null;
   }
@@ -419,20 +448,33 @@ export default function NotesScreen() {
                   className="rounded-xl border border-outline-100 bg-background-0 p-4 shadow-soft-1 dark:border-[#2A3B52] dark:bg-[#0E1524]"
                   style={{ width: cardSize, height: cardSize }}
                 >
-                  <VStack className="h-full justify-between gap-3">
-                    <VStack className="gap-2 flex-1">
-                      <Box className="flex-1">
-                        <Heading
-                          size="sm"
-                          numberOfLines={2}
-                          className="text-typography-900 dark:text-[#E8EBF0]"
-                        >
-                          {note.titulo || `Note #${note.id}`}
-                        </Heading>
-                        <Text
-                          numberOfLines={4}
-                          className="text-sm text-typography-600 dark:text-[#8A94A8] mt-2"
-                        >
+                    <VStack className="h-full justify-between gap-3">
+                      <VStack className="gap-2 flex-1">
+                        <Box className="flex-1">
+                          <HStack className="items-start justify-between gap-2">
+                            <Heading
+                              size="sm"
+                              numberOfLines={2}
+                              className="flex-1 text-typography-900 dark:text-[#E8EBF0]"
+                            >
+                              {note.titulo || `Note #${note.id}`}
+                            </Heading>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              action="negative"
+                              className="rounded-lg px-2 dark:border-red-900"
+                              onPress={() => setDeleteTarget(note)}
+                              isDisabled={deletingId !== null}
+                              accessibilityLabel={`Delete ${note.titulo || `note ${note.id}`}`}
+                            >
+                              <ButtonIcon as={Trash2} />
+                            </Button>
+                          </HStack>
+                          <Text
+                            numberOfLines={4}
+                            className="text-sm text-typography-600 dark:text-[#8A94A8] mt-2"
+                          >
                           {summarizeNote(note.nota) || "Empty note"}
                         </Text>
                       </Box>
@@ -555,6 +597,42 @@ export default function NotesScreen() {
           </ModalFooter>
         </ModalContent>
       </Modal>
+
+      <AlertDialog
+        isOpen={deleteTarget !== null}
+        onClose={() => {
+          if (deletingId === null) setDeleteTarget(null);
+        }}
+        size="md"
+      >
+        <AlertDialogBackdrop />
+        <AlertDialogContent className="rounded-2xl border-outline-100 dark:border-[#243247] dark:bg-[#0F1A2E]">
+          <AlertDialogHeader>
+            <HStack className="items-center gap-3">
+              <Box className="w-10 h-10 rounded-xl bg-[#EF444419] items-center justify-center">
+                <AlertTriangle size={22} color="#EF4444" />
+              </Box>
+              <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
+                Delete note
+              </Heading>
+            </HStack>
+          </AlertDialogHeader>
+          <AlertDialogBody>
+            <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
+              Are you sure you want to delete {deleteTarget?.titulo || `Note #${deleteTarget?.id}`}? This action cannot be undone.
+            </Text>
+          </AlertDialogBody>
+          <AlertDialogFooter>
+            <Button variant="outline" className="rounded-xl" onPress={() => setDeleteTarget(null)} isDisabled={deletingId !== null}>
+              <ButtonText>Cancel</ButtonText>
+            </Button>
+            <Button action="negative" className="rounded-xl bg-red-500" onPress={handleDelete} isDisabled={deletingId !== null}>
+              {deletingId !== null ? <ButtonSpinner /> : <ButtonIcon as={Trash2} />}
+              <ButtonText>Delete</ButtonText>
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Modal isOpen={previewOpen} onClose={closePreview} size="lg">
         <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />

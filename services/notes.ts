@@ -57,3 +57,11 @@ export async function updateNote(id: number, payload: NotePayload): Promise<Note
     body: payload,
   });
 }
+
+export async function deleteNote(id: number): Promise<{ status: "deleted"; id: number }> {
+  const authToken = await resolveToken();
+  return apiFetch<{ status: "deleted"; id: number }>(`/notes/${id}`, {
+    method: "DELETE",
+    token: authToken,
+  });
+}
