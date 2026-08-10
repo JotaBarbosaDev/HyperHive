@@ -1,5 +1,7 @@
 import React from "react";
 import { RefreshControl, ScrollView, useWindowDimensions, Platform, useColorScheme } from "react-native";
+import * as DocumentPicker from "expo-document-picker";
+import type { DocumentPickerAsset } from "expo-document-picker";
 import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";
 import { Heading } from "@/components/ui/heading";
@@ -40,6 +42,7 @@ import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/t
 import { Certificate, CreateLetsEncryptPayload } from "@/types/certificate";
 import {
   createLetsEncryptCertificate,
+  createManualCertificate,
   deleteCertificate,
   listCertificates,
   renewCertificate,
@@ -50,6 +53,7 @@ import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
 import {
   AlertTriangle,
   CloudLightning,
+  FileUp,
   Calendar,
   Plus,
   RefreshCcw,
@@ -163,9 +167,14 @@ export default function CertificatesScreen() {
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [modalOpen, setModalOpen] = React.useState(false);
+  const [creationMode, setCreationMode] = React.useState<"letsencrypt" | "manual">("letsencrypt");
   const [form, setForm] = React.useState<CreateLetsEncryptPayload>(DEFAULT_FORM);
   const [domainsInput, setDomainsInput] = React.useState("");
   const [domainsList, setDomainsList] = React.useState<string[]>([]);
+  const [manualName, setManualName] = React.useState("");
+  const [manualCertificate, setManualCertificate] = React.useState<DocumentPickerAsset | null>(null);
+  const [manualCertificateKey, setManualCertificateKey] = React.useState<DocumentPickerAsset | null>(null);
+  const [manualIntermediate, setManualIntermediate] = React.useState<DocumentPickerAsset | null>(null);
   const lastAddAtRef = React.useRef<number>(0);
   const addDomainFromInput = React.useCallback(() => {
     const now = Date.now();
@@ -232,9 +241,14 @@ export default function CertificatesScreen() {
   }, [loadCerts]);
 
   const openCreateModal = () => {
+    setCreationMode("letsencrypt");
     setForm(DEFAULT_FORM);
     setDomainsInput("");
     setDomainsList([]);
+    setManualName("");
+    setManualCertificate(null);
+    setManualCertificateKey(null);
+    setManualIntermediate(null);
     setModalOpen(true);
   };
 
@@ -304,6 +318,98 @@ export default function CertificatesScreen() {
       setSaving(false);
     }
   };
+
+  const pickDocument = async (onSelect: (asset: DocumentPickerAsset) => void) => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "*/*",
+        copyToCacheDirectory: true,
+        multiple: false,
+        base64: false,
+      });
+      if (!result.canceled && result.assets[0]) {
+        onSelect(result.assets[0]);
+      }
+    } catch {
+      showToast("Error selecting file", "Unable to access the selected file.", "error");
+    }
+  };
+
+  const handleManualCreate = async () => {
+    const name = manualName.trim();
+    if (!name) {
+      showToast("Name required", "Enter a name for the certificate.", "error");
+      return;
+    }
+    if (!manualCertificate) {
+      showToast("Certificate required", "Select the certificate file.", "error");
+      return;
+    }
+    if (!manualCertificateKey) {
+      showToast("Key required", "Select the private key file.", "error");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await createManualCertificate({
+        name,
+        certificate: manualCertificate,
+        certificateKey: manualCertificateKey,
+        intermediateCertificate: manualIntermediate ?? undefined,
+      });
+      setModalOpen(false);
+      setManualName("");
+      setManualCertificate(null);
+      setManualCertificateKey(null);
+      setManualIntermediate(null);
+      showToast("Certificate created", "Manual certificate added successfully.");
+      await loadCerts("silent");
+    } catch (err) {
+      console.error("Failed to create manual certificate", err);
+      showToast("Error creating", "Unable to create the certificate.", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const renderManualFileField = (
+    label: string,
+    asset: DocumentPickerAsset | null,
+    onChange: (asset: DocumentPickerAsset | null) => void,
+    required = true
+  ) => (
+    <FormControl isRequired={required}>
+      <FormControlLabel>
+        <FormControlLabelText>{label}</FormControlLabelText>
+      </FormControlLabel>
+      <HStack className="items-center gap-2 flex-wrap">
+        <Button
+          variant="outline"
+          action="default"
+          size="sm"
+          onPress={() => void pickDocument(onChange)}
+          isDisabled={saving}
+          className="rounded-xl border-outline-200 dark:border-[#2A3B52]"
+        >
+          <ButtonIcon as={FileUp} size="sm" />
+          <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
+            {asset ? "Replace" : "Select file"}
+          </ButtonText>
+        </Button>
+        {asset ? (
+          <HStack className="items-center gap-2 flex-1 min-w-0">
+            <Text className="text-sm text-typography-700 dark:text-[#8A94A8] flex-1" numberOfLines={1}>
+              {asset.name || "Selected file"}
+            </Text>
+            <Pressable onPress={() => onChange(null)} disabled={saving} className="p-1">
+              <X size={16} color="#6b7280" />
+            </Pressable>
+          </HStack>
+        ) : null}
+      </HStack>
+    </FormControl>
+  );
 
   const handleRenew = async (cert: Certificate) => {
     if (!cert.id) return;
@@ -702,10 +808,12 @@ export default function CertificatesScreen() {
           <ModalHeader className="flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
             <VStack className="flex-1">
               <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
-                Issue Let's Encrypt
+                {creationMode === "letsencrypt" ? "Issue Let's Encrypt" : "Add Manual Certificate"}
               </Heading>
               <Text className="text-typography-600 dark:text-[#8A94A8] mt-1">
-                Generate SSL certificates via ACME with HTTP or DNS challenge.
+                {creationMode === "letsencrypt"
+                  ? "Generate SSL certificates via ACME with HTTP or DNS challenge."
+                  : "Upload an existing certificate and its private key."}
               </Text>
             </VStack>
             <ModalCloseButton className="text-typography-500" />
@@ -718,6 +826,49 @@ export default function CertificatesScreen() {
               contentContainerStyle={{ paddingBottom: 8 }}
             >
               <VStack className="gap-4">
+                <HStack className="gap-2 w-full rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-50 dark:bg-[#070D19] p-1">
+                  <Pressable
+                    onPress={() => setCreationMode("letsencrypt")}
+                    disabled={saving}
+                    className={`flex-1 rounded-xl border items-center justify-center h-10 ${saving ? "opacity-50" : ""} ${
+                      creationMode === "letsencrypt"
+                        ? "border-typography-900 bg-typography-900 data-[hover=true]:bg-typography-800 data-[active=true]:bg-typography-950 dark:border-[#2DD4BF] dark:bg-[#2DD4BF] dark:data-[hover=true]:bg-[#5EEAD4] dark:data-[active=true]:bg-[#14B8A6]"
+                        : "border-outline-200 bg-background-0 data-[hover=true]:bg-background-100 data-[active=true]:bg-background-200 dark:border-[#2A3B52] dark:bg-[#0F1A2E] dark:data-[hover=true]:bg-[#16233A] dark:data-[active=true]:bg-[#1E2F47]"
+                    }`}
+                  >
+                    <Text
+                      className={
+                        creationMode === "letsencrypt"
+                          ? "text-sm font-semibold text-background-0 dark:text-[#0A1628]"
+                          : "text-sm font-semibold text-typography-800 dark:text-[#E8EBF0]"
+                      }
+                    >
+                      Let's Encrypt
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setCreationMode("manual")}
+                    disabled={saving}
+                    className={`flex-1 rounded-xl border items-center justify-center h-10 ${saving ? "opacity-50" : ""} ${
+                      creationMode === "manual"
+                        ? "border-typography-900 bg-typography-900 data-[hover=true]:bg-typography-800 data-[active=true]:bg-typography-950 dark:border-[#2DD4BF] dark:bg-[#2DD4BF] dark:data-[hover=true]:bg-[#5EEAD4] dark:data-[active=true]:bg-[#14B8A6]"
+                        : "border-outline-200 bg-background-0 data-[hover=true]:bg-background-100 data-[active=true]:bg-background-200 dark:border-[#2A3B52] dark:bg-[#0F1A2E] dark:data-[hover=true]:bg-[#16233A] dark:data-[active=true]:bg-[#1E2F47]"
+                    }`}
+                  >
+                    <Text
+                      className={
+                        creationMode === "manual"
+                          ? "text-sm font-semibold text-background-0 dark:text-[#0A1628]"
+                          : "text-sm font-semibold text-typography-800 dark:text-[#E8EBF0]"
+                      }
+                    >
+                      Manual
+                    </Text>
+                  </Pressable>
+                </HStack>
+
+                {creationMode === "letsencrypt" ? (
+                  <>
                 <FormControl isRequired>
                   <FormControlLabel>
                     <FormControlLabelText>Domains</FormControlLabelText>
@@ -858,6 +1009,35 @@ export default function CertificatesScreen() {
                     </FormControl>
                   </VStack>
                 ) : null}
+                  </>
+                ) : (
+                  <VStack className="gap-4">
+                    <FormControl isRequired>
+                      <FormControlLabel>
+                        <FormControlLabelText>Name</FormControlLabelText>
+                      </FormControlLabel>
+                      <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
+                        <InputField
+                          value={manualName}
+                          onChangeText={setManualName}
+                          placeholder="Certificate name"
+                          editable={!saving}
+                        />
+                      </Input>
+                    </FormControl>
+                    {renderManualFileField("Certificate", manualCertificate, setManualCertificate)}
+                    {renderManualFileField("Private key", manualCertificateKey, setManualCertificateKey)}
+                    {renderManualFileField(
+                      "Intermediate certificate (optional)",
+                      manualIntermediate,
+                      setManualIntermediate,
+                      false
+                    )}
+                    <Text className="text-sm text-typography-500 dark:text-[#8A94A8]">
+                      Select the certificate files without regard to extension or MIME type. Their contents will be validated by the server.
+                    </Text>
+                  </VStack>
+                )}
               </VStack>
             </ScrollView>
           </ModalBody>
@@ -868,12 +1048,22 @@ export default function CertificatesScreen() {
               </Button>
               <Button
                 action="primary"
-                onPress={handleCreate}
+                onPress={creationMode === "letsencrypt" ? handleCreate : handleManualCreate}
                 isDisabled={saving}
                 className="rounded-xl bg-typography-900 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
               >
-                {saving ? <ButtonSpinner /> : <ButtonIcon as={CloudLightning} size="sm" className="text-background-0 dark:text-[#0A1628]" />}
-                <ButtonText className="text-background-0 dark:text-[#0A1628]">Issue</ButtonText>
+                {saving ? (
+                  <ButtonSpinner />
+                ) : (
+                  <ButtonIcon
+                    as={creationMode === "letsencrypt" ? CloudLightning : FileUp}
+                    size="sm"
+                    className="text-background-0 dark:text-[#0A1628]"
+                  />
+                )}
+                <ButtonText className="text-background-0 dark:text-[#0A1628]">
+                  {creationMode === "letsencrypt" ? "Issue" : "Upload"}
+                </ButtonText>
               </Button>
             </HStack>
           </ModalFooter>

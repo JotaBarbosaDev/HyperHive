@@ -1,5 +1,12 @@
 import { getApiBaseUrl, setApiBaseUrl } from "@/config/apiConfig";
-import { Certificate, CreateLetsEncryptPayload } from "@/types/certificate";
+import {
+  Certificate,
+  CreateLetsEncryptPayload,
+  CreateManualCertificatePayload,
+  CreateManualCertificateResponse,
+} from "@/types/certificate";
+import type { DocumentPickerAsset } from "expo-document-picker";
+import { Platform } from "react-native";
 import { apiFetch, setAuthToken, triggerUnauthorized } from "./api-client";
 import { loadApiBaseUrl, loadAuthToken } from "./auth-storage";
 
@@ -41,6 +48,55 @@ export async function createLetsEncryptCertificate(payload: CreateLetsEncryptPay
     method: "POST",
     token: authToken,
     body: payload,
+  });
+}
+
+const appendDocumentAsset = async (
+  formData: FormData,
+  field: string,
+  asset: DocumentPickerAsset
+) => {
+  if (Platform.OS === "web") {
+    if (asset.file) {
+      formData.append(field, asset.file);
+      return;
+    }
+
+    const response = await fetch(asset.uri);
+    if (!response.ok) {
+      throw new Error(`Unable to read ${asset.name || "selected file"}.`);
+    }
+    const blob = await response.blob();
+    formData.append(field, blob, asset.name || "certificate.pem");
+    return;
+  }
+
+  formData.append(
+    field,
+    {
+      uri: asset.uri,
+      name: asset.name || "certificate.pem",
+      type: asset.mimeType || "application/octet-stream",
+    } as unknown as Blob
+  );
+};
+
+export async function createManualCertificate(
+  payload: CreateManualCertificatePayload
+): Promise<CreateManualCertificateResponse> {
+  const token = await resolveToken();
+  const formData = new FormData();
+  formData.append("name", payload.name);
+  await appendDocumentAsset(formData, "certificate", payload.certificate);
+  await appendDocumentAsset(formData, "certificate_key", payload.certificateKey);
+  if (payload.intermediateCertificate) {
+    await appendDocumentAsset(formData, "intermediate_certificate", payload.intermediateCertificate);
+  }
+
+  return apiFetch<CreateManualCertificateResponse>("/certs/create", {
+    method: "POST",
+    token,
+    body: formData,
   });
 }
 

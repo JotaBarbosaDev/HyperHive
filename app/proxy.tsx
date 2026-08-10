@@ -77,6 +77,9 @@ import {
 import { useCertificatesOptions } from "@/hooks/useCertificatesOptions";
 
 type FilterTab = "all" | "active" | "inactive";
+type DomainSort = "none" | "domain-asc" | "domain-desc";
+
+const ALL_DOMAINS = "__all_domains__";
 
 const DEFAULT_LOCATION: ProxyLocation = {
   path: "/",
@@ -113,6 +116,26 @@ const parseDomains = (raw: string) =>
 
 const isEnabled = (host: ProxyHost) => host.enabled !== false;
 
+const getDomainKey = (domain: string) => {
+  const cleaned = domain
+    .trim()
+    .toLowerCase()
+    .replace(/^[a-z][a-z0-9+.-]*:\/\//, "")
+    .split(/[/?#:]/)[0]
+    .replace(/^\*\./, "");
+  const parts = cleaned.split(".").filter(Boolean);
+  return parts.length > 2 ? parts.slice(-2).join(".") : cleaned;
+};
+
+const getHostDomainKey = (host: ProxyHost) =>
+  (host.domain_names ?? [])
+    .map(getDomainKey)
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b))[0] ?? "";
+
+const hostMatchesDomain = (host: ProxyHost, domain: string) =>
+  (host.domain_names ?? []).some((hostDomain) => getDomainKey(hostDomain) === domain);
+
 const StatusChip = ({ label, action = "muted" }: { label: string; action?: "muted" | "info" | "success" | "error" }) => (
   <Badge className="rounded-full px-3 py-1" size="sm" action={action} variant="solid">
     <BadgeText className={`text-xs ${action === "muted" ? "text-typography-800 dark:text-typography-950" : ""}`}>{label}</BadgeText>
@@ -132,6 +155,8 @@ export default function ProxyHostsScreen() {
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [filter, setFilter] = React.useState<FilterTab>("all");
+  const [domainFilter, setDomainFilter] = React.useState(ALL_DOMAINS);
+  const [domainSort, setDomainSort] = React.useState<DomainSort>("none");
   const [modalOpen, setModalOpen] = React.useState(false);
   const [form, setForm] = React.useState<ProxyPayload>(DEFAULT_FORM);
   const [domainsInput, setDomainsInput] = React.useState("");
@@ -221,11 +246,43 @@ export default function ProxyHostsScreen() {
     loadHosts();
   }, [loadHosts]);
 
+  const domainOptions = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    hosts.forEach((host) => {
+      const hostDomains = new Set((host.domain_names ?? []).map(getDomainKey).filter(Boolean));
+      hostDomains.forEach((domain) => counts.set(domain, (counts.get(domain) ?? 0) + 1));
+    });
+    return Array.from(counts, ([domain, count]) => ({ domain, count })).sort((a, b) =>
+      a.domain.localeCompare(b.domain)
+    );
+  }, [hosts]);
+
+  React.useEffect(() => {
+    if (domainFilter === ALL_DOMAINS) return;
+    if (!domainOptions.some((option) => option.domain === domainFilter)) setDomainFilter(ALL_DOMAINS);
+  }, [domainFilter, domainOptions]);
+
+  const selectedDomainLabel =
+    domainFilter === ALL_DOMAINS
+      ? "All domains"
+      : `${domainFilter} (${domainOptions.find((option) => option.domain === domainFilter)?.count ?? 0})`;
+
+  const selectedSortLabel =
+    domainSort === "domain-asc" ? "Domain A-Z" : domainSort === "domain-desc" ? "Domain Z-A" : "Original";
+
+  const hasListFilters = filter !== "all" || domainFilter !== ALL_DOMAINS;
+
   const filteredHosts = React.useMemo(() => {
-    if (filter === "active") return hosts.filter((h) => isEnabled(h));
-    if (filter === "inactive") return hosts.filter((h) => !isEnabled(h));
-    return hosts;
-  }, [filter, hosts]);
+    let next = hosts;
+    if (filter === "active") next = next.filter((h) => isEnabled(h));
+    if (filter === "inactive") next = next.filter((h) => !isEnabled(h));
+    if (domainFilter !== ALL_DOMAINS) next = next.filter((host) => hostMatchesDomain(host, domainFilter));
+    if (domainSort === "none") return next;
+    return [...next].sort((a, b) => {
+      const result = getHostDomainKey(a).localeCompare(getHostDomainKey(b));
+      return domainSort === "domain-asc" ? result || a.id - b.id : -result || a.id - b.id;
+    });
+  }, [domainFilter, domainSort, filter, hosts]);
 
   const stats = React.useMemo(() => {
     const active = hosts.filter((h) => isEnabled(h)).length;
@@ -508,13 +565,89 @@ export default function ProxyHostsScreen() {
             </HStack>
           </HStack>
 
+          <HStack className="mt-5 items-center gap-2 flex-wrap">
+            <Text className="text-xs text-typography-500 dark:text-[#8A94A8] mr-1">
+              {filteredHosts.length}/{hosts.length}
+            </Text>
+
+            <Select selectedValue={domainFilter} onValueChange={(value) => setDomainFilter(value)}>
+              <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524] h-9 px-3 min-w-44">
+                <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">{selectedDomainLabel}</Text>
+                <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-[#8A94A8]" />
+              </SelectTrigger>
+              <SelectPortal>
+                <SelectBackdropContent />
+                <SelectContent className="max-h-72 bg-background-0 dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52] rounded-xl">
+                  <SelectDragIndicatorWrapper>
+                    <SelectDragIndicator />
+                  </SelectDragIndicatorWrapper>
+                  <SelectItem label="All domains" value={ALL_DOMAINS} className="text-base text-typography-900 dark:text-[#E8EBF0]">
+                    All domains
+                  </SelectItem>
+                  {domainOptions.map((option) => (
+                    <SelectItem
+                      key={option.domain}
+                      label={`${option.domain} (${option.count})`}
+                      value={option.domain}
+                      className="text-base text-typography-900 dark:text-[#E8EBF0]"
+                    >
+                      {option.domain} ({option.count})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </SelectPortal>
+            </Select>
+
+            <Select selectedValue={domainSort} onValueChange={(value) => setDomainSort(value as DomainSort)}>
+              <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524] h-9 px-3 min-w-36">
+                <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">{selectedSortLabel}</Text>
+                <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-[#8A94A8]" />
+              </SelectTrigger>
+              <SelectPortal>
+                <SelectBackdropContent />
+                <SelectContent className="bg-background-0 dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52] rounded-xl">
+                  <SelectDragIndicatorWrapper>
+                    <SelectDragIndicator />
+                  </SelectDragIndicatorWrapper>
+                  <SelectItem label="Original" value="none" className="text-base text-typography-900 dark:text-[#E8EBF0]">
+                    Original
+                  </SelectItem>
+                  <SelectItem label="Domain A-Z" value="domain-asc" className="text-base text-typography-900 dark:text-[#E8EBF0]">
+                    Domain A-Z
+                  </SelectItem>
+                  <SelectItem label="Domain Z-A" value="domain-desc" className="text-base text-typography-900 dark:text-[#E8EBF0]">
+                    Domain Z-A
+                  </SelectItem>
+                </SelectContent>
+              </SelectPortal>
+            </Select>
+
+            {(domainFilter !== ALL_DOMAINS || domainSort !== "none") ? (
+              <Button
+                action="default"
+                variant="link"
+                size="sm"
+                onPress={() => {
+                  setDomainFilter(ALL_DOMAINS);
+                  setDomainSort("none");
+                }}
+                className="px-1"
+              >
+                <ButtonIcon as={X} size="sm" className="text-typography-500 dark:text-[#8A94A8]" />
+                <ButtonText className="text-typography-600 dark:text-[#8A94A8]">Clear</ButtonText>
+              </Button>
+            ) : null}
+          </HStack>
+
           {loading ? (
             renderLoading()
           ) : filteredHosts.length === 0 ? (
             <Box className="mt-10 p-6 border border-dashed border-outline-200 dark:border-[#2A3B52] rounded-2xl bg-background-0 dark:bg-[#0A1628] items-center">
               <Text className="text-typography-700 font-semibold text-base">No proxies found</Text>
               <Text className="text-typography-500 text-sm mt-1 text-center">
-                Click "Add Proxy Host" to create the first reverse proxy host.
+                {hasListFilters
+                  ? "No proxy hosts match the selected filters. Clear filters or choose another domain."
+                  : 'Click "Add Proxy Host" to create the first reverse proxy host.'}
               </Text>
             </Box>
           ) : isWeb ? (

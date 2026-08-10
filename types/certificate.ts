@@ -1,3 +1,5 @@
+import type { DocumentPickerAsset } from "expo-document-picker";
+
 export type CertificateMeta = {
   letsencrypt_email?: string;
   letsencrypt_agree?: boolean;
@@ -31,3 +33,12 @@ export type CreateLetsEncryptPayload = {
   domain_names: string[];
   meta: CertificateMeta;
 };
+
+export type CreateManualCertificatePayload = {
+  name: string;
+  certificate: DocumentPickerAsset;
+  certificateKey: DocumentPickerAsset;
+  intermediateCertificate?: DocumentPickerAsset;
+};
+
+export type CreateManualCertificateResponse = Certificate;
