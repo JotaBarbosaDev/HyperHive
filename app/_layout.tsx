@@ -596,13 +596,7 @@ function RootLayoutNav() {
 
   const handleMountCreated = React.useCallback(() => {
     setShowDrawer(false);
-    requestAnimationFrame(() => {
-      router.replace({
-        pathname: pathname as any,
-        params: { refresh: Date.now().toString() },
-      });
-    });
-  }, [pathname, router]);
+  }, []);
 
   useEffect(() => {
     if (pathname !== "/mounts" && showDrawer) {

@@ -506,7 +506,7 @@ export default function VmXmlTemplatesScreen() {
 
               <Divider className="mb-4 bg-outline-200 dark:bg-[#243247]" />
 
-              {isLoading ? (
+              {isLoading && templates.length === 0 ? (
                 <Box className="py-12 items-center justify-center">
                   <Spinner />
                   <Text className="mt-3 text-sm text-typography-500 dark:text-[#8A94A8]">

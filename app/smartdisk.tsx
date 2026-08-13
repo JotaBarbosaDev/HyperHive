@@ -724,7 +724,7 @@ export default function SmartDiskScreen() {
             </Button>
           </HStack>
 
-          {loading ? (
+          {loading && disks.length === 0 ? (
             <VStack className="mt-6 gap-4">
               {[1, 2, 3].map((idx) => (
                 <Box key={idx} className={`p-4 ${cardShellClass}`}>

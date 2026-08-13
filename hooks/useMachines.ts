@@ -5,16 +5,22 @@ import { Machine } from "@/types/machine";
 export function useMachines(token?: string | null) {
 	const [machines, setMachines] = useState<Machine[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
+	const [isRefreshing, setIsRefreshing] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const isMountedRef = useRef(true);
 
-	const fetchMachines = useCallback(async () => {
+	const fetchMachines = useCallback(async (mode: "initial" | "refresh" = "refresh") => {
 		if (!token) {
 			setMachines([]);
 			setIsLoading(false);
+			setIsRefreshing(false);
 			return;
 		}
-		setIsLoading(true);
+		if (mode === "initial") {
+			setIsLoading(true);
+		} else {
+			setIsRefreshing(true);
+		}
 		try {
 			const list = await listMachines();
 			if (!isMountedRef.current) return;
@@ -26,13 +32,17 @@ export function useMachines(token?: string | null) {
 			setError(message);
 		} finally {
 			if (!isMountedRef.current) return;
-			setIsLoading(false);
+			if (mode === "initial") {
+				setIsLoading(false);
+			} else {
+				setIsRefreshing(false);
+			}
 		}
 	}, [token]);
 
 	useEffect(() => {
 		isMountedRef.current = true;
-		fetchMachines();
+		fetchMachines("initial");
 		return () => {
 			isMountedRef.current = false;
 		};
@@ -41,6 +51,7 @@ export function useMachines(token?: string | null) {
 	return {
 		machines,
 		isLoading,
+		isRefreshing,
 		error,
 		refresh: fetchMachines,
 	};

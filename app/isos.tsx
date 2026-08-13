@@ -1204,7 +1204,7 @@ export default function ProfileScreen() {
 
           <Divider className="mt-8 bg-outline-100 dark:bg-[#2A3B52]" />
 
-          {isLoading ? (
+          {isLoading && isos.length === 0 ? (
             <VStack className="items-center justify-center gap-3 py-16">
               <Spinner color="#2DD4BF" />
               <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">

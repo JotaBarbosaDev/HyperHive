@@ -6,6 +6,7 @@ export type StreamMeta = {
 
 export type StreamHost = {
   id: number;
+  description: string;
   incoming_port: number;
   forwarding_host: string;
   forwarding_port: number;
@@ -19,6 +20,7 @@ export type StreamHost = {
 };
 
 export type StreamPayload = {
+  description: string;
   incoming_port: number;
   forwarding_host: string;
   forwarding_port: number;

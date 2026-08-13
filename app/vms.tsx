@@ -308,6 +308,7 @@ export default function VirtualMachinesScreen() {
   const statsIconWarningColor = isWeb ? undefined : resolvedMode === "dark" ? "#FCD34D" : "#FBBF24";
   const [vms, setVms] = React.useState<VM[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
   const [loadingVm, setLoadingVm] = React.useState<string | null>(null);
   const [openMenuFor, setOpenMenuFor] = React.useState<string | null>(null);
   const [detailsVm, setDetailsVm] = React.useState<VM | null>(null);
@@ -1264,7 +1265,7 @@ export default function VirtualMachinesScreen() {
   }, [vms]);
 
   const handleRefresh = async () => {
-    setLoading(true);
+    setRefreshing(true);
     try {
       Haptics.selectionAsync();
       await fetchAndSetVms();
@@ -1286,7 +1287,7 @@ export default function VirtualMachinesScreen() {
         )
       });
     } finally {
-      setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -1904,7 +1905,7 @@ export default function VirtualMachinesScreen() {
         contentContainerStyle={{ paddingBottom: 64 }}
         refreshControl={
           <RefreshControl
-            refreshing={loading}
+            refreshing={refreshing}
             onRefresh={handleRefresh}
             tintColor={refreshControlTint}
             colors={[refreshControlTint]}
@@ -1931,10 +1932,10 @@ export default function VirtualMachinesScreen() {
                 variant="outline"
                 size="md"
                 onPress={handleRefresh}
-                disabled={loading}
+                disabled={loading || refreshing}
                 className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
               >
-                {loading ? (
+                {refreshing ? (
                   <ButtonSpinner />
                 ) : (
                   <ButtonIcon
@@ -2187,7 +2188,7 @@ export default function VirtualMachinesScreen() {
           </HStack>
 
           {/* VMs agrupadas por Slave */}
-          {loading ? (
+          {loading && vms.length === 0 ? (
             <VStack className="gap-4">
               <VmSkeletonGrid count={6} />
             </VStack>
@@ -6105,7 +6106,7 @@ function ManageVmDisksForm({
               isDisabled={loading || saving || availableDisks.length === 0}
             >
               <SelectTrigger variant="outline" size="md" className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E]">
-                <SelectInput placeholder={loading ? "Loading..." : "Select VM disk"} value={selectedDiskLabel} />
+				<SelectInput placeholder={loading && allDisks.length === 0 ? "Loading..." : "Select VM disk"} value={selectedDiskLabel} />
                 <SelectIcon className="mr-3" as={ChevronDown} />
               </SelectTrigger>
               <SelectPortal>
@@ -6150,7 +6151,7 @@ function ManageVmDisksForm({
           </Text>
         </HStack>
 
-        {loading ? (
+		{loading && attachedDisks.length === 0 ? (
           <VStack className="gap-2">
             {Array.from({ length: 2 }).map((_, index) => (
               <Box key={`attached-disk-loading-${index}`} className="h-20 rounded-xl bg-background-100 dark:bg-[#1A2637] opacity-60" />

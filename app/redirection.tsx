@@ -417,7 +417,7 @@ export default function RedirectionHostsScreen() {
             </Button>
           </HStack>
 
-          {loading ? (
+          {loading && items.length === 0 ? (
             renderLoading()
           ) : filteredItems.length === 0 ? (
             <Box className="mt-10 p-6 border border-dashed border-outline-200 dark:border-[#2A3B52] rounded-2xl bg-background-0 dark:bg-[#0A1628] items-center">

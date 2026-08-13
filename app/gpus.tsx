@@ -369,7 +369,7 @@ export default function GpusScreen() {
             </VStack>
           </Box>
 
-          {isLoading ? (
+          {isLoading && gpus.length === 0 ? (
             <Box className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
               <Text className="text-typography-600 dark:text-[#8A94A8]">Loading GPUs...</Text>
             </Box>

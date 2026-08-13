@@ -1,6 +1,13 @@
 export type SpaPort = {
   port: number;
+  description: string;
   created_at: string;
+};
+
+export type SpaPortPayload = {
+  port: number;
+  password: string;
+  description: string;
 };
 
 export type SpaAllowEntry = {

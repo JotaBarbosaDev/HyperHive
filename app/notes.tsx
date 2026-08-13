@@ -413,7 +413,7 @@ export default function NotesScreen() {
             </Button>
           </HStack>
 
-          {loading ? (
+          {loading && notes.length === 0 ? (
             <Box className="rounded-2xl border border-outline-100 bg-background-0 p-8 shadow-soft-2 dark:border-[#2A3B52] dark:bg-[#0E1524]">
               <Text className="text-center text-typography-600 dark:text-[#8A94A8]">Loading notes...</Text>
             </Box>

@@ -80,6 +80,7 @@ export default function AutoBackupsScreen() {
   const toast = useToast();
   const [schedules, setSchedules] = React.useState<AutoBackup[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [refreshing, setRefreshing] = React.useState(false);
   const [showCreateModal, setShowCreateModal] = React.useState(false);
   const [editSchedule, setEditSchedule] = React.useState<AutoBackup | null>(null);
   const [nfsShares, setNfsShares] = React.useState<Record<number, string>>({});
@@ -190,8 +191,9 @@ export default function AutoBackupsScreen() {
   }, [formNfsShare, formVm, showToastMessage]);
 
   const refreshSchedules = React.useCallback(
-    async (showMessage = false) => {
-      setLoading(true);
+    async (showMessage = false, mode: "initial" | "refresh" = "refresh") => {
+      if (mode === "initial") setLoading(true);
+      else setRefreshing(true);
       try {
         const data = await listAutoBackups();
         const mapped = Array.isArray(data) ? data.map(mapRecord) : [];
@@ -204,14 +206,15 @@ export default function AutoBackupsScreen() {
         const message = err instanceof Error ? err.message : "Unable to load auto-backups.";
         showToastMessage(message, "error");
       } finally {
-        setLoading(false);
+        if (mode === "initial") setLoading(false);
+        else setRefreshing(false);
       }
     },
     [showToastMessage]
   );
 
   React.useEffect(() => {
-    refreshSchedules();
+    refreshSchedules(false, "initial");
     loadOptions();
   }, [refreshSchedules, loadOptions]);
 
@@ -294,7 +297,7 @@ export default function AutoBackupsScreen() {
   const getNfsName = (id: number): string => nfsShares[id] || `NFS #${id}`;
   const selectedNfsLabel = formNfsShare != null ? getNfsName(formNfsShare) : "";
 
-  const handleRefresh = () => refreshSchedules(true);
+  const handleRefresh = () => refreshSchedules(true, "refresh");
 
   const deleteSchedule = async (schedule: AutoBackup) => {
     if (deletingScheduleId) return;
@@ -428,7 +431,7 @@ export default function AutoBackupsScreen() {
         contentContainerStyle={{paddingBottom: 100}}
         refreshControl={
           <RefreshControl
-            refreshing={loading}
+            refreshing={refreshing}
             onRefresh={handleRefresh}
             tintColor={refreshControlTint}
             colors={[refreshControlTint]}
@@ -475,10 +478,10 @@ export default function AutoBackupsScreen() {
               variant="outline"
               size="md"
               onPress={handleRefresh}
-              disabled={loading}
+              disabled={loading || refreshing}
               className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
             >
-              {loading ? (
+              {refreshing ? (
                 <ButtonSpinner />
               ) : (
                 <ButtonIcon
@@ -491,7 +494,7 @@ export default function AutoBackupsScreen() {
               size="md"
               className={`rounded-xl ${primaryButtonClass}`}
               onPress={() => setShowCreateModal(true)}
-              disabled={loading}
+              disabled={loading || refreshing}
             >
               <ButtonIcon
                 as={Plus}
@@ -606,7 +609,7 @@ export default function AutoBackupsScreen() {
               disabled={loading}
               className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
             >
-              {loading ? (
+              {refreshing ? (
                 <ButtonSpinner />
               ) : (
                 <ButtonIcon

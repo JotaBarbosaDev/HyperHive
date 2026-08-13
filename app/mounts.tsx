@@ -101,12 +101,12 @@ export default function MountsScreen() {
 
           <Box
             className={
-              isLoading
+              isLoading && mounts.length === 0
                 ? "mt-6 flex flex-col gap-4 web:grid web:grid-cols-1 web:gap-6 web:sm:grid-cols-2 web:lg:grid-cols-3 web:xl:grid-cols-4 web:items-stretch"
                 : "mt-6 flex flex-col gap-5 web:grid web:grid-cols-1 web:gap-6 web:sm:grid-cols-2 web:lg:grid-cols-3 web:xl:grid-cols-4 web:items-stretch"
             }
           >
-            {isLoading ? (
+            {isLoading && mounts.length === 0 ? (
               <MountSkeletonGrid />
             ) : error ? (
               <Box className="p-3 web:rounded-2xl web:bg-background-0/80">

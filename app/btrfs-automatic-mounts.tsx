@@ -418,7 +418,7 @@ export default function BtrfsAutomaticMountsScreen() {
               </Text>
             </HStack>
             <Divider className={dividerClass} />
-            {loading ? (
+            {loading && autoMounts.length === 0 ? (
               <VStack className="gap-3 p-4">
                 {[1, 2].map((i) => (
                   <Box key={i} className={`p-3 ${softCardShellClass}`}>

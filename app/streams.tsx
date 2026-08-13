@@ -65,6 +65,7 @@ import { useCertificatesOptions } from "@/hooks/useCertificatesOptions";
 type FilterTab = "all" | "active" | "inactive";
 
 const DEFAULT_FORM: StreamPayload = {
+  description: "",
   incoming_port: 0,
   forwarding_host: "",
   forwarding_port: 0,
@@ -182,6 +183,7 @@ export default function StreamsScreen() {
   const openEditModal = (host: StreamHost) => {
     setEditingHost(host);
     setForm({
+      description: host.description ?? "",
       incoming_port: host.incoming_port,
       forwarding_host: host.forwarding_host,
       forwarding_port: host.forwarding_port,
@@ -363,7 +365,7 @@ export default function StreamsScreen() {
             </Button>
           </HStack>
 
-          {loading ? (
+          {loading && items.length === 0 ? (
             renderLoading()
           ) : filteredItems.length === 0 ? (
             <Box className="mt-10 p-6 border border-dashed border-outline-200 dark:border-[#2A3B52] rounded-2xl bg-background-0 dark:bg-[#0A1628] items-center">
@@ -392,6 +394,11 @@ export default function StreamsScreen() {
                             Port {host.incoming_port}
                           </Text>
                         </HStack>
+                        {host.description ? (
+                          <Text className={`text-sm ${enabled ? "text-typography-600 dark:text-[#8A94A8]" : "text-typography-500"}`}>
+                            {host.description}
+                          </Text>
+                        ) : null}
                         <HStack className="items-center gap-2 flex-wrap">
                           <ArrowLeftRight size={16} color={enabled ? "#0f172a" : "#9ca3af"} />
                           <Text className={`text-sm ${enabled ? "text-typography-800" : "text-typography-500"}`}>
@@ -485,6 +492,11 @@ export default function StreamsScreen() {
                           :{host.incoming_port} → {host.forwarding_host}:{host.forwarding_port}
                         </Text>
                       </HStack>
+                      {host.description ? (
+                        <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
+                          {host.description}
+                        </Text>
+                      ) : null}
                       <HStack className="gap-2 flex-wrap">
                         {protocols.map((p) => (
                           <Badge key={p} className="rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
@@ -683,6 +695,19 @@ export default function StreamsScreen() {
 
                 {formTab === "details" ? (
                   <VStack className="gap-4">
+                    <FormControl>
+                      <FormControlLabel>
+                        <FormControlLabelText>Description</FormControlLabelText>
+                      </FormControlLabel>
+                      <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
+                        <InputField
+                          value={form.description}
+                          onChangeText={(val) => setForm((prev) => ({ ...prev, description: val }))}
+                          placeholder="Production PostgreSQL replica"
+                        />
+                      </Input>
+                    </FormControl>
+
                     <FormControl isRequired>
                       <FormControlLabel>
                         <FormControlLabelText>Incoming port</FormControlLabelText>

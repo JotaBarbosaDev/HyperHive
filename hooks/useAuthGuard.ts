@@ -1,16 +1,13 @@
 import {useEffect, useMemo, useState} from "react";
 import {usePathname, useRouter} from "expo-router";
 import {setApiBaseUrl} from "@/config/apiConfig";
-import {ApiError, setAuthToken} from "@/services/api-client";
+import {getAuthToken, setAuthToken} from "@/services/api-client";
 import {
   API_BASE_URL_STORAGE_KEY,
   AUTH_TOKEN_STORAGE_KEY,
-  clearApiBaseUrl,
-  clearAuthToken,
   loadApiBaseUrl,
   loadAuthToken,
 } from "@/services/auth-storage";
-import {listMachines} from "@/services/hyperhive";
 
 export type UseAuthGuardResult = {
   token: string | null;
@@ -23,13 +20,16 @@ export type UseAuthGuardOptions = {
 
 export function useAuthGuard(
   redirectTo: string = "/",
-  {validate = true}: UseAuthGuardOptions = {}
+  _options: UseAuthGuardOptions = {}
 ): UseAuthGuardResult {
   const router = useRouter();
   const pathname = usePathname();
+  const currentToken = getAuthToken();
   const [state, setState] = useState<UseAuthGuardResult>({
-    token: null,
-    isChecking: true,
+    // Keep an already hydrated session visible when a route mounts. The root
+    // layout owns API validation, so page transitions never blank the screen.
+    token: currentToken,
+    isChecking: !currentToken,
   });
 
   useEffect(() => {
@@ -38,20 +38,6 @@ export function useAuthGuard(
     const redirectIfNeeded = () => {
       if (pathname !== redirectTo) {
         router.replace(redirectTo as any);
-      }
-    };
-
-    const signOutAndRedirect = async () => {
-      try {
-        await Promise.all([clearAuthToken()]);
-      } catch (err) {
-        console.warn("Failed to clear stored session credentials", err);
-      } finally {
-        setAuthToken(null);
-        if (isActive) {
-          setState({token: null, isChecking: false});
-          redirectIfNeeded();
-        }
       }
     };
 
@@ -67,18 +53,6 @@ export function useAuthGuard(
           redirectIfNeeded();
         }
         return;
-      }
-
-      if (validate) {
-        try {
-          await listMachines();
-        } catch (err) {
-          if (err instanceof ApiError && err.status === 401) {
-            await signOutAndRedirect();
-            return;
-          }
-          console.warn("Token validation failed", err);
-        }
       }
 
       if (isActive) {
@@ -113,7 +87,7 @@ export function useAuthGuard(
         window.removeEventListener("storage", storageHandler);
       }
     };
-  }, [pathname, redirectTo, router, validate]);
+  }, [pathname, redirectTo, router]);
 
   return useMemo(
     () => ({

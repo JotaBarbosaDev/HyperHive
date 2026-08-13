@@ -1588,7 +1588,12 @@ export default function MachineDetailsScreen() {
 				</Box>
 			</ScrollView>
 
-			<Modal isOpen={isLoading || isRefreshing} onClose={() => { }}>
+			<Modal
+				isOpen={
+					isLoading && !uptime && !cpu && !mem && !disk && !network
+				}
+				onClose={() => { }}
+			>
 				<ModalBackdrop />
 				<ModalContent className="bg-background-0 dark:bg-[#0A1628]">
 					<ModalHeader>

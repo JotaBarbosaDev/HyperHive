@@ -731,7 +731,7 @@ export default function BtrfsRaidsScreen() {
             />
           </HStack>
 
-          {loading ? (
+          {loading && raids.length === 0 ? (
             <VStack className="mt-6 gap-4">
               {[1, 2].map((idx) => (
                 <Box

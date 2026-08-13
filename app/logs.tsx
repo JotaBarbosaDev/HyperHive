@@ -671,7 +671,7 @@ export default function LogsScreen() {
 
         <View style={styles.listContainer}>
           <View style={[styles.card, styles.listCard]}>
-            {isLoading ? (
+            {isLoading && logs.length === 0 ? (
               <View style={styles.center}>
                 <ActivityIndicator size="large" color={theme.text} />
               </View>

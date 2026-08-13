@@ -253,7 +253,7 @@ export default function DnsScreen() {
                   Aliases ({aliases.length})
                 </Heading>
                 <HStack className="items-center gap-3">
-                  {loading ? (
+                  {loading && aliases.length === 0 ? (
                     <Text className="text-typography-500 dark:text-[#8A94A8] text-xs">Loading...</Text>
                   ) : null}
                   <Button
@@ -268,7 +268,7 @@ export default function DnsScreen() {
                 </HStack>
               </HStack>
 
-              {loading ? (
+              {loading && aliases.length === 0 ? (
                 <Box className="p-6">
                   <Text className="text-typography-600 dark:text-[#9AA4B8] text-center">
                     Loading aliases...

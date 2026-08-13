@@ -1,5 +1,5 @@
 import {getApiBaseUrl, setApiBaseUrl} from "@/config/apiConfig";
-import {SpaAllowResponse, SpaPort} from "@/types/spa";
+import {SpaAllowResponse, SpaPort, SpaPortPayload} from "@/types/spa";
 import {apiFetch, setAuthToken, triggerUnauthorized} from "./api-client";
 import {loadApiBaseUrl, loadAuthToken} from "./auth-storage";
 
@@ -39,7 +39,7 @@ export async function listSpaPorts(): Promise<SpaPort[]> {
   return [];
 }
 
-export async function createSpaPort(payload: {port: number; password: string}) {
+export async function createSpaPort(payload: SpaPortPayload) {
   const authToken = await resolveToken();
   return apiFetch<void>("/spa", {
     method: "POST",

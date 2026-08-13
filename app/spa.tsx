@@ -65,6 +65,7 @@ export default function SpaScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [portInput, setPortInput] = React.useState("");
   const [password, setPassword] = React.useState("");
+  const [description, setDescription] = React.useState("");
   const [saving, setSaving] = React.useState(false);
   const [deleteTarget, setDeleteTarget] = React.useState<SpaPort | null>(null);
   const [deletingPort, setDeletingPort] = React.useState<number | null>(null);
@@ -145,10 +146,11 @@ export default function SpaScreen() {
     }
     setSaving(true);
     try {
-      await createSpaPort({ port: parsedPort, password });
+      await createSpaPort({port: parsedPort, password, description});
       showToast("SPA created", `Port ${parsedPort} authorized successfully.`);
       setPortInput("");
       setPassword("");
+      setDescription("");
       await loadPorts("silent");
     } catch (err) {
       console.error("Failed to create SPA port", err);
@@ -342,6 +344,26 @@ export default function SpaScreen() {
                     </Input>
                   </Box>
                 </HStack>
+                <Box>
+                  <Text
+                    size="xs"
+                    className="mb-2 text-typography-700 dark:text-[#9AA4B8]"
+                  >
+                    Description
+                  </Text>
+                  <Input
+                    size="md"
+                    isDisabled={saving}
+                    className={inputShellClass}
+                  >
+                    <InputField
+                      placeholder="Administration SSH"
+                      value={description}
+                      onChangeText={setDescription}
+                      className={inputFieldClass}
+                    />
+                  </Input>
+                </Box>
                 <HStack className="items-center gap-3 flex-wrap">
                   <Button
                     action="primary"
@@ -376,7 +398,7 @@ export default function SpaScreen() {
                 >
                   Configured ports
                 </Heading>
-                {loading ? (
+                {loading && ports.length === 0 ? (
                   <Text
                     size="sm"
                     className="text-typography-600 dark:text-[#9AA4B8]"
@@ -386,7 +408,7 @@ export default function SpaScreen() {
                 ) : null}
               </HStack>
 
-              {loading ? (
+              {loading && ports.length === 0 ? (
                 <VStack space="md" className="mt-2">
                   {[1, 2, 3].map((item) => (
                     <Box key={item} className={`h-16 ${softCardShellClass}`} />
@@ -427,6 +449,14 @@ export default function SpaScreen() {
                           >
                             Port {item.port}
                           </Heading>
+                          {item.description ? (
+                            <Text
+                              size="sm"
+                              className="text-typography-700 dark:text-[#E8EBF0]"
+                            >
+                              {item.description}
+                            </Text>
+                          ) : null}
                           <Text
                             size="xs"
                             className="text-typography-600 dark:text-[#9AA4B8]"

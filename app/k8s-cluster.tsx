@@ -295,7 +295,7 @@ export default function K8ClusterScreen() {
                 download it.
               </Text>
 
-              {isLoading ? (
+              {isLoading && !status ? (
                 <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                   Loading options...
                 </Text>

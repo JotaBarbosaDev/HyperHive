@@ -327,7 +327,7 @@ export default function VmsDisksScreen() {
           </HStack>
 
           <Box className="mt-6 flex flex-col gap-5 web:grid web:grid-cols-1 web:gap-6 web:sm:grid-cols-2 web:lg:grid-cols-3 web:xl:grid-cols-4 web:items-stretch">
-            {loading ? (
+            {loading && disks.length === 0 ? (
               Array.from({ length: 8 }).map((_, index) => (
                 <Box
                   key={`vm-disk-skeleton-${index}`}

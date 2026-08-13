@@ -452,7 +452,7 @@ export default function DockerGitScreen() {
 						contentContainerStyle={{ paddingBottom: 72 }}
 						refreshControl={refreshControl}
 					>
-						{isLoading ? (
+						{isLoading && entries.length === 0 ? (
 							<Text className="text-typography-500 dark:text-[#8A94A8]">Loading...</Text>
 						) : error ? (
 							<Text className="text-[#EF4444]">{error}</Text>
