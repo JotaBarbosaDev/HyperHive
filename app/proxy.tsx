@@ -56,6 +56,7 @@ import {
   editProxyHost,
   enableProxyHost,
   setupFrontEnd,
+  setupFrontEndSecure,
   listProxyHosts,
 } from "@/services/proxy";
 import { listAccessLists } from "@/services/access-lists";
@@ -171,8 +172,13 @@ export default function ProxyHostsScreen() {
   const [deletingId, setDeletingId] = React.useState<number | null>(null);
   const [selectedHost, setSelectedHost] = React.useState<ProxyHost | null>(null);
   const [setupModalOpen, setSetupModalOpen] = React.useState(false);
+  const [setupTab, setSetupTab] = React.useState<"unique" | "secure">("unique");
   const [setupDomain, setSetupDomain] = React.useState("");
   const [setupCertificateId, setSetupCertificateId] = React.useState<number>(0);
+  const [setupSecurePublicDomain, setSetupSecurePublicDomain] = React.useState("");
+  const [setupSecurePublicCertificateId, setSetupSecurePublicCertificateId] = React.useState<number>(0);
+  const [setupSecurePrivateDomain, setSetupSecurePrivateDomain] = React.useState("");
+  const [setupSecurePrivateCertificateId, setSetupSecurePrivateCertificateId] = React.useState<number>(0);
   const [setupSaving, setSetupSaving] = React.useState(false);
   const { height: screenHeight } = useWindowDimensions();
   const modalBodyMaxHeight = Math.min(screenHeight * 0.55, 520);
@@ -210,6 +216,8 @@ export default function ProxyHostsScreen() {
     useCertificatesOptions(handleCertificatesError);
   const selectedCertificateLabel = resolveCertificateLabel(form.certificate_id);
   const setupCertificateLabel = resolveCertificateLabel(setupCertificateId);
+  const setupSecurePublicCertificateLabel = resolveCertificateLabel(setupSecurePublicCertificateId);
+  const setupSecurePrivateCertificateLabel = resolveCertificateLabel(setupSecurePrivateCertificateId);
 
   const loadHosts = React.useCallback(
     async (mode: "full" | "refresh" | "silent" = "full") => {
@@ -303,8 +311,13 @@ export default function ProxyHostsScreen() {
   };
 
   const openSetupModal = () => {
+    setSetupTab("unique");
     setSetupDomain("");
     setSetupCertificateId(0);
+    setSetupSecurePublicDomain("");
+    setSetupSecurePublicCertificateId(0);
+    setSetupSecurePrivateDomain("");
+    setSetupSecurePrivateCertificateId(0);
     void refreshCertificates();
     setSetupModalOpen(true);
   };
@@ -469,6 +482,31 @@ export default function ProxyHostsScreen() {
     } catch (err) {
       console.error("Failed to setup front-end", err);
       showToast("Setup failed", "Unable to configure the front-end page.", "error");
+    } finally {
+      setSetupSaving(false);
+    }
+  };
+
+  const handleSetupSecureSave = async () => {
+    const publicDomain = setupSecurePublicDomain.trim();
+    const privateDomain = setupSecurePrivateDomain.trim();
+    if (!publicDomain || !privateDomain) {
+      showToast("Domains required", "Provide both public and private domains.", "error");
+      return;
+    }
+    setSetupSaving(true);
+    try {
+      await setupFrontEndSecure({
+        publicDomain,
+        publicCertificateId: Number(setupSecurePublicCertificateId) || 0,
+        privateDomain,
+        privateCertificateId: Number(setupSecurePrivateCertificateId) || 0,
+      });
+      showToast("Secure front-end ready", "Setup completed for the secure front-end domains.");
+      setSetupModalOpen(false);
+    } catch (err) {
+      console.error("Failed to setup secure front-end", err);
+      showToast("Setup failed", "Unable to configure the secure front-end page.", "error");
     } finally {
       setSetupSaving(false);
     }
@@ -903,78 +941,244 @@ export default function ProxyHostsScreen() {
                 Setup FrontEnd Page
               </Heading>
               <Text className="text-typography-600 dark:text-[#8A94A8] mt-1">
-                Provide the public domain and optional certificate to finish the front-end setup.
+                Choose the front-end setup mode and provide the required domains and certificates.
               </Text>
             </VStack>
             <ModalCloseButton className="text-typography-500" />
           </ModalHeader>
           <ModalBody className="px-6 pt-4 pb-2">
             <VStack className="gap-4">
-              <FormControl isRequired>
-                <FormControlLabel>
-                  <FormControlLabelText>Domain</FormControlLabelText>
-                </FormControlLabel>
-                <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
-                  <InputField
-                    value={setupDomain}
-                    onChangeText={setSetupDomain}
-                    placeholder="yourdomain.com"
-                    autoCapitalize="none"
-                  />
-                </Input>
-                <FormControlHelper>
-                  <FormControlHelperText>Domain that will serve the application front-end.</FormControlHelperText>
-                </FormControlHelper>
-              </FormControl>
+              <HStack className="gap-2">
+                {[
+                  { key: "unique", label: "Setup Unique Domain Frontend" },
+                  { key: "secure", label: "Setup Secure Domain Frontend" },
+                ].map((tab) => {
+                  const active = setupTab === tab.key;
+                  return (
+                    <Pressable
+                      key={tab.key}
+                      onPress={() => setSetupTab(tab.key as typeof setupTab)}
+                      className={`flex-1 px-3 py-2 rounded-xl border items-center justify-center ${
+                        active
+                          ? "bg-typography-900 border-typography-900 dark:bg-[#2DD4BF] dark:border-[#2DD4BF]"
+                          : "bg-background-0 border-outline-200 dark:bg-[#0F1A2E] dark:border-[#243247]"
+                      }`}
+                    >
+                      <Text
+                        className={`text-xs font-medium text-center ${
+                          active ? "text-background-0 dark:text-[#0A1628]" : "text-typography-700 dark:text-[#8A94A8]"
+                        }`}
+                      >
+                        {tab.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </HStack>
 
-              <FormControl>
-                <HStack className="items-center justify-between">
-                  <FormControlLabel>
-                    <FormControlLabelText>SSL Certificate</FormControlLabelText>
-                  </FormControlLabel>
-                  <Button
-                    variant="link"
-                    action="primary"
-                    className="px-0"
-                    size="sm"
-                    onPress={() => void refreshCertificates()}
-                    isDisabled={loadingCertificates}
-                  >
-                    {loadingCertificates ? <ButtonSpinner /> : <ButtonText>Refresh</ButtonText>}
-                  </Button>
-                </HStack>
-                <Select
-                  selectedValue={String(setupCertificateId ?? 0)}
-                  onValueChange={(val) => setSetupCertificateId(Number(val))}
-                  isDisabled={loadingCertificates && certificateOptions.length === 0}
-                >
-                  <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] h-11 px-4">
-                    <Text className="text-typography-900 dark:text-[#E8EBF0]">{setupCertificateLabel}</Text>
-                    <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-[#8A94A8]" />
-                  </SelectTrigger>
-                  <SelectPortal>
-                    <SelectBackdropContent />
-                    <SelectContent className="max-h-72 bg-background-0 dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52] rounded-2xl">
-                      <SelectDragIndicatorWrapper>
-                        <SelectDragIndicator />
-                      </SelectDragIndicatorWrapper>
-                      {certificateOptions.map((option) => (
-                        <SelectItem
-                          key={option.value}
-                          label={option.label}
-                          value={option.value}
-                          className="text-base text-typography-900 dark:text-[#E8EBF0]"
-                        >
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </SelectPortal>
-                </Select>
-                <FormControlHelper>
-                  <FormControlHelperText>Leave as "No Certificate" to use HTTP only.</FormControlHelperText>
-                </FormControlHelper>
-              </FormControl>
+              {setupTab === "unique" ? (
+                <VStack className="gap-4">
+                  <FormControl isRequired>
+                    <FormControlLabel>
+                      <FormControlLabelText>Domain</FormControlLabelText>
+                    </FormControlLabel>
+                    <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
+                      <InputField
+                        value={setupDomain}
+                        onChangeText={setSetupDomain}
+                        placeholder="yourdomain.com"
+                        autoCapitalize="none"
+                      />
+                    </Input>
+                    <FormControlHelper>
+                      <FormControlHelperText>Domain that will serve the application front-end.</FormControlHelperText>
+                    </FormControlHelper>
+                  </FormControl>
+
+                  <FormControl>
+                    <HStack className="items-center justify-between">
+                      <FormControlLabel>
+                        <FormControlLabelText>SSL Certificate</FormControlLabelText>
+                      </FormControlLabel>
+                      <Button
+                        variant="link"
+                        action="primary"
+                        className="px-0"
+                        size="sm"
+                        onPress={() => void refreshCertificates()}
+                        isDisabled={loadingCertificates}
+                      >
+                        {loadingCertificates ? <ButtonSpinner /> : <ButtonText>Refresh</ButtonText>}
+                      </Button>
+                    </HStack>
+                    <Select
+                      selectedValue={String(setupCertificateId ?? 0)}
+                      onValueChange={(val) => setSetupCertificateId(Number(val))}
+                      isDisabled={loadingCertificates && certificateOptions.length === 0}
+                    >
+                      <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] h-11 px-4">
+                        <Text className="text-typography-900 dark:text-[#E8EBF0]">{setupCertificateLabel}</Text>
+                        <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-[#8A94A8]" />
+                      </SelectTrigger>
+                      <SelectPortal>
+                        <SelectBackdropContent />
+                        <SelectContent className="max-h-72 bg-background-0 dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52] rounded-2xl">
+                          <SelectDragIndicatorWrapper>
+                            <SelectDragIndicator />
+                          </SelectDragIndicatorWrapper>
+                          {certificateOptions.map((option) => (
+                            <SelectItem
+                              key={option.value}
+                              label={option.label}
+                              value={option.value}
+                              className="text-base text-typography-900 dark:text-[#E8EBF0]"
+                            >
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </SelectPortal>
+                    </Select>
+                    <FormControlHelper>
+                      <FormControlHelperText>Leave as "No Certificate" to use HTTP only.</FormControlHelperText>
+                    </FormControlHelper>
+                  </FormControl>
+                </VStack>
+              ) : (
+                <VStack className="gap-4">
+                  <FormControl isRequired>
+                    <FormControlLabel>
+                      <FormControlLabelText>Public Domain</FormControlLabelText>
+                    </FormControlLabel>
+                    <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
+                      <InputField
+                        value={setupSecurePublicDomain}
+                        onChangeText={setSetupSecurePublicDomain}
+                        placeholder="public.yourdomain.com"
+                        autoCapitalize="none"
+                      />
+                    </Input>
+                    <FormControlHelper>
+                      <FormControlHelperText>Public-facing domain that will serve the application front-end.</FormControlHelperText>
+                    </FormControlHelper>
+                  </FormControl>
+
+                  <FormControl>
+                    <HStack className="items-center justify-between">
+                      <FormControlLabel>
+                        <FormControlLabelText>Public SSL Certificate</FormControlLabelText>
+                      </FormControlLabel>
+                      <Button
+                        variant="link"
+                        action="primary"
+                        className="px-0"
+                        size="sm"
+                        onPress={() => void refreshCertificates()}
+                        isDisabled={loadingCertificates}
+                      >
+                        {loadingCertificates ? <ButtonSpinner /> : <ButtonText>Refresh</ButtonText>}
+                      </Button>
+                    </HStack>
+                    <Select
+                      selectedValue={String(setupSecurePublicCertificateId ?? 0)}
+                      onValueChange={(val) => setSetupSecurePublicCertificateId(Number(val))}
+                      isDisabled={loadingCertificates && certificateOptions.length === 0}
+                    >
+                      <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] h-11 px-4">
+                        <Text className="text-typography-900 dark:text-[#E8EBF0]">{setupSecurePublicCertificateLabel}</Text>
+                        <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-[#8A94A8]" />
+                      </SelectTrigger>
+                      <SelectPortal>
+                        <SelectBackdropContent />
+                        <SelectContent className="max-h-72 bg-background-0 dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52] rounded-2xl">
+                          <SelectDragIndicatorWrapper>
+                            <SelectDragIndicator />
+                          </SelectDragIndicatorWrapper>
+                          {certificateOptions.map((option) => (
+                            <SelectItem
+                              key={option.value}
+                              label={option.label}
+                              value={option.value}
+                              className="text-base text-typography-900 dark:text-[#E8EBF0]"
+                            >
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </SelectPortal>
+                    </Select>
+                    <FormControlHelper>
+                      <FormControlHelperText>Leave as "No Certificate" to use HTTP only.</FormControlHelperText>
+                    </FormControlHelper>
+                  </FormControl>
+
+                  <FormControl isRequired>
+                    <FormControlLabel>
+                      <FormControlLabelText>Private Domain</FormControlLabelText>
+                    </FormControlLabel>
+                    <Input className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
+                      <InputField
+                        value={setupSecurePrivateDomain}
+                        onChangeText={setSetupSecurePrivateDomain}
+                        placeholder="private.yourdomain.local"
+                        autoCapitalize="none"
+                      />
+                    </Input>
+                    <FormControlHelper>
+                      <FormControlHelperText>Internal domain used for the secure back-end communication.</FormControlHelperText>
+                    </FormControlHelper>
+                  </FormControl>
+
+                  <FormControl>
+                    <HStack className="items-center justify-between">
+                      <FormControlLabel>
+                        <FormControlLabelText>Private SSL Certificate</FormControlLabelText>
+                      </FormControlLabel>
+                      <Button
+                        variant="link"
+                        action="primary"
+                        className="px-0"
+                        size="sm"
+                        onPress={() => void refreshCertificates()}
+                        isDisabled={loadingCertificates}
+                      >
+                        {loadingCertificates ? <ButtonSpinner /> : <ButtonText>Refresh</ButtonText>}
+                      </Button>
+                    </HStack>
+                    <Select
+                      selectedValue={String(setupSecurePrivateCertificateId ?? 0)}
+                      onValueChange={(val) => setSetupSecurePrivateCertificateId(Number(val))}
+                      isDisabled={loadingCertificates && certificateOptions.length === 0}
+                    >
+                      <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] h-11 px-4">
+                        <Text className="text-typography-900 dark:text-[#E8EBF0]">{setupSecurePrivateCertificateLabel}</Text>
+                        <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-[#8A94A8]" />
+                      </SelectTrigger>
+                      <SelectPortal>
+                        <SelectBackdropContent />
+                        <SelectContent className="max-h-72 bg-background-0 dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52] rounded-2xl">
+                          <SelectDragIndicatorWrapper>
+                            <SelectDragIndicator />
+                          </SelectDragIndicatorWrapper>
+                          {certificateOptions.map((option) => (
+                            <SelectItem
+                              key={option.value}
+                              label={option.label}
+                              value={option.value}
+                              className="text-base text-typography-900 dark:text-[#E8EBF0]"
+                            >
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </SelectPortal>
+                    </Select>
+                    <FormControlHelper>
+                      <FormControlHelperText>Leave as "No Certificate" to use HTTP only.</FormControlHelperText>
+                    </FormControlHelper>
+                  </FormControl>
+                </VStack>
+              )}
             </VStack>
           </ModalBody>
           <ModalFooter className="px-6 pb-6 pt-2 border-t border-outline-100 dark:border-[#2A3B52]">
@@ -985,7 +1189,7 @@ export default function ProxyHostsScreen() {
               <Button
                 className="rounded-xl bg-typography-900 dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
                 action="primary"
-                onPress={handleSetupSave}
+                onPress={setupTab === "unique" ? handleSetupSave : handleSetupSecureSave}
                 isDisabled={setupSaving}
               >
                 {setupSaving ? <ButtonSpinner /> : <ButtonIcon as={Shield} size="sm" className="text-background-0 dark:text-[#0A1628]" />}

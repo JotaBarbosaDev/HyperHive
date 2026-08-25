@@ -12,9 +12,6 @@ type JwtPayload = {
   [key: string]: unknown;
 };
 
-const isDocumentAccessible = () =>
-  isWebPlatform && typeof document !== "undefined" && typeof document.cookie === "string";
-
 const base64UrlDecode = (value: string): string | null => {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
   const padding = "=".repeat((4 - (normalized.length % 4)) % 4);
@@ -73,21 +70,6 @@ const isTokenExpired = (token: string): boolean => {
   return Date.now() >= expiryMs;
 };
 
-const getCookieValue = (name: string): string | null => {
-  if (!isDocumentAccessible()) {
-    return null;
-  }
-  const cookiePairs = document.cookie.split(";");
-  for (const pair of cookiePairs) {
-    const [rawName, ...rest] = pair.split("=");
-    if (!rawName) continue;
-    if (rawName.trim() === name) {
-      return decodeURIComponent(rest.join("=").trim());
-    }
-  }
-  return null;
-};
-
 const getCookieExpiresAttribute = (token: string): string | null => {
   const expiryMs = getTokenExpiryMs(token);
   if (expiryMs === null) {
@@ -104,13 +86,10 @@ const isWebSessionExpired = (token: string): boolean => {
   if (!isWebPlatform) {
     return false;
   }
-  if (isTokenExpired(token)) {
-    return true;
-  }
-  if (isDocumentAccessible() && getCookieValue(AUTH_COOKIE_NAME) === null) {
-    return true;
-  }
-  return false;
+  // Firefox can reject Secure cookies on a self-signed HTTPS origin even
+  // after the user accepts a certificate exception. API auth uses the token
+  // in the Authorization header, so only the JWT expiry can end this session.
+  return isTokenExpired(token);
 };
 
 const setAuthCookie = (token: string | null) => {

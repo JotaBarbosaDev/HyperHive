@@ -91,3 +91,22 @@ export async function setupFrontEnd(payload: { domain: string; certificateId: nu
     body: { domain: payload.domain, id: payload.certificateId },
   });
 }
+
+export async function setupFrontEndSecure(payload: {
+  publicDomain: string;
+  publicCertificateId: number;
+  privateDomain: string;
+  privateCertificateId: number;
+}): Promise<void> {
+  const authToken = await resolveToken();
+  await apiFetch<void>("/proxy/setupFrontEndSecure", {
+    method: "POST",
+    token: authToken,
+    body: {
+      publicDomain: payload.publicDomain,
+      publicCertificateId: payload.publicCertificateId,
+      privateDomain: payload.privateDomain,
+      privateCertificateId: payload.privateCertificateId,
+    },
+  });
+}

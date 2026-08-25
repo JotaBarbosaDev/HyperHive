@@ -182,7 +182,7 @@ export default function SpaScreen() {
       showToast("API not configured", "Set the API domain before copying the link.", "error");
       return;
     }
-    const link = `${baseUrl.replace(/\/+$/, "")}/spa/pageallow/${port}`;
+    const link = `${baseUrl.replace(/\/+$/, "")}/guest_api/spa/pageallow/${port}`;
     try {
       await Clipboard.setStringAsync(link);
       showToast("Link copied", "SPA access link copied.");
