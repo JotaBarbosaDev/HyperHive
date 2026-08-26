@@ -2,13 +2,18 @@ import React from 'react';
 import type { VariantProps } from '@gluestack-ui/utils/nativewind-utils';
 import { textStyle } from './styles';
 
-type ITextProps = React.ComponentProps<'span'> & VariantProps<typeof textStyle>;
+type ITextProps = React.ComponentProps<'span'> &
+  VariantProps<typeof textStyle> & {
+    numberOfLines?: number;
+  };
 
 const Text = React.forwardRef<React.ComponentRef<'span'>, ITextProps>(
   function Text(
     {
       className,
+      style,
       isTruncated,
+      numberOfLines,
       bold,
       underline,
       strikeThrough,
@@ -23,7 +28,7 @@ const Text = React.forwardRef<React.ComponentRef<'span'>, ITextProps>(
     return (
       <span
         className={textStyle({
-          isTruncated: isTruncated as boolean,
+          isTruncated: (isTruncated || numberOfLines === 1) as boolean,
           bold: bold as boolean,
           underline: underline as boolean,
           strikeThrough: strikeThrough as boolean,
@@ -33,6 +38,17 @@ const Text = React.forwardRef<React.ComponentRef<'span'>, ITextProps>(
           highlight: highlight as boolean,
           class: className,
         })}
+        style={{
+          ...style,
+          ...(numberOfLines
+            ? {
+                display: '-webkit-box',
+                WebkitBoxOrient: 'vertical',
+                WebkitLineClamp: numberOfLines,
+                overflow: 'hidden',
+              }
+            : {}),
+        }}
         {...props}
         ref={ref}
       />
