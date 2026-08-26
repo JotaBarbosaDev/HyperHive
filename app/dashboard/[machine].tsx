@@ -1126,7 +1126,7 @@ export default function MachineDetailsScreen() {
 								<Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#5EEAD4] tracking-[0.08em]">
 									CPU
 								</Text>
-								<Icon as={Cpu} size={ICON_SIZE_MD} className="text-primary-700 dark:text-[#5EEAD4]" />
+								<Icon as={Cpu} size="md" className="text-primary-700 dark:text-[#5EEAD4]" />
 							</HStack>
 							<Box className="items-center my-2">
 								<PercentGauge value={cpuAvg} isDark={isDark} />
@@ -1141,7 +1141,7 @@ export default function MachineDetailsScreen() {
 								<Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#5EEAD4] tracking-[0.08em]">
 									RAM
 								</Text>
-								<Icon as={MemoryStick} size={ICON_SIZE_MD} className="text-primary-700 dark:text-[#5EEAD4]" />
+								<Icon as={MemoryStick} size="md" className="text-primary-700 dark:text-[#5EEAD4]" />
 							</HStack>
 							<Box className="items-center my-2">
 								<PercentGauge value={ramPercent} isDark={isDark} />
@@ -1156,7 +1156,7 @@ export default function MachineDetailsScreen() {
 								<Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#5EEAD4] tracking-[0.08em]">
 									Disk
 								</Text>
-								<Icon as={HardDrive} size={ICON_SIZE_MD} className="text-primary-700 dark:text-[#5EEAD4]" />
+								<Icon as={HardDrive} size="md" className="text-primary-700 dark:text-[#5EEAD4]" />
 							</HStack>
 							<Box className="items-center my-2">
 								<PercentGauge value={diskPercent} isDark={isDark} />
@@ -1171,7 +1171,7 @@ export default function MachineDetailsScreen() {
 								<Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#5EEAD4] tracking-[0.08em]">
 									Uptime
 								</Text>
-								<Icon as={Clock3} size={ICON_SIZE_MD} className="text-primary-700 dark:text-[#5EEAD4]" />
+								<Icon as={Clock3} size="md" className="text-primary-700 dark:text-[#5EEAD4]" />
 							</HStack>
 							<Heading size="xl" className="text-typography-900 dark:text-[#E8EBF0]">{parseUptime(uptime?.uptime)}</Heading>
 							<Text className="text-sm text-typography-600 dark:text-[#8A94A8]">Online since {formatRelative((machine as any)?.EntryTime)}</Text>
@@ -1431,7 +1431,7 @@ export default function MachineDetailsScreen() {
 					<Box className="mt-6 rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
 						<HStack className="items-center justify-between mb-3">
 							<Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">CPU per core</Heading>
-							<Icon as={ThermometerSun} size={ICON_SIZE_SM} className="text-primary-700 dark:text-[#5EEAD4]" />
+							<Icon as={ThermometerSun} size="sm" className="text-primary-700 dark:text-[#5EEAD4]" />
 						</HStack>
 						<HStack
 							className="w-full flex-wrap gap-3 web:flex-wrap justify-center"
@@ -1474,7 +1474,7 @@ export default function MachineDetailsScreen() {
 										</Text>
 										<Icon
 											as={ChevronDown}
-											size={ICON_SIZE_SM}
+											size="sm"
 											className="text-typography-600 dark:text-typography-950"
 											style={{ transform: [{ rotate: isCpuCoresExpanded ? "180deg" : "0deg" }] }}
 										/>
@@ -1487,7 +1487,7 @@ export default function MachineDetailsScreen() {
 					<Box className="mt-6 rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
 						<HStack className="items-center justify-between mb-3">
 							<Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">Disks</Heading>
-							<Icon as={BarChart3} size={ICON_SIZE_SM} className="text-primary-700 dark:text-[#5EEAD4]" />
+							<Icon as={BarChart3} size="sm" className="text-primary-700 dark:text-[#5EEAD4]" />
 						</HStack>
 						<VStack className="gap-3">
 							{disk?.disks?.map((d) => {
@@ -1522,7 +1522,7 @@ export default function MachineDetailsScreen() {
 					<Box className="mt-6 rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
 						<HStack className="items-center justify-between mb-3">
 							<Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">Network</Heading>
-							<Icon as={Network} size={ICON_SIZE_SM} className="text-primary-700 dark:text-[#5EEAD4]" />
+							<Icon as={Network} size="sm" className="text-primary-700 dark:text-[#5EEAD4]" />
 						</HStack>
 						<VStack className="gap-2">
 							{network?.stats?.slice(0, 4).map((stat) => {
@@ -1536,7 +1536,7 @@ export default function MachineDetailsScreen() {
 											<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">{stat.packetsRecv} rx / {stat.packetsSent} tx</Text>
 										</VStack>
 										<HStack className="items-center gap-2">
-											<Icon as={SignalHigh} size={ICON_SIZE_SM} className="text-primary-700 dark:text-[#5EEAD4]" />
+											<Icon as={SignalHigh} size="sm" className="text-primary-700 dark:text-[#5EEAD4]" />
 											<Text className="text-sm text-typography-600 dark:text-typography-950">{formatBytes(sent + recv)} ({totalMb.toFixed(1)} MB)</Text>
 										</HStack>
 									</HStack>

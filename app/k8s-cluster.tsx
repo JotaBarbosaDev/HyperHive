@@ -1,6 +1,6 @@
 import React from "react";
 import { Platform, RefreshControl, ScrollView, useColorScheme } from "react-native";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";

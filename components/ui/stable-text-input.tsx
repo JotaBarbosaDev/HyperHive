@@ -59,7 +59,7 @@ const StableTextInput = React.forwardRef<TextInput, TextInputProps>(
     const handleChange = React.useCallback(
       (event: NativeSyntheticEvent<TextInputChangeEventData>) => {
         if (preserveSelection) {
-          updateSelectionFromTarget(event.target);
+          updateSelectionFromTarget(event.target as unknown as EventTarget);
         }
         onChange?.(event);
       },
@@ -78,7 +78,7 @@ const StableTextInput = React.forwardRef<TextInput, TextInputProps>(
       (event: NativeSyntheticEvent<TextInputFocusEventData>) => {
         isFocusedRef.current = true;
         if (preserveSelection) {
-          updateSelectionFromTarget(event.target);
+          updateSelectionFromTarget(event.target as unknown as EventTarget);
         }
         onFocus?.(event);
       },
@@ -167,8 +167,8 @@ const StableTextInput = React.forwardRef<TextInput, TextInputProps>(
         onSelectionChange={
           preserveSelection ? handleSelectionChange : onSelectionChange
         }
-        onFocus={preserveSelection ? handleFocus : onFocus}
-        onBlur={preserveSelection ? handleBlur : onBlur}
+        onFocus={preserveSelection ? handleFocus as TextInputProps['onFocus'] : onFocus}
+        onBlur={preserveSelection ? handleBlur as TextInputProps['onBlur'] : onBlur}
       />
     );
   }

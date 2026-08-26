@@ -59,7 +59,7 @@ export const ToastList = () => {
     removeToast,
     AnimationWrapper,
     AnimatePresence: ContextAnimatePresence,
-  } = React.useContext(ToastContext);
+  } = React.useContext(ToastContext) as any;
   const AnimationView = AnimationWrapper?.current;
   const AnimatePresence = ContextAnimatePresence?.current;
   const bottomInset = useKeyboardBottomInset() * 2;

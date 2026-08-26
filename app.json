@@ -7,12 +7,6 @@
     "icon": "./assets/images/android-chrome-512x512.png",
     "scheme": "hyperhive",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/images/android-chrome-512x512.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0E1524"
-    },
     "ios": {
       "supportsTablet": true
     },
@@ -21,12 +15,7 @@
         "foregroundImage": "./assets/images/android-chrome-512x512.png",
         "backgroundColor": "#0E1524"
       },
-      "edgeToEdgeEnabled": true,
       "softwareKeyboardLayoutMode": "resize"
-    },
-    "androidNavigationBar": {
-      "visible": "sticky-immersive",
-      "backgroundColor": "#00000000"
     },
     "web": {
       "bundler": "metro",
@@ -69,8 +58,24 @@
       "expo-router",
       "expo-web-browser",
       "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/android-chrome-512x512.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#0E1524"
+        }
+      ],
       "expo-secure-store",
-      "./plugins/withAndroidUserCertificates"
+      [
+        "expo-navigation-bar",
+        {
+          "hidden": false
+        }
+      ],
+      "./plugins/withAndroidUserCertificates",
+      "expo-sharing",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true

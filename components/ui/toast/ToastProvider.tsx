@@ -115,7 +115,7 @@ export const ToastProvider = ({ children }: ToastProviderProps) => {
   );
 
   return (
-    <ToastContext.Provider value={contextValue}>
+    <ToastContext.Provider value={contextValue as any}>
       {children}
       <ToastList />
     </ToastContext.Provider>

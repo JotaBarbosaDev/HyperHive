@@ -7,12 +7,11 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from "@expo-google-fonts/inter";
-import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { useColorScheme } from "@/components/useColorScheme";
-import { Slot, usePathname, useRouter } from "expo-router";
+import { DarkTheme, DefaultTheme, Slot, ThemeProvider, usePathname, useRouter } from "expo-router";
 import { StatusBar, setStatusBarHidden } from "expo-status-bar";
 import { AppState, Platform, ScrollView, useWindowDimensions } from "react-native";
 import * as SystemUI from "expo-system-ui";
@@ -251,8 +250,6 @@ export default function RootLayout() {
 
     const showSystemUi = async () => {
       try {
-        await NavigationBar.setPositionAsync("relative");
-        await NavigationBar.setBehaviorAsync("inset-swipe");
         await NavigationBar.setVisibilityAsync("visible");
         setStatusBarHidden(true, "fade");
       } catch (navError) {
@@ -636,7 +633,6 @@ function RootLayoutNav() {
           >
             <StatusBar
               style={statusBarStyle}
-              backgroundColor={statusBarBackground}
               animated
               hidden={Platform.OS === "android"}
             />
