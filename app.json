@@ -69,7 +69,8 @@
       "expo-router",
       "expo-web-browser",
       "expo-font",
-      "expo-secure-store"
+      "expo-secure-store",
+      "./plugins/withAndroidUserCertificates"
     ],
     "experiments": {
       "typedRoutes": true
