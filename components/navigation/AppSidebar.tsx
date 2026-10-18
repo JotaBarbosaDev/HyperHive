@@ -141,6 +141,12 @@ const MENU_ITEMS: MenuItem[] = [
     route: "/k8s-cluster",
   },
   {
+    label: "celld Fleets",
+    icon: Server,
+    iconProps: { size: 20 },
+    route: "/celld-fleet",
+  },
+  {
     label: "SPA",
     icon: KeyRound,
     route: "/spa",

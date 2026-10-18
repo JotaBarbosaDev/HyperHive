@@ -6,6 +6,9 @@ export type ApiRequestOptions = {
   headers?: Record<string, string>;
   body?: unknown;
   signal?: AbortSignal;
+  reportResult?: boolean;
+  handledErrorStatuses?: number[];
+  acceptedStatuses?: number[];
 };
 
 let currentAuthToken: string | null = null;
@@ -118,7 +121,7 @@ const serializeBody = (body: unknown, headers: Record<string, string>) => {
 
 export async function apiFetch<T = unknown>(
   path: string,
-  { method = "GET", token, headers = {}, body, signal }: ApiRequestOptions = {}
+  { method = "GET", token, headers = {}, body, signal, reportResult = true, acceptedStatuses = [], handledErrorStatuses = [] }: ApiRequestOptions = {}
 ): Promise<T> {
   const effectiveToken =
     token === undefined ? currentAuthToken : token ?? null;
@@ -150,25 +153,27 @@ export async function apiFetch<T = unknown>(
     if (!isAbort) {
       console.error("[API ERROR]", method, requestPath, networkErr);
       const networkMessage = networkErr instanceof Error ? networkErr.message : undefined;
-      apiResultListeners.forEach((listener) => {
-        try {
-          listener({
-            ok: false,
-            method,
-            path: requestPath,
-            status: undefined,
-            error: networkErr,
-            errorText: networkMessage,
-          });
-        } catch (err) {
-          console.error("API result listener threw an error", err);
-        }
-      });
+      if (reportResult) {
+        apiResultListeners.forEach((listener) => {
+          try {
+            listener({
+              ok: false,
+              method,
+              path: requestPath,
+              status: undefined,
+              error: networkErr,
+              errorText: networkMessage,
+            });
+          } catch (err) {
+            console.error("API result listener threw an error", err);
+          }
+        });
+      }
     }
     throw networkErr;
   }
 
-  if (!response.ok) {
+  if (!response.ok && !acceptedStatuses.includes(response.status)) {
     let errorPayload: unknown = null;
     let errorText: string | null = null;
     try {
@@ -188,21 +193,25 @@ export async function apiFetch<T = unknown>(
       notifyUnauthorized();
     }
 
-    console.error("[API]", method, requestPath, "->", response.status, errorPayload);
-    apiResultListeners.forEach((listener) => {
-      try {
-        listener({
-          ok: false,
-          method,
-          path: requestPath,
-          status: response.status,
-          error: errorPayload,
-          errorText: errorText ?? undefined,
-        });
-      } catch (err) {
-        console.error("API result listener threw an error", err);
-      }
-    });
+    if (!handledErrorStatuses.includes(response.status)) {
+      console.error("[API]", method, requestPath, "->", response.status, errorPayload);
+    }
+    if (reportResult) {
+      apiResultListeners.forEach((listener) => {
+        try {
+          listener({
+            ok: false,
+            method,
+            path: requestPath,
+            status: response.status,
+            error: errorPayload,
+            errorText: errorText ?? undefined,
+          });
+        } catch (err) {
+          console.error("API result listener threw an error", err);
+        }
+      });
+    }
 
     const literalMessage =
       (errorText && errorText.trim()) ||
@@ -213,13 +222,15 @@ export async function apiFetch<T = unknown>(
   }
 
   console.info("[API]", method, requestPath, "->", response.status);
-  apiResultListeners.forEach((listener) => {
-    try {
-      listener({ ok: true, method, path: requestPath, status: response.status });
-    } catch (err) {
-      console.error("API result listener threw an error", err);
-    }
-  });
+  if (reportResult) {
+    apiResultListeners.forEach((listener) => {
+      try {
+        listener({ ok: true, method, path: requestPath, status: response.status });
+      } catch (err) {
+        console.error("API result listener threw an error", err);
+      }
+    });
+  }
 
   const contentType = response.headers.get("content-type");
 

@@ -5,6 +5,8 @@ import { textStyle } from './styles';
 type ITextProps = React.ComponentProps<'span'> &
   VariantProps<typeof textStyle> & {
     numberOfLines?: number;
+    selectable?: boolean;
+    accessibilityLiveRegion?: 'none' | 'polite' | 'assertive';
   };
 
 const Text = React.forwardRef<React.ComponentRef<'span'>, ITextProps>(
@@ -14,6 +16,8 @@ const Text = React.forwardRef<React.ComponentRef<'span'>, ITextProps>(
       style,
       isTruncated,
       numberOfLines,
+      selectable,
+      accessibilityLiveRegion,
       bold,
       underline,
       strikeThrough,
@@ -39,6 +43,7 @@ const Text = React.forwardRef<React.ComponentRef<'span'>, ITextProps>(
           class: className,
         })}
         style={{
+          ...(selectable !== undefined ? { userSelect: selectable ? 'text' : 'none' } as const : {}),
           ...style,
           ...(numberOfLines
             ? {
@@ -50,6 +55,7 @@ const Text = React.forwardRef<React.ComponentRef<'span'>, ITextProps>(
             : {}),
         }}
         {...props}
+        aria-live={props['aria-live'] ?? (accessibilityLiveRegion === 'none' ? 'off' : accessibilityLiveRegion)}
         ref={ref}
       />
     );

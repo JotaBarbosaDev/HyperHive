@@ -24,8 +24,9 @@ const iconStyle = tva({
 
 export const Icon = React.forwardRef<
   React.ComponentRef<typeof UIIcon>,
-  React.ComponentPropsWithoutRef<typeof UIIcon> &
-    VariantProps<typeof iconStyle> & {
+  Omit<React.ComponentPropsWithoutRef<typeof UIIcon> &
+    VariantProps<typeof iconStyle>, 'size'> & {
+      size?: VariantProps<typeof iconStyle>['size'] | number;
       height?: number | string;
       width?: number | string;
     }

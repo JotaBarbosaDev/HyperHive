@@ -31,7 +31,10 @@ export async function getNewSlaveCount(): Promise<number | null> {
   if (!token || !baseUrl) {
     return null;
   }
-  const data = await apiFetch<unknown>("/new-slave-count", { token });
+  const data = await apiFetch<unknown>("/new-slave-count", {
+    token,
+    reportResult: false,
+  });
   const count = parseCount(data);
   if (count === null) {
     return null;

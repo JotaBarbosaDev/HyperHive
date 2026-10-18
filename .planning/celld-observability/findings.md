@@ -1,0 +1,1 @@
+Local contract: HyperHive/docs/celld-observability-frontend.md and SilverBullet celld health-api-and-frontend. Backend not deployed. Frontend has existing uncommitted fleet work to preserve. Observations have opaque IDs, ms timestamps, optional resource fields. Follow must drain fixed windows then advance overlapping windows; incomplete alone is informational.
