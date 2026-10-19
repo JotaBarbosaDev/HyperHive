@@ -1,4 +1,5 @@
 import React from "react";
+import { useFocusEffect } from "expo-router";
 import { Platform, RefreshControl, ScrollView } from "react-native";
 import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";
@@ -27,7 +28,7 @@ import {
 } from "@/components/ui/modal";
 import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
-import { ApiError } from "@/services/api-client";
+import { ApiError, onApiResult } from "@/services/api-client";
 import {
   addDnsAlias,
   checkDnsAliasExists,
@@ -35,13 +36,14 @@ import {
   removeDnsAlias,
 } from "@/services/dnsmasq";
 import { DnsAliasEntry, DnsAliasPayload } from "@/types/dns";
-import { Plus, Trash2 } from "lucide-react-native";
+import { getAllVMs } from "@/services/vms-client";
+import { Select, SelectTrigger, SelectInput, SelectIcon, SelectPortal, SelectBackdrop, SelectContent, SelectItem, SelectScrollView } from "@/components/ui/select";
+import { ChevronDown, Pencil, Plus, Trash2 } from "lucide-react-native";
 
 type LoadMode = "full" | "refresh" | "silent";
 
 const IPV4_REGEX =
   /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
-const ALIAS_REGEX = /^[A-Za-z0-9._-]+$/;
 
 const aliasKey = (item: Pick<DnsAliasEntry, "alias" | "ip">) => `${item.alias}|${item.ip}`;
 
@@ -90,6 +92,12 @@ export default function DnsScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [formAlias, setFormAlias] = React.useState("");
   const [formIp, setFormIp] = React.useState("");
+  const [formSshUsername, setFormSshUsername] = React.useState("");
+  const [formRelatedVm, setFormRelatedVm] = React.useState("");
+  const [editTarget, setEditTarget] = React.useState<DnsAliasEntry | null>(null);
+  const [vmNames, setVmNames] = React.useState<string[]>([]);
+  const [vmLoading, setVmLoading] = React.useState(false);
+  const [vmLoadError, setVmLoadError] = React.useState("");
   const [adding, setAdding] = React.useState(false);
   const [showAddAliasModal, setShowAddAliasModal] = React.useState(false);
   const [deleteTarget, setDeleteTarget] = React.useState<DnsAliasEntry | null>(null);
@@ -133,16 +141,39 @@ export default function DnsScreen() {
     [showToast]
   );
 
-  React.useEffect(() => {
-    if (!isChecking && token) {
-      loadAliases("full");
+  const loadVmNames = React.useCallback(async () => {
+    setVmLoading(true);
+    setVmLoadError("");
+    try {
+      const vms = await getAllVMs();
+      setVmNames([...new Set((Array.isArray(vms) ? vms : []).map((vm) => vm.name))].sort());
+    } catch (err) {
+      setVmLoadError(getErrorMessage(err, "Could not fetch VMs."));
+    } finally {
+      setVmLoading(false);
     }
-  }, [isChecking, loadAliases, token]);
+  }, []);
+
+  useFocusEffect(React.useCallback(() => {
+    if (!isChecking && token) {
+      void loadAliases("full");
+    }
+  }, [isChecking, loadAliases, token]));
+
+  // A deletion can remove the VM even when DNS cleanup returns an error.
+  React.useEffect(() => onApiResult((result) => {
+    if (token && result.method === "DELETE" && /\/virsh\/deletevm\//.test(result.path)) {
+      void loadAliases("silent");
+      void loadVmNames();
+    }
+  }), [loadAliases, loadVmNames, token]);
 
   const handleAddAlias = async () => {
     const payload: DnsAliasPayload = {
       alias: formAlias.trim(),
       ip: formIp.trim(),
+      ssh_username: formSshUsername.trim(),
+      related_vm: formRelatedVm,
     };
 
     if (!validateAlias(payload.alias)) {
@@ -156,21 +187,22 @@ export default function DnsScreen() {
 
     setAdding(true);
     try {
-      const exists = await checkDnsAliasExists(payload);
+      const exists = !editTarget && await checkDnsAliasExists(payload);
       if (exists) {
         showToast("Alias already exists", `${payload.alias} -> ${payload.ip} is already configured.`, "error");
         return;
       }
 
       await addDnsAlias(payload);
-      showToast("Alias added", `${payload.alias} -> ${payload.ip} added successfully.`);
+      showToast(editTarget ? "Alias updated" : "Alias added", `${payload.alias} -> ${payload.ip} saved successfully.`);
       setFormAlias("");
       setFormIp("");
       setShowAddAliasModal(false);
       await loadAliases("silent");
     } catch (err) {
-      console.error("Failed to add DNS alias", err);
-      showToast("Add error", getErrorMessage(err, "Could not add DNS alias."), "error");
+      console.error("Failed to save DNS alias", err);
+      showToast("Save error", getErrorMessage(err, "Could not save DNS alias."), "error");
+      await loadAliases("silent");
     } finally {
       setAdding(false);
     }
@@ -211,9 +243,23 @@ export default function DnsScreen() {
   };
 
   const openAddAliasModal = () => {
+    setEditTarget(null);
     setFormAlias("");
     setFormIp("");
+    setFormSshUsername("");
+    setFormRelatedVm("");
     setShowAddAliasModal(true);
+    void loadVmNames();
+  };
+
+  const openEditAliasModal = (item: DnsAliasEntry) => {
+    setEditTarget(item);
+    setFormAlias(item.alias);
+    setFormIp(item.ip);
+    setFormSshUsername(item.ssh_username);
+    setFormRelatedVm(item.related_vm);
+    setShowAddAliasModal(true);
+    void loadVmNames();
   };
 
   const closeAddAliasModal = () => {
@@ -243,7 +289,7 @@ export default function DnsScreen() {
             DNS
           </Heading>
           <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl mb-6">
-            Manage local DNS aliases (`dnsmasq`) by adding or removing alias to IP mappings.
+            Manage local DNS mappings, SSH usernames and optional VM links.
           </Text>
 
           <VStack className="gap-6">
@@ -285,7 +331,7 @@ export default function DnsScreen() {
                 </Box>
               ) : isWeb ? (
                 <Box className="overflow-x-auto">
-                  <Box className="min-w-[760px]">
+                  <Box className="min-w-[960px]">
                     <HStack className="bg-background-50 dark:bg-[#0A1628] px-6 py-3 border-b border-outline-100 dark:border-[#1E2F47]">
                       <Text className="flex-1 text-xs text-[#9AA4B8] dark:text-[#8A94A8]" style={{ fontFamily: "Inter_600SemiBold" }}>
                         ALIAS
@@ -293,7 +339,9 @@ export default function DnsScreen() {
                       <Text className="w-[180px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]" style={{ fontFamily: "Inter_600SemiBold" }}>
                         IPV4
                       </Text>
-                      <Text className="w-[90px] text-xs text-[#9AA4B8] dark:text-[#8A94A8] text-right" style={{ fontFamily: "Inter_600SemiBold" }}>
+                      <Text className="w-[160px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]">SSH USERNAME</Text>
+                      <Text className="w-[180px] text-xs text-[#9AA4B8] dark:text-[#8A94A8]">RELATED VM</Text>
+                      <Text className="w-[110px] text-xs text-[#9AA4B8] dark:text-[#8A94A8] text-right" style={{ fontFamily: "Inter_600SemiBold" }}>
                         ACTIONS
                       </Text>
                     </HStack>
@@ -312,7 +360,12 @@ export default function DnsScreen() {
                           <Text className="w-[180px] text-sm text-typography-600 dark:text-[#9AA4B8]">
                             {item.ip}
                           </Text>
-                          <HStack className="w-[90px] justify-end">
+                          <Text className="w-[160px] text-sm text-typography-600 dark:text-[#9AA4B8]">{item.ssh_username || "—"}</Text>
+                          <Text className="w-[180px] text-sm text-typography-600 dark:text-[#9AA4B8]">{item.related_vm || "—"}</Text>
+                          <HStack className="w-[110px] justify-end gap-2">
+                            <Button variant="outline" size="xs" accessibilityLabel={`Edit ${item.alias}`} onPress={() => openEditAliasModal(item)} isDisabled={isDeleting}>
+                              <ButtonIcon as={Pencil} size="xs" />
+                            </Button>
                             <Button
                               variant="outline"
                               size="xs"
@@ -348,6 +401,12 @@ export default function DnsScreen() {
                               {item.alias}
                             </Text>
                             <Text className="text-sm text-typography-600 dark:text-[#9AA4B8]">{item.ip}</Text>
+                            <Text className="text-sm text-typography-600 dark:text-[#9AA4B8]">SSH username: {item.ssh_username || "—"}</Text>
+                            <Text className="text-sm text-typography-600 dark:text-[#9AA4B8]">Related VM: {item.related_vm || "—"}</Text>
+                            <Button variant="outline" size="xs" onPress={() => openEditAliasModal(item)} isDisabled={isDeleting}>
+                              <ButtonIcon as={Pencil} size="xs" />
+                              <ButtonText>Edit</ButtonText>
+                            </Button>
                           </VStack>
                           <Button
                             variant="outline"
@@ -381,7 +440,7 @@ export default function DnsScreen() {
         <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828] shadow-2xl max-w-lg p-6">
           <ModalHeader className="pb-4">
             <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
-              Add Alias
+              {editTarget ? "Edit Alias" : "Add Alias"}
             </Heading>
             <ModalCloseButton className="text-typography-600 dark:text-[#8A94A8]" />
           </ModalHeader>
@@ -391,7 +450,7 @@ export default function DnsScreen() {
                 <Text size="xs" className="mb-2 text-typography-700 dark:text-[#9AA4B8]">
                   Alias
                 </Text>
-                <Input size="md" isDisabled={adding} className="rounded-xl border-outline-200 dark:border-[#1E2F47]">
+                <Input size="md" isDisabled={adding || Boolean(editTarget)} className="rounded-xl border-outline-200 dark:border-[#1E2F47]">
                   <InputField
                     value={formAlias}
                     onChangeText={setFormAlias}
@@ -407,7 +466,7 @@ export default function DnsScreen() {
                 <Text size="xs" className="mb-2 text-typography-700 dark:text-[#9AA4B8]">
                   IPv4
                 </Text>
-                <Input size="md" isDisabled={adding} className="rounded-xl border-outline-200 dark:border-[#1E2F47]">
+                <Input size="md" isDisabled={adding || Boolean(editTarget)} className="rounded-xl border-outline-200 dark:border-[#1E2F47]">
                   <InputField
                     value={formIp}
                     onChangeText={setFormIp}
@@ -418,6 +477,40 @@ export default function DnsScreen() {
                     className="text-typography-900 dark:text-[#E8EBF0] placeholder:text-typography-500 dark:placeholder:text-[#9AA4B8]"
                   />
                 </Input>
+              </Box>
+              {editTarget ? <Text size="xs" className="text-typography-600 dark:text-[#9AA4B8]">Edit the metadata for this alias/IP. Leave either optional field blank to clear it.</Text> : null}
+              <Box>
+                <Text size="xs" className="mb-2 text-typography-700 dark:text-[#9AA4B8]">SSH username (optional)</Text>
+                <Input isDisabled={adding} className="rounded-xl border-outline-200 dark:border-[#1E2F47]">
+                  <InputField value={formSshUsername} onChangeText={setFormSshUsername} placeholder="ubuntu" autoCapitalize="none" autoCorrect={false} accessibilityLabel="SSH username" />
+                </Input>
+                <Text size="xs" className="mt-1 text-typography-600 dark:text-[#9AA4B8]">Enter manually, independently of the selected VM.</Text>
+              </Box>
+              <Box>
+                <Text size="xs" className="mb-2 text-typography-700 dark:text-[#9AA4B8]">Related VM (optional)</Text>
+                <Select selectedValue={formRelatedVm} onValueChange={setFormRelatedVm} isDisabled={adding || vmLoading}>
+                  <SelectTrigger className="rounded-xl border-outline-200 dark:border-[#1E2F47]" accessibilityLabel="Related VM">
+                    <SelectInput placeholder="No related VM" value={formRelatedVm || "No related VM"} />
+                    <SelectIcon as={ChevronDown} className="mr-3" />
+                  </SelectTrigger>
+                  <SelectPortal>
+                    <SelectBackdrop />
+                    <SelectContent className="bg-background-0 dark:bg-[#0E1828]">
+                      <SelectScrollView>
+                        <SelectItem label="No related VM" value="" />
+                        {formRelatedVm && !vmNames.includes(formRelatedVm) ? <SelectItem label={`${formRelatedVm} (unavailable)`} value={formRelatedVm} isDisabled /> : null}
+                        {vmNames.map((name) => <SelectItem key={name} label={name} value={name} />)}
+                      </SelectScrollView>
+                    </SelectContent>
+                  </SelectPortal>
+                </Select>
+                <Text size="xs" className="mt-1 text-typography-600 dark:text-[#9AA4B8]">Deleting a linked VM also removes this DNS record.</Text>
+                {vmLoading ? <Text size="xs">Loading VMs...</Text> : null}
+                {vmLoadError ? <VStack className="gap-2 mt-2">
+                  <Text size="xs" className="text-error-600">{vmLoadError}</Text>
+                  <Button variant="outline" size="xs" onPress={loadVmNames} isDisabled={adding}><ButtonText>Retry loading VMs</ButtonText></Button>
+                </VStack> : null}
+                {!vmLoading && !vmLoadError && vmNames.length === 0 ? <Text size="xs">No VMs available.</Text> : null}
               </Box>
             </VStack>
           </ModalBody>
@@ -443,7 +536,7 @@ export default function DnsScreen() {
                   <ButtonIcon as={Plus} className="text-background-0 dark:text-[#0A1628]" />
                 )}
                 <ButtonText className="text-background-0 dark:text-[#0A1628]">
-                  {adding ? "Adding..." : "Add Alias"}
+                  {adding ? "Saving..." : editTarget ? "Save changes" : "Add Alias"}
                 </ButtonText>
               </Button>
             </HStack>

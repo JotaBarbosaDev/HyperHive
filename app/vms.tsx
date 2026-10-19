@@ -2843,7 +2843,7 @@ export default function VirtualMachinesScreen() {
                 <VStack className="gap-3">
                   <Text className="text-typography-700 dark:text-[#8A94A8]">
                     {confirmAction?.type === "delete"
-                      ? `Are you sure you want to delete VM ${confirmAction?.vm.name}?`
+                      ? `Are you sure you want to delete VM ${confirmAction?.vm.name}? All DNS records explicitly linked to this VM will also be deleted. Unlinked records sharing its IP will remain.`
                       : confirmAction?.type === "force-shutdown"
                         ? `Force shutdown of ${confirmAction?.vm.name}?`
                         : confirmAction?.type === "shutdown"
@@ -2893,7 +2893,6 @@ export default function VirtualMachinesScreen() {
                       try {
                         setDeletingVm(confirmAction.vm.name);
                         await deleteVM(confirmAction.vm.name);
-                        await fetchAndSetVms();
                         setConfirmAction(null);
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         toast.show({
@@ -2918,11 +2917,19 @@ export default function VirtualMachinesScreen() {
                               className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row"
                               action="error"
                             >
-                              <ToastTitle size="sm">Error deleting VM</ToastTitle>
+                              <ToastTitle size="sm">VM deletion error</ToastTitle>
+                              <ToastDescription size="sm">{error instanceof Error ? error.message : "Could not delete VM."}</ToastDescription>
                             </Toast>
                           ),
                         });
                       } finally {
+                        // The backend may have deleted the VM before DNS cleanup failed.
+                        setConfirmAction(null);
+                        try {
+                          await fetchAndSetVms();
+                        } catch (refreshError) {
+                          showToastMessage("Refresh error", refreshError instanceof Error ? refreshError.message : "Could not refresh VMs. Refresh the list before retrying.", "error");
+                        }
                         setDeletingVm(null);
                       }
                     } else {

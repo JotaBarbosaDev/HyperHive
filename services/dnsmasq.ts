@@ -4,6 +4,7 @@ import {
   DnsAliasExistsResponse,
   DnsAliasListResponse,
   DnsAliasPayload,
+  DnsAliasKey,
 } from "@/types/dns";
 import { apiFetch, setAuthToken, triggerUnauthorized } from "./api-client";
 import { loadApiBaseUrl, loadAuthToken } from "./auth-storage";
@@ -48,12 +49,16 @@ export async function listDnsAliases(): Promise<DnsAliasEntry[]> {
     token: authToken,
   });
   if (response && Array.isArray(response.aliases)) {
-    return response.aliases;
+    return response.aliases.map((entry) => ({
+      ...entry,
+      ssh_username: entry.ssh_username ?? "",
+      related_vm: entry.related_vm ?? "",
+    }));
   }
   return [];
 }
 
-export async function checkDnsAliasExists(payload: DnsAliasPayload): Promise<boolean> {
+export async function checkDnsAliasExists(payload: DnsAliasKey): Promise<boolean> {
   const authToken = await resolveToken();
   const query = buildAliasQuery(payload.alias, payload.ip);
   const response = await apiFetch<DnsAliasExistsResponse>(`/dnsmasq/alias/get?${query}`, {
@@ -71,11 +76,11 @@ export async function addDnsAlias(payload: DnsAliasPayload): Promise<void> {
   });
 }
 
-export async function removeDnsAlias(payload: DnsAliasPayload): Promise<void> {
+export async function removeDnsAlias(payload: DnsAliasKey): Promise<void> {
   const authToken = await resolveToken();
   await apiFetch<void>("/dnsmasq/alias/remove", {
     method: "DELETE",
     token: authToken,
-    body: payload,
+    body: { alias: payload.alias, ip: payload.ip },
   });
 }
