@@ -1,4 +1,5 @@
 import React from "react";
+import { Platform } from "react-native";
 import Svg, { G, Path } from "react-native-svg";
 import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";
@@ -48,7 +49,12 @@ export function MountUsageGauge({
     <Box className="items-center gap-2">
       <Text className="text-xs text-typography-600 dark:text-[#AAB4C5]">Storage usage</Text>
       <Box className="relative w-[160px] h-[88px]" accessibilityLabel={`${safePercent}% storage used`}>
-        <Svg width={160} height={88} viewBox="0 0 160 88" accessible={false}>
+        <Svg
+          width={160}
+          height={88}
+          viewBox="0 0 160 88"
+          {...(Platform.OS === "web" ? { "aria-hidden": true } : { accessible: false })}
+        >
           <G transform="translate(80 80)">
             <Path d="M -70 0 A 70 70 0 0 1 70 0" fill="none" stroke={outlineStroke} strokeWidth={8} opacity={outlineOpacity} />
             <Path d="M -70 0 A 70 70 0 0 1 70 0" fill="none" stroke={progressColor} strokeWidth={8} strokeLinecap="round" strokeDasharray={[circumference]} strokeDashoffset={circumference - (safePercent / 100) * circumference} />

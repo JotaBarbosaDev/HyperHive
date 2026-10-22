@@ -91,3 +91,57 @@ it("searches host names and IPs without changing fleet totals", async () => {
  expect(container.textContent).toContain("alpha");expect(container.textContent).not.toContain("beta");
  expect(container.textContent).toContain("2 VMs");
 });
+
+it("keeps full host VM totals when only one VM matches", async () => {
+ api.getAllVMs.mockResolvedValueOnce([fixture("alpha","slave-a",1),fixture("beta","slave-a",5)]);
+ const hostApi = require("../services/hyperhive");
+ hostApi.getCpuInfo.mockResolvedValueOnce({cores:Array(16).fill({})});
+ hostApi.getMemInfo.mockResolvedValueOnce({totalMb:16384});
+ await render();
+ await click("Running");
+ expect(container.textContent).toContain("Showing 1 of 2 VMs across 1 host");
+ expect(container.textContent).toContain("2 VMs · 1 running · 1 shown");
+ expect(container.textContent).toContain("vCPU allocated: 4 / 16 · 12 remaining");
+ expect(container.textContent).toContain("RAM allocated: 4.0 GB / 16.0 GB · 12.0 GB remaining");
+ expect(container.textContent).not.toContain("beta");
+ await click("Clear filters");
+ expect(container.textContent).toContain("Showing 2 of 2 VMs across 1 host");
+ expect(container.textContent).toContain("beta");
+});
+
+it("makes exceptional states discoverable through Other", async () => {
+ api.getAllVMs.mockResolvedValueOnce([
+  fixture("alpha","slave-a",1), fixture("crashed-vm","slave-a",6),
+  fixture("blocked-vm","slave-b",2), fixture("unrecognized-vm","slave-b",99),
+ ]);
+ await render();
+ expect(container.textContent).toContain("3 other");
+ await click("Other");
+ expect(container.textContent).toContain("Showing 3 of 4 VMs across 2 hosts");
+ expect(container.textContent).toContain("crashed-vm");
+ expect(container.textContent).toContain("blocked-vm");
+ expect(container.textContent).toContain("unrecognized-vm");
+ expect(container.textContent).toContain("Unknown");
+ expect(container.textContent).not.toContain("alpha");
+});
+
+it("displays reported addresses and distinguishes missing addresses", async () => {
+ api.getAllVMs.mockResolvedValueOnce([
+  {...fixture("alpha","slave-a",1),ip:["192.0.2.7","2001:db8::7"]},
+  fixture("beta","slave-b",5),
+ ]);
+ await render();
+ expect(container.textContent).toContain("192.0.2.7");
+ expect(container.textContent).toContain("+1 more in details");
+ expect(container.textContent).toContain("Not reported");
+});
+
+it("shows overallocated resources instead of claiming free capacity", async () => {
+ api.getAllVMs.mockResolvedValueOnce([{...fixture("large-vm","slave-a",1),DefinedCPUS:20,DefinedRam:32768}]);
+ const hostApi = require("../services/hyperhive");
+ hostApi.getCpuInfo.mockResolvedValueOnce({cores:Array(16).fill({})});
+ hostApi.getMemInfo.mockResolvedValueOnce({totalMb:16384});
+ await render();
+ expect(container.textContent).toContain("vCPU allocated: 20 / 16 · 4 overallocated");
+ expect(container.textContent).toContain("RAM allocated: 32.0 GB / 16.0 GB · 16.0 GB overallocated");
+});

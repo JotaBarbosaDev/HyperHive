@@ -1210,12 +1210,20 @@ export default function VirtualMachinesScreen() {
         const matchesState = stateFilter === "All"
           || (stateFilter === "Running" && vm.state === VmState.RUNNING)
           || (stateFilter === "Stopped" && vm.state === VmState.SHUTOFF)
-          || (stateFilter === "Paused" && vm.state === VmState.PAUSED);
+          || (stateFilter === "Paused" && vm.state === VmState.PAUSED)
+          || (stateFilter === "Other" && ![VmState.RUNNING, VmState.SHUTOFF, VmState.PAUSED].includes(vm.state));
         return matchesState && [vm.name, vm.machineName, vm.network, ...vm.ip]
           .some((value) => value.toLowerCase().includes(query.trim().toLowerCase()));
       })] as const)
       .filter(([, machines]) => machines.length > 0);
   }, [vmsBySlave, query, stateFilter]);
+
+  const hasActiveFilters = query.trim().length > 0 || stateFilter !== "All";
+  const visibleVmCount = vmsBySlaveEntries.reduce((sum, [, machines]) => sum + machines.length, 0);
+  const clearFilters = () => {
+    setQuery("");
+    setStateFilter("All");
+  };
 
   const formatMemory = (mb: number) => {
     return mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb} MB`;
@@ -1237,34 +1245,6 @@ export default function VirtualMachinesScreen() {
     return `${Math.round(clamped)}%`;
   };
 
-  const formatHostRamGb = React.useCallback((totalRamMb?: number | null) => {
-    if (typeof totalRamMb !== "number" || !Number.isFinite(totalRamMb)) {
-      return "—";
-    }
-    const binaryGb = totalRamMb / 1024;
-    const decimalGb = totalRamMb / 1000;
-    const binaryRounded = Math.round(binaryGb);
-    const decimalRounded = Math.round(decimalGb);
-    const binaryDiff = Math.abs(binaryGb - binaryRounded);
-    const decimalDiff = Math.abs(decimalGb - decimalRounded);
-    const epsilon = 0.05;
-    let useDecimal = false;
-    if (decimalDiff + epsilon < binaryDiff) {
-      useDecimal = true;
-    } else if (binaryDiff + epsilon < decimalDiff) {
-      useDecimal = false;
-    } else if (decimalRounded % 2 === 0 && binaryRounded % 2 !== 0) {
-      useDecimal = true;
-    } else if (binaryRounded % 2 === 0 && decimalRounded % 2 !== 0) {
-      useDecimal = false;
-    } else {
-      useDecimal = decimalDiff <= binaryDiff;
-    }
-    const chosenGb = useDecimal ? decimalGb : binaryGb;
-    const decimals = chosenGb >= 10 ? 0 : 1;
-    return `${Number(chosenGb.toFixed(decimals)).toFixed(decimals)} GB RAM`;
-  }, []);
-
   const stats = React.useMemo(() => {
     const total = vms.length;
     const running = vms.filter((vm) => vm.state === VmState.RUNNING).length;
@@ -1272,7 +1252,7 @@ export default function VirtualMachinesScreen() {
     const paused = vms.filter((vm) => vm.state === VmState.PAUSED).length;
     const totalVcpu = vms.reduce((sum, vm) => sum + vm.DefinedCPUS, 0);
     const totalMemoryGB = (vms.reduce((sum, vm) => sum + vm.DefinedRam, 0) / 1024).toFixed(1);
-    return { total, running, stopped, paused, totalVcpu, totalMemoryGB };
+    return { total, running, stopped, paused, other: total - running - stopped - paused, totalVcpu, totalMemoryGB };
   }, [vms]);
 
   const handleRefresh = async () => {
@@ -1927,7 +1907,7 @@ export default function VirtualMachinesScreen() {
                 Virtual Machines
               </Heading>
               <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl mt-2">
-                Complete management of virtual machines distributed across slaves with resource controls and monitoring.
+                Monitor resources and manage virtual machines across your hosts.
               </Text>
             </VStack>
             <HStack className="gap-2 flex-wrap web:flex-nowrap">
@@ -1959,7 +1939,7 @@ export default function VirtualMachinesScreen() {
                     as={Upload}
                     className="text-typography-700 dark:text-[#E8EBF0]"
                   />
-                  <ButtonText className="web:inline hidden text-typography-900 dark:text-[#E8EBF0]">
+                  <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
                     Import VM
                   </ButtonText>
                 </Button>
@@ -1985,7 +1965,8 @@ export default function VirtualMachinesScreen() {
             <Text className="shrink-0 text-sm text-typography-700 dark:text-[#E8EBF0]">{loading || (inventoryError && !vms.length) ? "—" : stats.running} running</Text>
             <Text className="shrink-0 text-sm text-typography-700 dark:text-[#E8EBF0]">{loading || (inventoryError && !vms.length) ? "—" : stats.stopped} stopped</Text>
             <Text className="shrink-0 text-sm text-typography-700 dark:text-[#E8EBF0]">{loading || (inventoryError && !vms.length) ? "—" : stats.paused} paused</Text>
-            <Text className="shrink-0 text-sm text-typography-600 dark:text-[#8A94A8]">{loading || (inventoryError && !vms.length) ? "—" : stats.totalVcpu} vCPUs · {loading || (inventoryError && !vms.length) ? "—" : stats.totalMemoryGB} GB RAM</Text>
+            {stats.other > 0 ? <Text className="shrink-0 text-sm text-typography-700 dark:text-[#E8EBF0]">{stats.other} other</Text> : null}
+            <Text className="shrink-0 text-sm text-typography-600 dark:text-[#8A94A8]">Allocated: {loading || (inventoryError && !vms.length) ? "—" : stats.totalVcpu} vCPUs · {loading || (inventoryError && !vms.length) ? "—" : stats.totalMemoryGB} GB RAM</Text>
           </HStack>
 
           <VStack className="gap-4 mb-6 web:lg:flex-row web:lg:items-end">
@@ -1993,10 +1974,15 @@ export default function VirtualMachinesScreen() {
               <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">Search virtual machines</Text>
               <Input className="h-11 rounded-lg border-outline-200 dark:border-[#2A3B52]">
                 <InputField value={query} onChangeText={setQuery} accessibilityLabel="Search virtual machines" aria-label="Search virtual machines" placeholder="Search names, hosts, networks or IPs…" autoCapitalize="none" autoCorrect={false} />
+                {query.length > 0 ? (
+                  <Pressable onPress={() => setQuery("")} accessibilityRole="button" accessibilityLabel="Clear search" className="px-3 h-full items-center justify-center web:focus-visible:outline web:focus-visible:outline-2 web:focus-visible:outline-primary-500">
+                    <X size={16} color={cardMenuIconColor} />
+                  </Pressable>
+                ) : null}
               </Input>
             </VStack>
             <HStack className="gap-2 flex-wrap web:flex-wrap">
-              {["All", "Running", "Stopped", "Paused"].map((state) => (
+              {["All", "Running", "Stopped", "Paused", "Other"].map((state) => (
                 <Button key={state} variant="outline" action="default" onPress={() => setStateFilter(state)}
                   accessibilityState={{ selected: stateFilter === state }}
                   className={`h-11 rounded-lg border-outline-200 dark:border-[#2A3B52] ${stateFilter === state ? primaryButtonClass : "bg-background-0 dark:bg-[#0F1A2E]"}`}>
@@ -2005,6 +1991,20 @@ export default function VirtualMachinesScreen() {
               ))}
             </HStack>
           </VStack>
+
+          {!loading && vms.length > 0 ? (
+            <HStack className="items-center justify-between gap-3 flex-wrap web:flex-wrap mb-6 -mt-2">
+              <Text accessibilityLiveRegion="polite" className="text-sm text-typography-600 dark:text-[#8A94A8]">
+                Showing {visibleVmCount} of {stats.total} VMs across {vmsBySlaveEntries.length} {vmsBySlaveEntries.length === 1 ? "host" : "hosts"}
+              </Text>
+              {hasActiveFilters ? (
+                <Button size="sm" variant="link" onPress={clearFilters} accessibilityLabel="Clear all filters">
+                  <ButtonIcon as={X} className="text-typography-600 dark:text-[#8A94A8]" />
+                  <ButtonText className="text-typography-700 dark:text-[#E8EBF0]">Clear filters</ButtonText>
+                </Button>
+              ) : null}
+            </HStack>
+          ) : null}
 
           {inventoryError ? (
             <VStack className="gap-3 mb-6 p-4 rounded-xl border border-error-300 dark:border-error-700 bg-error-50 dark:bg-error-900/20">
@@ -2061,7 +2061,7 @@ export default function VirtualMachinesScreen() {
           ) : vmsBySlaveEntries.length === 0 ? (
             <VStack className="items-center gap-3 py-12">
               <Text className="text-lg font-semibold text-typography-900 dark:text-[#E8EBF0]">No VMs match your filters</Text>
-              <Button variant="outline" onPress={() => { setQuery(""); setStateFilter("All"); }} className="rounded-lg"><ButtonText>Clear filters</ButtonText></Button>
+              <Text className="text-sm text-center text-typography-600 dark:text-[#8A94A8]">Try another name, host, network or IP, or clear the active filters.</Text>
             </VStack>
           ) : (
             <VStack className="gap-8">
@@ -2069,59 +2069,48 @@ export default function VirtualMachinesScreen() {
                 <VmSkeletonGrid count={Math.min(6, Math.max(1, pendingVmNames.size))} />
               )}
               {vmsBySlaveEntries.map(([slaveName, slaveVms]) => {
-                const slaveRunning = slaveVms.filter(
+                const allHostVms = vmsBySlave[slaveName];
+                const slaveRunning = allHostVms.filter(
                   (vm) => vm.state === VmState.RUNNING
                 ).length;
-                const slaveVcpu = slaveVms.reduce(
-                  (sum, vm) => sum + vm.DefinedCPUS,
-                  0
-                );
-                const slaveMemoryMB = slaveVms.reduce(
-                  (sum, vm) => sum + vm.DefinedRam,
-                  0
-                );
-                const slaveMemoryGB = (slaveMemoryMB / 1024).toFixed(1);
+                const allocatedCpu = allHostVms.reduce((sum, vm) => sum + vm.DefinedCPUS, 0);
+                const allocatedRam = allHostVms.reduce((sum, vm) => sum + vm.DefinedRam, 0);
                 const hostResources = machineResources[slaveName];
-                const hostVcpuDisplay =
-                  typeof hostResources?.totalVcpus === "number" && Number.isFinite(hostResources.totalVcpus)
-                    ? `${hostResources.totalVcpus} vCPU${hostResources.totalVcpus === 1 ? "" : "s"}`
-                    : "—";
-                const hostRamDisplay = formatHostRamGb(hostResources?.totalRamMb ?? null);
+                const totalCpu = hostResources?.totalVcpus;
+                const totalRam = hostResources?.totalRamMb;
+                const cpuKnown = typeof totalCpu === "number" && Number.isFinite(totalCpu) && totalCpu > 0;
+                const ramKnown = typeof totalRam === "number" && Number.isFinite(totalRam) && totalRam > 0;
+                const remainingCpu = cpuKnown ? totalCpu - allocatedCpu : 0;
+                const remainingRam = ramKnown ? totalRam - allocatedRam : 0;
 
                 return (
                   <Box
                     key={slaveName}
-                    className="gap-4"
+                    className="gap-4 rounded-xl border border-outline-200 dark:border-[#223149] bg-[#F1F5F9] dark:bg-[#0B1424] p-4"
                   >
-                    {/* Slave Header */}
-                    <Box className="pb-4 border-b border-outline-200 dark:border-[#2A3B52]">
-                      <Heading
-                        size="lg"
-                        className="text-typography-900 dark:text-[#E8EBF0] mb-2"
-                        style={{ fontFamily: "Inter_700Bold" }}
-                      >
+                    {/* Host totals remain independent of display filters. */}
+                    <VStack className="gap-1">
+                      <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_700Bold" }}>
                         {slaveName}
                       </Heading>
-                      <Text
-                        className="text-sm text-[#9AA4B8] dark:text-[#8A94A8]"
-                        style={{ fontFamily: "Inter_400Regular" }}
-                      >
-                        {slaveVms.length} VMs • {slaveRunning} running •{" "}
-                        {slaveVcpu} vCPU • {slaveMemoryGB} GB RAM
+                      <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">
+                        {allHostVms.length} VMs · {slaveRunning} running{hasActiveFilters ? ` · ${slaveVms.length} shown` : ""}
                       </Text>
-                      <Text
-                        className="text-sm text-[#9AA4B8] dark:text-[#8A94A8] mt-1"
-                        style={{ fontFamily: "Inter_400Regular" }}
-                      >
-                        Host resources: {hostVcpuDisplay} • {hostRamDisplay}
-                      </Text>
-                    </Box>
+                      <HStack className="gap-x-6 gap-y-1 flex-wrap web:flex-wrap mt-1">
+                        <Text className="text-xs text-typography-700 dark:text-[#CBD5E1]">
+                          vCPU allocated: {allocatedCpu} / {cpuKnown ? totalCpu : "—"}{cpuKnown ? ` · ${Math.abs(remainingCpu)} ${remainingCpu < 0 ? "overallocated" : "remaining"}` : ""}
+                        </Text>
+                        <Text className="text-xs text-typography-700 dark:text-[#CBD5E1]">
+                          RAM allocated: {formatMemory(allocatedRam)} / {ramKnown ? formatMemory(totalRam) : "—"}{ramKnown ? ` · ${formatMemory(Math.abs(remainingRam))} ${remainingRam < 0 ? "overallocated" : "remaining"}` : ""}
+                        </Text>
+                      </HStack>
+                    </VStack>
 
                     {/* VMs Grid */}
                     <Box>
                       <VStack className="gap-4 web:grid web:grid-cols-1 web:gap-4 web:sm:grid-cols-2 web:lg:grid-cols-3">
                         {slaveVms.map((vm) => {
-                          const vmState = VM_STATES[vm.state];
+                          const vmState = VM_STATES[vm.state] ?? VM_STATES[VmState.UNKNOWN];
                           const isRunning = vm.state === VmState.RUNNING;
                           const isPaused = vm.state === VmState.PAUSED;
                           const isStopped = vm.state === VmState.SHUTOFF;
@@ -2211,7 +2200,7 @@ export default function VirtualMachinesScreen() {
                               </HStack>
 
                               {/* Recursos */}
-                              <Box className="border-b border-outline-100 dark:border-[#1E2F47] pb-4">
+                              <Box className="flex-1 border-b border-outline-100 dark:border-[#1E2F47] pb-4">
                                 <HStack className="flex flex-col">
                                   <Box className="flex flex-row justify-between">
                                     <Text
@@ -2231,7 +2220,7 @@ export default function VirtualMachinesScreen() {
                                     value={vm.currentCpuUsage}
                                     size="xs"
                                     orientation="horizontal"
-                                    className="mb-5 mt-2"
+                                    className="mb-3 mt-2"
                                   >
                                     <ProgressFilledTrack
                                       className={
@@ -2261,12 +2250,13 @@ export default function VirtualMachinesScreen() {
                                   </Box>
                                   <Progress
                                     value={
-                                      (vm.currentMemoryUsageMB * 100) /
-                                      vm.DefinedRam
+                                      vm.DefinedRam > 0
+                                        ? (vm.currentMemoryUsageMB * 100) / vm.DefinedRam
+                                        : 0
                                     }
                                     size="xs"
                                     orientation="horizontal"
-                                    className="mb-5 mt-2"
+                                    className="mb-3 mt-2"
                                   >
                                     <ProgressFilledTrack
                                       className={
@@ -2304,7 +2294,7 @@ export default function VirtualMachinesScreen() {
                                     }
                                     size="xs"
                                     orientation="horizontal"
-                                    className="mb-5 mt-2"
+                                    className="mb-3 mt-2"
                                   >
                                     <ProgressFilledTrack
                                       className={
@@ -2336,11 +2326,13 @@ export default function VirtualMachinesScreen() {
                                   </Box>
                                   <Progress
                                     value={
-                                      (vm.AllocatedGb * 100) / vm.diskSizeGB
+                                      vm.diskSizeGB > 0
+                                        ? (vm.AllocatedGb * 100) / vm.diskSizeGB
+                                        : 0
                                     }
                                     size="xs"
                                     orientation="horizontal"
-                                    className="mb-5 mt-2"
+                                    className="mb-3 mt-2"
                                   >
                                     <ProgressFilledTrack
                                       className={
@@ -2354,19 +2346,16 @@ export default function VirtualMachinesScreen() {
                                     />
                                   </Progress>
                                 </HStack>
-                                <HStack className="justify-between">
-                                  <Text
-                                    className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                                    style={{ fontFamily: "Inter_400Regular" }}
-                                  >
-                                    Network
-                                  </Text>
-                                  <Text
-                                    className="text-xs text-typography-900 dark:text-[#E8EBF0]"
-                                    style={{ fontFamily: "Inter_500Medium" }}
-                                  >
-                                    {vm.network}
-                                  </Text>
+                                <HStack className="justify-between items-start gap-3">
+                                  <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">Network</Text>
+                                  <Text className="text-xs text-right flex-1 min-w-0 text-typography-900 dark:text-[#E8EBF0]">{vm.network || "—"}</Text>
+                                </HStack>
+                                <HStack className="justify-between items-start gap-3 mt-2">
+                                  <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">IP address</Text>
+                                  <VStack className="flex-1 min-w-0 items-end gap-1">
+                                    <Text selectable className="text-xs text-right font-mono text-typography-900 dark:text-[#E8EBF0]">{vm.ip[0] || "Not reported"}</Text>
+                                    {vm.ip.length > 1 ? <Text className="text-xs text-right text-typography-600 dark:text-[#8A94A8]">+{vm.ip.length - 1} more in details</Text> : null}
+                                  </VStack>
                                 </HStack>
                                 {vmNfsName ? (
                                   <HStack className="justify-between mt-3">
