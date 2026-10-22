@@ -439,8 +439,8 @@ export default function AutoBackupsScreen() {
           />
         }
       >
-        <Box className="p-4 pt-16 web:p-20 web:max-w-7xl web:mx-auto web:w-full">
-          <HStack className="justify-between items-start mb-3">
+        <Box className="p-4 pt-24 web:px-6 web:pb-8 web:pt-24 web:lg:px-10 web:max-w-screen-2xl web:mx-auto web:w-full">
+          <HStack className="justify-between items-start mb-3 flex-col gap-4 web:lg:flex-row">
             <VStack className="flex-1">
               <Heading
                 size="2xl"
@@ -473,13 +473,14 @@ export default function AutoBackupsScreen() {
             </Box>
           </HStack>
 
-          <HStack className="mb-6 gap-2 flex-wrap web:hidden">
+          <HStack className="mb-6 gap-2 flex-wrap web:hidden web:flex-wrap">
             <Button
               variant="outline"
               size="md"
               onPress={handleRefresh}
+              accessibilityLabel="Refresh automatic backups"
               disabled={loading || refreshing}
-              className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
+              className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E]"
             >
               {refreshing ? (
                 <ButtonSpinner />
@@ -510,94 +511,11 @@ export default function AutoBackupsScreen() {
           </HStack>
 
           {/* Stats Overview */}
-          <HStack className="mb-6 gap-4 flex-wrap web:grid web:grid-cols-4">
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
-              <HStack className="items-center gap-2 mb-2">
-                <Calendar
-                  size={16}
-                  className="text-[#9AA4B8] dark:text-[#5EEAD4]"
-                  color={statsIconMutedColor}
-                />
-                <Text
-                  className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{fontFamily: "Inter_500Medium"}}
-                >
-                  Total Schedules
-                </Text>
-              </HStack>
-              <Text
-                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{fontFamily: "Inter_700Bold"}}
-              >
-                {stats.total}
-              </Text>
-            </Box>
-
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
-              <HStack className="items-center gap-2 mb-2">
-                <Database
-                  size={16}
-                  className="text-[#2DD4BF] dark:text-[#5EEAD4]"
-                  color={statsIconAccentColor}
-                />
-                <Text
-                  className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{fontFamily: "Inter_500Medium"}}
-                >
-                  Active
-                </Text>
-              </HStack>
-              <Text
-                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{fontFamily: "Inter_700Bold"}}
-              >
-                {stats.active}
-              </Text>
-            </Box>
-
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
-              <HStack className="items-center gap-2 mb-2">
-                <TrendingUp
-                  size={16}
-                  className="text-[#9AA4B8] dark:text-[#5EEAD4]"
-                  color={statsIconMutedColor}
-                />
-                <Text
-                  className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{fontFamily: "Inter_500Medium"}}
-                >
-                  Avg Frequency
-                </Text>
-              </HStack>
-              <Text
-                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{fontFamily: "Inter_700Bold"}}
-              >
-                {stats.avgFrequency} d
-              </Text>
-            </Box>
-
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
-              <HStack className="items-center gap-2 mb-2">
-                <Clock
-                  size={16}
-                  className="text-[#9AA4B8] dark:text-[#5EEAD4]"
-                  color={statsIconMutedColor}
-                />
-                <Text
-                  className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{fontFamily: "Inter_500Medium"}}
-                >
-                  VMs Covered
-                </Text>
-              </HStack>
-              <Text
-                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{fontFamily: "Inter_700Bold"}}
-              >
-                {stats.totalVms}
-              </Text>
-            </Box>
+          <HStack className="mt-6 mb-6 py-4 gap-x-6 gap-y-3 flex-wrap web:flex-wrap border-y border-outline-200 dark:border-[#2A3B52]">
+            <Text className="shrink-0 text-sm text-typography-700 dark:text-[#E8EBF0]">{stats.total} schedules</Text>
+            <Text className="shrink-0 text-sm text-typography-700 dark:text-[#E8EBF0]">{stats.active} active</Text>
+            <Text className="shrink-0 text-sm text-typography-700 dark:text-[#E8EBF0]">{stats.avgFrequency} d average frequency</Text>
+            <Text className="shrink-0 text-sm text-typography-700 dark:text-[#E8EBF0]">{stats.totalVms} VMs covered</Text>
           </HStack>
 
           {/* Search/Actions */}
@@ -606,8 +524,9 @@ export default function AutoBackupsScreen() {
               variant="outline"
               size="md"
               onPress={handleRefresh}
+              accessibilityLabel="Refresh automatic backups"
               disabled={loading}
-              className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
+              className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E]"
             >
               {refreshing ? (
                 <ButtonSpinner />
@@ -643,68 +562,36 @@ export default function AutoBackupsScreen() {
               </VStack>
             </Box>
           ) : (
-            <VStack className="gap-4">
+            <VStack className="border-y border-outline-200 dark:border-[#2A3B52]">
+              <HStack className="hidden web:lg:flex items-center gap-4 px-4 py-3 bg-background-50 dark:bg-[#0A1628] border-b border-outline-200 dark:border-[#2A3B52]">
+                <Text className="flex-[1.2] text-xs font-semibold text-typography-600 dark:text-[#8A94A8]">VM</Text>
+                <Text className="flex-1 text-xs font-semibold text-typography-600 dark:text-[#8A94A8]">Schedule</Text>
+                <Text className="flex-1 text-xs font-semibold text-typography-600 dark:text-[#8A94A8]">Storage / retention</Text>
+                <Text className="flex-[1.2] text-xs font-semibold text-typography-600 dark:text-[#8A94A8]">Last backup</Text>
+                <Text className="w-24 text-xs font-semibold text-typography-600 dark:text-[#8A94A8]">State</Text>
+                <Text className="w-64 text-right text-xs font-semibold text-typography-600 dark:text-[#8A94A8]">Actions</Text>
+              </HStack>
               {schedules.map((schedule) => (
-                <Box
+                <HStack
                   key={schedule.id}
-                  className="rounded-2xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4 web:p-6"
+                  className="flex-wrap items-start gap-3 px-4 py-3 border-b border-outline-100 dark:border-[#1E2F47] web:grid web:grid-cols-2 web:lg:flex web:lg:flex-nowrap web:lg:gap-4 web:lg:items-center"
                 >
-                  <HStack className="justify-between items-start">
-                    <VStack className="gap-1">
-                      <Heading
-                        size="md"
-                        className="text-typography-900 dark:text-[#E8EBF0]"
-                        style={{fontFamily: "Inter_700Bold"}}
-                      >
-                        {schedule.vmName}
-                      </Heading>
-                      <Text
-                        className="text-sm text-[#9AA4B8] dark:text-[#8A94A8]"
-                        style={{fontFamily: "Inter_400Regular"}}
-                      >
-                        {getFrequencyLabel(schedule.frequencyDays)} •{" "}
-                        {schedule.minTime} - {schedule.maxTime}
-                      </Text>
-                      <Text
-                        className="text-sm text-[#9AA4B8] dark:text-[#8A94A8]"
-                        style={{fontFamily: "Inter_400Regular"}}
-                      >
-                        NFS: {getNfsName(schedule.nfsShareId)} • Retain{" "}
-                        {schedule.retention} backups
-                      </Text>
-                      <Text
-                        className="text-xs text-typography-600 dark:text-[#8A94A8]"
-                        style={{fontFamily: "Inter_400Regular"}}
-                      >
-                        Last backup: {formatDate(schedule.lastBackup)}
-                      </Text>
-                    </VStack>
-                    <HStack className="gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="rounded-xl"
-                        onPress={() => openEdit(schedule)}
-                      >
-                        <ButtonIcon
-                          as={Edit}
-                          className="text-typography-700 dark:text-[#E8EBF0]"
-                        />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="rounded-xl border-error-300 dark:border-error-700 bg-background-0 dark:bg-red-900/20 dark:hover:bg-red-900/30"
-                        onPress={() => handleDelete(schedule)}
-                      >
-                        <ButtonIcon
-                          as={Trash2}
-                          className="text-error-600 dark:text-error-700"
-                        />
-                      </Button>
-                    </HStack>
-                  </HStack>
-                  <HStack className="mt-4 items-center gap-3">
+                  <Text className="w-full web:col-span-2 web:lg:w-auto web:lg:flex-[1.2] min-w-0 text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
+                    {schedule.vmName}
+                  </Text>
+                  <VStack className="web:lg:flex-1 min-w-0 gap-1">
+                    <Text className="text-sm text-typography-700 dark:text-[#E8EBF0]">{getFrequencyLabel(schedule.frequencyDays)}</Text>
+                    <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">{schedule.minTime} - {schedule.maxTime}</Text>
+                  </VStack>
+                  <VStack className="web:lg:flex-1 min-w-0 gap-1">
+                    <Text className="text-sm text-typography-700 dark:text-[#E8EBF0]">{getNfsName(schedule.nfsShareId)}</Text>
+                    <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">Retain {schedule.retention} backups</Text>
+                  </VStack>
+                  <VStack className="web:lg:flex-[1.2] min-w-0 gap-1">
+                    <Text className="web:lg:hidden text-xs text-typography-600 dark:text-[#8A94A8]">Last backup</Text>
+                    <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">{formatDate(schedule.lastBackup)}</Text>
+                  </VStack>
+                  <Box className="web:lg:w-24 items-start">
                     <Badge
                       size="sm"
                       variant="outline"
@@ -725,6 +612,8 @@ export default function AutoBackupsScreen() {
                         {schedule.isEnabled ? "Enabled" : "Disabled"}
                       </BadgeText>
                     </Badge>
+                  </Box>
+                  <HStack className="web:col-span-2 web:lg:w-64 gap-2 items-center web:lg:justify-end flex-wrap web:flex-wrap web:lg:flex-nowrap">
                     <Button
                       variant="outline"
                       size="sm"
@@ -739,8 +628,32 @@ export default function AutoBackupsScreen() {
                         {schedule.isEnabled ? "Disable" : "Enable"}
                       </ButtonText>
                     </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-xl"
+                        accessibilityLabel={`Edit schedule for ${schedule.vmName}`}
+                        onPress={() => openEdit(schedule)}
+                      >
+                        <ButtonIcon
+                          as={Edit}
+                          className="text-typography-700 dark:text-[#E8EBF0]"
+                        />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-xl border-error-300 dark:border-error-700 bg-background-0 dark:bg-red-900/20 dark:hover:bg-red-900/30"
+                        accessibilityLabel={`Delete schedule for ${schedule.vmName}`}
+                        onPress={() => handleDelete(schedule)}
+                      >
+                        <ButtonIcon
+                          as={Trash2}
+                          className="text-error-600 dark:text-error-700"
+                        />
+                      </Button>
                   </HStack>
-                </Box>
+                </HStack>
               ))}
             </VStack>
           )}
@@ -1126,7 +1039,7 @@ export default function AutoBackupsScreen() {
                     <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
                       {confirmDelete.vmName}
                     </Text>
-                    <HStack className="flex-wrap gap-2">
+                    <HStack className="flex-wrap gap-2 web:flex-wrap">
                       <Badge
                         action="muted"
                         variant="outline"

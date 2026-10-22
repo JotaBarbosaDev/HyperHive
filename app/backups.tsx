@@ -590,139 +590,20 @@ export default function BackupsScreen() {
           />
         }
       >
-        <Box className="p-4 pt-16 web:p-20 web:max-w-7xl web:mx-auto web:w-full">
-          <Heading
-            size="2xl"
-            className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
-            style={{ fontFamily: "Inter_700Bold" }}
-          >
-            Backups
-          </Heading>
-          <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl mb-6">
-            Full backup management for virtual machines with quick restores and version control.
-          </Text>
-
-          {/* Stats Overview */}
-          <HStack className="mb-6 gap-4 flex-wrap web:grid web:grid-cols-4">
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
-              <HStack className="items-center gap-2 mb-2">
-                <HardDrive
-                  size={16}
-                  className="text-[#9AA4B8] dark:text-[#8A94A8]"
-                  color={statsIconMutedColor}
-                />
-                <Text
-                  className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{ fontFamily: "Inter_500Medium" }}
-                >
-                  Total Backups
-                </Text>
-              </HStack>
-              <Text
-                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
+        <Box className="p-4 pt-24 web:px-6 web:pb-8 web:pt-24 web:lg:px-10 web:max-w-screen-2xl web:mx-auto web:w-full">
+          <HStack className="justify-between items-start flex-col gap-4 web:lg:flex-row">
+            <VStack className="flex-1 min-w-0">
+              <Heading
+                size="2xl"
+                className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
                 style={{ fontFamily: "Inter_700Bold" }}
               >
-                {stats.total}
+                Backups
+              </Heading>
+              <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
+                Full backup management for virtual machines with quick restores and version control.
               </Text>
-            </Box>
-
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
-              <HStack className="items-center gap-2 mb-2">
-                <Database
-                  size={16}
-                  className="text-[#2DD4BF] dark:text-[#5EEAD4]"
-                  color={statsIconAccentColor}
-                />
-                <Text
-                  className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{ fontFamily: "Inter_500Medium" }}
-                >
-                  Completed
-                </Text>
-              </HStack>
-              <Text
-                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{ fontFamily: "Inter_700Bold" }}
-              >
-                {stats.complete}
-              </Text>
-            </Box>
-
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
-              <HStack className="items-center gap-2 mb-2">
-                <HardDrive
-                  size={16}
-                  className="text-[#9AA4B8] dark:text-[#8A94A8]"
-                  color={statsIconMutedColor}
-                />
-                <Text
-                  className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{ fontFamily: "Inter_500Medium" }}
-                >
-                  Total Space
-                </Text>
-              </HStack>
-              <Text
-                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{ fontFamily: "Inter_700Bold" }}
-              >
-                {stats.totalSize.toFixed(1)} GB
-              </Text>
-            </Box>
-
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
-              <HStack className="items-center gap-2 mb-2">
-                <Calendar
-                  size={16}
-                  className="text-[#9AA4B8] dark:text-[#8A94A8]"
-                  color={statsIconMutedColor}
-                />
-                <Text
-                  className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{ fontFamily: "Inter_500Medium" }}
-                >
-                  Last Backup
-                </Text>
-              </HStack>
-              <Text
-                className="text-sm text-typography-900 dark:text-[#E8EBF0]"
-                style={{ fontFamily: "Inter_600SemiBold" }}
-              >
-                {stats.lastBackup
-                  ? formatDate(stats.lastBackup).split(",")[0]
-                  : "N/A"}
-              </Text>
-            </Box>
-          </HStack>
-
-          {/* Search Bar */}
-          <HStack className="mb-6 gap-2 flex-wrap">
-            <Input variant="outline" className="flex-1 rounded-lg">
-              <InputSlot className="pl-3">
-                <InputIcon as={Search} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
-              </InputSlot>
-              <InputField
-                placeholder="Search by VM or slave..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-            </Input>
-            <Button
-              variant="outline"
-              size="md"
-              onPress={handleRefresh}
-              disabled={isRefreshing}
-              className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
-            >
-              {isRefreshing ? (
-                <ButtonSpinner />
-              ) : (
-                <ButtonIcon
-                  as={RefreshCw}
-                  className="text-typography-700 rounded-xl dark:text-[#E8EBF0]"
-                />
-              )}
-            </Button>
+            </VStack>
             <Button
               size="md"
               className="rounded-xl"
@@ -740,6 +621,46 @@ export default function BackupsScreen() {
                 </>
               )}
             </Button>
+          </HStack>
+
+          {/* Stats Overview */}
+          <HStack className="mt-6 mb-6 py-4 gap-x-6 gap-y-3 flex-wrap web:flex-wrap border-y border-outline-200 dark:border-[#2A3B52]">
+            <Text className="shrink-0 text-sm text-typography-700 dark:text-[#E8EBF0]">{stats.total} backups</Text>
+            <Text className="shrink-0 text-sm text-typography-700 dark:text-[#E8EBF0]">{stats.complete} completed</Text>
+            <Text className="shrink-0 text-sm text-typography-700 dark:text-[#E8EBF0]">{stats.totalSize.toFixed(1)} GB total</Text>
+            <Text className="shrink-0 text-sm text-typography-700 dark:text-[#E8EBF0]">Last backup: {stats.lastBackup ? formatDate(stats.lastBackup).split(",")[0] : "N/A"}</Text>
+          </HStack>
+
+          {/* Search Bar */}
+          <HStack className="mb-6 gap-2 flex-wrap web:flex-wrap">
+            <Input variant="outline" className="flex-1 h-11 rounded-lg">
+              <InputSlot className="pl-3">
+                <InputIcon as={Search} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
+              </InputSlot>
+              <InputField
+                placeholder="Search by VM or slave..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </Input>
+            <Button
+              variant="outline"
+              size="md"
+              onPress={handleRefresh}
+              accessibilityLabel="Refresh backups"
+              disabled={isRefreshing}
+              className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E]"
+            >
+              {isRefreshing ? (
+                <ButtonSpinner />
+              ) : (
+                <ButtonIcon
+                  as={RefreshCw}
+                  className="text-typography-700 rounded-xl dark:text-[#E8EBF0]"
+                />
+              )}
+            </Button>
+
           </HStack>
 
           {/* Backups List */}
@@ -764,7 +685,7 @@ export default function BackupsScreen() {
               </VStack>
             </Box>
           ) : isWeb ? (
-            <VStack className="gap-6">
+            <VStack className="gap-8">
               {Object.entries(backupsByVm).map(([vmName, vmBackups]) => {
                 const firstBackup = vmBackups[0];
                 const vmTotalSize = vmBackups.reduce(
@@ -775,12 +696,12 @@ export default function BackupsScreen() {
                 return (
                   <Box
                     key={vmName}
-                    className="rounded-2xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] overflow-hidden web:shadow-md dark:web:shadow-none"
+                    className="overflow-hidden"
                   >
                     {/* Header */}
-                    <Box className="border-b border-outline-100 dark:border-[#2A3B52] p-4 web:p-6">
+                    <Box className="flex-col gap-1 pb-3 web:md:flex-row web:md:items-center web:md:justify-between">
                       <Heading
-                        size="lg"
+                        size="md"
                         className="text-typography-900 dark:text-[#E8EBF0] mb-1"
                         style={{ fontFamily: "Inter_700Bold" }}
                       >
@@ -797,10 +718,10 @@ export default function BackupsScreen() {
                     </Box>
 
                     {/* Table */}
-                    <Box className="overflow-x-auto">
+                    <Box className="overflow-x-auto border-y border-outline-200 dark:border-[#2A3B52]">
                       <Box className="min-w-[900px]">
                         {/* Table Header */}
-                        <HStack className="bg-background-50 dark:bg-[#0A1628] px-4 py-3 border-b border-outline-100 dark:border-[#1E2F47]">
+                        <HStack className="bg-background-50 dark:bg-[#0A1628] px-4 py-2.5 border-b border-outline-100 dark:border-[#1E2F47]">
                           <Text
                             className="flex-[2] text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
                             style={{ fontFamily: "Inter_600SemiBold" }}
@@ -847,7 +768,7 @@ export default function BackupsScreen() {
                           return (
                             <HStack
                               key={backup.id}
-                              className={`px-4 py-3 items-center ${index !== vmBackups.length - 1
+                              className={`px-4 py-2.5 items-center ${index !== vmBackups.length - 1
                                 ? "border-b border-outline-100 dark:border-[#1E2F47]"
                                 : ""
                                 }`}
@@ -914,7 +835,8 @@ export default function BackupsScreen() {
                                 <Button
                                   size="xs"
                                   variant="outline"
-                                  className="rounded-xl"
+                                  className="rounded-lg"
+                                  accessibilityLabel={`Download backup for ${vmName}`}
                                   onPress={() => handleDownload(backup)}
                                 >
                                   <ButtonIcon
@@ -926,7 +848,8 @@ export default function BackupsScreen() {
                                 <Button
                                   size="xs"
                                   variant="outline"
-                                  className="rounded-xl"
+                                  className="rounded-lg"
+                                  accessibilityLabel={`Restore backup for ${vmName}`}
                                   onPress={() => setRestoreBackup(backup)}
                                   disabled={restoring}
                                 >
@@ -939,7 +862,8 @@ export default function BackupsScreen() {
                                 <Button
                                   size="xs"
                                   variant="outline"
-                                  className="rounded-xl border-red-500"
+                                  className="rounded-lg border-red-500"
+                                  accessibilityLabel={`Delete backup for ${vmName}`}
                                   onPress={() => handleDelete(backup)}
                                   disabled={deletingId === backup.id}
                                 >
@@ -994,7 +918,7 @@ export default function BackupsScreen() {
                         <Pressable
                           key={backup.id}
                           onPress={() => setMobileActionBackup(backup)}
-                          className="rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4"
+                          className="border-b border-outline-200 dark:border-[#2A3B52] py-3"
                         >
                           <HStack className="items-start justify-between">
                             <VStack className="flex-1 pr-3">
@@ -1192,7 +1116,7 @@ export default function BackupsScreen() {
                             className="text-typography-900 dark:text-[#E8EBF0]"
                           />
                         </Input>
-                        <HStack className="gap-2 flex-wrap">
+                        <HStack className="gap-2 flex-wrap web:flex-wrap">
                           {quickRestoreMemoryGb.map((gb) => (
                             <Pressable
                               key={`restore-mem-${gb}`}
@@ -1425,7 +1349,7 @@ export default function BackupsScreen() {
                                 No slave selected
                               </Text>
                             ) : (
-                              <HStack className="gap-2 flex-wrap">
+                              <HStack className="gap-2 flex-wrap web:flex-wrap">
                                 {selectedSlaves.map((slaveName) => (
                                   <Badge
                                     key={slaveName}

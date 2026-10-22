@@ -291,7 +291,7 @@ export default function GpusScreen() {
           />
         }
       >
-        <Box className="p-4 pt-16 web:p-10 web:max-w-6xl web:mx-auto web:w-full">
+        <Box className="p-4 pt-24 web:px-6 web:pb-8 web:pt-24 web:lg:px-10 web:max-w-screen-2xl web:mx-auto web:w-full">
           <VStack className="gap-2 mb-5">
             <Heading
               size="2xl"
@@ -305,9 +305,9 @@ export default function GpusScreen() {
             </Text>
           </VStack>
 
-          <Box className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4 mb-4">
+          <Box className="py-4 mb-6 border-y border-outline-200 dark:border-[#2A3B52]">
             <VStack className="gap-3">
-              <Text className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8]">
+              <Text className="text-sm text-typography-500 dark:text-[#8A94A8]">
                 Machine
               </Text>
               <Select
@@ -321,7 +321,7 @@ export default function GpusScreen() {
                 </SelectTrigger>
                 <SelectPortal>
                   <SelectBackdrop />
-                  <SelectContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
+                  <SelectContent className="rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
                     <SelectDragIndicatorWrapper>
                       <SelectDragIndicator />
                     </SelectDragIndicatorWrapper>
@@ -336,7 +336,7 @@ export default function GpusScreen() {
                 </SelectPortal>
               </Select>
 
-              <HStack className="items-center justify-between gap-3 flex-wrap">
+              <HStack className="items-center justify-between gap-3 flex-wrap web:flex-wrap">
                 <Button
                   variant="outline"
                   className="rounded-xl"
@@ -370,7 +370,7 @@ export default function GpusScreen() {
           </Box>
 
           {isLoading && gpus.length === 0 ? (
-            <Box className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
+            <Box className="rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
               <Text className="text-typography-600 dark:text-[#8A94A8]">Loading GPUs...</Text>
             </Box>
           ) : error ? (
@@ -378,11 +378,11 @@ export default function GpusScreen() {
               <Text className="text-[#B91C1C] dark:text-[#FCA5A5] text-sm">{error}</Text>
             </Box>
           ) : gpus.length === 0 ? (
-            <Box className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
+            <Box className="rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
               <Text className="text-typography-700 dark:text-[#D6DEEA]">No GPUs found for this machine.</Text>
             </Box>
           ) : (
-            <VStack className="gap-3">
+            <VStack className="gap-4 web:grid web:grid-cols-1 web:sm:grid-cols-2 web:lg:grid-cols-3">
               {gpus.map((gpu, index) => {
                 const addressRaw = toTrimmedString(gpu.address);
                 const addressLabel = addressRaw ?? "N/A";
@@ -401,11 +401,11 @@ export default function GpusScreen() {
                 return (
                   <Box
                     key={key}
-                    className="rounded-2xl border border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524] p-4"
+                    className="rounded-xl border border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] p-4"
                   >
                     <VStack className="gap-2">
                       <HStack className="items-start justify-between gap-3">
-                        <VStack className="gap-0.5 flex-1">
+                        <VStack className="gap-0.5 flex-1 min-w-0">
                           <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
                             {vendor}
                           </Text>

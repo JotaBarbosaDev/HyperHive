@@ -297,43 +297,45 @@ export default function VmsDisksScreen() {
         }
       >
         <Box className="p-4 pt-24 web:px-6 web:pb-8 web:pt-24 web:lg:px-10 web:max-w-screen-2xl web:mx-auto web:w-full">
-          <VStack className="gap-2 mb-6">
-            <Heading size="2xl" className="text-typography-900 dark:text-[#E8EBF0] mb-1 web:text-4xl">
-              VMs Disks
-            </Heading>
-            <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
-              Manage standalone VM disks, their NFS placement, size and attachment status.
-            </Text>
-          </VStack>
+          <HStack className="justify-between items-start flex-col gap-4 mb-6 web:lg:flex-row">
+            <VStack className="gap-2 flex-1 min-w-0">
+              <Heading size="2xl" className="text-typography-900 dark:text-[#E8EBF0] mb-1 web:text-4xl">
+                VMs Disks
+              </Heading>
+              <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
+                Manage standalone VM disks, their NFS placement, size and attachment status.
+              </Text>
+            </VStack>
 
-          <HStack className="gap-3 items-center justify-end flex-shrink-0 mb-6">
-            <Button
-              variant="outline"
-              action="default"
-              className="h-11 px-4 rounded-xl border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E]"
-              accessibilityLabel="Refresh VM disks"
-              onPress={() => loadDisks("refresh")}
-              isDisabled={refreshing || loading}
-            >
-              {refreshing ? <ButtonSpinner /> : <ButtonIcon as={RefreshCw} className="text-typography-900 dark:text-[#E8EBF0]" />}
-            </Button>
-            <Button
-              action="primary"
-              className="h-11 rounded-xl dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
-              onPress={openCreate}
-            >
-              <ButtonIcon as={Plus} />
-              <ButtonText>Create VM Disk</ButtonText>
-            </Button>
+            <HStack className="gap-3 items-center flex-wrap web:flex-wrap">
+              <Button
+                variant="outline"
+                action="default"
+                className="h-11 px-4 rounded-xl border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E]"
+                accessibilityLabel="Refresh VM disks"
+                onPress={() => loadDisks("refresh")}
+                isDisabled={refreshing || loading}
+              >
+                {refreshing ? <ButtonSpinner /> : <ButtonIcon as={RefreshCw} className="text-typography-900 dark:text-[#E8EBF0]" />}
+              </Button>
+              <Button
+                action="primary"
+                className="h-11 rounded-xl dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+                onPress={openCreate}
+              >
+                <ButtonIcon as={Plus} />
+                <ButtonText>Create VM Disk</ButtonText>
+              </Button>
+            </HStack>
           </HStack>
 
-          <Box className="mt-6 flex flex-col gap-5 web:grid web:grid-cols-1 web:gap-6 web:sm:grid-cols-2 web:lg:grid-cols-3 web:xl:grid-cols-4 web:items-stretch">
+          <Box className="mt-6 flex flex-col gap-4 web:grid web:grid-cols-1 web:gap-4 web:sm:grid-cols-2 web:lg:grid-cols-3 web:items-stretch">
             {loading && disks.length === 0 ? (
               Array.from({ length: 8 }).map((_, index) => (
                 <Box
                   key={`vm-disk-skeleton-${index}`}
-                  className="rounded-2xl border border-outline-100 dark:border-[#243247] bg-background-50 dark:bg-[#0F1A2E] opacity-60"
-                  style={{ aspectRatio: 1, minHeight: 260 }}
+                  className="rounded-xl border border-outline-200 dark:border-[#243247] bg-background-50 dark:bg-[#0F1A2E] opacity-60"
+                  style={{ minHeight: 280 }}
                 />
               ))
             ) : error ? (
@@ -353,8 +355,8 @@ export default function VmsDisksScreen() {
                 return (
                   <Box
                     key={disk.id}
-                    className="rounded-xl border border-outline-100 bg-background-0 p-4 dark:border-[#2A3B52] dark:bg-[#0E1524]"
-                    style={{ aspectRatio: 1, minHeight: 280 }}
+                    className="rounded-xl border border-outline-200 bg-background-0 p-4 dark:border-[#2A3B52] dark:bg-[#0F1A2E]"
+                    style={{ minHeight: 280 }}
                   >
                     <VStack className="h-full justify-between gap-2">
                       <VStack className="gap-3 flex-1">
@@ -417,7 +419,7 @@ export default function VmsDisksScreen() {
                         </Box>
                       </VStack>
 
-                      <HStack className="items-center justify-between gap-2 pt-3">
+                      <HStack className="items-center justify-between gap-2 pt-4 mt-4 border-t border-outline-200 dark:border-[#2A3B52]">
                         <Text className="text-xs text-typography-500 dark:text-[#6F7A8D]">
                           {formatBytes(disk.occupied_bytes)}
                         </Text>
@@ -437,6 +439,7 @@ export default function VmsDisksScreen() {
                             variant="outline"
                             action="secondary"
                             className="rounded-lg gap-2 border-red-500"
+                            accessibilityLabel={`Delete disk ${disk.name}`}
                             onPress={() => setDeleteTarget(disk)}
                             isDisabled={deletingId === disk.id}
                           >

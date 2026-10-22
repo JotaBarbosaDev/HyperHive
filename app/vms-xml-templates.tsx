@@ -379,7 +379,7 @@ export default function VmXmlTemplatesScreen() {
               XML Templates
             </Heading>
 
-            <HStack className="items-start justify-between flex-wrap gap-3 mb-6">
+            <HStack className="items-start justify-between flex-wrap gap-3 mb-6 web:flex-wrap">
               <VStack className="gap-2 flex-1 min-w-[240px]">
                 <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
                   Manage reusable libvirt domain XML templates with placeholders such as
@@ -390,7 +390,7 @@ export default function VmXmlTemplatesScreen() {
                 </Text>
               </VStack>
 
-              <HStack className="gap-2 flex-wrap">
+              <HStack className="gap-2 flex-wrap web:flex-wrap">
                 <Button
                   variant="outline"
                   className="rounded-xl"
@@ -407,46 +407,11 @@ export default function VmXmlTemplatesScreen() {
               </HStack>
             </HStack>
 
-            <HStack className="mb-6 gap-4 flex-wrap web:grid web:grid-cols-2 web:lg:grid-cols-4">
-              <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
-                <HStack className="items-center gap-2 mb-2">
-                  <Database size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
-                  <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Total Templates</Text>
-                </HStack>
-                <Text className="text-2xl font-bold text-typography-900 dark:text-[#E8EBF0]">
-                  {templates.length}
-                </Text>
-              </Box>
-
-              <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
-                <HStack className="items-center gap-2 mb-2">
-                  <Search size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
-                  <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Visible</Text>
-                </HStack>
-                <Text className="text-2xl font-bold text-typography-900 dark:text-[#E8EBF0]">
-                  {filteredTemplates.length}
-                </Text>
-              </Box>
-
-              <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
-                <HStack className="items-center gap-2 mb-2">
-                  <FileText size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
-                  <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Placeholders</Text>
-                </HStack>
-                <Text className="text-2xl font-bold text-typography-900 dark:text-[#E8EBF0]">
-                  {totalPlaceholders}
-                </Text>
-              </Box>
-
-              <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
-                <HStack className="items-center gap-2 mb-2">
-                  <Icon as={Database} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
-                  <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">With Placeholders</Text>
-                </HStack>
-                <Text className="text-2xl font-bold text-typography-900 dark:text-[#E8EBF0]">
-                  {templatesWithPlaceholders}
-                </Text>
-              </Box>
+            <HStack className="mt-6 mb-6 py-4 gap-x-6 gap-y-3 flex-wrap web:flex-wrap border-y border-outline-200 dark:border-[#2A3B52]">
+              <Text className="shrink-0 text-sm text-typography-700 dark:text-[#E8EBF0]">{templates.length} templates</Text>
+              <Text className="shrink-0 text-sm text-typography-700 dark:text-[#E8EBF0]">{filteredTemplates.length} visible</Text>
+              <Text className="shrink-0 text-sm text-typography-700 dark:text-[#E8EBF0]">{totalPlaceholders} placeholders</Text>
+              <Text className="shrink-0 text-sm text-typography-700 dark:text-[#E8EBF0]">{templatesWithPlaceholders} with placeholders</Text>
             </HStack>
 
             <Box className="mb-6">
@@ -456,7 +421,7 @@ export default function VmXmlTemplatesScreen() {
                 </Text>
                 <Input
                   variant="outline"
-                  className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
+                  className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E]"
                 >
                   <InputSlot className="pl-3">
                     <InputIcon as={Search} className="text-typography-500 dark:text-[#8A94A8]" />
@@ -482,8 +447,8 @@ export default function VmXmlTemplatesScreen() {
               </Box>
             ) : null}
 
-            <Box className="rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
-              <HStack className="items-center justify-between flex-wrap gap-3 mb-3">
+            <Box className="gap-0">
+              <HStack className="items-center justify-between flex-wrap gap-3 mb-3 web:flex-wrap">
                 <VStack className="gap-1">
                   <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
                     Template Library
@@ -493,7 +458,7 @@ export default function VmXmlTemplatesScreen() {
                   </Text>
                 </VStack>
 
-                <HStack className="gap-2 flex-wrap">
+                <HStack className="gap-2 flex-wrap web:flex-wrap">
                   <Badge variant="outline" className="border-outline-300 dark:border-[#243247]">
                     <BadgeText>{templates.length} total</BadgeText>
                   </Badge>
@@ -540,11 +505,11 @@ export default function VmXmlTemplatesScreen() {
                     return (
                       <Box
                         key={template.id}
-                        className="rounded-xl border border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628] p-4 shadow-sm"
+                        className="rounded-xl border border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] p-4"
                       >
-                        <HStack className="items-start justify-between gap-4 flex-wrap">
+                        <HStack className="items-start justify-between gap-4 flex-wrap web:flex-wrap">
                           <VStack className="gap-3 flex-1 min-w-[240px]">
-                            <HStack className="items-center gap-2 flex-wrap">
+                            <HStack className="items-center gap-2 flex-wrap web:flex-wrap">
                               <Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
                                 {template.name}
                               </Text>
@@ -585,7 +550,7 @@ export default function VmXmlTemplatesScreen() {
                             )}
 
                             {placeholders.length > 0 ? (
-                              <HStack className="gap-2 flex-wrap">
+                              <HStack className="gap-2 flex-wrap web:flex-wrap">
                                 {placeholders.map((placeholder) => (
                                   <Badge
                                     key={`${template.id}-${placeholder}`}
@@ -599,7 +564,7 @@ export default function VmXmlTemplatesScreen() {
                             ) : null}
 
                             <Box className="rounded-lg border border-outline-200 dark:border-[#1E2F47] overflow-hidden bg-background-50 dark:bg-[#081122]">
-                              <Box className="px-3 py-2 border-b border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0E1828]">
+                              <Box className="px-3 py-2 border-b border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]">
                                 <Text className="text-xs text-typography-500 dark:text-[#8A94A8] font-mono">
                                   XML Preview
                                 </Text>
@@ -760,7 +725,7 @@ export default function VmXmlTemplatesScreen() {
             </ScrollView>
           </ModalBody>
 
-          <ModalFooter className="gap-2 flex-wrap border-t border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]">
+          <ModalFooter className="gap-2 flex-wrap border-t border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828] web:flex-wrap">
             <Button
               variant="outline"
               className="rounded-xl border-outline-200 dark:border-[#2A3B52]"
