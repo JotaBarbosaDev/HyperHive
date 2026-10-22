@@ -91,7 +91,7 @@ export default function CelldFleetScreen() {
           </Button>
         </Box>
         <Box className="flex-row flex-wrap justify-between items-center gap-3">
-          <Text className={mutedClassName}>Background status · refreshes every 30 seconds</Text>
+          <Text className={mutedClassName}>Background status</Text>
           <Button className="rounded-xl gap-2" variant="outline" action="secondary" isDisabled={isRefreshing} onPress={() => { void refresh(); void refreshMachines(); }}>
             {isRefreshing ? <ButtonSpinner /> : <ButtonIcon as={RefreshCw} />}<ButtonText>{isRefreshing ? "Refreshing…" : "Refresh"}</ButtonText>
           </Button>

@@ -370,7 +370,7 @@ export default function VmXmlTemplatesScreen() {
             />
           }
         >
-          <Box className="p-4 pt-16 web:p-20 web:max-w-7xl web:mx-auto web:w-full">
+          <Box className="p-4 pt-24 web:px-6 web:pb-8 web:pt-24 web:lg:px-10 web:max-w-screen-2xl web:mx-auto web:w-full">
             <Heading
               size="2xl"
               className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
@@ -387,9 +387,6 @@ export default function VmXmlTemplatesScreen() {
                   <Text className="font-mono">$qcow2</Text>
                   {" "}and{" "}
                   <Text className="font-mono">$name</Text>.
-                </Text>
-                <Text className="text-xs text-typography-500 dark:text-[#6B7B95]">
-                  Edit loads the latest content from <Text className="font-mono">GET /virsh/xmltemplates/:id</Text>.
                 </Text>
               </VStack>
 
@@ -410,7 +407,7 @@ export default function VmXmlTemplatesScreen() {
               </HStack>
             </HStack>
 
-            <HStack className="mb-6 gap-4 flex-wrap web:grid web:grid-cols-4">
+            <HStack className="mb-6 gap-4 flex-wrap web:grid web:grid-cols-2 web:lg:grid-cols-4">
               <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
                 <HStack className="items-center gap-2 mb-2">
                   <Database size={16} className="text-[#9AA4B8] dark:text-[#8A94A8]" />
@@ -452,7 +449,7 @@ export default function VmXmlTemplatesScreen() {
               </Box>
             </HStack>
 
-            <Box className="rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4 mb-6">
+            <Box className="mb-6">
               <VStack className="gap-2">
                 <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
                   Search Templates
@@ -465,6 +462,8 @@ export default function VmXmlTemplatesScreen() {
                     <InputIcon as={Search} className="text-typography-500 dark:text-[#8A94A8]" />
                   </InputSlot>
                   <InputField
+                    accessibilityLabel="Search XML templates"
+                    aria-label="Search XML templates"
                     value={search}
                     onChangeText={setSearch}
                     placeholder="Search by name, description, XML content, placeholder, or ID..."

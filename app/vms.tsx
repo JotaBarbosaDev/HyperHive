@@ -124,7 +124,6 @@ try {
 }
 import {
   Cpu,
-  MemoryStick,
   Server,
   Square,
   RefreshCw,
@@ -303,11 +302,11 @@ export default function VirtualMachinesScreen() {
   const cardIconColor = resolvedMode === "dark" ? "#E8EBF0" : "#0F172A";
   const cardMenuIconColor = resolvedMode === "dark" ? "#8A94A8" : "#9AA4B8";
   const cardDangerIconColor = "#DC2626";
-  const statsIconMutedColor = isWeb ? undefined : resolvedMode === "dark" ? "#8A94A8" : "#9AA4B8";
-  const statsIconAccentColor = isWeb ? undefined : resolvedMode === "dark" ? "#5EEAD4" : "#2DD4BF";
-  const statsIconWarningColor = isWeb ? undefined : resolvedMode === "dark" ? "#FCD34D" : "#FBBF24";
   const [vms, setVms] = React.useState<VM[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [inventoryError, setInventoryError] = React.useState<string | null>(null);
+  const [query, setQuery] = React.useState("");
+  const [stateFilter, setStateFilter] = React.useState("All");
   const [refreshing, setRefreshing] = React.useState(false);
   const [loadingVm, setLoadingVm] = React.useState<string | null>(null);
   const [openMenuFor, setOpenMenuFor] = React.useState<string | null>(null);
@@ -906,7 +905,11 @@ export default function VirtualMachinesScreen() {
   );
 
   const fetchAndSetVms = React.useCallback(async () => {
-    const data = await getAllVMs();
+    const data = await getAllVMs().catch((error) => {
+      setInventoryError(error instanceof Error ? error.message : "Could not load the VM inventory.");
+      throw error;
+    });
+    setInventoryError(null);
     const vmArray = Array.isArray(data) ? data : [];
     setVms(vmArray.map(mapVirtualMachineToVM));
     setPendingVmNames((prev) => {
@@ -1203,8 +1206,16 @@ export default function VirtualMachinesScreen() {
   const vmsBySlaveEntries = React.useMemo(() => {
     return Object.keys(vmsBySlave)
       .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base", numeric: true }))
-      .map((slaveName) => [slaveName, vmsBySlave[slaveName]] as const);
-  }, [vmsBySlave]);
+      .map((slaveName) => [slaveName, vmsBySlave[slaveName].filter((vm) => {
+        const matchesState = stateFilter === "All"
+          || (stateFilter === "Running" && vm.state === VmState.RUNNING)
+          || (stateFilter === "Stopped" && vm.state === VmState.SHUTOFF)
+          || (stateFilter === "Paused" && vm.state === VmState.PAUSED);
+        return matchesState && [vm.name, vm.machineName, vm.network, ...vm.ip]
+          .some((value) => value.toLowerCase().includes(query.trim().toLowerCase()));
+      })] as const)
+      .filter(([, machines]) => machines.length > 0);
+  }, [vmsBySlave, query, stateFilter]);
 
   const formatMemory = (mb: number) => {
     return mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb} MB`;
@@ -1330,21 +1341,13 @@ export default function VirtualMachinesScreen() {
   );
 
   React.useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
-    const setup = async () => {
-      try {
-        await ensureHyperHiveWebsocket();
-        unsubscribe = subscribeToHyperHiveWebsocket((msg) => {
-          void processWsPayload(msg);
-        });
-      } catch (err) {
-        console.error("Error starting WebSocket:", err);
-      }
-    };
-    setup();
-    return () => {
-      unsubscribe?.();
-    };
+    const unsubscribe = subscribeToHyperHiveWebsocket((msg) => {
+      void processWsPayload(msg);
+    });
+    ensureHyperHiveWebsocket().catch((err) => {
+      console.error("Error starting WebSocket:", err);
+    });
+    return unsubscribe;
   }, [handleVmWsMessage, processWsPayload]);
 
   React.useEffect(() => {
@@ -1913,8 +1916,8 @@ export default function VirtualMachinesScreen() {
           />
         }
       >
-        <Box className="p-4 pt-16 web:p-20 web:max-w-7xl web:mx-auto web:w-full">
-          <HStack className="justify-between items-start mb-3 flex-col gap-3 web:flex-row web:items-start">
+        <Box className="p-4 pt-24 web:px-6 web:pb-8 web:pt-24 web:lg:px-10 web:max-w-screen-2xl web:mx-auto web:w-full">
+          <HStack className="justify-between items-start mb-3 flex-col gap-4 web:lg:flex-row web:lg:items-start">
             <VStack className="flex-1">
               <Heading
                 size="2xl"
@@ -1932,6 +1935,7 @@ export default function VirtualMachinesScreen() {
                 variant="outline"
                 size="md"
                 onPress={handleRefresh}
+                accessibilityLabel="Refresh virtual machines"
                 disabled={loading || refreshing}
                 className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1828]"
               >
@@ -1969,223 +1973,48 @@ export default function VirtualMachinesScreen() {
                   as={Plus}
                   className={`${primaryButtonTextClass}`}
                 />
-                <ButtonText className={`web:inline hidden ${primaryButtonTextClass}`}>
+                <ButtonText className={primaryButtonTextClass}>
                   New VM
                 </ButtonText>
               </Button>
             </HStack>
           </HStack>
 
-          {/* Stats Overview */}
-          <HStack className="mb-6 mt-6 gap-4 flex-wrap web:grid web:grid-cols-6">
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
-              <HStack className="items-center gap-2 mb-2">
-                <Server
-                  size={16}
-                  className="text-[#9AA4B8] dark:text-[#5EEAD4]"
-                  color={statsIconMutedColor}
-                />
-                <Text
-                  className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{ fontFamily: "Inter_500Medium" }}
-                >
-                  Total VMs
-                </Text>
-              </HStack>
-              <Text
-                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{ fontFamily: "Inter_700Bold" }}
-              >
-                {loading ? "..." : stats.total}
-              </Text>
-            </Box>
-
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
-              <HStack className="items-center gap-2 mb-2">
-                <Play
-                  size={16}
-                  className="text-[#2DD4BF] dark:text-[#5EEAD4]"
-                  color={statsIconAccentColor}
-                />
-                <Text
-                  className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{ fontFamily: "Inter_500Medium" }}
-                >
-                  Running
-                </Text>
-              </HStack>
-              <Text
-                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{ fontFamily: "Inter_700Bold" }}
-              >
-                {loading ? "..." : stats.running}
-              </Text>
-            </Box>
-
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
-              <HStack className="items-center gap-2 mb-2">
-                <Square
-                  size={16}
-                  className="text-[#9AA4B8] dark:text-[#5EEAD4]"
-                  color={statsIconMutedColor}
-                />
-                <Text
-                  className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{ fontFamily: "Inter_500Medium" }}
-                >
-                  Stopped
-                </Text>
-              </HStack>
-              <Text
-                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{ fontFamily: "Inter_700Bold" }}
-              >
-                {loading ? "..." : stats.stopped}
-              </Text>
-            </Box>
-
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
-              <HStack className="items-center gap-2 mb-2">
-                <Pause
-                  size={16}
-                  className="text-[#9AA4B8] dark:text-[#5EEAD4]"
-                  color={statsIconWarningColor}
-                />
-                <Text
-                  className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{ fontFamily: "Inter_500Medium" }}
-                >
-                  Paused
-                </Text>
-              </HStack>
-              <Text
-                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{ fontFamily: "Inter_700Bold" }}
-              >
-                {loading ? "..." : stats.paused}
-              </Text>
-            </Box>
-
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
-              <HStack className="items-center gap-2 mb-2">
-                <Cpu
-                  size={16}
-                  className="text-[#9AA4B8] dark:text-[#5EEAD4]"
-                  color={statsIconMutedColor}
-                />
-                <Text
-                  className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{ fontFamily: "Inter_500Medium" }}
-                >
-                  Total vCPUs
-                </Text>
-              </HStack>
-              <Text
-                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{ fontFamily: "Inter_700Bold" }}
-              >
-                {loading ? "..." : stats.totalVcpu}
-              </Text>
-            </Box>
-
-            <Box className="flex-1 min-w-[140px] rounded-xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] p-4">
-              <HStack className="items-center gap-2 mb-2">
-                <MemoryStick
-                  size={16}
-                  className="text-[#9AA4B8] dark:text-[#5EEAD4]"
-                  color={statsIconMutedColor}
-                />
-                <Text
-                  className="text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
-                  style={{ fontFamily: "Inter_500Medium" }}
-                >
-                  Total RAM
-                </Text>
-              </HStack>
-              <Text
-                className="text-2xl text-typography-900 dark:text-[#E8EBF0]"
-                style={{ fontFamily: "Inter_700Bold" }}
-              >
-                {loading ? "..." : stats.totalMemoryGB} GB
-              </Text>
-            </Box>
+          <HStack className="mt-6 mb-6 py-4 gap-x-6 gap-y-3 flex-wrap web:flex-wrap border-y border-outline-200 dark:border-[#2A3B52]">
+            <Text className="shrink-0 text-sm text-typography-700 dark:text-[#E8EBF0]">{loading || (inventoryError && !vms.length) ? "—" : stats.total} VMs</Text>
+            <Text className="shrink-0 text-sm text-typography-700 dark:text-[#E8EBF0]">{loading || (inventoryError && !vms.length) ? "—" : stats.running} running</Text>
+            <Text className="shrink-0 text-sm text-typography-700 dark:text-[#E8EBF0]">{loading || (inventoryError && !vms.length) ? "—" : stats.stopped} stopped</Text>
+            <Text className="shrink-0 text-sm text-typography-700 dark:text-[#E8EBF0]">{loading || (inventoryError && !vms.length) ? "—" : stats.paused} paused</Text>
+            <Text className="shrink-0 text-sm text-typography-600 dark:text-[#8A94A8]">{loading || (inventoryError && !vms.length) ? "—" : stats.totalVcpu} vCPUs · {loading || (inventoryError && !vms.length) ? "—" : stats.totalMemoryGB} GB RAM</Text>
           </HStack>
 
-          {/* Linha separadora removida - stats inline antigos */}
-          <HStack className="mb-6 gap-4 flex-wrap hidden">
-            <HStack className="gap-2 items-center">
-              <Text
-                className="text-typography-600 dark:text-[#8A94A8] text-sm"
-                style={{ fontFamily: "Inter_400Regular" }}
-              >
-                Total:
-              </Text>
-              <Text
-                className="text-typography-900 dark:text-[#E8EBF0] font-semibold"
-                style={{ fontFamily: "Inter_600SemiBold" }}
-              >
-                {loading ? "..." : stats.total}
-              </Text>
+          <VStack className="gap-4 mb-6 web:lg:flex-row web:lg:items-end">
+            <VStack className="flex-1 min-w-0 gap-2">
+              <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">Search virtual machines</Text>
+              <Input className="h-11 rounded-lg border-outline-200 dark:border-[#2A3B52]">
+                <InputField value={query} onChangeText={setQuery} accessibilityLabel="Search virtual machines" aria-label="Search virtual machines" placeholder="Search names, hosts, networks or IPs…" autoCapitalize="none" autoCorrect={false} />
+              </Input>
+            </VStack>
+            <HStack className="gap-2 flex-wrap web:flex-wrap">
+              {["All", "Running", "Stopped", "Paused"].map((state) => (
+                <Button key={state} variant="outline" action="default" onPress={() => setStateFilter(state)}
+                  accessibilityState={{ selected: stateFilter === state }}
+                  className={`h-11 rounded-lg border-outline-200 dark:border-[#2A3B52] ${stateFilter === state ? primaryButtonClass : "bg-background-0 dark:bg-[#0F1A2E]"}`}>
+                  <ButtonText className={stateFilter === state ? primaryButtonTextClass : "text-typography-700 dark:text-[#E8EBF0]"}>{state}</ButtonText>
+                </Button>
+              ))}
             </HStack>
-            <HStack className="gap-2 items-center">
-              <Box className="w-2 h-2 rounded-full bg-[#2DD4BF] dark:bg-[#5EEAD4]" />
-              <Text
-                className="text-typography-600 dark:text-[#8A94A8] text-sm"
-                style={{ fontFamily: "Inter_400Regular" }}
-              >
-                Running:
-              </Text>
-              <Text
-                className="text-typography-900 dark:text-[#E8EBF0] font-semibold"
-                style={{ fontFamily: "Inter_600SemiBold" }}
-              >
-                {loading ? "..." : stats.running}
-              </Text>
-            </HStack>
-            <HStack className="gap-2 items-center">
-              <Box className="w-2 h-2 rounded-full bg-[#94A3B8] dark:bg-[#64748B]" />
-              <Text
-                className="text-typography-600 dark:text-[#8A94A8] text-sm"
-                style={{ fontFamily: "Inter_400Regular" }}
-              >
-                Stopped:
-              </Text>
-              <Text
-                className="text-typography-900 dark:text-[#E8EBF0] font-semibold"
-                style={{ fontFamily: "Inter_600SemiBold" }}
-              >
-                {loading ? "..." : stats.stopped}
-              </Text>
-            </HStack>
-            <HStack className="gap-2 items-center">
-              <Text
-                className="text-typography-600 dark:text-[#8A94A8] text-sm"
-                style={{ fontFamily: "Inter_400Regular" }}
-              >
-                vCPU:
-              </Text>
-              <Text
-                className="text-typography-900 dark:text-[#E8EBF0] font-semibold"
-                style={{ fontFamily: "Inter_600SemiBold" }}
-              >
-                {loading ? "..." : stats.totalVcpu}
-              </Text>
-            </HStack>
-            <HStack className="gap-2 items-center">
-              <Text
-                className="text-typography-600 dark:text-[#8A94A8] text-sm"
-                style={{ fontFamily: "Inter_400Regular" }}
-              >
-                RAM:
-              </Text>
-              <Text
-                className="text-typography-900 dark:text-[#E8EBF0] font-semibold"
-                style={{ fontFamily: "Inter_600SemiBold" }}
-              >
-                {loading ? "..." : `${stats.totalMemoryGB} GB`}
-              </Text>
-            </HStack>
-          </HStack>
+          </VStack>
+
+          {inventoryError ? (
+            <VStack className="gap-3 mb-6 p-4 rounded-xl border border-error-300 dark:border-error-700 bg-error-50 dark:bg-error-900/20">
+              <Text className="font-semibold text-error-700 dark:text-error-200">{vms.length ? "Inventory may be stale" : "Unable to load VMs"}</Text>
+              <Text className="text-sm text-error-700 dark:text-error-200">{inventoryError}</Text>
+              <Button variant="outline" onPress={handleRefresh} disabled={refreshing} className="self-start rounded-lg">
+                {refreshing ? <ButtonSpinner /> : null}<ButtonText>Retry</ButtonText>
+              </Button>
+            </VStack>
+          ) : null}
 
           {/* VMs agrupadas por Slave */}
           {loading && vms.length === 0 ? (
@@ -2196,7 +2025,7 @@ export default function VirtualMachinesScreen() {
             <VStack className="gap-4">
               <VmSkeletonGrid count={Math.min(6, Math.max(1, pendingVmNames.size))} />
             </VStack>
-          ) : vms.length === 0 ? (
+          ) : inventoryError && vms.length === 0 ? null : vms.length === 0 ? (
             <Box className="p-8 web:rounded-2xl web:bg-background-0/80 dark:web:bg-[#151F30]/80">
               <VStack className="items-center gap-4">
                 <Server
@@ -2229,8 +2058,13 @@ export default function VirtualMachinesScreen() {
                 </Button>
               </VStack>
             </Box>
+          ) : vmsBySlaveEntries.length === 0 ? (
+            <VStack className="items-center gap-3 py-12">
+              <Text className="text-lg font-semibold text-typography-900 dark:text-[#E8EBF0]">No VMs match your filters</Text>
+              <Button variant="outline" onPress={() => { setQuery(""); setStateFilter("All"); }} className="rounded-lg"><ButtonText>Clear filters</ButtonText></Button>
+            </VStack>
           ) : (
-            <VStack className="gap-6">
+            <VStack className="gap-8">
               {pendingVmNames.size > 0 && (
                 <VmSkeletonGrid count={Math.min(6, Math.max(1, pendingVmNames.size))} />
               )}
@@ -2257,10 +2091,10 @@ export default function VirtualMachinesScreen() {
                 return (
                   <Box
                     key={slaveName}
-                    className="rounded-2xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] overflow-hidden web:shadow-md dark:web:shadow-none"
+                    className="gap-4"
                   >
                     {/* Slave Header */}
-                    <Box className="border-b border-outline-100 dark:border-[#2A3B52] p-4 web:p-6">
+                    <Box className="pb-4 border-b border-outline-200 dark:border-[#2A3B52]">
                       <Heading
                         size="lg"
                         className="text-typography-900 dark:text-[#E8EBF0] mb-2"
@@ -2284,7 +2118,7 @@ export default function VirtualMachinesScreen() {
                     </Box>
 
                     {/* VMs Grid */}
-                    <Box className="bg-background-50 dark:bg-[#0A1628] p-4">
+                    <Box>
                       <VStack className="gap-4 web:grid web:grid-cols-1 web:gap-4 web:sm:grid-cols-2 web:lg:grid-cols-3">
                         {slaveVms.map((vm) => {
                           const vmState = VM_STATES[vm.state];
@@ -2302,11 +2136,11 @@ export default function VirtualMachinesScreen() {
                                 setSelectedVm(vm);
                                 setShowActionsheet(true);
                               }}
-                              className={`rounded-xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E] p-4 web:hover:shadow-lg transition-all duration-200 ${isRunning
-                                ? "hover:border-[#2DD4BF] dark:border-[#5EEAD4] border"
+                              className={`rounded-xl border bg-background-0 dark:bg-[#0F1A2E] p-4 ${isRunning
+                                ? "border-[#2DD4BF] dark:border-[#5EEAD4]"
                                 : isPaused
-                                  ? "hover:border-[#FBBF24] dark:border-[#FCD34D] border"
-                                  : "hover:border-[#94A3B8] dark:border-[#64748B] border"
+                                  ? "border-[#FBBF24] dark:border-[#FCD34D]"
+                                  : "border-[#94A3B8] dark:border-[#64748B]"
                                 }`}
                             >
                               {/* VM Header */}
@@ -2318,7 +2152,7 @@ export default function VirtualMachinesScreen() {
                                       : isPaused
                                         ? "bg-[#FBBF24] dark:bg-[#FCD34D]"
                                         : "bg-[#94A3B8] dark:bg-[#64748B]"
-                                      } ${isRunning ? "animate-pulse" : ""}`}
+                                      }`}
                                   />
                                   <Pressable
                                     onPress={() => {
@@ -2363,7 +2197,9 @@ export default function VirtualMachinesScreen() {
                                       setSelectedVm(vm);
                                       setShowActionsheet(true);
                                     }}
-                                    className="p-1"
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`More actions for ${vm.name}`}
+                                    className="p-2"
                                   >
                                     <MoreVertical
                                       size={16}
@@ -2375,7 +2211,7 @@ export default function VirtualMachinesScreen() {
                               </HStack>
 
                               {/* Recursos */}
-                              <Box className="border-b border-outline-100 dark:border-[#1E2F47] pb-6">
+                              <Box className="border-b border-outline-100 dark:border-[#1E2F47] pb-4">
                                 <HStack className="flex flex-col">
                                   <Box className="flex flex-row justify-between">
                                     <Text
@@ -2551,7 +2387,7 @@ export default function VirtualMachinesScreen() {
                               </Box>
 
                               {/* Botões de Ação */}
-                              <HStack className="gap-3 items-center justify-evenly pt-8">
+                              <HStack className="gap-3 items-center justify-evenly pt-4">
                                 {isStopped && (
                                   <Button
                                     size="sm"
@@ -2585,6 +2421,8 @@ export default function VirtualMachinesScreen() {
                                   <>
                                     <Pressable
                                       className={`${cardIconButtonClass}`}
+                                      accessibilityRole="button"
+                                      accessibilityLabel={`Pause ${vm.name}`}
                                       onPress={() =>
                                         setConfirmAction({ type: "pause", vm })
                                       }
@@ -2597,6 +2435,8 @@ export default function VirtualMachinesScreen() {
                                     </Pressable>
                                     <Pressable
                                       className={`${cardIconButtonClass}`}
+                                      accessibilityRole="button"
+                                      accessibilityLabel={`Restart ${vm.name}`}
                                       onPress={() =>
                                         setConfirmAction({ type: "restart", vm })
                                       }
@@ -2609,6 +2449,8 @@ export default function VirtualMachinesScreen() {
                                     </Pressable>
                                     <Pressable
                                       className={`${cardDangerButtonClass}`}
+                                      accessibilityRole="button"
+                                      accessibilityLabel={`Shutdown ${vm.name}`}
                                       onPress={() =>
                                         setConfirmAction({ type: "shutdown", vm })
                                       }
@@ -2652,6 +2494,8 @@ export default function VirtualMachinesScreen() {
                                 )}
                                 <Pressable
                                   className={`${cardIconButtonClass}`}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={`View details for ${vm.name}`}
                                   onPress={() => setDetailsVm(vm)}
                                 >
                                   <Monitor
@@ -2677,7 +2521,7 @@ export default function VirtualMachinesScreen() {
             <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] shadow-soft-2 max-w-[720px] w-full">
               <ModalHeader className="flex justify-between border-b border-outline-100 dark:border-[#2A3B52]">
                 <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
-                  VM Details
+                  {detailsVm?.name} · Details
                 </Heading>
                 <VStack className="gap-2">
                   <HStack className="">
@@ -2689,10 +2533,11 @@ export default function VirtualMachinesScreen() {
                         setShowConsoleOptions(true);
                       }}
                     >
-                      <ButtonText className={`${primaryButtonTextClass}`}>Open</ButtonText>
+                      <ButtonText className={`${primaryButtonTextClass}`}>Open console</ButtonText>
                     </Button>
                   </HStack>
                 </VStack>
+                <ModalCloseButton accessibilityLabel="Close VM details"><X className="text-typography-700 dark:text-[#E8EBF0]" /></ModalCloseButton>
               </ModalHeader>
               <ModalBody className="p-0">
                 {detailsVm && (

@@ -34,7 +34,7 @@ jest.mock("expo-haptics", () => ({selectionAsync:jest.fn()}));
 jest.mock("../components/modals/CreateVmModal", () => () => null);
 jest.mock("../components/modals/ImportVmModal", () => () => null);
 jest.mock("../components/modals/CpuPinningModal", () => () => null);
-jest.mock("../services/websocket-client", () => ({ensureHyperHiveWebsocket:jest.fn(async()=>{}),subscribeToHyperHiveWebsocket:()=>()=>{}}));
+jest.mock("../services/websocket-client", () => ({ensureHyperHiveWebsocket:jest.fn(async()=>{}),subscribeToHyperHiveWebsocket:jest.fn(()=>jest.fn())}));
 jest.mock("../services/hyperhive", () => ({listMounts:jest.fn(async()=>[]),getCpuInfo:jest.fn(async()=>({cores:[]})),getMemInfo:jest.fn(async()=>({}))}));
 jest.mock("../services/xml-templates-client", () => ({listXmlTemplates:jest.fn(async()=>[])}));
 jest.mock("../services/backups", () => ({}));
@@ -52,6 +52,18 @@ beforeEach(() => {global.IS_REACT_ACT_ENVIRONMENT=true;jest.useFakeTimers();api.
 afterEach(async()=>{await act(async()=>root.unmount());jest.useRealTimers();});
 const render = async()=>act(async()=>root.render(<Screen/>));
 const click = async label => act(async()=>[...container.querySelectorAll("button")].find(el=>el.textContent===label).click());
+it("registers and cleans up VM listeners during effect replay while connection is pending", async () => {
+ const ws = require("../services/websocket-client");
+ ws.subscribeToHyperHiveWebsocket.mockClear();
+ ws.ensureHyperHiveWebsocket.mockImplementationOnce(() => new Promise(() => {}));
+ await act(async()=>root.render(<React.StrictMode><Screen/></React.StrictMode>));
+ expect(ws.subscribeToHyperHiveWebsocket).toHaveBeenCalledTimes(2);
+ const [first, second] = ws.subscribeToHyperHiveWebsocket.mock.results.map(result=>result.value);
+ expect(first).toHaveBeenCalledTimes(1);
+ expect(second).not.toHaveBeenCalled();
+ await act(async()=>root.render(null));
+ expect(second).toHaveBeenCalledTimes(1);
+});
 it("filters cards and slave groups and restores them with clear filters",async()=>{
  await render();expect(container.textContent).toContain("slave-a");expect(container.textContent).toContain("slave-b");
  await click("Running");expect(container.textContent).toContain("alpha");expect(container.textContent).not.toContain("slave-b");
@@ -63,4 +75,19 @@ it("shows a load failure without claiming the fleet is empty and supports retry"
 });
 it("keeps cards visible and marks inventory stale when polling fails",async()=>{
  await render();api.getAllVMs.mockRejectedValueOnce(new Error("Offline"));await act(async()=>jest.advanceTimersByTime(10000));expect(container.textContent).toContain("Inventory may be stale");expect(container.textContent).toContain("alpha");
+});
+
+it("searches host names and IPs without changing fleet totals", async () => {
+ api.getAllVMs.mockResolvedValueOnce([{...fixture("alpha","slave-a",1),ip:["192.0.2.7"]},fixture("beta","slave-b",5)]);
+ await render();
+ const search = async value => act(async()=>{
+  const input=container.querySelector("input");
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value").set.call(input,value);
+  input.dispatchEvent(new Event("input",{bubbles:true}));
+ });
+ await search(" SLAVE-B ");
+ expect(container.textContent).toContain("beta");expect(container.textContent).not.toContain("alpha");
+ await search("192.0.2.7");
+ expect(container.textContent).toContain("alpha");expect(container.textContent).not.toContain("beta");
+ expect(container.textContent).toContain("2 VMs");
 });

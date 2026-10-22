@@ -270,7 +270,7 @@ export function FleetOverview({
       />
       <View style={[s.row, { justifyContent: "space-between" }]}>
         <OpsText muted>
-          Auto refresh 2s · Last response{" "}
+          Last response{" "}
           {updatedAt?.toLocaleTimeString("en-GB") ?? "Waiting"}
         </OpsText>
         <Tone value={error ? "unavailable" : data ? "connected" : "pending"} />

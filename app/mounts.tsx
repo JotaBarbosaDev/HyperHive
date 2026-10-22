@@ -82,7 +82,6 @@ export default function MountsScreen() {
           <HStack className="flex-wrap web:flex-wrap gap-x-6 gap-y-2 border-y border-outline-200 dark:border-[#2A3B52] py-4 mb-6">
             <Text className="text-sm text-typography-700 dark:text-[#E8EBF0]">{isLoading ? "—" : mounts.length} exports</Text>
             <Text className="text-sm text-typography-700 dark:text-[#E8EBF0]">{isLoading ? "—" : mounts.filter(m => !m.Status.working).length} unhealthy</Text>
-            <Text className="text-sm text-typography-500 dark:text-[#8A94A8]">Refreshes every 5s</Text>
           </HStack>
           <VStack className="gap-4 web:md:flex-row web:md:items-end mb-4">
             <Box className="flex-1 min-w-0">

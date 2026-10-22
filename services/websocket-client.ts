@@ -83,7 +83,8 @@ export const ensureHyperHiveWebsocket = async (options?: {
   const resolvedBaseUrl = options?.baseUrl ?? getApiBaseUrl();
 
   if (!resolvedToken || !resolvedBaseUrl) {
-    throw new Error("Cannot establish WebSocket connection without token and API base URL.");
+    // The layout restores the session asynchronously and connects once credentials are ready.
+    return null;
   }
 
   if (isSocketReusable(resolvedToken, resolvedBaseUrl)) {

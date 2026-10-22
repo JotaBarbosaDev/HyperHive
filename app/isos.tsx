@@ -1080,7 +1080,6 @@ export default function ProfileScreen() {
           <HStack className="mt-6 flex-wrap gap-x-6 gap-y-3 border-y border-outline-200 dark:border-[#2A3B52] py-4">
             <HStack className="items-center gap-2"><Icon as={Disc3} size="sm" className="text-primary-600 dark:text-[#2DD4BF]" /><Text className="text-sm text-typography-700 dark:text-[#E8EBF0]">{isLoading ? "—" : isos.length} images</Text></HStack>
             <HStack className="items-center gap-2"><Icon as={HardDrive} size="sm" className="text-typography-500 dark:text-[#8A94A8]" /><Text className="text-sm text-typography-700 dark:text-[#E8EBF0]">{shareInfos.length} configured mounts</Text></HStack>
-            <HStack className="items-center gap-2"><Icon as={RefreshCw} size="sm" className="text-typography-500 dark:text-[#8A94A8]" /><Text className="text-sm text-typography-500 dark:text-[#8A94A8]">Refreshes every 5s</Text></HStack>
           </HStack>
           <VStack className="mt-6 gap-4 web:md:flex-row web:md:items-end">
             <Box className="flex-1">

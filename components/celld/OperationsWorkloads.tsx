@@ -148,7 +148,7 @@ export function FleetWorkloads({
           />
         </View>
         <OpsText muted>
-          Auto refresh 2s · Last response{" "}
+          Last response{" "}
           {updatedAt?.toLocaleTimeString("en-GB") ?? "Waiting"}
         </OpsText>
       </View>

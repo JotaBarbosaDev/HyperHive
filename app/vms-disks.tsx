@@ -296,7 +296,7 @@ export default function VmsDisksScreen() {
           />
         }
       >
-        <Box className="p-4 pt-16 web:p-20 web:max-w-7xl web:mx-auto web:w-full">
+        <Box className="p-4 pt-24 web:px-6 web:pb-8 web:pt-24 web:lg:px-10 web:max-w-screen-2xl web:mx-auto web:w-full">
           <VStack className="gap-2 mb-6">
             <Heading size="2xl" className="text-typography-900 dark:text-[#E8EBF0] mb-1 web:text-4xl">
               VMs Disks
@@ -311,6 +311,7 @@ export default function VmsDisksScreen() {
               variant="outline"
               action="default"
               className="h-11 px-4 rounded-xl border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E]"
+              accessibilityLabel="Refresh VM disks"
               onPress={() => loadDisks("refresh")}
               isDisabled={refreshing || loading}
             >
@@ -322,7 +323,7 @@ export default function VmsDisksScreen() {
               onPress={openCreate}
             >
               <ButtonIcon as={Plus} />
-              <ButtonText>Create Vm Disk</ButtonText>
+              <ButtonText>Create VM Disk</ButtonText>
             </Button>
           </HStack>
 
@@ -352,7 +353,7 @@ export default function VmsDisksScreen() {
                 return (
                   <Box
                     key={disk.id}
-                    className="rounded-xl border border-outline-100 bg-background-0 p-4 shadow-soft-1 dark:border-[#2A3B52] dark:bg-[#0E1524]"
+                    className="rounded-xl border border-outline-100 bg-background-0 p-4 dark:border-[#2A3B52] dark:bg-[#0E1524]"
                     style={{ aspectRatio: 1, minHeight: 280 }}
                   >
                     <VStack className="h-full justify-between gap-2">
@@ -457,7 +458,7 @@ export default function VmsDisksScreen() {
         <ModalContent className="rounded-2xl border-outline-100 dark:border-[#243247] dark:bg-[#0F1A2E]">
           <ModalHeader>
             <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
-              Create Vm Disk
+              Create VM Disk
             </Heading>
           </ModalHeader>
           <ModalBody>

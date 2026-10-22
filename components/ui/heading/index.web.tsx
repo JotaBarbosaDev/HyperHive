@@ -5,6 +5,7 @@ import { cleanStyle } from '../clean-style';
 type IHeadingProps = VariantProps<typeof headingStyle> &
   React.ComponentPropsWithoutRef<'h1'> & {
     as?: React.ElementType;
+    numberOfLines?: number;
   };
 
 const MappedHeading = memo(
@@ -20,11 +21,17 @@ const MappedHeading = memo(
       italic,
       highlight,
       style,
+      numberOfLines,
       ...props
     },
     ref
   ) {
-    const safeStyle = cleanStyle(style);
+    const safeStyle = {
+      ...cleanStyle(style),
+      ...(numberOfLines
+        ? { display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: numberOfLines, overflow: 'hidden' }
+        : {}),
+    };
     switch (size) {
       case '5xl':
       case '4xl':
@@ -168,7 +175,7 @@ const MappedHeading = memo(
 
 const Heading = memo(
   forwardRef<HTMLHeadingElement, IHeadingProps>(function Heading(
-    { className, size = 'lg', as: AsComp, ...props },
+    { className, size = 'lg', as: AsComp, numberOfLines, ...props },
     ref
   ) {
     const {
@@ -197,14 +204,19 @@ const Heading = memo(
             class: className,
           })}
           {...props}
-          style={cleanStyle(style)}
+          style={{
+            ...cleanStyle(style),
+            ...(numberOfLines
+              ? { display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: numberOfLines, overflow: 'hidden' }
+              : {}),
+          }}
           ref={ref}
         />
       );
     }
 
     return (
-      <MappedHeading className={className} size={size} ref={ref} {...props} />
+      <MappedHeading className={className} size={size} numberOfLines={numberOfLines} ref={ref} {...props} />
     );
   })
 );

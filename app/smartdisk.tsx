@@ -1216,8 +1216,7 @@ export default function SmartDiskScreen() {
                   </Select>
                   <FormControlHelper>
                     <FormControlHelperText className={formHelperTextClass}>
-                      Self-test runs in background; we refresh progress every
-                      minute.
+                      Self-test runs in background.
                     </FormControlHelperText>
                   </FormControlHelper>
                 </FormControl>
