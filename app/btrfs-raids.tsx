@@ -530,14 +530,6 @@ export default function BtrfsRaidsScreen() {
     </Select>
   );
 
-  const StatCard = ({ label, value, hint }: { label: string; value: string | number; hint?: string }) => (
-    <Box className="p-4 rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E] flex-1 min-w-[150px]">
-      <Text className="text-typography-700 dark:text-[#9AA4B8] text-xs uppercase tracking-wide">{label}</Text>
-      <Text className="text-typography-900 dark:text-[#E8EBF0] text-2xl font-bold mt-1">{value}</Text>
-      {hint ? <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs mt-1">{hint}</Text> : null}
-    </Box>
-  );
-
   const RaidTabButton = ({ tab }: { tab: RaidTab }) => {
     const active = raidTab === tab;
     const label = RAID_TABS.find((t) => t.key === tab)?.label ?? tab;
@@ -563,17 +555,19 @@ export default function BtrfsRaidsScreen() {
     <Pressable
       key={disk.device}
       onPress={() => setDiskDetail(disk)}
-      className="flex-row items-center justify-between px-3 py-2 border-b border-outline-100 dark:border-[#1E2F47]"
+      accessibilityRole="button"
+      accessibilityLabel={`View disk ${disk.device}`}
+      className="flex-row flex-wrap gap-3 items-center justify-between px-4 py-4 border-b border-outline-100 dark:border-[#1E2F47]"
     >
-      <VStack className="gap-1">
-        <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold">
+      <VStack className="gap-1 flex-1 min-w-0">
+        <Text selectable className="text-typography-900 dark:text-[#E8EBF0] font-mono break-all">
           {formatDeviceDisplay(disk)}
         </Text>
         <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">
           {disk.model || disk.name || "—"} • {formatSize(disk.size)}
         </Text>
       </VStack>
-      <HStack className="gap-2">
+      <HStack className="gap-2 flex-wrap">
         {disk.type ? (
           <Badge
             className="rounded-full px-3 py-1 border-outline-200 dark:border-[#1E2F47]"
@@ -638,17 +632,16 @@ export default function BtrfsRaidsScreen() {
           />
         }
       >
-        <Box className="p-4 pt-16 web:p-20 web:max-w-6xl web:mx-auto web:w-full">
+        <Box className="p-4 pt-16 web:px-10 web:pb-10 web:pt-20 web:max-w-7xl web:mx-auto web:w-full">
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
             style={{fontFamily: "Inter_700Bold"}}
           >
-            BTRFS / RAIDs
+            Btrfs RAIDs
           </Heading>
           <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm web:text-base max-w-3xl">
-            Full BTRFS management: create arrays, balance, scrub, and automate
-            mounts.
+            Manage arrays, disks, maintenance, and automatic mounts.
           </Text>
 
           <HStack className="mt-6 items-center justify-between flex-wrap gap-3">
@@ -682,13 +675,14 @@ export default function BtrfsRaidsScreen() {
                 action="default"
                 size="sm"
                 onPress={() => loadData("refresh")}
+                isDisabled={loading || refreshing}
                 className="rounded-xl border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E] dark:hover:bg-[#1A2637]/50 dark:active:bg-[#1A2637] h-10"
               >
-                <ButtonIcon
+                {refreshing ? <ButtonSpinner /> : <ButtonIcon
                   as={RefreshCcw}
                   size="sm"
                   className="text-typography-900 dark:text-[#E8EBF0]"
-                />
+                />}
                 <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
                   Refresh
                 </ButtonText>
@@ -708,27 +702,11 @@ export default function BtrfsRaidsScreen() {
             </Button>
           </HStack>
 
-          <HStack className="mt-4 gap-3 flex-wrap">
-            <StatCard
-              label="RAIDs"
-              value={raids.length}
-              hint={`${activeCount} active • ${inactiveCount} inactive`}
-            />
-            <StatCard
-              label="Free disks"
-              value={freeDisks.length}
-              hint="Ready to add"
-            />
-            <StatCard
-              label="Auto-mount"
-              value={autoMounts.length}
-              hint="Configured rules"
-            />
-            <StatCard
-              label="Machines"
-              value={machines.length}
-              hint="Available targets"
-            />
+          <HStack className="mt-5 py-3 border-y border-outline-100 dark:border-[#1E2F47] gap-x-6 gap-y-2 flex-wrap">
+            <Text className="text-sm text-typography-700 dark:text-[#9AA4B8]">{loading ? "Loading inventory…" : refreshing ? "Refreshing inventory…" : `${raids.length} arrays · ${activeCount} active · ${inactiveCount} inactive`}</Text>
+            <Text className="text-sm text-typography-700 dark:text-[#9AA4B8]">{freeDisks.length} free disks</Text>
+            <Text className="text-sm text-typography-700 dark:text-[#9AA4B8]">{autoMounts.length} automatic mounts</Text>
+            <Text className="text-sm text-typography-700 dark:text-[#9AA4B8]">{machines.length} machines</Text>
           </HStack>
 
           {loading && raids.length === 0 ? (
@@ -745,38 +723,10 @@ export default function BtrfsRaidsScreen() {
             </VStack>
           ) : (
             <>
-              <Box className="mt-6 rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E] web:shadow-md dark:web:shadow-none">
-                <HStack className="items-center justify-between px-4 py-3">
-                  <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base">
-                    Free Disks
-                  </Text>
-                  <HStack className="items-center gap-2">
-                    <Icon
-                      as={HardDrive}
-                      size="sm"
-                      className="text-typography-900 dark:text-[#E8EBF0]"
-                    />
-                    <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm">
-                      {Array.isArray(freeDisks) ? freeDisks.length : 0} disks
-                    </Text>
-                  </HStack>
-                </HStack>
-                <Divider className="opacity-60 dark:bg-[#1E2F47] dark:border-[#1E2F47]" />
-                {!Array.isArray(freeDisks) || freeDisks.length === 0 ? (
-                  <Box className="p-4">
-                    <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">
-                      No free disks found.
-                    </Text>
-                  </Box>
-                ) : (
-                  freeDisks.map(renderDiskRow)
-                )}
-              </Box>
-
-              <Box className="mt-6 rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E] web:shadow-md dark:web:shadow-none">
+              <Box className="mt-6 rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]">
                 <HStack className="items-center justify-between px-4 py-3 flex-wrap gap-3">
                   <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base">
-                    Arrays BTRFS
+                    RAID arrays
                   </Text>
                   <HStack className="gap-2 flex-wrap">
                     {[
@@ -795,7 +745,9 @@ export default function BtrfsRaidsScreen() {
                         <Pressable
                           key={tab.key}
                           onPress={() => setFilter(tab.key)}
-                          className={`px-4 py-2 rounded-full border transition-all ${
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: active }}
+                          className={`px-4 py-2 rounded-lg border transition-all ${
                             active
                               ? "border-typography-900 dark:border-[#2DD4BF] bg-background-50 dark:bg-[#0A1628]"
                               : "border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]"
@@ -820,28 +772,30 @@ export default function BtrfsRaidsScreen() {
                 {filteredRaids.length === 0 ? (
                   <Box className="p-4">
                     <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">
-                      No RAID found.
+                      No arrays match this view. Choose another filter or create a RAID.
                     </Text>
                   </Box>
                 ) : (
-                  <VStack className="p-4 gap-3">
+                  <VStack>
                     {filteredRaids.map((raid) => {
                       const active = isRaidActive(raid);
                       const auto = getAutoMountForRaid(raid.uuid);
                       return (
-                        <Pressable
+                        <Box
                           key={raid.uuid}
-                          onPress={() => openRaidModal(raid)}
-                          className={`rounded-xl border border-outline-100 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] p-4 web:hover:border-[#2DD4BF] dark:web:hover:border-[#2DD4BF] active:scale-[0.99] transition-all ${active ? "" : "opacity-90"}`}
+                          className="px-4 py-5 border-b border-outline-100 dark:border-[#1E2F47]"
                         >
-                          <HStack className="items-start justify-between gap-4 flex-wrap">
-                            <VStack className="gap-2 flex-1">
+                          <HStack className="flex-col lg:flex-row items-start justify-between gap-4">
+                            <VStack className="gap-2 w-full lg:flex-1 min-w-0">
                               <HStack className="items-center gap-2 flex-wrap">
                                 <Box
-                                  className={`h-2.5 w-2.5 rounded-full ${active ? "bg-[#2DD4BF] dark:bg-[#2DD4BF]" : "bg-[#94A3B8] dark:bg-[#64748B]"}`}
+                                  className={`h-2.5 w-2.5 rounded-full ${raid.mounted === true ? "bg-[#2DD4BF] dark:bg-[#2DD4BF]" : "bg-[#94A3B8] dark:bg-[#64748B]"}`}
                                 />
-                                <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold">
-                                  {raid.mount_point || raid.name || raid.uuid}
+                                <Text selectable className="text-typography-900 dark:text-[#E8EBF0] font-semibold flex-shrink">
+                                  {raid.name || raid.mount_point || raid.uuid}
+                                </Text>
+                                <Text className="text-sm text-typography-700 dark:text-[#9AA4B8]">
+                                  {raid.mounted === undefined || raid.mounted === null ? "Mount state unknown" : active ? "Mounted" : "Unmounted"}
                                 </Text>
                                 {raid.raid_level ? (
                                   <Badge
@@ -881,7 +835,10 @@ export default function BtrfsRaidsScreen() {
                                   </Badge>
                                 ) : null}
                               </HStack>
-                              <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm">
+                              <Text selectable className="text-typography-700 dark:text-[#9AA4B8] text-sm font-mono break-all">
+                                {raid.mount_point || "No mount point"}
+                              </Text>
+                              <Text selectable className="text-typography-700 dark:text-[#9AA4B8] text-xs font-mono break-all">
                                 UUID: {raid.uuid}
                               </Text>
                               {raid.status ? (
@@ -929,18 +886,45 @@ export default function BtrfsRaidsScreen() {
                                 })}
                               </HStack>
                             </VStack>
-                            <Icon
-                              as={ArrowRight}
-                              size="sm"
-                              className="text-typography-500 dark:text-[#9AA4B8]"
-                            />
+                            <Button variant="outline" action="default" size="sm" onPress={() => openRaidModal(raid)} accessibilityLabel={`Manage RAID ${raid.name || raid.uuid}`} className="rounded-lg border-outline-200 dark:border-[#1E2F47]">
+                              <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Manage RAID</ButtonText>
+                              <ButtonIcon as={ArrowRight} size="sm" />
+                            </Button>
                           </HStack>
-                        </Pressable>
+                        </Box>
                       );
                     })}
                   </VStack>
                 )}
               </Box>
+              <Box className="mt-6 rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]">
+                <HStack className="items-center justify-between px-4 py-3">
+                  <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base">
+                    Free disks
+                  </Text>
+                  <HStack className="items-center gap-2">
+                    <Icon
+                      as={HardDrive}
+                      size="sm"
+                      className="text-typography-900 dark:text-[#E8EBF0]"
+                    />
+                    <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm">
+                      {Array.isArray(freeDisks) ? freeDisks.length : 0} disks
+                    </Text>
+                  </HStack>
+                </HStack>
+                <Divider className="opacity-60 dark:bg-[#1E2F47] dark:border-[#1E2F47]" />
+                {!Array.isArray(freeDisks) || freeDisks.length === 0 ? (
+                  <Box className="p-4">
+                    <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">
+                      No free disks found.
+                    </Text>
+                  </Box>
+                ) : (
+                  freeDisks.map(renderDiskRow)
+                )}
+              </Box>
+
             </>
           )}
         </Box>

@@ -1,0 +1,66 @@
+/** @jest-environment jsdom */
+import React, { act } from "react";
+import { createRoot } from "react-dom/client";
+const mockElement = ({children}) => <div>{children}</div>;
+jest.mock("../components/ui/box", () => ({Box: mockElement}));
+jest.mock("../components/ui/text", () => ({Text: mockElement}));
+jest.mock("../components/ui/vstack", () => ({VStack: mockElement}));
+jest.mock("../components/ui/hstack", () => ({HStack: mockElement}));
+jest.mock("../components/ui/badge", () => ({Badge: mockElement,BadgeText: mockElement}));
+jest.mock("../components/ui/skeleton", () => ({Skeleton: mockElement,SkeletonText: mockElement}));
+jest.mock("../components/ui/pressable", () => ({Pressable: mockElement}));
+jest.mock("../components/ui/modal", () => ({Modal: ({isOpen,children}) => isOpen ? <div role="dialog">{children}</div> : null,ModalBackdrop: mockElement,ModalContent: mockElement,ModalHeader: mockElement,ModalBody: mockElement,ModalFooter: mockElement,ModalCloseButton: mockElement}));
+jest.mock("../components/ui/divider", () => ({Divider: mockElement}));
+jest.mock("../components/ui/progress", () => ({Progress: mockElement,ProgressFilledTrack: mockElement}));
+jest.mock("../components/ui/actionsheet", () => ({Actionsheet: ({isOpen,children}) => isOpen ? <div role="dialog">{children}</div> : null,ActionsheetBackdrop: mockElement,ActionsheetContent: mockElement,ActionsheetDragIndicator: mockElement,ActionsheetDragIndicatorWrapper: mockElement,ActionsheetItem: mockElement,ActionsheetItemText: mockElement,ActionsheetIcon: mockElement}));
+jest.mock("../components/ui/alert-dialog", () => ({AlertDialog: ({isOpen,children}) => isOpen ? <div role="dialog">{children}</div> : null,AlertDialogBackdrop: mockElement,AlertDialogContent: mockElement,AlertDialogHeader: mockElement,AlertDialogBody: mockElement,AlertDialogFooter: mockElement,AlertDialogCloseButton: mockElement}));
+jest.mock("../components/ui/textarea", () => ({Textarea: mockElement,TextareaInput: mockElement}));
+jest.mock("../components/ui/select", () => ({Select: mockElement,SelectTrigger: mockElement,SelectInput: mockElement,SelectItem: mockElement,SelectIcon: mockElement,SelectPortal: mockElement,SelectContent: mockElement,SelectBackdrop: mockElement,SelectDragIndicator: mockElement,SelectDragIndicatorWrapper: mockElement}));
+jest.mock("../components/ui/form-control", () => ({FormControl: mockElement,FormControlHelper: mockElement,FormControlHelperText: mockElement,FormControlLabel: mockElement,FormControlLabelText: mockElement}));
+jest.mock("../components/ui/switch", () => ({Switch: mockElement}));
+jest.mock("react-native", () => ({ScrollView: mockElement,RefreshControl: () => null,useColorScheme: () => "dark",Platform: {OS:"web"}}));
+jest.mock("../components/ui/button", () => ({Button: ({children,onPress,disabled}) => <button onClick={onPress} disabled={disabled}>{children}</button>,ButtonText:mockElement,ButtonIcon:()=>null,ButtonSpinner:()=>null}));
+jest.mock("../components/ui/input", () => ({Input:mockElement,InputField:({value,onChangeText}) => <input value={value} onChange={e => onChangeText(e.target.value)}/>}));
+jest.mock("../components/ui/toast", () => ({useToast: () => mockToast,Toast:mockElement,ToastTitle:mockElement,ToastDescription:mockElement}));
+jest.mock("../components/ui/heading", () => ({Heading:mockElement}));
+const mockToast = {show:jest.fn()};
+jest.mock("lucide-react-native", () => new Proxy({}, {get: () => () => null}));
+jest.mock("../hooks/useAppTheme", () => ({useAppTheme: () => ({resolvedMode:"dark"})}));
+jest.mock("expo-clipboard", () => ({}));
+jest.mock("expo-file-system/legacy", () => ({}));
+jest.mock("expo-sharing", () => ({}));
+jest.mock("expo-web-browser", () => ({}));
+jest.mock("expo-haptics", () => ({selectionAsync:jest.fn()}));
+jest.mock("../components/modals/CreateVmModal", () => () => null);
+jest.mock("../components/modals/ImportVmModal", () => () => null);
+jest.mock("../components/modals/CpuPinningModal", () => () => null);
+jest.mock("../services/websocket-client", () => ({ensureHyperHiveWebsocket:jest.fn(async()=>{}),subscribeToHyperHiveWebsocket:()=>()=>{}}));
+jest.mock("../services/hyperhive", () => ({listMounts:jest.fn(async()=>[]),getCpuInfo:jest.fn(async()=>({cores:[]})),getMemInfo:jest.fn(async()=>({}))}));
+jest.mock("../services/xml-templates-client", () => ({listXmlTemplates:jest.fn(async()=>[])}));
+jest.mock("../services/backups", () => ({}));
+jest.mock("../services/api-client", () => ({ApiError:class extends Error {}}));
+jest.mock("../config/apiConfig", () => ({getApiBaseUrl:()=>"https://example.test"}));
+jest.mock("../services/vms-client", () => ({
+  VmState:{UNKNOWN:0,RUNNING:1,BLOCKED:2,PAUSED:3,SHUTDOWN:4,SHUTOFF:5,CRASHED:6,PMSUSPENDED:7,NOSTATE:8},
+  getAllVMs:jest.fn(),listSlaves:jest.fn(async()=>[])
+}));
+const api = require("../services/vms-client");
+const Screen = require("../app/vms").default;
+const fixture = (name,machineName,state) => ({name,machineName,state,DefinedCPUS:2,DefinedRam:2048,ip:[],network:"default"});
+let root,container;
+beforeEach(() => {global.IS_REACT_ACT_ENVIRONMENT=true;jest.useFakeTimers();api.getAllVMs.mockReset().mockResolvedValue([fixture("alpha","slave-a",1),fixture("beta","slave-b",5)]);container=document.createElement("div");root=createRoot(container);});
+afterEach(async()=>{await act(async()=>root.unmount());jest.useRealTimers();});
+const render = async()=>act(async()=>root.render(<Screen/>));
+const click = async label => act(async()=>[...container.querySelectorAll("button")].find(el=>el.textContent===label).click());
+it("filters cards and slave groups and restores them with clear filters",async()=>{
+ await render();expect(container.textContent).toContain("slave-a");expect(container.textContent).toContain("slave-b");
+ await click("Running");expect(container.textContent).toContain("alpha");expect(container.textContent).not.toContain("slave-b");
+ await act(async()=>{const input=container.querySelector("input");Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value").set.call(input,"missing");input.dispatchEvent(new Event("input",{bubbles:true}));});
+ expect(container.textContent).toContain("No VMs match your filters");await click("Clear filters");expect(container.textContent).toContain("beta");
+});
+it("shows a load failure without claiming the fleet is empty and supports retry",async()=>{
+ api.getAllVMs.mockRejectedValueOnce(new Error("Unavailable"));await render();expect(container.textContent).toContain("Unable to load VMs");expect(container.textContent).not.toContain("No VMs found");await click("Retry");expect(container.textContent).toContain("alpha");expect(container.textContent).not.toContain("Unable to load VMs");
+});
+it("keeps cards visible and marks inventory stale when polling fails",async()=>{
+ await render();api.getAllVMs.mockRejectedValueOnce(new Error("Offline"));await act(async()=>jest.advanceTimersByTime(10000));expect(container.textContent).toContain("Inventory may be stale");expect(container.textContent).toContain("alpha");
+});

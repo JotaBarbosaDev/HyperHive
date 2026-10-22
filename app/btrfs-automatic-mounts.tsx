@@ -102,7 +102,7 @@ export default function BtrfsAutomaticMountsScreen() {
   const modalHeaderClass = "flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#1E2F47]";
   const modalBodyClass = "px-6 pt-5 pb-6 max-h-[70vh] overflow-y-auto";
   const modalFooterClass = "gap-3 px-6 pt-4 pb-6 border-t border-outline-100 dark:border-[#1E2F47]";
-  const cardShellClass = "rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E] shadow-soft-1";
+  const cardShellClass = "rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]";
   const softCardShellClass = "rounded-xl border border-outline-100 bg-background-50 dark:border-[#1E2F47] dark:bg-[#132038]";
   const outlineButtonClass = "border-outline-200 rounded-xl dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]";
   const outlineButtonTextClass = "text-typography-900 dark:text-[#E8EBF0]";
@@ -332,16 +332,16 @@ export default function BtrfsAutomaticMountsScreen() {
           />
         }
       >
-        <Box className="p-4 pt-16 web:p-20 web:max-w-5xl web:mx-auto web:w-full">
+        <Box className="p-4 pt-16 web:px-10 web:pb-10 web:pt-20 web:max-w-7xl web:mx-auto web:w-full">
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
             style={{fontFamily: "Inter_700Bold"}}
           >
-            BTRFS Auto-Mounts
+            Automatic mounts
           </Heading>
-          <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
-            Rules that automatically mount BTRFS RAIDs when the machine starts.
+          <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm web:text-base max-w-3xl">
+            Configure Btrfs arrays to mount when the selected machine starts.
           </Text>
 
           <HStack className="mt-6 items-center justify-between flex-wrap gap-3">
@@ -386,11 +386,11 @@ export default function BtrfsAutomaticMountsScreen() {
                 onPress={() => loadData("refresh")}
                 className={`${outlineButtonClass} h-10`}
               >
-                <ButtonIcon
+                {refreshing ? <ButtonSpinner /> : <ButtonIcon
                   as={RefreshCcw}
                   size="sm"
                   className={outlineButtonIconClass}
-                />
+                />}
                 <ButtonText className={outlineButtonTextClass}>
                   Refresh
                 </ButtonText>
@@ -403,15 +403,21 @@ export default function BtrfsAutomaticMountsScreen() {
             >
               <ButtonIcon as={Plus} size="sm" />
               <ButtonText style={{fontFamily: "Inter_600SemiBold"}}>
-                New Auto-mount
+                Create auto-mount
               </ButtonText>
             </Button>
+          </HStack>
+
+          <HStack className="mt-5 py-3 border-y border-outline-100 dark:border-[#1E2F47] gap-x-6 gap-y-2 flex-wrap">
+            <Text className="text-sm text-typography-700 dark:text-[#9AA4B8]">{loading ? "Loading rules…" : refreshing ? "Refreshing rules…" : `${autoMounts.length} configured rules`}</Text>
+            <Text className="text-sm text-typography-700 dark:text-[#9AA4B8]">{raids.length} available arrays</Text>
+            <Text className="text-sm text-typography-700 dark:text-[#9AA4B8]">Applied at machine startup</Text>
           </HStack>
 
           <Box className={`mt-6 ${cardShellClass}`}>
             <HStack className="items-center justify-between px-4 py-3">
               <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base">
-                Rules
+                Mount rules
               </Text>
               <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm">
                 {autoMounts.length} items
@@ -430,23 +436,23 @@ export default function BtrfsAutomaticMountsScreen() {
             ) : autoMounts.length === 0 ? (
               <Box className="p-4">
                 <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">
-                  No rules configured.
+                  No automatic mounts configured. Create an auto-mount to mount an array at startup.
                 </Text>
               </Box>
             ) : (
               <VStack className="divide-y divide-outline-100 dark:divide-[#1E2F47]">
                 {autoMounts.map((rule) => (
-                  <Box key={rule.id} className="px-4 py-3">
+                  <Box key={rule.id} className="px-4 py-5 border-b border-outline-100 dark:border-[#1E2F47]">
                     <HStack className="justify-between items-start gap-3 flex-wrap">
-                      <VStack className="gap-1">
-                        <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold">
+                      <VStack className="gap-2 flex-1 min-w-0">
+                        <Text selectable className="text-typography-900 dark:text-[#E8EBF0] font-semibold font-mono break-all">
                           {rule.mount_point}
                         </Text>
                         <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm">
                           RAID:{" "}
                           {getRaidLabel(rule.uuid || rule.raid_uuid, raids)}
                         </Text>
-                        <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">
+                        <Text selectable className="text-typography-600 dark:text-[#9AA4B8] text-xs font-mono break-all">
                           UUID: {rule.uuid || rule.raid_uuid}
                         </Text>
                         <HStack className="gap-2 mt-1 flex-wrap">
@@ -481,8 +487,7 @@ export default function BtrfsAutomaticMountsScreen() {
                         onPress={() => handleRemove(rule.id)}
                         isDisabled={removingId !== null}
                         className={
-                          outlineButtonClass +
-                          "rounded-xl border-error-300 dark:border-error-700 bg-background-0 dark:bg-red-900/20 dark:hover:bg-red-900/30"
+                          outlineButtonClass
                         }
                       >
                         {removingId === rule.id ? (

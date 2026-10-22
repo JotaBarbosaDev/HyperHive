@@ -206,7 +206,7 @@ export default function SmartDiskScreen() {
   const modalBodyScrollClass = "px-6 pt-5 pb-6 max-h-[70vh] overflow-y-auto";
   const modalFooterClass = "gap-3 px-6 pt-4 pb-6 border-t border-outline-100 dark:border-[#1E2F47]";
   const modalTabsClass = "rounded-2xl border border-outline-100 dark:border-[#1E2F47] bg-background-50 dark:bg-[#132038] p-1";
-  const cardShellClass = "rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E] shadow-soft-1";
+  const cardShellClass = "rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]";
   const softCardShellClass = "rounded-xl border border-outline-100 bg-background-50 dark:border-[#1E2F47] dark:bg-[#132038]";
   const outlineButtonClass = "border-outline-200 rounded-xl dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]";
   const outlineButtonTextClass = "text-typography-900 dark:text-[#E8EBF0]";
@@ -651,15 +651,15 @@ export default function SmartDiskScreen() {
           />
         }
       >
-        <Box className="p-4 pt-16 web:p-20 web:max-w-6xl web:mx-auto web:w-full">
+        <Box className="p-4 pt-16 web:px-10 web:pb-10 web:pt-20 web:max-w-7xl web:mx-auto web:w-full">
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
             style={{fontFamily: "Inter_700Bold"}}
           >
-            SMART Tests
+            Smart Disk
           </Heading>
-          <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
+          <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm web:text-base max-w-3xl">
             Monitor disks, run self-tests, and track reallocation in real time.
           </Text>
 
@@ -702,11 +702,11 @@ export default function SmartDiskScreen() {
                 onPress={() => loadData("refresh")}
                 className={`${outlineButtonClass} h-10`}
               >
-                <ButtonIcon
+                {refreshing ? <ButtonSpinner /> : <ButtonIcon
                   as={RefreshCcw}
                   size="sm"
                   className={outlineButtonIconClass}
-                />
+                />}
                 <ButtonText className={outlineButtonTextClass}>
                   Refresh
                 </ButtonText>
@@ -720,8 +720,14 @@ export default function SmartDiskScreen() {
               className="rounded-xl dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
             >
               <ButtonIcon as={CalendarClock} size="sm" />
-              <ButtonText>New Schedule</ButtonText>
+              <ButtonText>Create schedule</ButtonText>
             </Button>
+          </HStack>
+
+          <HStack className="mt-5 py-3 border-y border-outline-100 dark:border-[#1E2F47] gap-x-6 gap-y-2 flex-wrap">
+            <Text className="text-sm text-typography-700 dark:text-[#9AA4B8]">{loading ? "Loading disks…" : refreshing ? "Refreshing disks…" : `${disks.length} disks`}</Text>
+            <Text className="text-sm text-typography-700 dark:text-[#9AA4B8]">{schedules.length} test schedules</Text>
+            <Text className="text-sm text-typography-700 dark:text-[#9AA4B8]">Self-test and reallocation progress updates automatically</Text>
           </HStack>
 
           {loading && disks.length === 0 ? (
@@ -735,34 +741,38 @@ export default function SmartDiskScreen() {
             </VStack>
           ) : (
             <>
-              <VStack className="mt-6 gap-3">
+              <VStack className={`mt-6 ${cardShellClass}`}>
+                <HStack className="px-4 py-3 items-center justify-between">
+                  <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base">Disks</Text>
+                  <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">{disks.length} devices</Text>
+                </HStack>
+                <Divider className={dividerClass} />
                 {(disks ?? []).length === 0 ? (
-                  <Box className={`p-4 ${cardShellClass}`}>
+                  <Box className="p-4">
                     <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">
                       No eligible disks found.
                     </Text>
                   </Box>
                 ) : (
                   (disks ?? []).map((disk) => (
-                    <Pressable
+                    <Box
                       key={disk.device}
-                      onPress={() => openDetail(disk.device)}
-                      className={`p-4 ${cardShellClass}`}
+                      className="px-4 py-5 border-b border-outline-100 dark:border-[#1E2F47]"
                     >
                       <HStack className="items-center justify-between flex-wrap gap-2">
-                        <HStack className="items-center gap-2 flex-1">
+                        <HStack className="items-center gap-2 flex-1 min-w-0">
                           <HardDrive size={18} className={iconPrimaryClass} />
-                          <VStack>
-                            <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold">
+                          <VStack className="flex-1 min-w-0 gap-1">
+                            <Text selectable className="text-typography-900 dark:text-[#E8EBF0] font-semibold font-mono break-all">
                               {getDeviceLabel(disk.device, disks, deviceMeta)}
                             </Text>
-                            <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs">
+                            <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs font-mono break-all">
                               {disk.serial ? `Serial ${disk.serial}` : ""}
                             </Text>
                           </VStack>
                         </HStack>
                         <HStack className="items-center gap-2">
-                          {badgeStatus(disk.healthStatus || disk.status)}
+                          {badgeStatus(disk.healthStatus || disk.status || "Unknown")}
                           <Badge
                             className={neutralBadgeClass}
                             size="sm"
@@ -794,7 +804,7 @@ export default function SmartDiskScreen() {
                       {renderSelfTestBar(disk.device)}
                       {renderReallocBar(disk.device)}
 
-                      <HStack className="mt-3 gap-2">
+                      <HStack className="mt-4 gap-2 flex-wrap">
                         <Button
                           action="default"
                           variant="outline"
@@ -824,7 +834,7 @@ export default function SmartDiskScreen() {
                             className={outlineButtonIconClass}
                           />
                           <ButtonText className={outlineButtonTextClass}>
-                            Realloc
+                            Reallocation
                           </ButtonText>
                         </Button>
                         <Button
@@ -838,7 +848,7 @@ export default function SmartDiskScreen() {
                           <ButtonText>Details</ButtonText>
                         </Button>
                       </HStack>
-                    </Pressable>
+                    </Box>
                   ))
                 )}
               </VStack>
@@ -862,7 +872,7 @@ export default function SmartDiskScreen() {
                 ) : (
                   <VStack className="divide-y divide-outline-100 dark:divide-[#1E2F47]">
                     {schedules.map((sched) => (
-                      <Box key={sched.id} className="px-4 py-3">
+                      <Box key={sched.id} className="px-4 py-5 border-b border-outline-100 dark:border-[#1E2F47]">
                         <HStack className="items-center gap-2 flex-wrap">
                           <CalendarClock size={16} className={iconMutedClass} />
                           <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold flex-1">
@@ -895,7 +905,7 @@ export default function SmartDiskScreen() {
                             </BadgeText>
                           </Badge>
                         </HStack>
-                        <HStack className="mt-2 gap-2">
+                        <HStack className="mt-3 gap-2 flex-wrap">
                           <Button
                             action="default"
                             variant="outline"
@@ -931,6 +941,7 @@ export default function SmartDiskScreen() {
                                 className={outlineButtonIconClass}
                               />
                             )}
+                            <ButtonText className={outlineButtonTextClass}>{sched.active ? "Disable" : "Enable"}</ButtonText>
                           </Button>
                           <Button
                             action="negative"
@@ -951,6 +962,7 @@ export default function SmartDiskScreen() {
                                 className={dangerOutlineIconClass}
                               />
                             )}
+                            <ButtonText className={dangerOutlineTextClass}>Delete</ButtonText>
                           </Button>
                         </HStack>
                       </Box>
