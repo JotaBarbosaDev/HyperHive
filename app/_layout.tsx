@@ -94,6 +94,7 @@ const ROUTE_TITLE_MAP: Record<string, string> = {
   "/proxy": "Proxy",
   "/redirection": "Redirection",
   "/streams": "Streams",
+  "/upstreams": "Upstreams",
   "/cards": "Cards",
   "/orders": "Orders",
   "/modal": "Modal",

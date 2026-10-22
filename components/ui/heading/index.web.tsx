@@ -1,6 +1,7 @@
 import React, { forwardRef, memo } from 'react';
 import { headingStyle } from './styles';
 import type { VariantProps } from '@gluestack-ui/utils/nativewind-utils';
+import { cleanStyle } from '../clean-style';
 type IHeadingProps = VariantProps<typeof headingStyle> &
   React.ComponentPropsWithoutRef<'h1'> & {
     as?: React.ElementType;
@@ -18,10 +19,12 @@ const MappedHeading = memo(
       sub,
       italic,
       highlight,
+      style,
       ...props
     },
     ref
   ) {
+    const safeStyle = cleanStyle(style);
     switch (size) {
       case '5xl':
       case '4xl':
@@ -40,6 +43,7 @@ const MappedHeading = memo(
               class: className,
             })}
             {...props}
+            style={safeStyle}
             ref={ref}
           />
         );
@@ -58,6 +62,7 @@ const MappedHeading = memo(
               class: className,
             })}
             {...props}
+            style={safeStyle}
             ref={ref}
           />
         );
@@ -76,6 +81,7 @@ const MappedHeading = memo(
               class: className,
             })}
             {...props}
+            style={safeStyle}
             ref={ref}
           />
         );
@@ -94,6 +100,7 @@ const MappedHeading = memo(
               class: className,
             })}
             {...props}
+            style={safeStyle}
             ref={ref}
           />
         );
@@ -112,6 +119,7 @@ const MappedHeading = memo(
               class: className,
             })}
             {...props}
+            style={safeStyle}
             ref={ref}
           />
         );
@@ -131,6 +139,7 @@ const MappedHeading = memo(
               class: className,
             })}
             {...props}
+            style={safeStyle}
             ref={ref}
           />
         );
@@ -149,6 +158,7 @@ const MappedHeading = memo(
               class: className,
             })}
             {...props}
+            style={safeStyle}
             ref={ref}
           />
         );
@@ -169,6 +179,7 @@ const Heading = memo(
       sub,
       italic,
       highlight,
+      style,
     } = props;
 
     if (AsComp) {
@@ -186,6 +197,7 @@ const Heading = memo(
             class: className,
           })}
           {...props}
+          style={cleanStyle(style)}
           ref={ref}
         />
       );

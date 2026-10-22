@@ -169,6 +169,7 @@ const MENU_ITEMS: MenuItem[] = [
       {label: "Certificates", route: "/certificates", icon: ShieldCheck},
       {label: "Access Lists", route: "/access-lists", icon: Lock},
       {label: "Proxy", route: "/proxy", icon: GitFork},
+      {label: "Upstreams", route: "/upstreams", icon: GitFork},
       {label: "Redirection", route: "/redirection", icon: ArrowLeftRight},
       {label: "Streams", route: "/streams", icon: ChevronsLeftRightEllipsis},
     ],

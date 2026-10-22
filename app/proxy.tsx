@@ -1,4 +1,5 @@
 import React from "react";
+import {UpstreamPoolsProvider, UpstreamSelector, upstreamTargetLabel, useUpstreamPools} from "@/components/UpstreamSelector";
 import { RefreshControl, ScrollView, useWindowDimensions, Platform, useColorScheme } from "react-native";
 import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";
@@ -150,7 +151,9 @@ const TOGGLE_PROPS = {
   ios_backgroundColor: "#cbd5e1",
 };
 
-export default function ProxyHostsScreen() {
+export default function ProxyHostsScreen() {return <UpstreamPoolsProvider><ProxyHostsContent/></UpstreamPoolsProvider>;}
+function ProxyHostsContent() {
+  const upstreamPools = useUpstreamPools();
   const toast = useToast();
   const [hosts, setHosts] = React.useState<ProxyHost[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -325,6 +328,7 @@ export default function ProxyHostsScreen() {
   const openEditModal = (host: ProxyHost) => {
     setEditingHost(host);
     setForm({
+      upstream_id: host.upstream_id,
       domain_names: host.domain_names ?? [],
       forward_scheme: host.forward_scheme ?? "http",
       forward_host: host.forward_host ?? "",
@@ -382,7 +386,7 @@ export default function ProxyHostsScreen() {
       showToast("Domains required", "Provide at least one domain.", "error");
       return;
     }
-    if (!form.forward_host) {
+    if (!form.upstream_id && !form.forward_host) {
       showToast("Destination host required", "Provide the destination host.", "error");
       return;
     }
@@ -394,7 +398,8 @@ export default function ProxyHostsScreen() {
       locations,
       access_list_id: accessListId,
       certificate_id: Number(form.certificate_id) || 0,
-      forward_port: Number(form.forward_port) || 80,
+      forward_host: form.upstream_id ? "" : form.forward_host,
+      forward_port: form.upstream_id ? 0 : Number(form.forward_port) || 80,
     };
 
     setSaving(true);
@@ -715,7 +720,7 @@ export default function ProxyHostsScreen() {
                           <HStack className="items-center gap-1">
                             <Globe size={16} color="#0f172a" />
                             <Text className="text-typography-800 text-sm">
-                              {host.forward_scheme}://{host.forward_host}:{host.forward_port}
+                              {upstreamTargetLabel(host.upstream_id, `${host.forward_scheme}://${host.forward_host}:${host.forward_port}`)}
                             </Text>
                           </HStack>
                           {host.ssl_forced ? (
@@ -805,7 +810,7 @@ export default function ProxyHostsScreen() {
                       <HStack className="items-center gap-2 flex-wrap">
                         <Globe size={16} color={isDarkMode ? "#E2E8F0" : "#0f172a"} />
                         <Text className="text-typography-700 dark:text-[#8A94A8] text-sm">
-                          {host.forward_scheme}://{host.forward_host}:{host.forward_port}
+                          {upstreamTargetLabel(host.upstream_id, `${host.forward_scheme}://${host.forward_host}:${host.forward_port}`)}
                         </Text>
                       </HStack>
                       <HStack className="gap-2 flex-wrap">
@@ -862,7 +867,7 @@ export default function ProxyHostsScreen() {
                 <HStack className="items-center gap-2">
                   <Globe size={16} color={isDarkMode ? "#E2E8F0" : "#0f172a"} />
                   <Text className="text-typography-700 dark:text-[#8A94A8] text-sm">
-                    {selectedHost.forward_scheme}://{selectedHost.forward_host}:{selectedHost.forward_port}
+                    {upstreamTargetLabel(selectedHost.upstream_id, `${selectedHost.forward_scheme}://${selectedHost.forward_host}:${selectedHost.forward_port}`)}
                   </Text>
                 </HStack>
                 <HStack className="gap-2 flex-wrap">
@@ -1285,6 +1290,7 @@ export default function ProxyHostsScreen() {
                       </FormControlHelper>
                     </FormControl>
 
+                    <UpstreamSelector poolsState={upstreamPools} context="http" value={form.upstream_id} onChange={upstream_id => setForm(prev => ({...prev, upstream_id, forward_host: "", forward_port: upstream_id ? 0 : 80}))}/>
                     <FormControl isRequired>
                       <FormControlLabel>
                         <FormControlLabelText>Destination</FormControlLabelText>
@@ -1300,6 +1306,7 @@ export default function ProxyHostsScreen() {
                         </Input>
                         <Input className="flex-1 min-w-[180px] rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
                           <InputField
+                            editable={!form.upstream_id}
                             value={form.forward_host}
                             onChangeText={(val) => setForm((prev) => ({ ...prev, forward_host: val }))}
                             autoCapitalize="none"
@@ -1308,6 +1315,7 @@ export default function ProxyHostsScreen() {
                         </Input>
                         <Input className="w-24 rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
                           <InputField
+                            editable={!form.upstream_id}
                             value={String(form.forward_port)}
                             onChangeText={(val) => setForm((prev) => ({ ...prev, forward_port: Number(val) || 0 }))}
                             keyboardType="number-pad"
@@ -1420,6 +1428,7 @@ export default function ProxyHostsScreen() {
                               />
                             </Input>
                           </FormControl>
+                          <UpstreamSelector poolsState={upstreamPools} context="http" value={loc.upstream_id} onChange={upstream_id => setLocations(prev => prev.map((location, index) => index === idx ? {...location, upstream_id, forward_host: "", forward_port: upstream_id ? 0 : 80} : location))}/>
                           <HStack className="gap-3 flex-wrap">
                             <Input className="flex-1 min-w-[120px] rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
                               <InputField
@@ -1431,6 +1440,7 @@ export default function ProxyHostsScreen() {
                             </Input>
                             <Input className="flex-1 min-w-[160px] rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
                               <InputField
+                                editable={!loc.upstream_id}
                                 value={loc.forward_host}
                                 onChangeText={(val) => updateLocation(idx, "forward_host", val)}
                                 autoCapitalize="none"
@@ -1439,6 +1449,7 @@ export default function ProxyHostsScreen() {
                             </Input>
                             <Input className="w-24 rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0A1628]">
                               <InputField
+                                editable={!loc.upstream_id}
                                 value={String(loc.forward_port)}
                                 onChangeText={(val) => updateLocation(idx, "forward_port", val)}
                                 keyboardType="number-pad"

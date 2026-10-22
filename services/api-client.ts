@@ -232,14 +232,15 @@ export async function apiFetch<T = unknown>(
     });
   }
 
-  const contentType = response.headers.get("content-type");
-
-  if (contentType?.includes("application/json")) {
-    return (await response.json()) as T;
+  // No-content responses may still carry Content-Type: application/json.
+  // Check the status first: parsing their empty body is always an error.
+  if (response.status === 204 || response.status === 205 || method.toUpperCase() === "HEAD") {
+    return undefined as T;
   }
 
-  if (response.status === 204 || response.status === 205) {
-    return undefined as T;
+  const contentType = response.headers.get("content-type");
+  if (contentType?.includes("application/json")) {
+    return (await response.json()) as T;
   }
 
   return (await response.text()) as unknown as T;

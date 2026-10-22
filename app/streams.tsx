@@ -1,4 +1,5 @@
 import React from "react";
+import {UpstreamPoolsProvider, UpstreamSelector, upstreamTargetLabel, useUpstreamPools} from "@/components/UpstreamSelector";
 import { RefreshControl, ScrollView, useWindowDimensions, Platform, useColorScheme } from "react-native";
 import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";
@@ -88,7 +89,9 @@ const TOGGLE_PROPS = {
   ios_backgroundColor: "#cbd5e1",
 };
 
-export default function StreamsScreen() {
+export default function StreamsScreen() {return <UpstreamPoolsProvider><StreamsContent/></UpstreamPoolsProvider>;}
+function StreamsContent() {
+  const upstreamPools = useUpstreamPools();
   const toast = useToast();
   const [items, setItems] = React.useState<StreamHost[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -183,6 +186,7 @@ export default function StreamsScreen() {
   const openEditModal = (host: StreamHost) => {
     setEditingHost(host);
     setForm({
+      upstream_id: host.upstream_id,
       description: host.description ?? "",
       incoming_port: host.incoming_port,
       forwarding_host: host.forwarding_host,
@@ -191,6 +195,7 @@ export default function StreamsScreen() {
       udp_forwarding: Boolean(host.udp_forwarding),
       certificate_id: host.certificate_id ?? 0,
       meta: {
+        ...host.meta,
         dns_provider_credentials: host.meta?.dns_provider_credentials ?? "",
         letsencrypt_agree: host.meta?.letsencrypt_agree ?? false,
         dns_challenge: host.meta?.dns_challenge ?? true,
@@ -208,14 +213,15 @@ export default function StreamsScreen() {
   };
 
   const handleSave = async () => {
-    if (!form.incoming_port || !form.forwarding_host || !form.forwarding_port) {
+    if (!form.incoming_port || (!form.upstream_id && (!form.forwarding_host || !form.forwarding_port))) {
       showToast("Required fields", "Provide incoming port, host, and destination port.", "error");
       return;
     }
     const payload: StreamPayload = {
       ...form,
       incoming_port: Number(form.incoming_port),
-      forwarding_port: Number(form.forwarding_port),
+      forwarding_host: form.upstream_id ? "" : form.forwarding_host,
+      forwarding_port: form.upstream_id ? 0 : Number(form.forwarding_port),
       certificate_id: Number(form.certificate_id) || 0,
     };
 
@@ -402,7 +408,7 @@ export default function StreamsScreen() {
                         <HStack className="items-center gap-2 flex-wrap">
                           <ArrowLeftRight size={16} color={enabled ? "#0f172a" : "#9ca3af"} />
                           <Text className={`text-sm ${enabled ? "text-typography-800" : "text-typography-500"}`}>
-                            :{host.incoming_port} → {host.forwarding_host}:{host.forwarding_port}
+                            :{host.incoming_port} → {upstreamTargetLabel(host.upstream_id, `${host.forwarding_host}:${host.forwarding_port}`)}
                           </Text>
                         </HStack>
                         <HStack className="gap-2 flex-wrap">
@@ -489,7 +495,7 @@ export default function StreamsScreen() {
                       <HStack className="items-center gap-2 flex-wrap">
                         <ArrowLeftRight size={16} color={isDarkMode ? "#E2E8F0" : "#0f172a"} />
                         <Text className="text-typography-700 dark:text-[#8A94A8] text-sm">
-                          :{host.incoming_port} → {host.forwarding_host}:{host.forwarding_port}
+                          :{host.incoming_port} → {upstreamTargetLabel(host.upstream_id, `${host.forwarding_host}:${host.forwarding_port}`)}
                         </Text>
                       </HStack>
                       {host.description ? (
@@ -551,7 +557,7 @@ export default function StreamsScreen() {
                   <HStack className="items-center gap-2">
                     <ArrowLeftRight size={16} color={isDarkMode ? "#E2E8F0" : "#0f172a"} />
                     <Text className="text-typography-700 dark:text-[#8A94A8] text-sm">
-                      :{selectedHost.incoming_port} → {selectedHost.forwarding_host}:{selectedHost.forwarding_port}
+                      :{selectedHost.incoming_port} → {upstreamTargetLabel(selectedHost.upstream_id, `${selectedHost.forwarding_host}:${selectedHost.forwarding_port}`)}
                     </Text>
                   </HStack>
                 </VStack>
@@ -722,6 +728,7 @@ export default function StreamsScreen() {
                       </Input>
                     </FormControl>
 
+                    <UpstreamSelector poolsState={upstreamPools} context="stream" value={form.upstream_id} onChange={upstream_id => setForm(prev => ({...prev, upstream_id, forwarding_host: "", forwarding_port: 0}))}/>
                     <FormControl isRequired>
                       <FormControlLabel>
                         <FormControlLabelText>Destination</FormControlLabelText>
@@ -729,6 +736,7 @@ export default function StreamsScreen() {
                       <HStack className="gap-3 flex-wrap">
                         <Input className="flex-1 min-w-[160px] rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
                           <InputField
+                            editable={!form.upstream_id}
                             value={form.forwarding_host}
                             onChangeText={(val) => setForm((prev) => ({ ...prev, forwarding_host: val }))}
                             autoCapitalize="none"
@@ -737,6 +745,7 @@ export default function StreamsScreen() {
                         </Input>
                         <Input className="w-24 rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524]">
                           <InputField
+                            editable={!form.upstream_id}
                             value={String(form.forwarding_port || "")}
                             onChangeText={(val) => setForm((prev) => ({ ...prev, forwarding_port: Number(val) || 0 }))}
                             keyboardType="number-pad"

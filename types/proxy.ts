@@ -1,4 +1,6 @@
 export type ProxyLocation = {
+  advanced_config?: string;
+  upstream_id?: number | null;
   path: string;
   forward_scheme: string;
   forward_host: string;
@@ -8,6 +10,7 @@ export type ProxyLocation = {
 export type ProxyMeta = Record<string, unknown>;
 
 export type ProxyHost = {
+  upstream_id?: number | null;
   id: number;
   domain_names: string[];
   forward_scheme: string;
@@ -31,6 +34,7 @@ export type ProxyHost = {
 };
 
 export type ProxyPayload = {
+  upstream_id?: number | null;
   id?: number;
   domain_names: string[];
   forward_scheme: string;

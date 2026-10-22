@@ -1,10 +1,12 @@
 export type StreamMeta = {
+  [key: string]: unknown;
   dns_provider_credentials?: string;
   letsencrypt_agree?: boolean;
   dns_challenge?: boolean;
 };
 
 export type StreamHost = {
+  upstream_id?: number | null;
   id: number;
   description: string;
   incoming_port: number;
@@ -20,6 +22,7 @@ export type StreamHost = {
 };
 
 export type StreamPayload = {
+  upstream_id?: number | null;
   description: string;
   incoming_port: number;
   forwarding_host: string;
