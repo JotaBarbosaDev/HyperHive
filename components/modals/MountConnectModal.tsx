@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/modal";
 import {Box} from "@/components/ui/box";
 import {Button, ButtonText} from "@/components/ui/button";
-import {Divider} from "@/components/ui/divider";
 import {Heading} from "@/components/ui/heading";
 import {Text} from "@/components/ui/text";
 import {Mount} from "@/types/mount";
@@ -35,177 +34,45 @@ export function MountConnectModal({isOpen, mount, onClose}: MountConnectModalPro
   const linuxCommands = `sudo mkdir -p "${linuxMountPoint}"\nsudo mount -t nfs ${source} "${linuxMountPoint}"`;
   const macCommands = `sudo mkdir -p "${macMountPoint}"\nsudo mount -t nfs ${source} "${macMountPoint}"`;
   const windowsCommands = `mount -o anon ${source} ${windowsDrive}`;
-  const truncateMiddle = (value: string, maxLength: number = 48) => {
-    if (value.length <= maxLength) return value;
-    const keep = Math.floor((maxLength - 3) / 2);
-    return `${value.slice(0, keep)}...${value.slice(-keep)}`;
-  };
-  const sourceLabel = truncateMiddle(source);
-  const mountPointLabel = truncateMiddle(linuxMountPoint);
-
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <ModalBackdrop className="bg-background-950/50 dark:bg-black/70" />
-      <ModalContent className="max-w-[360px] w-full max-h-[90%] web:max-w-[640px] web:max-h-[90vh] p-5 web:p-8 rounded-2xl dark:bg-[#0E1524] border border-outline-100 dark:border-[#2A3B52]">
-        <ModalHeader className="pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
-          <Box className="flex flex-col gap-1">
-            <Heading
-              size="lg"
-              className="text-typography-900 dark:text-[#E8EBF0] web:text-2xl"
-              style={{fontFamily: "Inter_700Bold"}}
-            >
-              Connect to {shareName}
-            </Heading>
-            <Text className="text-typography-500 dark:text-[#8A94A8] text-sm web:text-base">
-              Follow the steps below to securely reach the cluster and mount this NFS share.
-            </Text>
+      <ModalContent className="w-[94%] max-w-[640px] max-h-[90%] web:max-h-[90vh] p-4 web:p-5 rounded-xl dark:bg-[#0E1524] border border-outline-200 dark:border-[#2A3B52]">
+        <ModalHeader className="pb-3 border-b border-outline-200 dark:border-[#2A3B52]">
+          <Box className="flex-1 min-w-0 gap-1">
+            <Heading className="text-typography-900 dark:text-[#E8EBF0]" style={{fontFamily: "Inter_700Bold"}}>Connect to {shareName}</Heading>
+            <Text className="text-sm text-typography-600 dark:text-[#AAB4C5]">Mount this export on your device.</Text>
           </Box>
         </ModalHeader>
-        <ModalBody className="pt-6">
-          <ScrollView showsVerticalScrollIndicator>
-            <Box className="flex flex-col gap-10 pb-2">
-              <Box className="flex flex-col gap-4 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
-                <Text
-                  className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide"
-                  style={{fontFamily: "Inter_700Bold"}}
-                >
-                  Share details
-                </Text>
-                <Box className="flex flex-col gap-3 web:grid web:grid-cols-2">
-                  <Box className="flex flex-col gap-2">
-                    <Text
-                      className="text-[11px] font-semibold uppercase text-typography-500 dark:text-[#8A94A8] tracking-wide"
-                      style={{fontFamily: "Inter_600SemiBold"}}
-                    >
-                      Source
-                    </Text>
-                    <Box className="bg-background-100 dark:bg-[#0F172A] border border-outline-200 dark:border-[#1E2F47] rounded-lg p-3">
-                      <Text className="font-mono text-xs text-typography-900 dark:text-[#E2E8F0]" selectable>
-                        {sourceLabel}
-                      </Text>
-                    </Box>
-                  </Box>
-                  <Box className="flex flex-col gap-2">
-                    <Text
-                      className="text-[11px] font-semibold uppercase text-typography-500 dark:text-[#8A94A8] tracking-wide"
-                      style={{fontFamily: "Inter_600SemiBold"}}
-                    >
-                      Mount point
-                    </Text>
-                    <Box className="bg-background-100 dark:bg-[#0F172A] border border-outline-200 dark:border-[#1E2F47] rounded-lg p-3">
-                      <Text className="font-mono text-xs text-typography-900 dark:text-[#E2E8F0]" selectable>
-                        {mountPointLabel}
-                      </Text>
-                    </Box>
-                  </Box>
-                </Box>
+        <ModalBody className="min-h-0 my-0 py-3">
+          <ScrollView showsVerticalScrollIndicator contentContainerStyle={{paddingBottom: 4}}>
+            <Box className="gap-4">
+              <Box className="gap-1">
+                <Text className="text-xs text-typography-600 dark:text-[#AAB4C5]">Export source</Text>
+                <Text selectable className="text-sm text-typography-900 dark:text-[#E8EBF0] web:break-all" style={{fontFamily: "monospace"}}>{source}</Text>
               </Box>
-
-              <Divider className="bg-outline-100 dark:bg-[#2A3B52] my-2" />
-
-              <Box className="flex flex-col gap-3 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
-                <Text
-                  className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide"
-                  style={{fontFamily: "Inter_700Bold"}}
-                >
-                  Step 1: WireGuard VPN
-                </Text>
-                <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
-                  Make sure your device is connected to the WireGuard VPN to reach the cluster.
-                </Text>
-                <Button
-                  variant="solid"
-                  action="primary"
-                  size="md"
-                  className="rounded-xl self-start dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
-                  onPress={() => {
-                    onClose();
-                    router.push("/wireguard");
-                  }}
-                >
-                  <ButtonText
-                    className="web:text-sm web:font-semibold dark:text-[#0D1420]"
-                    style={{fontFamily: "Inter_600SemiBold"}}
-                  >
-                    Open WireGuard VPN
-                  </ButtonText>
-                </Button>
+              <Box className="gap-2 p-3 rounded-lg bg-background-50 dark:bg-[#131F30]">
+                <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]" style={{fontFamily: "Inter_600SemiBold"}}>1. Connect to the cluster</Text>
+                <Text className="text-sm text-typography-600 dark:text-[#AAB4C5]">Connect your device to the WireGuard VPN before mounting.</Text>
+                <Button variant="outline" action="secondary" className="h-11 rounded-lg self-start" onPress={() => { onClose(); router.push("/wireguard"); }}><ButtonText>Open WireGuard VPN</ButtonText></Button>
               </Box>
-
-              <Divider className="bg-outline-100 dark:bg-[#2A3B52] my-2" />
-
-              <Box className="flex flex-col gap-4 p-4 rounded-xl bg-background-50 dark:bg-[#1A2637] border border-outline-100 dark:border-[#2A3B52]">
-                <Text
-                  className="text-xs font-bold uppercase text-typography-700 dark:text-[#A8B3C7] tracking-wide"
-                  style={{fontFamily: "Inter_700Bold"}}
-                >
-                  Step 2: Mount commands
-                </Text>
-                <Text className="text-sm text-typography-500 dark:text-[#8A94A8]">
-                  Use the commands below for your operating system.
-                </Text>
-                <Box className="flex flex-col gap-3">
-                  <Box className="flex flex-col gap-2">
-                    <Text
-                      className="text-[11px] font-semibold uppercase text-typography-500 dark:text-[#8A94A8] tracking-wide"
-                      style={{fontFamily: "Inter_600SemiBold"}}
-                    >
-                      Linux
-                    </Text>
-                    <Box className="bg-background-100 dark:bg-[#0F172A] border border-outline-200 dark:border-[#1E2F47] rounded-lg p-3">
-                      <Text className="font-mono text-xs text-typography-900 dark:text-[#E2E8F0]" selectable>
-                        {linuxCommands}
-                      </Text>
+              <Box className="gap-3">
+                <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]" style={{fontFamily: "Inter_600SemiBold"}}>2. Run your mount commands</Text>
+                {[["Linux", linuxCommands], ["macOS", macCommands], ["Windows", windowsCommands]].map(([label, commands]) => (
+                  <Box key={label} className="gap-2">
+                    <Text className="text-xs text-typography-600 dark:text-[#AAB4C5]">{label}</Text>
+                    {label === "Windows" ? <Text className="text-xs text-typography-600 dark:text-[#AAB4C5]">Requires Windows Client for NFS.</Text> : null}
+                    <Box className="p-3 rounded-lg border border-outline-200 bg-background-50 dark:border-[#243247] dark:bg-[#090F1C]">
+                      <Text selectable className="text-xs leading-5 text-typography-900 dark:text-[#E8EBF0] web:break-all" style={{fontFamily: "monospace"}}>{commands}</Text>
                     </Box>
                   </Box>
-                  <Box className="flex flex-col gap-2">
-                    <Text
-                      className="text-[11px] font-semibold uppercase text-typography-500 dark:text-[#8A94A8] tracking-wide"
-                      style={{fontFamily: "Inter_600SemiBold"}}
-                    >
-                      macOS
-                    </Text>
-                    <Box className="bg-background-100 dark:bg-[#0F172A] border border-outline-200 dark:border-[#1E2F47] rounded-lg p-3">
-                      <Text className="font-mono text-xs text-typography-900 dark:text-[#E2E8F0]" selectable>
-                        {macCommands}
-                      </Text>
-                    </Box>
-                  </Box>
-                  <Box className="flex flex-col gap-2">
-                    <Text
-                      className="text-[11px] font-semibold uppercase text-typography-500 dark:text-[#8A94A8] tracking-wide"
-                      style={{fontFamily: "Inter_600SemiBold"}}
-                    >
-                      Windows
-                    </Text>
-                    <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
-                      Requires the Windows "Client for NFS" feature.
-                    </Text>
-                    <Box className="bg-background-100 dark:bg-[#0F172A] border border-outline-200 dark:border-[#1E2F47] rounded-lg p-3">
-                      <Text className="font-mono text-xs text-typography-900 dark:text-[#E2E8F0]" selectable>
-                        {windowsCommands}
-                      </Text>
-                    </Box>
-                  </Box>
-                </Box>
+                ))}
               </Box>
             </Box>
           </ScrollView>
         </ModalBody>
-        <ModalFooter className="w-full pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
-          <Button
-            variant="solid"
-            action="secondary"
-            className="w-full h-11 rounded-xl"
-            onPress={onClose}
-          >
-            <ButtonText
-              className="font-semibold web:text-base"
-              style={{fontFamily: "Inter_600SemiBold"}}
-            >
-              Close
-            </ButtonText>
-          </Button>
+        <ModalFooter className="pt-3 border-t border-outline-200 dark:border-[#2A3B52]">
+          <Button variant="outline" action="secondary" className="h-11 rounded-lg w-full" onPress={onClose}><ButtonText>Close</ButtonText></Button>
         </ModalFooter>
       </ModalContent>
     </Modal>

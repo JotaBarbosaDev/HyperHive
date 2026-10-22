@@ -5,8 +5,8 @@ import {HStack} from "@/components/ui/hstack";
 
 export function MountSkeletonCard() {
   return (
-    <Box className="w-full max-w-[360px] gap-4 p-3 rounded-md bg-background-100">
-      <Skeleton variant="sharp" className="h-[100px] w-full" />
+    <Box className="w-full gap-2 p-3 rounded-xl bg-background-100">
+      <Skeleton variant="sharp" className="h-[125px] w-full" />
       <SkeletonText _lines={3} className="h-2" />
       <HStack className="gap-1 align-middle">
         <Skeleton variant="circular" className="h-[24px] w-[28px] mr-2" />

@@ -1,8 +1,8 @@
 import React from "react";
 import {Box} from "@/components/ui/box";
 import {Text} from "@/components/ui/text";
-import {Badge, BadgeIcon, BadgeText} from "@/components/ui/badge";
-import {Icon, GlobeIcon, TrashIcon} from "@/components/ui/icon";
+import {Badge, BadgeText} from "@/components/ui/badge";
+import {Icon, TrashIcon} from "@/components/ui/icon";
 import {Button, ButtonSpinner, ButtonText} from "@/components/ui/button";
 import {Toast, ToastTitle, useToast} from "@/components/ui/toast";
 import {Divider} from "@/components/ui/divider";
@@ -75,140 +75,25 @@ export function MountCard({
 
   return (
     <>
-      <Box className="flex w-full flex-col justify-between rounded-2xl border border-outline-100 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] mb-6 overflow-hidden web:mb-0 web:min-h-[340px] web:shadow-md dark:web:shadow-none">
-        <Box className="flex flex-1 flex-col gap-2 p-3 web:p-4 web:gap-2">
-          <Box className="flex flex-row justify-between items-center gap-3">
-            <Box className="flex-1 min-w-0">
-              <Text
-                className="text-typography-900 dark:text-[#E8EBF0] truncate web:text-lg"
-                style={{fontFamily: "Inter_700Bold"}}
-              >
-                {Name}
-              </Text>
-              <Text
-                className="text-[#9AA4B8] dark:text-[#8A94A8] text-xs mt-1 truncate"
-                style={{fontFamily: "Inter_400Regular"}}
-              >
-                {FolderPath}
-              </Text>
+      <Box className="w-full rounded-xl border border-outline-200 bg-background-0 dark:border-[#2A3B52] dark:bg-[#0E1828] overflow-hidden">
+        <Box className="flex-1 p-3 gap-2">
+          <Box className="min-w-0 gap-1">
+            <Box className="flex-row flex-wrap items-center gap-2">
+              <Text className="text-base text-typography-900 dark:text-[#E8EBF0]" style={{fontFamily: "Inter_700Bold"}}>{Name}</Text>
+              <Badge action={status} variant="outline" className="rounded-md"><BadgeText>{Status.working ? "Healthy" : "Unhealthy"}</BadgeText></Badge>
             </Box>
-            <Badge
-              size="sm"
-              variant="outline"
-              action={status}
-              className={`rounded-full border shrink-0 px-2.5 py-1 ${
-                status === "error"
-                  ? "bg-[#ef444419] border-[#EF4444] dark:bg-[#EF444425] dark:border-[#F87171]"
-                  : "bg-[#2dd4be19] border-[#2DD4BF] dark:bg-[#2DD4BF25] dark:border-[#5EEAD4]"
-              }`}
-            >
-              <BadgeText
-                className={`${
-                  status === "error"
-                    ? "text-[#EF4444] dark:text-[#FCA5A5]"
-                    : "text-[#2DD4BF] dark:text-[#5EEAD4]"
-                } text-[10px] font-semibold`}
-                style={{fontFamily: "Inter_600SemiBold"}}
-              >
-                {status === "error" ? "Unhealthy" : "Healthy"}
-              </BadgeText>
-
-              <BadgeIcon
-                as={GlobeIcon}
-                className={`ml-1 ${
-                  status === "error"
-                    ? "text-[#EF4444] dark:text-[#FCA5A5]"
-                    : "text-[#2DD4BF] dark:text-[#5EEAD4]"
-                }`}
-                size="sm"
-              />
-            </Badge>
+            <Text selectable className="text-sm text-typography-700 dark:text-[#E8EBF0]" style={{fontFamily: "monospace"}}>{MachineName}</Text>
+            <Text selectable className="text-sm text-typography-600 dark:text-[#AAB4C5] web:break-all" style={{fontFamily: "monospace"}}>{FolderPath}</Text>
           </Box>
-
-          <Box className="mt-3 web:mt-4 flex flex-col gap-3">
-            <MountUsageGauge
-              usagePercent={usagePercent}
-              usedGB={usageUsedGB}
-              totalGB={usageTotalGB}
-              freeGB={Status.spaceFreeGB}
-            />
-            <Box className="w-full h-px bg-outline-100 dark:bg-[#2A3B52]" />
-            <Box className="flex items-center justify-center gap-2 pb-1">
-              <Text
-                className="text-[#9AA4B8] dark:text-[#8A94A8] text-xs"
-                style={{fontFamily: "Inter_500Medium"}}
-              >
-                Host:
-              </Text>
-              <Text
-                className="text-typography-900 dark:text-[#E8EBF0] text-sm font-semibold truncate"
-                style={{fontFamily: "Inter_600SemiBold"}}
-              >
-                {MachineName}
-              </Text>
-            </Box>
+          <Box className="py-0">
+            <MountUsageGauge usagePercent={usagePercent} usedGB={usageUsedGB} totalGB={usageTotalGB} freeGB={Status.spaceFreeGB} />
           </Box>
-        </Box>
-        <Box className="rounded-b-2xl flex flex-col gap-2 border-t border-outline-100 bg-background-50 p-3 dark:border-[#2A3B52] dark:bg-[#0E1828] web:p-3 web:mt-auto">
-          <Button
-            variant="outline"
-            size="md"
-            action="secondary"
-            className="border-outline-200 rounded-xl dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]"
-            onPress={() => setShowConnectModal(true)}
-          >
-            <ButtonText
-              className="web:text-sm web:font-semibold text-typography-900 dark:text-[#E8EBF0]"
-              style={{fontFamily: "Inter_600SemiBold"}}
-            >
-              Connect to NFS
-            </ButtonText>
-          </Button>
-          <Box className="flex flex-col gap-2 md:flex-row md:justify-end md:gap-3 web:flex-row web:gap-3">
-            <Button
-              variant="outline"
-              size="md"
-              action="secondary"
-              className="border-outline-200 rounded-xl dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] hover:bg-background-50 dark:hover:bg-[#0A1628]"
-              onPress={() => setShowDetailsModal(true)}
-            >
-              <ButtonText
-                className="web:text-sm web:font-semibold text-typography-900 dark:text-[#E8EBF0]"
-                style={{fontFamily: "Inter_600SemiBold"}}
-              >
-                See Details
-              </ButtonText>
+          <Box className="flex-row flex-wrap gap-1 mt-auto pt-2 border-t border-outline-200 dark:border-[#2A3B52]">
+            <Button variant="outline" action="secondary" className="h-11 rounded-lg px-2 flex-1" onPress={() => setShowConnectModal(true)} accessibilityLabel={`Connect to ${Name}`}><ButtonText className="text-xs">Connect</ButtonText></Button>
+            <Button variant="outline" action="secondary" className="h-11 rounded-lg px-2 flex-1" onPress={() => setShowDetailsModal(true)} accessibilityLabel={`Details for ${Name}`}><ButtonText className="text-xs">Details</ButtonText></Button>
+            <Button variant="outline" action="negative" className="h-11 rounded-lg px-2 flex-1" isDisabled={isDeleting} onPress={() => setShowDeleteModal(true)} accessibilityLabel={`Unmount ${Name}`}>
+              {isDeleting ? <ButtonSpinner /> : null}<ButtonText className="text-xs">{isDeleting ? "Removing…" : "Unmount"}</ButtonText>
             </Button>
-
-            {!isDeleting ? (
-              <Button
-                variant="solid"
-                size="md"
-                action="primary"
-                className="w-full rounded-xl md:w-auto web:flex-1  dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
-                onPress={() => setShowDeleteModal(true)}
-              >
-                <ButtonText
-                  className="web:text-sm web:font-semibold dark:text-[#0D1420]"
-                  style={{fontFamily: "Inter_600SemiBold"}}
-                >
-                  UMount
-                </ButtonText>
-              </Button>
-            ) : (
-              <Button
-                className="p-3 rounded-xl web:flex-1 dark:bg-[#2A3B52]"
-                isDisabled
-              >
-                <ButtonSpinner color="gray" />
-                <ButtonText
-                  className="font-semibold text-sm ml-2 web:text-sm dark:text-[#E8EBF0]"
-                  style={{fontFamily: "Inter_600SemiBold"}}
-                >
-                  Removing...
-                </ButtonText>
-              </Button>
-            )}
           </Box>
         </Box>
         {deleteError ? (
