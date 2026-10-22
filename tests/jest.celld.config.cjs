@@ -1,7 +1,7 @@
 // These API and polling tests use React DOM, without the native Expo preset.
 module.exports = {
   rootDir: "..",
-  testMatch: ["<rootDir>/tests/celld-stream.test.js", "<rootDir>/tests/celld-operations.test.js", "<rootDir>/tests/celld-observability.test.js", "<rootDir>/tests/celld-health.test.js", "<rootDir>/tests/celld-fleets.test.js", "<rootDir>/tests/text-web.test.js"],
+  testMatch: ["<rootDir>/tests/isos.test.js", "<rootDir>/tests/celld-stream.test.js", "<rootDir>/tests/celld-operations.test.js", "<rootDir>/tests/celld-observability.test.js", "<rootDir>/tests/celld-health.test.js", "<rootDir>/tests/celld-fleets.test.js", "<rootDir>/tests/text-web.test.js"],
   testEnvironment: "jsdom",
   moduleNameMapper: { "^@/(.*)$": "<rootDir>/$1" },
   transform: {

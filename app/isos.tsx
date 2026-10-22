@@ -28,7 +28,6 @@ import {
 import { VStack } from "@/components/ui/vstack";
 import { HStack } from "@/components/ui/hstack";
 import { Badge, BadgeText } from "@/components/ui/badge";
-import { Divider } from "@/components/ui/divider";
 import { Spinner } from "@/components/ui/spinner";
 import { Icon } from "@/components/ui/icon";
 import { ChevronDownIcon } from "@/components/ui/icon";
@@ -36,7 +35,6 @@ import {
   AlertCircle,
   CalendarClock,
   CheckCircle,
-  Database,
   Hash,
   Folder,
   HardDrive,
@@ -44,6 +42,9 @@ import {
   RefreshCw,
   Search,
   Server,
+  Disc3,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react-native";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import {
@@ -806,6 +807,7 @@ export default function ProfileScreen() {
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
+  const [sortAscending, setSortAscending] = React.useState(true);
   const [showAddIsoModal, setShowAddIsoModal] = React.useState(false);
   const [shareInfos, setShareInfos] = React.useState<ShareInfo[]>([]);
   const [activeDownload, setActiveDownload] = React.useState<DownloadMonitor | null>(null);
@@ -956,9 +958,6 @@ export default function ProfileScreen() {
   }, [isos, shareInfos]);
 
   const filteredIsos = React.useMemo(() => {
-    if (!query.trim()) {
-      return displayIsos;
-    }
     const needle = query.trim().toLowerCase();
     return displayIsos.filter((iso) =>
       [
@@ -978,8 +977,10 @@ export default function ProfileScreen() {
       ]
         .filter(Boolean)
         .some((field) => field?.toLowerCase().includes(needle))
-    );
-  }, [displayIsos, query]);
+    ).sort((a, b) => sortAscending
+      ? a.name.localeCompare(b.name, undefined, { numeric: true })
+      : b.name.localeCompare(a.name, undefined, { numeric: true }));
+  }, [displayIsos, query, sortAscending]);
 
   const handleManualRefresh = React.useCallback(() => {
     fetchIsos("refresh");
@@ -1064,28 +1065,32 @@ export default function ProfileScreen() {
           />
         }
       >
-        <Box className="p-4 pt-16 web:p-20 web:max-w-6xl web:mx-auto web:w-full">
+        <Box className="p-4 pt-24 web:px-6 web:pb-8 web:pt-24 web:lg:px-10 web:max-w-screen-2xl web:mx-auto web:w-full">
           <Heading
             size="2xl"
             className="text-typography-900 dark:text-[#E8EBF0] mb-3 web:text-4xl"
             style={{fontFamily: "Inter_700Bold"}}
           >
-            ISO Downloads
+            ISO library
           </Heading>
           <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base max-w-3xl">
-            Browse all ISOs available for your VMs and add new images by
-            downloading them straight to the cluster.
+            Installation media for your virtual machines. Find an image, locate its storage, and check host availability.
           </Text>
 
-          <VStack className="mt-6 gap-4 web:flex-row web:items-end">
+          <HStack className="mt-6 flex-wrap gap-x-6 gap-y-3 border-y border-outline-200 dark:border-[#2A3B52] py-4">
+            <HStack className="items-center gap-2"><Icon as={Disc3} size="sm" className="text-primary-600 dark:text-[#2DD4BF]" /><Text className="text-sm text-typography-700 dark:text-[#E8EBF0]">{isLoading ? "—" : isos.length} images</Text></HStack>
+            <HStack className="items-center gap-2"><Icon as={HardDrive} size="sm" className="text-typography-500 dark:text-[#8A94A8]" /><Text className="text-sm text-typography-700 dark:text-[#E8EBF0]">{shareInfos.length} configured mounts</Text></HStack>
+            <HStack className="items-center gap-2"><Icon as={RefreshCw} size="sm" className="text-typography-500 dark:text-[#8A94A8]" /><Text className="text-sm text-typography-500 dark:text-[#8A94A8]">Refreshes every 5s</Text></HStack>
+          </HStack>
+          <VStack className="mt-6 gap-4 web:md:flex-row web:md:items-end">
             <Box className="flex-1">
               <Text
                 className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#8A94A8] mb-2"
                 style={{fontFamily: "Inter_600SemiBold"}}
               >
-                Filter ISOs
+                Search library
               </Text>
-              <Input variant="outline" className="rounded-2xl">
+              <Input variant="outline" className="rounded-lg h-11 bg-background-0 dark:bg-[#0E1524] border-outline-200 dark:border-[#2A3B52]">
                 <InputSlot className="pl-4">
                   <InputIcon
                     as={Search}
@@ -1095,7 +1100,10 @@ export default function ProfileScreen() {
                 <InputField
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="Name, operating system, version..."
+                  placeholder="Search images, hosts, mounts, paths…"
+                  accessibilityLabel="Search ISO library"
+                  autoCapitalize="none"
+                  autoCorrect={false}
                   placeholderTextColor={
                     colorScheme === "dark" ? "#8A94A8" : "#94A3B8"
                   }
@@ -1202,7 +1210,13 @@ export default function ProfileScreen() {
             </Box>
           ) : null}
 
-          <Divider className="mt-8 bg-outline-100 dark:bg-[#2A3B52]" />
+          <HStack className="mt-6 mb-3 items-center justify-between gap-3">
+            <Text accessibilityLiveRegion="polite" className="text-sm text-typography-500 dark:text-[#8A94A8]">{isLoading ? "Loading inventory…" : `${filteredIsos.length} of ${isos.length} images`}</Text>
+            <HStack className="items-center gap-2">
+              {query ? <Button variant="link" onPress={() => setQuery("")} accessibilityLabel="Clear ISO search"><ButtonText className="text-primary-600 dark:text-[#2DD4BF]">Clear search</ButtonText></Button> : null}
+              <Button variant="outline" onPress={() => setSortAscending((value) => !value)} accessibilityLabel={sortAscending ? "Sort images Z to A" : "Sort images A to Z"} className="rounded-lg border-outline-200 dark:border-[#2A3B52] h-10"><ButtonText className="text-typography-700 dark:text-[#E8EBF0]">{sortAscending ? "Name A–Z" : "Name Z–A"}</ButtonText></Button>
+            </HStack>
+          </HStack>
 
           {isLoading && isos.length === 0 ? (
             <VStack className="items-center justify-center gap-3 py-16">
@@ -1224,11 +1238,18 @@ export default function ProfileScreen() {
               <Text className="mt-2 text-sm text-typography-600 dark:text-[#8A94A8]">
                 {query.trim()
                   ? "Adjust your search or clear the filter to see the full library."
-                  : "As soon as your subscriptions are active, images will appear automatically."}
+                  : "Add an ISO from a direct download URL to a configured mount."}
               </Text>
             </Box>
           ) : (
-            <Box className="mt-8 flex flex-col gap-5 web:grid web:grid-cols-1 web:gap-6 web:sm:grid-cols-2 web:xl:grid-cols-3">
+            <Box className="rounded-xl border border-outline-200 dark:border-[#2A3B52] overflow-hidden bg-background-0 dark:bg-[#0E1524]">
+              <HStack className="hidden web:lg:flex px-5 py-3 gap-5 bg-background-50 dark:bg-[#111D30] border-b border-outline-200 dark:border-[#2A3B52]">
+                <Text className="flex-1 min-w-0 text-xs font-semibold text-typography-500 dark:text-[#8A94A8]">IMAGE / RELEASE</Text>
+                <Text className="w-24 text-xs font-semibold text-typography-500 dark:text-[#8A94A8]">SIZE</Text>
+                <Text className="w-44 text-xs font-semibold text-typography-500 dark:text-[#8A94A8]">STORAGE</Text>
+                <Text className="w-40 text-xs font-semibold text-typography-500 dark:text-[#8A94A8]">AVAILABLE ON</Text>
+                <Text className="w-24 text-xs font-semibold text-typography-500 dark:text-[#8A94A8]">DETAILS</Text>
+              </HStack>
               {filteredIsos.map((iso) => (
                 <IsoCard
                   key={iso.id}
@@ -1350,146 +1371,44 @@ type IsoCardProps = {
 };
 
 function IsoCard({ iso, onDelete, isDeleting }: IsoCardProps) {
+  const [expanded, setExpanded] = React.useState(false);
   return (
-    <Box className="rounded-3xl border border-outline-100 bg-background-0 p-5 shadow-soft-3 dark:border-[#2A3B52] dark:bg-[#0E1524]">
-      <VStack className="gap-5">
-        <VStack className="gap-3">
-          <Text
-            className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#5EEAD4]"
-            style={{fontFamily: "Inter_600SemiBold"}}
-          >
-            ISO image
-          </Text>
-          <Heading
-            size="md"
-            className="text-typography-900 dark:text-[#E8EBF0]"
-            style={{fontFamily: "Inter_600SemiBold"}}
-          >
-            {iso.name}
-          </Heading>
-          {iso.description ? (
-            <Text
-              className="text-sm text-typography-600 dark:text-[#8A94A8]"
-              numberOfLines={3}
-              style={{fontFamily: "Inter_400Regular"}}
-            >
-              {iso.description}
-            </Text>
-          ) : null}
+    <Box className="border-b border-outline-100 dark:border-[#2A3B52] last:border-b-0 hover:bg-background-50 dark:hover:bg-[#111D30]">
+      <VStack className="px-4 py-4 gap-4 web:lg:px-5 web:lg:flex-row web:lg:items-center web:lg:gap-5">
+        <HStack className="flex-1 min-w-0 items-start gap-3">
+          <Box className="mt-1"><Icon as={Disc3} size="lg" className="text-primary-600 dark:text-[#2DD4BF]" /></Box>
+          <VStack className="flex-1 min-w-0 gap-1">
+            <Text selectable className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0] break-all" style={{ fontFamily: "Inter_600SemiBold" }}>{iso.name}</Text>
+            <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">{[iso.osLabel, iso.version].filter(Boolean).join(" · ") || "ISO installation image"}</Text>
+            {iso.description ? <Text className="text-xs text-typography-500 dark:text-[#8A94A8]" numberOfLines={2}>{iso.description}</Text> : null}
+          </VStack>
+        </HStack>
+        <VStack className="web:lg:w-24 gap-1">
+          <Text className="web:lg:hidden text-xs text-typography-500 dark:text-[#8A94A8]">Size</Text>
+          <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]" style={{ fontVariant: ["tabular-nums"] }}>{iso.sizeLabel || "Not reported"}</Text>
         </VStack>
-
-        <VStack className="gap-2">
-          <HStack className="flex-wrap gap-2">
-            {iso.osLabel ? (
-              <Badge
-                action="info"
-                variant="outline"
-                className="rounded-full border border-info-300/60 bg-info-500/5 px-3"
-              >
-                <BadgeText className="text-xs font-semibold text-info-600">
-                  {iso.osLabel}
-                </BadgeText>
-              </Badge>
-            ) : null}
-            {iso.version ? (
-              <Badge
-                action="muted"
-                variant="outline"
-                className="rounded-full border px-3"
-              >
-                <BadgeText className="text-xs font-medium text-typography-700 dark:text-typography-200">
-                  v{iso.version}
-                </BadgeText>
-              </Badge>
-            ) : null}
-            {iso.tags.map((tag) => (
-              <Badge
-                key={`${iso.id}-${tag}`}
-                action="muted"
-                variant="solid"
-                className="rounded-full bg-background-50 px-3 dark:bg-[#1A2637]"
-              >
-                <BadgeText className="text-xs text-typography-700 dark:text-typography-200">
-                  {tag}
-                </BadgeText>
-              </Badge>
-            ))}
-          </HStack>
-          {iso.availableOn.length > 0 ? (
-            <VStack className="gap-2">
-              <Text
-                className="text-xs uppercase tracking-wide text-typography-500 dark:text-[#5EEAD4]"
-                style={{fontFamily: "Inter_500Medium"}}
-              >
-                Available on
-              </Text>
-              <HStack className="flex-wrap gap-2 web:flex-wrap">
-                {iso.availableOn.map((host) => (
-                  <Badge
-                    key={`${iso.id}-${host}`}
-                    action="muted"
-                    variant="outline"
-                    className="rounded-full px-3 py-1 border-outline-200 dark:bg-[#0F1A2E] dark:border-[#1E2F47]"
-                  >
-                    <BadgeText className="text-xs font-semibold text-typography-700 dark:text-typography-950 whitespace-normal break-normal">
-                      {host}
-                    </BadgeText>
-                  </Badge>
-                ))}
-              </HStack>
-            </VStack>
-          ) : null}
+        <VStack className="web:lg:w-44 min-w-0 gap-1">
+          <Text className="web:lg:hidden text-xs text-typography-500 dark:text-[#8A94A8]">Storage</Text>
+          <Text selectable className="text-sm text-typography-900 dark:text-[#E8EBF0] break-all">{iso.mountName || (iso.nfsShareId != null ? `Mount #${iso.nfsShareId}` : "Mount not reported")}</Text>
+          <Text selectable className="text-xs text-typography-500 dark:text-[#8A94A8] break-all">{iso.machineName || "Host not reported"}</Text>
         </VStack>
-
-        <VStack className="gap-3">
-          {iso.sizeLabel ? (
-            <IsoInfoRow icon={Database} label="Size" value={iso.sizeLabel} />
-          ) : null}
-          {iso.dateLabel ? (
-            <IsoInfoRow
-              icon={CalendarClock}
-              label="Updated"
-              value={iso.dateLabel}
-            />
-          ) : null}
-          {iso.checksum ? (
-            <IsoInfoRow
-              icon={Hash}
-              label="Checksum"
-              value={iso.checksum}
-              mono
-            />
-          ) : null}
-          {iso.mountName ? (
-            <IsoInfoRow icon={HardDrive} label="Mount" value={iso.mountName} />
-          ) : null}
-          {iso.machineName ? (
-            <IsoInfoRow icon={Server} label="Machine" value={iso.machineName} />
-          ) : null}
-          {iso.filePath ? (
-            <IsoInfoRow icon={Folder} label="Path" value={iso.filePath} mono />
-          ) : null}
-          <HStack className="justify-end pt-2">
-            <Button
-              action="negative"
-              onPress={() => onDelete?.(iso)}
-              isDisabled={!onDelete || isDeleting}
-              className="rounded-xl px-4 h-10 bg-error-600 hover:bg-error-500 active:bg-error-700 dark:bg-[#af2b2b] dark:hover:bg-[#be4a4a] dark:active:bg-[#DC2626]"
-            >
-              {isDeleting ? (
-                <ButtonSpinner />
-              ) : (
-                <ButtonText
-                  className="text-background-0 dark:text-typography-950"
-                  style={{fontFamily: "Inter_600SemiBold"}}
-                >
-                  Remove
-                </ButtonText>
-              )}
-            </Button>
-          </HStack>
+        <VStack className="web:lg:w-40 min-w-0 gap-1">
+          <Text className="web:lg:hidden text-xs text-typography-500 dark:text-[#8A94A8]">Available on</Text>
+          {iso.availableOn.length ? iso.availableOn.map(host => <Text key={host} selectable className="text-xs text-typography-700 dark:text-[#5EEAD4] break-all">{host}</Text>) : <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Not reported</Text>}
         </VStack>
+        <Button variant="outline" onPress={() => setExpanded(value => !value)} accessibilityLabel={`${expanded ? "Hide" : "Show"} details for ${iso.name}`} accessibilityState={{ expanded }} className="web:lg:w-24 h-11 rounded-lg border-outline-200 dark:border-[#2A3B52]">
+          <ButtonText className="text-sm text-typography-700 dark:text-[#E8EBF0]">Details</ButtonText><ButtonIcon as={expanded ? ChevronUp : ChevronDown} className="text-typography-500 dark:text-[#8A94A8]" />
+        </Button>
       </VStack>
+      {expanded ? <VStack className="p-4 web:lg:px-5 gap-4 bg-background-50 dark:bg-[#0A1220] border-t border-outline-100 dark:border-[#2A3B52]">
+        <IsoInfoRow icon={Folder} label="File path" value={iso.filePath || "Not reported"} mono />
+        <IsoInfoRow icon={CalendarClock} label="Updated" value={iso.dateLabel || "Not reported"} />
+        <IsoInfoRow icon={Hash} label="Checksum" value={iso.checksum || "Not reported"} mono />
+        {iso.tags.length ? <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">Tags: {iso.tags.join(" · ")}</Text> : null}
+        <HStack className="justify-end"><Button action="negative" variant="outline" onPress={() => onDelete?.(iso)} isDisabled={!onDelete || isDeleting} accessibilityLabel={`Remove ${iso.name}`} className="h-11 rounded-lg border-error-300 dark:border-error-700">
+          {isDeleting ? <ButtonSpinner /> : <ButtonText className="text-error-600 dark:text-error-400">Remove ISO</ButtonText>}
+        </Button></HStack>
+      </VStack> : null}
     </Box>
   );
 }
@@ -1504,7 +1423,7 @@ type IsoInfoRowProps = {
 function IsoInfoRow({ icon, label, value, mono = false }: IsoInfoRowProps) {
   return (
     <HStack className="items-start gap-3">
-      <Box className="h-10 w-10 rounded-2xl bg-background-50 dark:bg-[#1A2637] items-center justify-center">
+      <Box className="h-8 w-8 rounded-lg bg-background-50 dark:bg-[#1A2637] items-center justify-center">
         <Icon as={icon} size="sm" className="text-typography-500 dark:text-[#5EEAD4]" />
       </Box>
       <VStack className="flex-1 min-w-0">
@@ -1516,8 +1435,8 @@ function IsoInfoRow({ icon, label, value, mono = false }: IsoInfoRowProps) {
         </Text>
         <Text
           className={`text-sm text-typography-900 dark:text-[#E8EBF0] ${mono ? 'break-all' : ''}`}
-          numberOfLines={mono ? 2 : undefined}
-          style={{ fontFamily: mono ? "SpaceMono" : "Inter_600SemiBold" }}
+          selectable
+          style={{ fontFamily: mono ? "monospace" : "Inter_600SemiBold" }}
         >
           {value}
         </Text>
@@ -2064,7 +1983,6 @@ function AddIsoModal({ isOpen, onClose, onSuccess, authToken, onDownloadChange }
                             style={{ fontFamily: "Inter_500Medium" }}
                           >
                             {downloadMonitor.detail}
-                            {"adwedqaefweq"}
                           </Text>
                         ) : null}
                       </HStack>
