@@ -1,18 +1,10 @@
 import React from "react";
-import {
-  Drawer,
-  DrawerBackdrop,
-  DrawerBody,
-  DrawerContent,
-  DrawerFooter,
-} from "@/components/ui/drawer";
-import { Button, ButtonIcon, ButtonText } from "@/components/ui/button";
+import { Button, ButtonText } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { Box } from "@/components/ui/box";
-import { VStack } from "@/components/ui/vstack";
 import { Pressable } from "@/components/ui/pressable";
 import { Icon } from "@/components/ui/icon";
-import { Platform, ScrollView, LayoutAnimation, UIManager, Animated, Easing } from "react-native";
+import { Platform, ScrollView, View, useWindowDimensions } from "react-native";
 import { useColorScheme } from "@/components/useColorScheme";
 import {
   Modal,
@@ -23,7 +15,7 @@ import {
   ModalHeader,
   ModalCloseButton,
 } from "@/components/ui/modal";
-import { Radio, RadioGroup, RadioIndicator, RadioLabel, RadioIcon } from "@/components/ui/radio";
+import { Radio, RadioGroup, RadioIndicator, RadioLabel } from "@/components/ui/radio";
 import { Heading } from "@/components/ui/heading";
 import {
   HardDrive,
@@ -31,7 +23,6 @@ import {
   Server,
   Boxes,
   LogOut,
-  LayoutDashboard,
   Share2,
   Shield,
   WifiPen,
@@ -39,12 +30,12 @@ import {
   RefreshCw,
   FileText,
   ChevronRight,
+  ChevronDown,
   Globe,
   Settings,
-  Dot,
   MoonStar,
   MonitorSmartphone,
-  PcCase,
+  Monitor,
   SunMedium,
   KeyRound,
   Lock,
@@ -66,20 +57,33 @@ import {
   GitBranch,
   Gpu,
   StickyNote,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react-native";
 import { usePathname, useRouter } from "expo-router";
 import { clearAuthToken } from "@/services/auth-storage";
 import { setAuthToken } from "@/services/api-client";
-// Snowfall agora é global no layout raiz (web)
+import { Image } from "@/components/ui/image";
+import type { SupportApp } from "@/types/support";
+import { resetSupportNavigation, selectSupportApp, useSupportNavigation } from "@/hooks/useSupportNavigation";
+import { SIDEBAR_RAIL_WIDTH } from "@/hooks/useSidebarLayout";
 
 export type AppSidebarProps = {
   isOpen: boolean;
   onClose: () => void;
+  onToggle: () => void;
+  width: number;
+  onResize: (width: number) => void;
+  compact: boolean;
+  connected: boolean;
   themePreference: "light" | "dark" | "system";
   onChangeThemePreference: (pref: "light" | "dark" | "system") => void;
 };
 
 type MenuItem = {
+  key?: string;
+  supportTabId?: string;
+  supportApp?: SupportApp;
   label: string;
   route?: string;
   icon?: React.ComponentType<any>;
@@ -114,7 +118,7 @@ const MENU_ITEMS: MenuItem[] = [
   },
   {
     label: "VMs",
-    icon: PcCase,
+    icon: Monitor,
     iconProps: { size: "md" },
     children: [
       {label: "Virtual Machines", route: "/vms", icon: ServerCog},
@@ -159,10 +163,13 @@ const MENU_ITEMS: MenuItem[] = [
   {
     label: "Logs",
     icon: FileText,
-    children: [
-      { label: "System logs", route: "/logs", icon: FileText },
-      { label: "HH Support", route: "/support", icon: Gauge },
-    ],
+    route: "/logs",
+  },
+  {
+    label: "HH Support",
+    icon: Gauge,
+    route: "/support",
+    children: [],
   },
   {
     label: "Nginx",
@@ -216,23 +223,45 @@ const THEME_OPTIONS = [
   },
 ];
 
-export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePreference }: AppSidebarProps) {
+export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact, connected, themePreference, onChangeThemePreference }: AppSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const support = useSupportNavigation();
+  React.useEffect(() => () => resetSupportNavigation(), []);
   const systemScheme = useColorScheme();
   const resolvedMode = themePreference === "system" ? (systemScheme === "dark" ? "dark" : "light") : themePreference;
-  const isWeb = Platform.OS === "web";
-  const chevronMuted = resolvedMode === "dark" ? "#94A3B8" : "#9AA4B8";
-  const chevronActive = resolvedMode === "dark" ? "#E8EBF0" : "#475569";
-  const chevronAnims = React.useRef<Record<string, Animated.Value>>({});
+  const { width: viewportWidth } = useWindowDimensions();
   const [expandedParents, setExpandedParents] = React.useState<Record<string, boolean>>({});
-  const [showSettings, setShowSettings] = React.useState(false);
-
   React.useEffect(() => {
-    if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
-      UIManager.setLayoutAnimationEnabledExperimental(true);
-    }
-  }, []);
+    if (pathname === "/support" && support.tabId) setExpandedParents((current) => ({ ...current, ["support-tab-" + support.tabId]: true }));
+  }, [pathname, support.tabId]);
+  const [showSettings, setShowSettings] = React.useState(false);
+  const dragging = React.useRef<{ x: number; width: number } | null>(null);
+  const resizeRef = React.useRef(onResize);
+  resizeRef.current = onResize;
+  React.useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const move = (event: PointerEvent) => {
+      if (dragging.current) resizeRef.current(dragging.current.width + event.clientX - dragging.current.x);
+    };
+    const stop = () => { dragging.current = null; };
+    const key = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { stop(); if (compact && isOpen) onClose(); }
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+    window.addEventListener("keydown", key);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+      window.removeEventListener("keydown", key);
+    };
+  }, [compact, isOpen, onClose]);
+  const dark = resolvedMode === "dark";
+  const muted = dark ? "#94A3B8" : "#64748B";
+  const targetHeight = Platform.OS === "android" ? 48 : 44;
 
   const handleLogout = React.useCallback(async () => {
     onClose();
@@ -247,13 +276,14 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
   }, [onClose, router]);
 
   const handleNavigate = React.useCallback(
-    (route: string) => {
+    (route: string, keepOpen = false) => {
+      if (useSupportNavigation.getState().dirty && route !== pathname) return;
       if (route !== pathname) {
         router.replace(route as any);
       }
-      onClose();
+      if (compact && !keepOpen) onClose();
     },
-    [onClose, pathname, router]
+    [compact, onClose, pathname, router]
   );
 
   const isRouteActive = React.useCallback(
@@ -269,175 +299,108 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
     [pathname]
   );
 
+  const supportItems = MENU_ITEMS.map((item) => item.route !== "/support" ? item : { ...item, children: support.tabs.map((tab) => ({
+    key: "support-tab-" + tab.id, label: tab.name, route: "/support", supportTabId: tab.id,
+    children: support.apps.filter((app) => app.tab_id === tab.id).map((app) => ({ key: "support-app-" + app.id, label: app.name, route: "/support", supportTabId: tab.id, supportApp: app })),
+  })) });
   const isItemActive = (item: MenuItem): boolean => {
+    if (item.supportApp) return pathname === "/support" && support.selectedId === item.supportApp.id;
+    if (item.supportTabId) return pathname === "/support" && support.tabId === item.supportTabId;
     if (item.route && isRouteActive(item.route)) {
       return true;
     }
     return item.children?.some((child) => isItemActive(child)) ?? false;
   };
 
-  const getChevronAnim = React.useCallback((key: string, initial: number) => {
-    if (!chevronAnims.current[key]) {
-      chevronAnims.current[key] = new Animated.Value(initial);
-    }
-    return chevronAnims.current[key];
-  }, []);
+  const renderMenuItems = (items: MenuItem[], level = 0): React.ReactNode => items.map((item) => {
+    const key = item.key ?? item.route ?? item.label;
+    const hasChildren = item.children !== undefined;
+    const active = isItemActive(item);
+    const expanded = expandedParents[key] ?? active;
+    const app = item.supportApp;
+    const live = support.connection === "live";
+    const appStatus = app ? live ? `${app.connectivity}, ${app.health}` : "status unavailable" : "";
+    const dotColor = !live || app?.connectivity === "unknown" || app?.health === "unknown" ? (dark ? "#94A3B8" : "#64748B") : app?.connectivity === "offline" || app?.health === "unhealthy" ? (dark ? "#E88070" : "#BA4F3D") : app?.health === "degraded" ? (dark ? "#E9BD62" : "#946A18") : (dark ? "#2DD4BF" : "#147D78");
+    return (
+      <React.Fragment key={key}>
+        <Box className="flex-row items-center">
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={app ? `${app.name}: ${appStatus}${app.tags.length ? ". Tags: " + app.tags.join(", ") : ""}` : item.label}
+          accessibilityState={{ selected: active, ...(hasChildren ? { expanded: isOpen && expanded } : {}) }}
+          {...(Platform.OS === "web" ? { title: app ? `${app.name}: ${appStatus}${app.tags.length ? ". Tags: " + app.tags.join(", ") : ""}` : item.label } : {})}
+          onPress={() => {
+            if (item.supportTabId) {
+              const selected = item.supportApp ?? support.apps.find((app) => app.id === support.selectedId && app.tab_id === item.supportTabId) ?? support.apps.find((app) => app.tab_id === item.supportTabId);
+              if (!selectSupportApp(item.supportTabId, selected?.id ?? null)) return;
+              handleNavigate("/support", hasChildren);
+            }
+            if (hasChildren) {
+              if (!isOpen) { onToggle(); setExpandedParents((prev) => ({ ...prev, [key]: true })); }
+              else setExpandedParents((prev) => ({ ...prev, [key]: !expanded }));
+              if (item.route === "/support" && !item.supportTabId) handleNavigate("/support", true);
+            } else if (item.route && !item.supportTabId) handleNavigate(item.route);
+          }}
+          className={`flex-row items-center gap-3 rounded-lg active:opacity-70 focus-visible:outline-2 focus-visible:outline-[#2DD4BF] ${active ? "bg-[#E2E8F0] dark:bg-[#263244] hover:bg-[#D8E0EA] dark:hover:bg-[#2D3B50]" : "hover:bg-background-100 dark:hover:bg-[#1A2637]"}`}
+          style={{ flex: 1, minHeight: targetHeight, paddingVertical: 8, paddingHorizontal: isOpen ? 12 : 0, justifyContent: isOpen ? "flex-start" : "center", marginLeft: isOpen ? level * 16 : 0 }}
+        >
+          {app ? <Box accessibilityElementsHidden className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: dotColor }} /> : null}
+          {item.icon ? <Box className="w-5 items-center shrink-0"><Icon as={item.icon} size={level ? 18 : 20} aria-hidden={true} className={active ? "text-[#1E293B] dark:text-[#F1F5F9]" : "text-[#64748B] dark:text-[#94A3B8]"} /></Box> : null}
+          {isOpen ? <>
+            {app ? <Box className="flex-1 min-w-0 gap-1"><Text className={`text-sm web:[overflow-wrap:anywhere] ${active ? "text-typography-900 dark:text-[#F1F5F9]" : "text-typography-700 dark:text-[#CBD5E1]"}`}>{app.name}</Text>{app.tags.length ? <Box className="flex-row flex-wrap gap-1">{app.tags.map((tag) => <Text key={tag} className="text-xs px-1 rounded bg-background-100 dark:bg-[#1A2637] text-typography-600 dark:text-[#94A3B8] max-w-full web:[overflow-wrap:anywhere]">{tag}</Text>)}</Box> : null}</Box> : <Text numberOfLines={1} className={`flex-1 text-sm ${active ? "text-typography-900 dark:text-[#F1F5F9]" : "text-typography-700 dark:text-[#CBD5E1]"}`} style={{ fontFamily: active ? "Inter_600SemiBold" : level ? "Inter_400Regular" : "Inter_500Medium" }}>{item.label}</Text>}
+            {hasChildren ? <Box className="w-5 h-5 shrink-0 items-center justify-center"><Icon as={expanded ? ChevronDown : ChevronRight} size={16} aria-hidden={true} className="text-[#64748B] dark:text-[#94A3B8]" /></Box> : null}
+          </> : null}
+        </Pressable>
 
-  const toggleParent = React.useCallback((key: string) => {
-    setExpandedParents((prev) => {
-      const current = prev[key] ? 1 : 0;
-      const next = prev[key] ? 0 : 1;
-      const anim = getChevronAnim(key, current);
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      Animated.timing(anim, {
-        toValue: next,
-        duration: 180,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-      return {
-        ...prev,
-        [key]: !prev[key],
-      };
-    });
-  }, [getChevronAnim]);
-
-  const renderMenuItems = (items: MenuItem[], level = 0): React.ReactNode => {
-    return items.map((item) => {
-      const itemKey = item.route ?? item.label;
-      const hasChildren = Boolean(item.children?.length);
-      const isExpanded = hasChildren ? Boolean(expandedParents[itemKey]) : false;
-      const isActive = isItemActive(item);
-      const paddingLeft = level * 12;
-      const showBullet = level > 0 && !item.icon;
-      const displayLabel = showBullet ? `- ${item.label}` : item.label;
-      const {
-        className: iconClassOverride,
-        size: iconSizeOverride,
-        ...restIconProps
-      } = item.iconProps ?? {};
-
-      const handlePress = () => {
-        if (hasChildren) {
-          toggleParent(itemKey);
-          return;
-        }
-        if (item.route) {
-          handleNavigate(item.route);
-        }
-      };
-
-      return (
-        <React.Fragment key={itemKey}>
-          <Pressable
-            className={`gap-3 flex-row items-center rounded-xl px-4 py-3 transition-all ${
-              isActive
-                ? "bg-background-100 dark:bg-[#1A2637]"
-                : "hover:bg-background-50 dark:hover:bg-[#1A2637]/50 active:bg-background-100 dark:active:bg-[#1A2637]"
-            }`}
-            style={{marginLeft: paddingLeft}}
-            onPress={handlePress}
-          >
-            <Box
-              className="w-6 h-6 shrink-0 !items-center !justify-center"
-              style={{alignItems: "center", justifyContent: "center"}}
-            >
-              {item.icon ? (
-                <Icon
-                  as={item.icon}
-                  size={iconSizeOverride ?? "lg"}
-                  className={`shrink-0 ${
-                    isActive
-                      ? "text-typography-900 dark:text-[#E8EBF0]"
-                      : "text-typography-600 dark:text-[#E8EBF0]"
-                  } ${iconClassOverride ?? ""}`}
-                  {...restIconProps}
-                />
-              ) : null}
-            </Box>
-            <Text
-              className={`flex-1 text-base ${
-                isActive
-                  ? "text-typography-900 dark:text-[#E8EBF0] font-semibold"
-                  : "text-typography-900 dark:text-[#E8EBF0] dark:font-medium"
-              }`}
-              style={{
-                fontFamily: isActive ? "Inter_600SemiBold" : "Inter_500Medium",
-              }}
-            >
-              {displayLabel}
-            </Text>
-            {hasChildren ? (() => {
-              const anim = getChevronAnim(itemKey, isExpanded ? 1 : 0);
-              const rotate = anim.interpolate({
-                inputRange: [0, 1],
-                outputRange: ["0deg", "90deg"],
-              });
-              return (
-                <Animated.View style={{ marginLeft: "auto", transform: [{ rotate }] }}>
-                  <Icon
-                    as={ChevronRight}
-                    size="sm"
-                    color={isActive ? chevronActive : chevronMuted}
-                  />
-                </Animated.View>
-              );
-            })() : null}
-          </Pressable>
-          {hasChildren && isExpanded ? (
-            <Box className="mt-1">
-              {renderMenuItems(item.children!, level + 1)}
-            </Box>
-          ) : null}
-        </React.Fragment>
-      );
-    });
-  };
+        </Box>
+        {isOpen && hasChildren && expanded ? <Box className="gap-1 my-1">{renderMenuItems(item.children!, level + 1)}{item.supportTabId && !item.children?.length ? <Text className="text-xs px-3 py-2 text-typography-600 dark:text-[#94A3B8]" style={{ marginLeft: (level + 1) * 16 }}>No Apps in this workspace</Text> : null}</Box> : null}
+      </React.Fragment>
+    );
+  });
 
   return (
-    <Drawer isOpen={isOpen} onClose={onClose} anchor="left" size="full">
-      <DrawerBackdrop className="bg-background-950/50 dark:bg-black/70" />
-      <DrawerContent className="w-[280px] max-w-[90%] md:w-[340px] bg-background-0 dark:bg-[#0E1524]">
-        <DrawerBody className="flex-1 px-3 py-2">
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{paddingBottom: 24}}
-          >
-            <VStack className="gap-1">{renderMenuItems(MENU_ITEMS)}</VStack>
-
-            <VStack className="mt-4 px-1 pb-2 gap-3">
-              <Button
-                className="w-full gap-2 h-12 rounded-xl dark:border-[#E8EBF0] dark:hover:bg-[#1A2637]/50 dark:active:bg-[#1A2637]"
-                variant="outline"
-                action="secondary"
-                onPress={() => setShowSettings(true)}
-              >
-                <ButtonIcon
-                  as={Settings}
-                  className="text-typography-700 dark:text-[#f0e8e8]"
-                />
-                <ButtonText className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
-                  Settings
-                </ButtonText>
-              </Button>
-              <Button
-                className="w-full gap-2 h-12 rounded-xl dark:border-[#E8EBF0] dark:hover:bg-[#1A2637]/50 dark:active:bg-[#1A2637]"
-                variant="outline"
-                action="secondary"
-                onPress={handleLogout}
-              >
-                <ButtonIcon
-                  as={LogOut}
-                  className="text-typography-700 dark:text-[#E8EBF0]"
-                />
-                <ButtonText className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">
-                  Logout
-                </ButtonText>
-              </Button>
-            </VStack>
-          </ScrollView>
-        </DrawerBody>
-      </DrawerContent>
+    <>
+      {compact && isOpen ? <Pressable accessibilityRole="button" accessibilityLabel="Close navigation" onPress={onClose} className="absolute inset-0 bg-black/40" style={{ zIndex: 29 }} /> : null}
+      <Box
+        className="absolute left-0 top-0 bottom-0 bg-[#F8FAFC] dark:bg-[#0E1524] border-r border-[#D9E0E9] dark:border-[#293548]"
+        style={{ width: isOpen ? Math.min(width, viewportWidth - 48) : SIDEBAR_RAIL_WIDTH, zIndex: 30 }}
+      >
+        <Box className="px-2 pt-3 pb-5 gap-2" style={{ flexDirection: isOpen ? "row" : "column", alignItems: "center" }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="HyperHive dashboard" onPress={() => handleNavigate("/dashboard")} className="flex-row items-center gap-3 rounded-lg px-1 py-1 active:opacity-70 focus-visible:outline-2 focus-visible:outline-[#2DD4BF]" style={{ flex: isOpen ? 1 : undefined, minHeight: targetHeight }}>
+            <Box className="h-10 w-10 items-center justify-center shrink-0 rounded-lg bg-[#0E1524] dark:bg-transparent">
+              <Image source={require("../../assets/images/android-chrome-192x192.png")} alt="HyperHive" resizeMode="contain" size="none" className="h-7 w-7" />
+            </Box>
+            {isOpen ? <Box className="flex-1"><Text className="text-base font-semibold text-typography-900 dark:text-[#E8EBF0]">HyperHive</Text><Text className="text-xs" style={{ color: muted }}>{connected ? "Connected" : "Disconnected"}</Text></Box> : null}
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel={isOpen ? "Collapse sidebar" : "Expand sidebar"} accessibilityState={{ expanded: isOpen }} {...(Platform.OS === "web" ? { title: isOpen ? "Collapse sidebar" : "Expand sidebar" } : {})} onPress={onToggle} className="flex-row items-center gap-3 px-3 py-2 rounded-lg active:opacity-70 hover:bg-background-100 dark:hover:bg-[#1A2637] focus-visible:outline-2 focus-visible:outline-[#2DD4BF]" style={{ minWidth: 44, minHeight: targetHeight, justifyContent: isOpen ? "flex-start" : "center" }}>
+            <Icon as={isOpen ? PanelLeftClose : PanelLeftOpen} size={18} aria-hidden={true} className="text-[#64748B] dark:text-[#94A3B8]" />
+          </Pressable>
+        </Box>
+        <ScrollView style={{ flex: 1, minHeight: 0 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 8, paddingBottom: 16, gap: 4 }}>
+          {renderMenuItems(supportItems)}
+        </ScrollView>
+        <Box className="px-2 pt-3 pb-2 gap-1 border-t border-[#D9E0E9] dark:border-[#293548] bg-[#F1F5F9] dark:bg-[#111C2D]">
+          {[{ label: "Settings", icon: Settings, action: () => setShowSettings(true) }, { label: "Logout", icon: LogOut, action: handleLogout }].map((item) => (
+            <Pressable key={item.label} accessibilityRole="button" accessibilityLabel={item.label} {...(Platform.OS === "web" ? { title: item.label } : {})} onPress={item.action} className="flex-row items-center gap-3 px-3 py-2 rounded-lg active:opacity-70 hover:bg-background-100 dark:hover:bg-[#1A2637] focus-visible:outline-2 focus-visible:outline-[#2DD4BF]" style={{ minWidth: 44, minHeight: targetHeight, justifyContent: isOpen ? "flex-start" : "center" }}>
+              <Box className="w-5 items-center shrink-0"><Icon as={item.icon} size={16} aria-hidden={true} className="text-[#64748B] dark:text-[#94A3B8]" /></Box>
+              {isOpen ? <Text className="text-xs" style={{ color: muted }}>{item.label}</Text> : null}
+            </Pressable>
+          ))}
+        </Box>
+        {isOpen && !compact && Platform.OS === "web" ? <View
+          {...({ role: "separator", tabIndex: 0, "aria-label": "Resize sidebar", "aria-orientation": "vertical", "aria-valuemin": 240, "aria-valuemax": 400, "aria-valuenow": width,
+            onPointerDown: (event: PointerEvent) => { event.preventDefault(); dragging.current = { x: event.clientX, width }; },
+            onKeyDown: (event: KeyboardEvent) => {
+              if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+                event.preventDefault();
+                onResize(event.key === "Home" ? 240 : event.key === "End" ? 400 : width + (event.key === "ArrowLeft" ? -16 : 16));
+              }
+            },
+          } as any)}
+          className="absolute top-0 bottom-0 hover:bg-[#2DD4BF]/30 focus-visible:bg-[#2DD4BF]/30"
+          style={{ right: -4, width: 8, cursor: "col-resize", touchAction: "none" } as any}
+        /> : null}
+      </Box>
 
       <Modal
         isOpen={showSettings}
@@ -445,10 +408,10 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
         size="md"
       >
         <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
-        <ModalContent className="bg-background-0 dark:bg-[#0E1524] rounded-2xl border border-outline-100 dark:border-[#2A3B52] shadow-soft-2 web:max-w-xl">
-          <ModalHeader className="flex-row items-start justify-between gap-3 pb-4 border-b border-outline-100 dark:border-[#2A3B52]">
+        <ModalContent className="bg-background-0 dark:bg-[#0E1524] rounded-2xl shadow-soft-2 web:max-w-xl">
+          <ModalHeader className="flex-row items-start justify-between gap-3 pb-4">
             <Box className="flex-row items-center gap-3 flex-1">
-              <Box className="w-11 h-11 rounded-xl items-center justify-center from-primary-50 to-background-0 dark:from-[#16263D] dark:to-[#0F1A2E] border border-outline-100 dark:border-[#2A3B52]">
+              <Box className="w-11 h-11 rounded-xl items-center justify-center from-primary-50 to-background-0 dark:from-[#16263D] dark:to-[#0F1A2E]">
                 <Icon
                   as={Settings}
                   size="lg"
@@ -467,10 +430,10 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
                 </Text>
               </Box>
             </Box>
-            <ModalCloseButton className="mt-1 rounded-full border border-outline-100 dark:border-[#2A3B52]" />
+            <ModalCloseButton className="mt-1 rounded-full" />
           </ModalHeader>
           <ModalBody className="gap-5 pt-5">
-            <Box className="rounded-xl border border-outline-100 dark:border-[#2A3B52] bg-background-50/70 dark:bg-[#0F1A2E] p-4 gap-3">
+            <Box className="rounded-xl bg-background-50/70 dark:bg-[#0F1A2E] p-4 gap-3">
               <Text
                 className="text-xs font-semibold uppercase text-typography-500 dark:text-[#8A94A8] tracking-[0.08em]"
                 style={{fontFamily: "Inter_600SemiBold"}}
@@ -491,10 +454,10 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
                     <Radio
                       key={option.value}
                       value={option.value}
-                      className={`flex-row items-center gap-3 rounded-xl border px-3 py-3 transition-all ${
+                      className={`flex-row items-center gap-3 rounded-xl px-3 py-3 transition-all ${
                         isActive
-                          ? "border-primary-500 bg-primary-50/60 dark:border-[#2DD4BF] dark:bg-[#121C2D]"
-                          : "border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524]"
+                          ? "bg-primary-50/60 dark:bg-[#121C2D]"
+                          : "bg-background-0 dark:bg-[#0E1524]"
                       }`}
                     >
                       <RadioIndicator
@@ -544,11 +507,11 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
               </RadioGroup>
             </Box>
           </ModalBody>
-          <ModalFooter className="justify-end border-t border-outline-100 dark:border-[#2A3B52] pt-4 mt-2">
+          <ModalFooter className="justify-end pt-4 mt-2">
             <Button
               variant="outline"
               action="secondary"
-              className="rounded-xl px-4 h-11 border-outline-100 dark:border-[#2A3B52] dark:hover:bg-[#1A2637]/50 dark:active:bg-[#1A2637]"
+              className="rounded-xl px-4 h-11 dark:hover:bg-[#1A2637]/50 dark:active:bg-[#1A2637]"
               onPress={() => setShowSettings(false)}
             >
               <ButtonText className="font-semibold text-typography-900 dark:text-[#E8EBF0]">
@@ -558,6 +521,6 @@ export function AppSidebar({ isOpen, onClose, themePreference, onChangeThemePref
           </ModalFooter>
         </ModalContent>
       </Modal>
-    </Drawer>
+    </>
   );
 }

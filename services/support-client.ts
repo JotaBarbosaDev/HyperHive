@@ -44,6 +44,7 @@ export const listSupportTabs = (token: string, signal?: AbortSignal) => supportR
 export const listSupportApps = (token: string, signal?: AbortSignal) => supportRequest<SupportApp[]>(token, "/apps", "GET", undefined, signal);
 export const getSupportApp = (token: string, id: string, signal?: AbortSignal) => supportRequest<AppDetail>(token, "/apps/" + encodeURIComponent(id), "GET", undefined, signal);
 export const saveSupportApp = (token: string, input: AppInput, id?: string) => id ? supportRequest<SupportApp>(token, "/apps/" + encodeURIComponent(id), "PUT", input) : supportRequest<{ app: SupportApp; secret: string }>(token, "/apps", "POST", input);
+export const replicateSupportApp = (token: string, sourceId: string, input: Pick<AppInput, "name" | "tab_id" | "tags">) => supportRequest<{ app: SupportApp; secret: string }>(token, "/apps/" + encodeURIComponent(sourceId) + "/replicate", "POST", input);
 export const saveSupportLayout = (token: string, id: string, layout: SupportLayout) => supportRequest<SupportLayout>(token, "/apps/" + encodeURIComponent(id) + "/layout", "PUT", layout);
 export const getSupportHistory = async (token: string, id: string, stream: string, before?: number, signal?: AbortSignal, filters?: { severity?: Severity[] }) => {
   const query = new URLSearchParams({ stream, limit: "200" });

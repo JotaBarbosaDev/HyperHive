@@ -6,10 +6,18 @@ const root = path.resolve(__dirname, "../../dist");
 const port = Number(process.env.PORT || 8097);
 const now = () => new Date().toISOString();
 const participant = { connectivity: "online", health: "healthy", health_message: "All checks passed", last_heartbeat_at: now() };
-let tabs = [{ id: "general", name: "General" }, { id: "workers", name: "Workers" }];
+let tabs = [{ id: "general", name: "VMs" }, { id: "workers", name: "Docker PC" }];
 let apps = [{ ...participant, id: "payments", name: "Payments API", tab_id: "general", tags: ["Go", "production"], heartbeat_timeout_seconds: 120, retention_days: 7, instances: [{ ...participant, instance_id: "worker-a" }, { ...participant, instance_id: "worker-b", connectivity: "offline", health: "unhealthy", health_message: "Database unavailable" }] }];
 apps[0].connectivity = "offline";
 apps[0].health = "unhealthy";
+for (const [id, name, tab_id, tags] of [
+  ["vm-agent", "VM agent", "general", ["production", "agent"]],
+  ["backups", "Backup service", "general", ["storage"]],
+  ["container-api", "Container API", "workers", ["production", "docker"]],
+  ["docker-agent", "Docker agent", "workers", ["agent"]],
+  ["registry", "Registry", "workers", ["images"]],
+]) apps.push({ ...participant, id, name, tab_id, tags, heartbeat_timeout_seconds: 120, retention_days: 7, instances: [] });
+
 const streams = [
   { name: "cpu", type: "number", unit: "%", label: "CPU" }, { name: "version", type: "text", unit: "", label: "Version" },
   { name: "ready", type: "boolean", unit: "", label: "Readiness" }, { name: "logs", type: "log", unit: "", label: "Application logs" }, { name: "deployments", type: "event", unit: "", label: "Deployments" },
@@ -28,6 +36,7 @@ let layout = { revision: 0, widgets: [
   { id: "cpu-bar", stream: "cpu", kind: "bar", x: 6, y: 10, w: 6, h: 4, window_minutes: 60 },
   { id: "cpu-table", stream: "cpu", kind: "table", x: 0, y: 14, w: 12, h: 5 },
 ] };
+const layouts = new Map(apps.map((app) => [app.id, structuredClone(layout)]));
 const samples = [];
 for (let index = 0; index < 240; index++) samples.push({ id: index + 1, app_id: "payments", stream: "cpu", instance_id: "worker-a", timestamp: now(), received_at: new Date(Date.now() - (240 - index) * 1000).toISOString(), value: 30 + Math.sin(index / 5) * 20 });
 samples.push(...[
@@ -76,12 +85,13 @@ const server = http.createServer(async (req, res) => {
   if (route.startsWith("/apps/")) {
     const [, , id, suffix] = route.split("/"); const app = apps.find((item) => item.id === id);
     if (!app) { reply(404, { error: "Unknown App" }); return; }
-    if (suffix === "samples") { const severity = url.searchParams.get("severity")?.split(","); let rows = samples.filter((sample) => sample.stream === url.searchParams.get("stream") && (!url.searchParams.has("before") || sample.id < Number(url.searchParams.get("before"))) && (!severity?.length || severity.includes(sample.value.severity))); const more = rows.length > 200; rows = rows.slice(-200); reply(200, { samples: rows, next_before: more ? rows[0].id : null }); return; }
+    if (suffix === "samples") { const severity = url.searchParams.get("severity")?.split(","); let rows = samples.filter((sample) => sample.stream === url.searchParams.get("stream") && (!url.searchParams.has("before") || sample.id < Number(url.searchParams.get("before"))) && (!severity?.length || severity.includes(sample.value.severity))); const more = rows.length > 200; rows = rows.slice(-200); reply(200, { samples: rows.map((sample) => ({ ...sample, app_id: id })), next_before: more ? rows[0].id : null }); return; }
     if (suffix === "rotate-secret") { reply(200, { secret: "synthetic-rotated-secret" }); return; }
-    if (suffix === "layout") { if (req.method === "PUT") { if (input.revision !== layout.revision) { reply(409, { error: "Dashboard changed" }); return; } layout = { ...input, revision: layout.revision + 1 }; notify(); } reply(200, layout); return; }
+    const appLayout = layouts.get(id) ?? { revision: 0, widgets: [] };
+    if (suffix === "layout") { if (req.method === "PUT") { if (input.revision !== appLayout.revision) { reply(409, { error: "Dashboard changed" }); return; } layouts.set(id, { ...input, revision: appLayout.revision + 1 }); notify(); } reply(200, layouts.get(id) ?? appLayout); return; }
     if (req.method === "DELETE") { apps = apps.filter((item) => item.id !== id); reply(204); notify(); return; }
     if (req.method === "PUT") { Object.assign(app, input); reply(200, app); notify(); return; }
-    reply(200, { app, streams, layout }); return;
+    reply(200, { app, streams, layout: appLayout }); return;
   }
   reply(200, []);
 });

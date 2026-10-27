@@ -1,6 +1,6 @@
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { PanResponder } from "react-native";
+import { PanResponder, useWindowDimensions } from "react-native";
 import { compatibleWidgets, getSupportHistory, mergeSamples, parseFrame, parseHistory, supportSocketUrl } from "../services/support-client";
 import { useSupportLayout } from "../hooks/useSupportLayout";
 import { useSupport } from "../hooks/useSupport";
@@ -9,21 +9,29 @@ import { chartGeometry, WidgetChart } from "../components/support/widget-chart";
 import { WidgetFeed, WidgetTable } from "../components/support/widget-feed";
 import { defaultWidgetSize, minimumWidgetHeight } from "../components/support/widget-format";
 import SupportScreen from "../app/support";
+import { resetSupportNavigation, selectSupportApp, useSupportNavigation } from "../hooks/useSupportNavigation";
+import { AppForm } from "../components/support/support-dialogs";
 jest.mock("react-native", () => {
   const React = require("react");
   const View = ({ children, accessibilityLabel, style, testID, onPointerMove, onPointerLeave, onFocus, onBlur, onKeyDown, tabIndex }) => React.createElement("div", { "aria-label": accessibilityLabel, style, "data-testid": testID, onPointerMove, onPointerLeave, onFocus, onBlur, onKeyDown, tabIndex }, children);
   const ScrollView = React.forwardRef(({ children }, ref) => { React.useImperativeHandle(ref, () => ({ scrollToEnd: jest.fn() })); return React.createElement("div", null, children); });
   const FlatList = React.forwardRef(({ data, renderItem, ListEmptyComponent, testID, onScroll }, ref) => { React.useImperativeHandle(ref, () => ({ scrollToEnd: jest.fn() })); return React.createElement("div", { "data-testid": testID, onScroll: (event) => onScroll?.({ nativeEvent: { contentOffset: { y: event.currentTarget.scrollTop }, contentSize: { height: event.currentTarget.scrollHeight }, layoutMeasurement: { height: event.currentTarget.clientHeight } } }) }, data.length ? data.map((item, index) => React.createElement(React.Fragment, { key: item.id }, renderItem({ item, index }))) : ListEmptyComponent); });
-  return { View, ScrollView, FlatList, Platform: { OS: "web" }, TextInput: ({ accessibilityLabel, placeholder, value, onChangeText }) => React.createElement("input", { "aria-label": accessibilityLabel, placeholder, value, onChange: (event) => onChangeText(event.target.value) }), Pressable: ({ children, onPress, accessibilityLabel }) => React.createElement("button", { onClick: onPress, "aria-label": accessibilityLabel }, children), ActivityIndicator: () => "Loading", useWindowDimensions: () => ({ width: 1400 }), PanResponder: { create: jest.fn((handlers) => ({ panHandlers: handlers })) } };
+  return { View, ScrollView, FlatList, Platform: { OS: "web" }, TextInput: React.forwardRef(({ accessibilityLabel, placeholder, value, onChangeText, onSubmitEditing, editable }, ref) => React.createElement("input", { ref, "aria-label": accessibilityLabel, placeholder, value, disabled: editable === false, onChange: (event) => onChangeText(event.target.value), onKeyDown: (event) => { if (event.key === "Enter") onSubmitEditing?.(); } })), Pressable: React.forwardRef(({ children, onPress, onHoverIn, accessibilityLabel, accessibilityRole, accessibilityState, disabled, onKeyDown, tabIndex, nativeID, "aria-controls": controls, "aria-selected": selected, "aria-disabled": ariaDisabled, "aria-expanded": expanded }, ref) => React.createElement("button", { ref, onClick: onPress, onMouseOver: onHoverIn, "aria-label": accessibilityLabel, role: accessibilityRole, "aria-selected": selected ?? accessibilityState?.selected, "aria-disabled": ariaDisabled, "aria-expanded": expanded, disabled, onKeyDown, tabIndex, id: nativeID, "aria-controls": controls }, children)), ActivityIndicator: () => "Loading", useWindowDimensions: jest.fn(() => ({ width: 1400 })), PanResponder: { create: jest.fn((handlers) => ({ panHandlers: handlers })) } };
 });
 jest.mock("react-native-svg", () => ({ __esModule: true, default: ({ children }) => children, Polyline: () => null, Polygon: () => null, Rect: () => null, Circle: () => null, Line: () => null }));
-jest.mock("../components/ui/box", () => ({ Box: ({ children, style, testID }) => <div style={style} data-testid={testID}>{children}</div> }));
+jest.mock("../components/ui/box", () => ({ Box: ({ children, style, testID, nativeID, role, accessibilityRole, accessibilityLabel, "aria-labelledby": labelledBy }) => <div style={style} data-testid={testID} id={nativeID} role={role ?? accessibilityRole} aria-label={accessibilityLabel} aria-labelledby={labelledBy}>{children}</div> }));
+jest.mock("../components/ui/button", () => ({ Button: ({ children, accessibilityLabel, onPress, isDisabled }) => <button aria-label={accessibilityLabel} onClick={onPress} disabled={isDisabled}>{children}</button>, ButtonText: ({ children }) => children }));
 jest.mock("../components/ui/text", () => ({ Text: ({ children }) => children }));
 jest.mock("../components/ui/heading", () => ({ Heading: ({ children }) => children }));
 jest.mock("../components/ui/modal", () => {
   const Child = ({ children }) => children;
   return { Modal: Child, ModalBackdrop: () => null, ModalBody: Child, ModalContent: Child, ModalFooter: Child, ModalHeader: Child };
 });
+jest.mock("../components/ui/popover", () => ({
+  Popover: ({ trigger, children, isOpen, onOpen, onClose }) => <>{trigger({ onPress: () => isOpen ? onClose() : onOpen() })}{isOpen ? children : null}</>,
+  PopoverContent: ({ children }) => children,
+  PopoverBackdrop: () => null,
+}));
 jest.mock("expo-clipboard", () => ({ setStringAsync: jest.fn(async () => undefined) }));
 jest.mock("../hooks/useAuthGuard", () => ({ useAuthGuard: () => ({ token: "session", isChecking: false }) }));
 jest.mock("../components/support/support-ui", () => {
@@ -39,6 +47,175 @@ describe("Support dashboard actions", () => {
     const field = container.querySelector(`[aria-label="${label}"]`);
     await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(field, value); field.dispatchEvent(new Event("input", { bubbles: true })); });
   };
+  test("creates chips with Enter, deduplicates tags and saves unfinished input", async () => {
+    const onSave = jest.fn(async () => undefined);
+    await act(async () => root.render(<AppForm tabs={[{ id: "tab", name: "General" }]} apps={[]} onClose={() => {}} onSave={onSave} />));
+    await input("App name", "Tagged App"); await input("Add tag", " production ");
+    await act(async () => container.querySelector('[aria-label="Add tag"]').dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
+    expect(container.querySelector('[aria-label="Remove tag production"]')).not.toBeNull();
+    await input("Add tag", "production"); await click("Add tag");
+    expect(container.querySelectorAll('[aria-label="Remove tag production"]')).toHaveLength(1);
+    await input("Add tag", "worker"); await click("Save App");
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ tags: ["production", "worker"] }), undefined);
+  });
+  test("edits and removes tags locally, suggests tags across tabs, and persists only on Save", async () => {
+    const onSave = jest.fn(async () => undefined);
+    const tagged = { ...app, tags: ["api", "old"] };
+    const other = { ...app, id: "other", tab_id: "other-tab", tags: ["production", "worker", "production"] };
+    const render = () => root.render(<AppForm app={tagged} tabs={[{ id: "tab", name: "General" }]} apps={[tagged, other]} onClose={() => {}} onSave={onSave} />);
+    await act(async () => render());
+    expect(container.querySelectorAll('[aria-label="Use tag production"]')).toHaveLength(1);
+    expect(container.querySelector('[aria-label="Use tag api"]')).toBeNull();
+    await click("Remove tag old"); await click("Edit tag api"); await input("Edit tag", "backend"); await click("Update tag");
+    expect(container.querySelector('[aria-label="Remove tag api"]')).toBeNull();
+    expect(container.querySelector('[aria-label="Remove tag backend"]')).not.toBeNull();
+    await input("Add tag", "PRO");
+    expect(container.querySelector('[aria-label="Use tag production"]')).not.toBeNull();
+    expect(container.querySelector('[aria-label="Use tag worker"]')).toBeNull();
+    await click("Use tag production");
+    expect(onSave).not.toHaveBeenCalled(); expect(tagged.tags).toEqual(["api", "old"]);
+    await click("Save App");
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ tags: ["backend", "production"] }), undefined);
+    await click("Remove tag backend"); await click("Remove tag production"); await click("Save App");
+    expect(onSave).toHaveBeenLastCalledWith(expect.objectContaining({ tags: [] }), undefined);
+  });
+  test("cancels tag edits, saves an active edit, and resets tag drafts when switching templates", async () => {
+    const onSave = jest.fn(async () => undefined);
+    await act(async () => root.render(<AppForm tabs={[{ id: "tab", name: "General" }]} apps={[{ ...app, tags: ["source"] }]} onClose={() => {}} onSave={onSave} />));
+    await click("Replicate API"); await input("App name", "Copy"); await click("Edit tag source"); await input("Edit tag", "discarded"); await click("Cancel tag edit");
+    expect(container.querySelector('[aria-label="Remove tag source"]')).not.toBeNull();
+    await click("Edit tag source"); await input("Edit tag", "renamed"); await click("Save App");
+    expect(onSave).toHaveBeenLastCalledWith(expect.objectContaining({ tags: ["renamed"] }), "app");
+    await input("Edit tag", "unsaved"); await click("Blank App");
+    expect(container.querySelector('[aria-label="Add tag"]').value).toBe("");
+    expect(container.querySelector('[aria-label="Remove tag source"]')).toBeNull();
+    await click("Save App"); expect(onSave).toHaveBeenLastCalledWith(expect.objectContaining({ tags: [] }), undefined);
+  });
+  test("keeps invalid tags out of saved Apps and preserves draft on save failure", async () => {
+    const onSave = jest.fn(async () => { throw new Error("Save failed"); });
+    await act(async () => root.render(<AppForm app={app} tabs={[{ id: "tab", name: "General" }]} apps={[]} onClose={() => {}} onSave={onSave} />));
+    await input("Add tag", "x".repeat(65)); await click("Add tag"); await click("Save App");
+    expect(onSave).not.toHaveBeenCalled();
+    await input("Add tag", Array.from({ length: 33 }, (_, index) => `tag${index}`).join(",")); await click("Save App");
+    expect(onSave).not.toHaveBeenCalled();
+    await input("Add tag", "valid"); await click("Add tag"); await click("Save App");
+    expect(container.textContent).toContain("Save failed");
+    expect(container.querySelector('[aria-label="Remove tag valid"]')).not.toBeNull();
+  });
+  test("keeps dashboard controls and registration in the overflow menu", async () => {
+    await act(async () => root.render(React.createElement(SupportScreen)));
+    for (const label of ["Refresh", "Create an App", "Add widget", "Edit layout", "App details"]) expect([...container.querySelectorAll("button")].some((button) => button.textContent === label)).toBe(false);
+    expect(container.textContent).not.toContain("saved on server");
+    await click("Dashboard actions");
+    expect(container.querySelector('[role="menu"]')).not.toBeNull();
+    expect([...container.querySelectorAll('[role="menuitem"]')].map((item) => item.textContent)).toEqual(["Create an App", "Manage Apps›", "Add widget", "Edit layout", "App details"]);
+    await click("Edit layout");
+    expect(container.querySelector('[role="menu"]')).toBeNull();
+    expect(container.textContent).toContain("Done positioning");
+    await click("Done positioning"); await click("Dashboard actions");
+    expect(container.textContent).toContain("Create an App");
+    await click("Create an App");
+    expect(container.querySelector('[aria-label="App name"]')).not.toBeNull();
+    expect(container.querySelector('[aria-label="Search Apps or tags"]')).toBeNull();
+  });
+  test("Manage Apps opens on hover and supports right, left and Escape keys", async () => {
+    await act(async () => root.render(React.createElement(SupportScreen)));
+    await click("Dashboard actions");
+    const manage = () => container.querySelector('[aria-label="Manage Apps"][role="menuitem"]');
+    await act(async () => manage().dispatchEvent(new MouseEvent("mouseover", { bubbles: true })));
+    expect(container.querySelector('[role="menu"][aria-label="Manage Apps"]')).not.toBeNull();
+    await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === "Edit Apps").dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })));
+    expect(container.querySelector('[role="menu"][aria-label="Manage Apps"]')).toBeNull();
+    await act(async () => manage().dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+    expect(container.querySelector('[role="menu"][aria-label="Manage Apps"]')).not.toBeNull();
+    await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === "Edit Apps").dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    expect(container.querySelector('[role="menu"]')).toBeNull();
+  });
+  test("phone Manage Apps opens on tap without hover replacing the pressed item", async () => {
+    useWindowDimensions.mockReturnValue({ width: 390 });
+    await act(async () => root.render(React.createElement(SupportScreen)));
+    await click("Dashboard actions");
+    await act(async () => container.querySelector('[aria-label="Manage Apps"][role="menuitem"]').dispatchEvent(new MouseEvent("mouseover", { bubbles: true })));
+    expect(container.querySelector('[role="menu"][aria-label="Manage Apps"]')).toBeNull();
+    await click("Manage Apps");
+    expect(container.querySelector('[role="menu"][aria-label="Manage Apps"]')).not.toBeNull();
+    expect(container.querySelector('[aria-label="App name"]')).toBeNull();
+    await click("Back to dashboard actions");
+    expect(container.querySelector('[role="menu"][aria-label="Dashboard actions"]')).not.toBeNull();
+  });
+  test("general App management edits and deletes its chosen App without changing the open dashboard", async () => {
+    const original = fetchMock.getMockImplementation();
+    let apps = [app, { ...app, id: "other", name: "Worker", tab_id: "workers", tags: ["jobs"] }];
+    fetchMock.mockImplementation(async (url, options) => {
+      if (url.endsWith("/tabs")) return response([{ id: "tab", name: "General" }, { id: "workers", name: "Workers" }]);
+      if (url.endsWith("/apps")) return response(apps);
+      if (url.endsWith("/apps/other") && options.method === "PUT") { apps[1] = { ...apps[1], ...JSON.parse(options.body) }; return response(apps[1]); }
+      if (url.endsWith("/apps/other") && options.method === "DELETE") { apps = apps.filter((entry) => entry.id !== "other"); return { ...response(null), status: 204 }; }
+      return original(url, options);
+    });
+    await act(async () => root.render(React.createElement(SupportScreen)));
+    await click("Dashboard actions"); await click("Manage Apps"); await click("Edit Apps");
+    await input("Search Apps or tags", "jobs");
+    expect([...container.querySelectorAll("button")].some((button) => button.textContent === "Edit API")).toBe(false);
+    await click("Edit Worker"); await input("App name", "Renamed worker"); await click("Save App");
+    expect(apps[1].name).toBe("Renamed worker");
+    expect(useSupportNavigation.getState()).toMatchObject({ selectedId: "app", tabId: "tab" });
+    await click("Dashboard actions"); await click("Manage Apps"); await click("Delete Apps"); await click("Delete Renamed worker");
+    expect(container.textContent).toContain("This deletes Renamed worker");
+    expect(fetchMock.mock.calls.some(([url, options]) => options.method === "DELETE")).toBe(false);
+    await click("Delete App permanently");
+    expect(apps).toHaveLength(1);
+    expect(useSupportNavigation.getState()).toMatchObject({ selectedId: "app", tabId: "tab" });
+    expect(fetchMock.mock.calls.some(([url, options]) => url.endsWith("/apps/other") && options.method === "DELETE")).toBe(true);
+    expect(fetchMock.mock.calls.some(([url, options]) => url.endsWith("/apps/app") && options.method === "DELETE")).toBe(false);
+  });
+  test("keeps verbose App metadata in details while health remains visible", async () => {
+    const original = fetchMock.getMockImplementation();
+    const detailed = { ...app, id: "private-app-id", health: "unhealthy", health_message: "Database unavailable", last_heartbeat_at: "2026-10-27T12:00:00Z", instances: [{ instance_id: "worker-instance", connectivity: "offline", health: "unhealthy", health_message: "Sender timed out", last_heartbeat_at: null }] };
+    fetchMock.mockImplementation(async (url, options) => url.endsWith("/apps") ? response([detailed]) : url.endsWith("/apps/private-app-id") ? response({ app: detailed, streams: [stream], layout: { revision: 0, widgets: [] } }) : original(url, options));
+    await act(async () => root.render(React.createElement(SupportScreen)));
+    expect(container.textContent).toContain("unhealthy");
+    for (const text of ["private-app-id", "Last heartbeat:", "worker-instance", "day retention", "Database unavailable"]) expect(container.textContent).not.toContain(text);
+    await click("Dashboard actions"); await click("App details");
+    for (const text of ["private-app-id", "Last heartbeat:", "worker-instance", "7 day retention", "Database unavailable", "Sender timed out"]) expect(container.textContent).toContain(text);
+    await click("Close");
+    expect(container.textContent).not.toContain("private-app-id");
+    expect(container.textContent).not.toContain("worker-instance");
+  });
+  test("sidebar selection changes the dashboard without page tabs or a switcher", async () => {
+    const original = fetchMock.getMockImplementation();
+    const worker = { ...app, id: "worker", name: "Queue", tab_id: "workers", tags: ["jobs"] };
+    fetchMock.mockImplementation(async (url, options) => url.endsWith("/tabs") ? response([{ id: "tab", name: "General" }, { id: "workers", name: "Workers" }, { id: "empty", name: "Empty" }]) : url.endsWith("/apps") ? response([app, worker]) : url.endsWith("/apps/worker") ? response({ app: worker, streams: [], layout: { revision: 0, widgets: [] } }) : original(url, options));
+    await act(async () => root.render(React.createElement(SupportScreen)));
+    expect(container.querySelector('[role="tablist"]')).toBeNull();
+    expect(container.textContent).not.toContain("Switch App");
+    expect(useSupportNavigation.getState().apps).toHaveLength(2);
+    await act(async () => selectSupportApp("workers", "worker"));
+    expect(container.textContent).toContain("Workers /Queue");
+    await act(async () => selectSupportApp("empty", null));
+    expect(container.textContent).toContain("No Apps in Empty");
+    await act(async () => selectSupportApp("tab", "app"));
+    expect(container.textContent).toContain("General /API");
+  });
+  test("workspace manager permits deletion only for empty workspaces", async () => {
+    const original = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation(async (url, options) => url.endsWith("/tabs") ? response([{ id: "tab", name: "General" }, { id: "empty", name: "Empty" }]) : original(url, options));
+    await act(async () => root.render(React.createElement(SupportScreen)));
+    await click("Dashboard actions"); await click("Manage Apps"); await click("Manage workspaces"); await click("Edit General");
+    expect(container.textContent).not.toContain("Delete empty tab");
+    await click("Cancel"); await click("Dashboard actions"); await click("Manage Apps"); await click("Manage workspaces"); await click("Edit Empty");
+    expect(container.textContent).toContain("Delete empty tab");
+    await click("Delete empty tab");
+    expect(fetchMock.mock.calls.some(([url, options]) => url.endsWith("/tabs/empty") && options.method === "DELETE")).toBe(true);
+  });
+  test("registration starts in the current workspace", async () => {
+    const original = fetchMock.getMockImplementation();
+    let saved;
+    fetchMock.mockImplementation(async (url, options) => url.endsWith("/tabs") ? response([{ id: "tab", name: "General" }, { id: "workers", name: "Workers" }]) : url.endsWith("/apps") && options.method === "POST" ? (saved = JSON.parse(options.body), response({ app: { ...app, ...saved, id: "new-worker" }, secret: "worker-secret" })) : original(url, options));
+    await act(async () => root.render(React.createElement(SupportScreen)));
+    await act(async () => selectSupportApp("workers", null)); await click("Create an App"); await input("App name", "New worker"); await click("Save App");
+    expect(saved.tab_id).toBe("workers");
+  });
   test("registers, edits and deletes an App and creates a tab through their real form actions", async () => {
     let apps = [app];
     fetchMock.mockImplementation(async (url, options) => {
@@ -52,21 +229,56 @@ describe("Support dashboard actions", () => {
       return response({ app: apps.find((entry) => url.endsWith(entry.id)) ?? app, streams: [], layout: { revision: 0, widgets: [] } });
     });
     await act(async () => root.render(React.createElement(SupportScreen)));
-    await click("Register App"); await input("App name", "Worker queue"); await click("Save App");
+    await click("Dashboard actions"); await click("Create an App"); await input("App name", "Worker queue"); await click("Save App");
     expect(container.textContent).toContain("registration-secret");
     await click("I saved the credentials");
-    await click("App settings"); await input("App name", "Renamed queue"); await click("Save App");
+    await click("Dashboard actions"); await click("App details"); await click("App settings"); await input("App name", "Renamed queue"); await click("Save App");
     expect(apps.find((entry) => entry.id === "created").name).toBe("Renamed queue");
-    await click("App settings"); await click("Delete App"); expect(apps).toHaveLength(2);
+    await click("Dashboard actions"); await click("App details"); await click("App settings"); await click("Delete App"); expect(apps).toHaveLength(2);
     await click("Delete App permanently"); expect(apps).toHaveLength(1);
-    await click("Create tab"); await input("Tab name", "Workers"); await click("Save tab");
+    await click("Dashboard actions"); await click("Manage Apps"); await click("Manage workspaces"); await click("Create tab"); await input("Tab name", "Workers"); await click("Save tab");
     expect(fetchMock.mock.calls).toContainEqual(["https://hh.test/api/support/tabs", expect.objectContaining({ method: "POST", body: JSON.stringify({ name: "Workers" }) })]);
+  });
+  test("replicates an existing App through registration with new tags and a destination tab", async () => {
+    const original = fetchMock.getMockImplementation();
+    let saved;
+    fetchMock.mockImplementation(async (url, options) => {
+      if (url.endsWith("/tabs")) return response([{ id: "tab", name: "General" }, { id: "new-tab", name: "Workers" }]);
+      if (url.endsWith(`/apps/${app.id}/replicate`)) {
+        saved = JSON.parse(options.body);
+        return response({ app: { ...app, ...saved, id: "replica" }, secret: "replica-secret" });
+      }
+      return original(url, options);
+    });
+    await act(async () => root.render(React.createElement(SupportScreen)));
+    await click("Dashboard actions"); await click("Create an App"); await click(`Replicate ${app.name}`);
+    expect(container.textContent).toContain("Starts with fresh telemetry and new credentials");
+    expect(container.querySelector('[aria-label="Heartbeat timeout (seconds)"]')).toBeNull();
+    await input("App name", "Worker replica"); await input("Add tag", "production, worker"); await click("Workers");
+    await click("Save App");
+    expect(saved).toEqual({ name: "Worker replica", tab_id: "new-tab", tags: ["production", "worker"] });
+    expect(fetchMock.mock.calls.some(([url, options]) => url.endsWith("/apps") && options.method === "POST")).toBe(false);
+    expect(container.textContent).toContain("replica-secret");
+    await click("I saved the credentials");
+    expect(container.textContent).not.toContain("replica-secret");
+  });
+  test("switches from a template back to a blank App without replicating", async () => {
+    const original = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation(async (url, options) => url.endsWith("/apps") && options.method === "POST"
+      ? response({ app: { ...app, ...JSON.parse(options.body), id: "blank" }, secret: "blank-secret" })
+      : original(url, options));
+    await act(async () => root.render(React.createElement(SupportScreen)));
+    await click("Dashboard actions"); await click("Create an App"); await click(`Replicate ${app.name}`); await click("Blank App");
+    expect(container.querySelector('[aria-label="Heartbeat timeout (seconds)"]')).not.toBeNull();
+    await input("App name", "Blank"); await click("Save App");
+    expect(fetchMock.mock.calls.some(([url]) => url.endsWith("/replicate"))).toBe(false);
+    expect(container.textContent).toContain("blank-secret");
   });
   test("rotation requires confirmation and presents the new credentials once", async () => {
     const original = fetchMock.getMockImplementation();
     fetchMock.mockImplementation(async (url, options) => url.endsWith("rotate-secret") ? response({ secret: "new-one-time-secret" }) : original(url, options));
     await act(async () => root.render(React.createElement(SupportScreen)));
-    await click("Rotate secret");
+    await click("Dashboard actions"); await click("App details"); await click("Rotate secret");
     expect(fetchMock.mock.calls.some(([url]) => url.endsWith("rotate-secret"))).toBe(false);
     expect(container.textContent).toContain("Existing senders stop authenticating immediately");
     await click("Replace secret");
@@ -79,8 +291,13 @@ describe("Support dashboard actions", () => {
     const original = fetchMock.getMockImplementation();
     fetchMock.mockImplementation(async (url, options) => url.endsWith("/layout") && options.method === "PUT" ? { ...response({ error: "Layout changed" }), ok: false, status: 409 } : original(url, options));
     await act(async () => root.render(React.createElement(SupportScreen)));
-    await click("Add widget"); await input("Incoming stream name", "cpu"); await click("Add to dashboard");
+    await click("Dashboard actions"); await click("Add widget"); await input("Incoming stream name", "cpu"); await click("Add to dashboard");
     expect(container.textContent).toContain("Your draft is preserved");
+    expect(selectSupportApp("other", "other-app")).toBe(false);
+    expect(useSupportNavigation.getState().selectedId).toBe("app");
+    await click("Dashboard actions");
+    for (const label of ["Add widget", "Edit layout"]) expect([...container.querySelectorAll('[role="menuitem"]')].find((item) => item.textContent === label).disabled).toBe(true);
+    await click("Dashboard actions");
     const request = fetchMock.mock.calls.find(([url, options]) => url.endsWith("/layout") && options.method === "PUT");
     expect(JSON.parse(request[1].body)).toMatchObject({ revision: 0, widgets: [expect.objectContaining({ kind: "value", stream: "cpu", w: 3 })] });
     await click("Reload saved layout");
@@ -94,12 +311,12 @@ describe("Support dashboard actions", () => {
       return original(url, options);
     });
     await act(async () => root.render(React.createElement(SupportScreen)));
-    await click("Add widget"); await input("Incoming stream name", "number_cpu"); await click("Area chart");
+    await click("Dashboard actions"); await click("Add widget"); await input("Incoming stream name", "number_cpu"); await click("Area chart");
     await input("Time window (minutes)", "15"); await click("Add to dashboard");
     expect(saved.widgets[0]).toMatchObject({ stream: "number_cpu", stream_type: "number", kind: "area", window_minutes: 15 });
-    expect(container.textContent).toContain("saved on server");
+    expect(container.textContent).not.toContain("saved on server");
     expect(container.textContent).toContain("Waiting for number_cpu");
-    await click("Edit layout"); await click("Widget controls"); await click("Widget settings"); await click("Progress");
+    await click("Dashboard actions"); await click("Edit layout"); await click("Widget controls"); await click("Widget settings"); await click("Progress");
     await input("Minimum", "10"); await input("Maximum", "90"); await click("Save widget");
     expect(saved.widgets[0]).toMatchObject({ kind: "progress", min: 10, max: 90 });
     expect(saved.widgets[0].window_minutes).toBeUndefined();
@@ -120,6 +337,8 @@ class Socket {
   close() { this.onclose?.(); }
 }
 beforeEach(() => {
+  resetSupportNavigation();
+  useWindowDimensions.mockReturnValue({ width: 1400 });
   fetchMock = jest.fn(async (url) => response(url.endsWith("ws-ticket") ? { ticket: "one-time" } : url.endsWith("/tabs") ? [{ id: "tab", name: "General" }] : url.endsWith("/apps") ? [app] : url.includes("/samples?") ? { samples: [sample(1)], next_before: null } : { app, streams: [stream], layout: { revision: 0, widgets: [] } }));
   global.fetch = fetchMock;
   sockets = []; global.WebSocket = Socket;

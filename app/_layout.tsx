@@ -22,13 +22,13 @@ import GoAccessStreamButtons from "@/components/GoAccessStreamButtons";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import React from "react";
 import { CreateMountDrawer } from "@/components/drawers/CreateMountDrawer";
+import { useSidebarLayout, SIDEBAR_RAIL_WIDTH } from "@/hooks/useSidebarLayout";
 import { AppSidebar } from "@/components/navigation/AppSidebar";
 import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";
 import { Image } from "@/components/ui/image";
 import { VStack } from "@/components/ui/vstack";
 import { HStack } from "@/components/ui/hstack";
-import { Menu } from "lucide-react-native";
 import { getApiBaseUrl, setApiBaseUrl } from "@/config/apiConfig";
 import {
   API_BASE_URL_STORAGE_KEY,
@@ -67,7 +67,6 @@ export {
 SplashScreen.preventAutoHideAsync();
 
 const APP_TITLE = "HyperHive";
-const APP_CORNER_ICON = require("../assets/images/android-chrome-192x192.png");
 
 const ROUTE_TITLE_MAP: Record<string, string> = {
   "/support": "HH Support",
@@ -311,7 +310,9 @@ function RootLayoutNav() {
   const statusBarStyle = resolvedMode === "dark" ? "light" : "dark";
   const statusBarBackground = resolvedMode === "dark" ? "#070D19" : "#F8FAFC";
   const [showDrawer, setShowDrawer] = React.useState(false);
-  const [showSidebar, setShowSidebar] = React.useState(false);
+  const sidebar = useSidebarLayout();
+  const showSidebar = sidebar.open;
+  const setShowSidebar = sidebar.setOpen;
   const [tutorialModalOpen, setTutorialModalOpen] = React.useState(false);
   const [apiErrorModal, setApiErrorModal] = React.useState<
     { status?: number; path?: string; details: string } | null
@@ -319,7 +320,8 @@ function RootLayoutNav() {
   const shouldShowSnow = React.useMemo(() => isSnowSeason(), []);
   const isSigningOutRef = React.useRef(false);
   const isWeb = Platform.OS === "web";
-  const { height: screenHeight } = useWindowDimensions();
+  const { height: screenHeight, width: screenWidth } = useWindowDimensions();
+  const compactSidebar = screenWidth < 768;
   const tutorialBodyMaxHeight = Math.min(screenHeight * 0.6, 520);
 
   const handleCloseApiErrorModal = React.useCallback(() => {
@@ -602,9 +604,6 @@ function RootLayoutNav() {
     if (pathname !== "/mounts" && showDrawer) {
       setShowDrawer(false);
     }
-    if (pathname === "/" && showSidebar) {
-      setShowSidebar(false);
-    }
   }, [pathname, showDrawer, showSidebar]);
 
   const apiBaseMismatch = React.useMemo(() => {
@@ -679,55 +678,8 @@ function RootLayoutNav() {
                       </HStack>
                     </Box>
                   )}
-                  {pathname !== "/" && (
-                    <Box
-                      className="absolute top-3 left-3 web:top-5 web:left-5 z-20"
-                      pointerEvents="box-none"
-                    >
-                      <Button
-                        size="md"
-                        variant="outline"
-                        action="secondary"
-                        className="gap-2 rounded-xl px-4 h-11 border-outline-100 dark:border-[#2A3B52] bg-background-0/95 dark:bg-[#1A2332]/95 shadow-soft-1 web:hover:bg-background-50 dark:web:hover:bg-[#1F2D42]"
-                        onPress={() => setShowSidebar(true)}
-                        pointerEvents="auto"
-                      >
-                        <ButtonIcon
-                          as={Menu}
-                          size="md"
-                          className="text-typography-900 dark:text-[#E8EBF0]"
-                        />
-                        <ButtonText className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">
-                          Menu
-                        </ButtonText>
-                      </Button>
-                    </Box>
-                  )}
-                  {pathname !== "/" && (
-                    <Box
-                      className="absolute top-3 right-3 web:top-5 web:right-5 z-20"
-                      pointerEvents="none"
-                    >
-                      <VStack className="items-center gap-1">
-                        <Box className="h-9 w-9 web:h-10 web:w-10 items-center justify-center rounded-xl bg-[#0E1524]/95 border border-outline-100 dark:border-[#2A3B52] shadow-soft-1">
-                          <Image
-                            source={APP_CORNER_ICON}
-                            alt="HyperHive"
-                            resizeMode="contain"
-                            size="none"
-                            className="h-5 w-5 web:h-6 web:w-6"
-                          />
-                        </Box>
-                        <Box
-                          className={`h-2.5 w-2.5 rounded-full border-2 border-background-0 ${
-                            isWsConnected ? "bg-success-500" : "bg-error-500"
-                          }`}
-                        />
-                      </VStack>
-                    </Box>
-                  )}
                   <GoAccessStreamButtons />
-                  <Box className="flex-1">
+                  <Box className="flex-1" style={{ marginLeft: pathname === "/" ? 0 : (!compactSidebar && showSidebar ? sidebar.width : SIDEBAR_RAIL_WIDTH) }}>
                     <Slot />
                   </Box>
                 </Box>
@@ -752,6 +704,11 @@ function RootLayoutNav() {
               <AppSidebar
                 isOpen={showSidebar}
                 onClose={() => setShowSidebar(false)}
+                onToggle={() => setShowSidebar(!showSidebar)}
+                width={sidebar.width}
+                onResize={sidebar.setWidth}
+                compact={compactSidebar}
+                connected={isWsConnected}
                 themePreference={themePreference}
                 onChangeThemePreference={(pref) => {
                   setThemePreference(pref);
