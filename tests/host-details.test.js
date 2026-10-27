@@ -29,7 +29,7 @@ jest.mock("../components/ui/spinner", () => ({ Spinner: () => null }));
 jest.mock("../components/ui/switch", () => ({ Switch: () => null }));
 jest.mock("../components/modals/CoreIsolationModal", () => () => null);
 jest.mock("lucide-react-native", () => new Proxy({}, { get: () => () => null }));
-jest.mock("victory-native", () => ({ VictoryChart: ({ width }) => <div data-chart-width={width} />, VictoryAxis: () => null, VictoryLine: () => null, VictoryTheme: {}, VictoryTooltip: () => null, createContainer: () => () => null }));
+jest.mock("victory-native", () => ({ VictoryChart: ({ width }) => <div data-chart-width={width} />, VictoryAxis: () => null, VictoryLine: () => null, VictoryTheme: {}, VictoryTooltip: () => null, VictoryVoronoiContainer: () => null }));
 jest.mock("../services/api-client", () => ({ ApiError: class extends Error {} }));
 jest.mock("../services/vms-client", () => ({ getNodeIrqbalanceStatus: jest.fn(async () => ({})), getNodeHostHugepagesStatus: jest.fn(async () => ({})) }));
 jest.mock("../services/hyperhive", () => ({

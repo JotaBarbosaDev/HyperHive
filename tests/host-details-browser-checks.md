@@ -1,6 +1,6 @@
 # Host details H03 validation — 2026-10-27
 
-H03 replaces circular CPU/RAM/disk summary gauges with numeric readings, retains the visible per-core section and its Show more/less disclosure, and allows host-control cards to keep their own heights. IRQ, hugepage and isolation operations are unchanged.
+H03 replaces circular CPU/RAM/disk summary gauges with numeric readings, retains the visible per-core section and its Show more/less disclosure, and presents host controls as compact full-width rows. IRQ, hugepage and isolation operations are unchanged.
 
 Responsive rows explicitly override HStack's web no-wrap default. Core and history measurements use React Native Box containers, because the web HStack/VStack implementations render plain divs without onLayout. The measured core width takes precedence over a window-sized fallback; history charts use the available content width.
 
@@ -17,3 +17,13 @@ Before evidence: `/home/marques/projects/HyperHive/notes/ui-audit-2026-10-27/scr
 After evidence: `/home/marques/projects/HyperHive/notes/ui-audit-2026-10-27/screenshots/milestone-01/h03-{desktop,phone,phone-cores,tablet,light}.jpg`.
 
 No native-device checks, production deployment or real host mutations were performed. H03 is ready for user review; acceptance is pending.
+
+## H03 review correction
+
+User review requested fixing `Unknown event handler property onTouchPinch` and removing more empty space from Host Controls. Both history renderers now use `VictoryVoronoiContainer` directly instead of a composite zoom/voronoi container with zoom disabled. The installed native zoom mixin registers `onTouchPinch` unconditionally; removing the unused zoom mixin prevents that unsupported web SVG handler while retaining tooltip inspection.
+
+Host Controls now has three full-width compact rows. The hugepages size/count inputs and Apply/Remove actions share a wrapping row; configured/active status, validation and error text remain visible. Existing service mutation handlers are unchanged.
+
+Validation: four focused tests and web export pass. TypeScript retains only the seven known shared-heading errors. React development preview with synthetic telemetry produced no `onTouchPinch` log entries. A separate native-library `accessibilityHint` warning was observed; this change does not claim a globally clean console. The synthetic fixture's initial WebSocket `ready` message caused an unrelated development overlay; removed it from the disposable fixture.
+
+Revised evidence: backend audit `screenshots/milestone-01/h03-revision-{desktop,phone}.jpg`. Original H03 screenshots remain as review history. No native-device or production validation.

@@ -1,7 +1,7 @@
 import React from "react";
 import { LayoutChangeEvent, Platform, RefreshControl, ScrollView, useColorScheme } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { VictoryAxis, VictoryChart, VictoryLine, VictoryTheme, VictoryTooltip, createContainer } from "victory-native";
+import { VictoryAxis, VictoryChart, VictoryLine, VictoryTheme, VictoryTooltip, VictoryVoronoiContainer } from "victory-native";
 import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";
 import { Heading } from "@/components/ui/heading";
@@ -321,9 +321,6 @@ const getApiErrorMessage = (error: unknown, fallback: string) => {
 	}
 	return fallback;
 };
-
-// Typed alias to satisfy TS when using the composite container.
-const ZoomVoronoiContainer: React.ComponentType<any> = createContainer("zoom", "voronoi") as React.ComponentType<any>;
 
 export default function MachineDetailsScreen() {
 	const router = useRouter();
@@ -856,8 +853,7 @@ export default function MachineDetailsScreen() {
 						scale={{ x: "time" }}
 						domain={xDomain ? { x: xDomain } : undefined}
 						containerComponent={
-							<ZoomVoronoiContainer
-								allowZoom={false}
+							<VictoryVoronoiContainer
 								voronoiDimension="x"
 								voronoiPadding={{ left: 8, right: 8, top: 8, bottom: 12 }}
 								mouseFollowTooltips
@@ -945,8 +941,7 @@ export default function MachineDetailsScreen() {
 						scale={{ x: "time" }}
 						domain={xDomain ? { x: xDomain } : undefined}
 						containerComponent={
-							<ZoomVoronoiContainer
-								allowZoom={false}
+							<VictoryVoronoiContainer
 								voronoiDimension="x"
 								voronoiPadding={{ left: 8, right: 8, top: 8, bottom: 12 }}
 								mouseFollowTooltips
@@ -1108,193 +1103,61 @@ export default function MachineDetailsScreen() {
 						</Box>
 					</HStack>
 
-					<Box className="mt-4 rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
-						<HStack className="items-center justify-between mb-3">
-							<VStack className="gap-1">
-								<Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
-									Host Controls
-								</Heading>
-								<Text className="text-xs text-typography-600 dark:text-[#8A94A8]">
-									Service tuning and CPU isolation controls for this node.
-								</Text>
-							</VStack>
-							<Cpu size={ICON_SIZE_SM} className="text-primary-700 dark:text-[#5EEAD4]" />
-						</HStack>
-
-						<HStack className="gap-4 flex-wrap items-start web:flex-wrap">
-							<Box className="flex-1 min-w-0 basis-[260px] rounded-2xl border border-outline-200 dark:border-[#243247] bg-background-50 dark:bg-[#0E1A2B] p-4">
-							<HStack className="items-center justify-between mb-2">
-								<Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#5EEAD4] tracking-[0.08em]">
-									irqbalance
-								</Text>
-								<Pressable
-									onPress={() => void loadIrqbalance()}
-									disabled={irqbalance.isUpdating}
-									className="p-2 rounded-lg border border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0E1A2B]"
-								>
-									<RefreshCcw size={ICON_SIZE_SM} className="text-primary-700 dark:text-[#5EEAD4]" />
-								</Pressable>
-							</HStack>
-							<VStack className="gap-3">
-								<HStack className="items-center justify-between gap-3">
-									<VStack className="gap-2 flex-1">
-										<HStack className="items-center gap-2 flex-wrap web:flex-wrap">
-											<Badge
-												size="sm"
-												variant="outline"
-												className={
-													irqbalance.isLoading && !irqbalance.hasLoaded
-														? "border-outline-300 dark:border-[#243247]"
-														: irqbalance.error && !irqbalance.hasLoaded
-															? "border-error-300 dark:border-error-700"
-															: irqbalance.enabled
-																? "border-success-300 dark:border-success-700"
-																: "border-warning-300 dark:border-warning-700"
-												}
-											>
-												<BadgeText className="text-xs text-typography-600 dark:text-typography-950">
-													{irqbalance.isLoading && !irqbalance.hasLoaded
-														? "Loading"
-														: irqbalance.error && !irqbalance.hasLoaded
-															? "Unavailable"
-															: irqbalance.enabled
-																? "Enabled"
-																: "Disabled"}
-												</BadgeText>
-											</Badge>
-											{irqbalance.hasLoaded ? (
-												<Badge size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-													<BadgeText className="text-xs text-typography-600 dark:text-typography-950">
-														{irqbalance.active ? "Active" : "Inactive"}
-													</BadgeText>
-												</Badge>
-											) : null}
-										</HStack>
-										<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
-											{irqbalance.error
-												? irqbalance.error
-												: irqbalance.isUpdating
-													? "Applying change..."
-													: `Unit: ${irqbalance.unitName ?? "irqbalance.service"}`}
-										</Text>
-									</VStack>
-									<VStack className="items-end gap-2">
-										{irqbalance.isUpdating ? <Spinner color={isDark ? "#5EEAD4" : "#0F172A"} /> : null}
-										<Switch
-											value={irqbalance.hasLoaded ? irqbalance.enabled : false}
-											disabled={!irqbalance.hasLoaded || irqbalance.isLoading || irqbalance.isUpdating}
-											onValueChange={(value) => {
-												void handleToggleIrqbalance(value);
-											}}
-										/>
-									</VStack>
-								</HStack>
-								<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
-									Enable or disable the `irqbalance` service on this node.
-								</Text>
-							</VStack>
-						</Box>
-
-						<Box className="flex-1 min-w-0 basis-[260px] rounded-2xl border border-outline-200 dark:border-[#243247] bg-background-50 dark:bg-[#0E1A2B] p-4">
-							<HStack className="items-center justify-between mb-2">
-								<Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#5EEAD4] tracking-[0.08em]">
-									Core Isolation
-								</Text>
-								<Cpu size={ICON_SIZE_SM} className="text-primary-700 dark:text-[#5EEAD4]" />
-							</HStack>
-							<VStack className="gap-3">
-								<Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
-									Select and isolate physical CPU cores for this host. Maximum 50% of cores per socket.
-								</Text>
-								<Button
-									size="sm"
-									variant="outline"
-									className="rounded-xl self-start"
-									onPress={() => setIsCoreIsolationModalOpen(true)}
-								>
-									<ButtonText>Isolate Cores</ButtonText>
-								</Button>
-							</VStack>
-						</Box>
-						<Box className="flex-1 min-w-[300px] rounded-2xl border border-outline-200 dark:border-[#243247] bg-background-50 dark:bg-[#0E1A2B] p-4">
-							<HStack className="items-center justify-between mb-2">
-								<Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#5EEAD4] tracking-[0.08em]">
-									Host Hugepages
-								</Text>
-								<Pressable
-									onPress={() => void loadHostHugepages()}
-									disabled={hostHugepages.isUpdating}
-									className="p-2 rounded-lg border border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0E1A2B]"
-								>
-									<RefreshCcw size={ICON_SIZE_SM} className="text-primary-700 dark:text-[#5EEAD4]" />
-								</Pressable>
-							</HStack>
-							<VStack className="gap-3">
-								<HStack className="items-center gap-2 flex-wrap web:flex-wrap">
-									<Badge
-										size="sm"
-										variant="outline"
-										className={
-											hostHugepages.isLoading && !hostHugepages.hasLoaded
-												? "border-outline-300 dark:border-[#243247]"
-												: hostHugepages.error && !hostHugepages.hasLoaded
-													? "border-error-300 dark:border-error-700"
-													: hostHugepagesStatus?.enabled
-														? "border-success-300 dark:border-success-700"
-														: "border-warning-300 dark:border-warning-700"
-										}
-									>
+					<Box className="mt-4 rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] px-4 py-3">
+						<Heading size="md" className="mb-2 text-typography-900 dark:text-[#E8EBF0]">Host Controls</Heading>
+						<VStack>
+							<Box className="flex-row flex-wrap items-center gap-3 py-3 border-t border-outline-200 dark:border-[#243247]">
+								<VStack className="flex-1 min-w-[140px] gap-1">
+									<Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">irqbalance</Text>
+									<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+										{irqbalance.error ? irqbalance.error : irqbalance.isUpdating ? "Applying change..." : `Unit: ${irqbalance.unitName ?? "irqbalance.service"}`}
+									</Text>
+								</VStack>
+								<Box className="flex-row flex-wrap items-center gap-2">
+									<Badge size="sm" variant="outline" className={irqbalance.error && !irqbalance.hasLoaded ? "border-error-300 dark:border-error-700" : "border-outline-300 dark:border-[#243247]"}>
 										<BadgeText className="text-xs text-typography-600 dark:text-typography-950">
-											{hostHugepages.isLoading && !hostHugepages.hasLoaded
-												? "Loading"
-												: hostHugepages.error && !hostHugepages.hasLoaded
-													? "Unavailable"
-													: hostHugepagesStatus?.enabled
-														? "Enabled"
-														: "Disabled"}
+											{irqbalance.isLoading && !irqbalance.hasLoaded ? "Loading" : irqbalance.error && !irqbalance.hasLoaded ? "Unavailable" : irqbalance.enabled ? "Enabled" : "Disabled"}
 										</BadgeText>
 									</Badge>
-									{hostHugepagesStatus?.rebootRequired ? (
-										<Badge size="sm" variant="outline" className="border-warning-300 dark:border-warning-700">
-											<BadgeText className="text-xs text-typography-600 dark:text-typography-950">
-												Reboot required
-											</BadgeText>
-										</Badge>
-									) : null}
-									{hostHugepages.isUpdating ? (
-										<Badge size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
-											<BadgeText className="text-xs text-typography-600 dark:text-typography-950">
-												Applying
-											</BadgeText>
-										</Badge>
-									) : null}
-								</HStack>
-
-								<HStack className="gap-2 flex-wrap items-end web:flex-wrap">
-									<Box className="flex-1 min-w-[120px]">
+									{irqbalance.hasLoaded ? <Badge size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]"><BadgeText className="text-xs text-typography-600 dark:text-typography-950">{irqbalance.active ? "Active" : "Inactive"}</BadgeText></Badge> : null}
+									{irqbalance.isUpdating ? <Spinner color={isDark ? "#5EEAD4" : "#0F172A"} /> : null}
+									<Switch accessibilityLabel="Enable irqbalance" value={irqbalance.hasLoaded ? irqbalance.enabled : false} disabled={!irqbalance.hasLoaded || irqbalance.isLoading || irqbalance.isUpdating} onValueChange={(value) => { void handleToggleIrqbalance(value); }} />
+									<Pressable accessibilityRole="button" accessibilityLabel="Refresh irqbalance status" onPress={() => void loadIrqbalance()} disabled={irqbalance.isUpdating} className="p-2 rounded-lg border border-outline-200 dark:border-[#243247]">
+										<RefreshCcw size={ICON_SIZE_SM} className="text-primary-700 dark:text-[#5EEAD4]" />
+									</Pressable>
+								</Box>
+							</Box>
+							<Box className="flex-row flex-wrap items-center gap-3 py-3 border-t border-outline-200 dark:border-[#243247]">
+								<VStack className="flex-1 min-w-[140px] gap-1">
+									<Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">Core Isolation</Text>
+									<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Select physical CPU cores to isolate. Maximum 50% per socket.</Text>
+								</VStack>
+								<Button size="sm" variant="outline" className="rounded-xl" onPress={() => setIsCoreIsolationModalOpen(true)}><ButtonText>Isolate Cores</ButtonText></Button>
+							</Box>
+							<VStack className="gap-2 pt-3 border-t border-outline-200 dark:border-[#243247]">
+								<Box className="flex-row flex-wrap items-center gap-2">
+									<Text className="text-sm font-semibold flex-1 text-typography-900 dark:text-[#E8EBF0]">Host Hugepages</Text>
+									<Badge size="sm" variant="outline" className={hostHugepages.error && !hostHugepages.hasLoaded ? "border-error-300 dark:border-error-700" : "border-outline-300 dark:border-[#243247]"}>
+										<BadgeText className="text-xs text-typography-600 dark:text-typography-950">
+											{hostHugepages.isLoading && !hostHugepages.hasLoaded ? "Loading" : hostHugepages.error && !hostHugepages.hasLoaded ? "Unavailable" : hostHugepagesStatus?.enabled ? "Enabled" : "Disabled"}
+										</BadgeText>
+									</Badge>
+									{hostHugepagesStatus?.rebootRequired ? <Badge size="sm" variant="outline" className="border-warning-300 dark:border-warning-700"><BadgeText className="text-xs text-typography-600 dark:text-typography-950">Reboot required</BadgeText></Badge> : null}
+									{hostHugepages.isUpdating ? <Spinner color={isDark ? "#5EEAD4" : "#0F172A"} /> : null}
+									<Pressable accessibilityRole="button" accessibilityLabel="Refresh host hugepages status" onPress={() => void loadHostHugepages()} disabled={hostHugepages.isUpdating} className="p-2 rounded-lg border border-outline-200 dark:border-[#243247]">
+										<RefreshCcw size={ICON_SIZE_SM} className="text-primary-700 dark:text-[#5EEAD4]" />
+									</Pressable>
+								</Box>
+								<Box className="flex-row flex-wrap items-end gap-2">
+									<Box className="w-[120px]">
 										<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Page Size</Text>
-										<Select
-											selectedValue={hostHugepagesPageSize}
-											onValueChange={(value) => setHostHugepagesPageSize(value)}
-											isDisabled={hostHugepagesControlsDisabled}
-										>
-											<SelectTrigger className="rounded-xl">
-												<SelectInput placeholder="Select size" value={hostHugepagesPageSize} />
-												<SelectIcon />
-											</SelectTrigger>
+										<Select selectedValue={hostHugepagesPageSize} onValueChange={(value) => setHostHugepagesPageSize(value)} isDisabled={hostHugepagesControlsDisabled}>
+											<SelectTrigger className="rounded-xl"><SelectInput placeholder="Select size" value={hostHugepagesPageSize} /><SelectIcon /></SelectTrigger>
 											<SelectPortal>
 												<SelectBackdropContent />
 												<SelectContent>
-													<SelectDragIndicatorWrapper>
-														<SelectDragIndicator />
-													</SelectDragIndicatorWrapper>
-													{HOST_HUGEPAGES_PAGE_SIZES.map((sizeOption) => (
-														<SelectItem
-															key={sizeOption}
-															label={sizeOption}
-															value={sizeOption}
-														/>
-													))}
+													<SelectDragIndicatorWrapper><SelectDragIndicator /></SelectDragIndicatorWrapper>
+													{HOST_HUGEPAGES_PAGE_SIZES.map((sizeOption) => <SelectItem key={sizeOption} label={sizeOption} value={sizeOption} />)}
 												</SelectContent>
 											</SelectPortal>
 										</Select>
@@ -1302,62 +1165,21 @@ export default function MachineDetailsScreen() {
 									<Box className="w-[132px]">
 										<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Page Count</Text>
 										<Input className="rounded-xl" isDisabled={hostHugepagesControlsDisabled}>
-											<InputField
-												value={hostHugepagesPageCountInput}
-												onChangeText={setHostHugepagesPageCountInput}
-												placeholder="e.g. 8"
-												keyboardType={Platform.OS === "ios" ? "number-pad" : "numeric"}
-											/>
+											<InputField accessibilityLabel="Hugepages page count" value={hostHugepagesPageCountInput} onChangeText={setHostHugepagesPageCountInput} placeholder="e.g. 8" keyboardType={Platform.OS === "ios" ? "number-pad" : "numeric"} />
 										</Input>
 									</Box>
-								</HStack>
-
-								<HStack className="items-center gap-2 flex-wrap web:flex-wrap">
-									<Button
-										size="sm"
-										variant="outline"
-										className="rounded-xl"
-										isDisabled={hostHugepagesControlsDisabled}
-										onPress={() => {
-											void handleApplyHostHugepages("POST");
-										}}
-									>
-										<ButtonText>Apply</ButtonText>
-									</Button>
-									<Button
-										size="sm"
-										variant="outline"
-										className="rounded-xl"
-										isDisabled={hostHugepagesRemoveDisabled}
-										onPress={() => {
-											void handleRemoveHostHugepages();
-										}}
-									>
-										<ButtonText>Remove</ButtonText>
-									</Button>
-									{hostHugepages.isUpdating ? <Spinner color={isDark ? "#5EEAD4" : "#0F172A"} /> : null}
-								</HStack>
-
-								<VStack className="gap-1">
-									<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
-										Selected capacity: {hostHugepagesSelectedCapacityLabel}
-									</Text>
-									<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
-										Configured: {hostHugepagesConfiguredLabel} ({hostHugepagesConfiguredCapacityLabel})
-									</Text>
-									<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
-										Active: {hostHugepagesActiveLabel} ({hostHugepagesActiveCapacityLabel})
-									</Text>
-								</VStack>
-
-								<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
-									{hostHugepagesStatusText}
-								</Text>
+									<Button size="sm" variant="outline" className="rounded-xl" isDisabled={hostHugepagesControlsDisabled} onPress={() => { void handleApplyHostHugepages("POST"); }}><ButtonText>Apply</ButtonText></Button>
+									<Button size="sm" variant="outline" className="rounded-xl" isDisabled={hostHugepagesRemoveDisabled} onPress={() => { void handleRemoveHostHugepages(); }}><ButtonText>Remove</ButtonText></Button>
+									<Text className="text-xs text-typography-500 dark:text-[#8A94A8] self-center">Selected capacity: {hostHugepagesSelectedCapacityLabel}</Text>
+								</Box>
+								<Box className="flex-row flex-wrap gap-x-4 gap-y-1">
+									<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Configured: {hostHugepagesConfiguredLabel} ({hostHugepagesConfiguredCapacityLabel})</Text>
+									<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Active: {hostHugepagesActiveLabel} ({hostHugepagesActiveCapacityLabel})</Text>
+								</Box>
+								<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">{hostHugepagesStatusText}</Text>
 							</VStack>
-						</Box>
-						</HStack>
+						</VStack>
 					</Box>
-
 					<Box className="mt-6 rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
 						<HStack className="items-center justify-between mb-3">
 							<Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">CPU per core</Heading>
