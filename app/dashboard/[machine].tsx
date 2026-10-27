@@ -1,6 +1,5 @@
 import React from "react";
-import { Dimensions, LayoutChangeEvent, Platform, RefreshControl, ScrollView, useColorScheme } from "react-native";
-import Svg, { Circle, G } from "react-native-svg";
+import { LayoutChangeEvent, Platform, RefreshControl, ScrollView, useColorScheme } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { VictoryAxis, VictoryChart, VictoryLine, VictoryTheme, VictoryTooltip, createContainer } from "victory-native";
 import { Box } from "@/components/ui/box";
@@ -57,8 +56,6 @@ import { ArrowLeft, BarChart3, ChevronDown, Clock3, Cpu, HardDrive, MemoryStick,
 
 const ICON_SIZE_SM = 16;
 const ICON_SIZE_MD = 18;
-const GAUGE_SIZE = 88;
-const GAUGE_STROKE = 8;
 const CPU_CORE_CARD_WIDTH = 140;
 const CPU_CORE_CARD_GAP = 12;
 
@@ -100,64 +97,6 @@ const mbToGb = (value?: number) => {
 const formatPercent = (value?: number) => {
 	if (value == null || !Number.isFinite(value)) return "—";
 	return `${value.toFixed(1)}%`;
-};
-
-type PercentGaugeProps = {
-	value?: number;
-	isDark: boolean;
-	size?: number;
-	strokeWidth?: number;
-};
-
-const getGaugeColor = (value: number, isDark: boolean) => {
-	if (value >= 85) return isDark ? "#F87171" : "#EF4444";
-	if (value >= 60) return isDark ? "#FCD34D" : "#F59E0B";
-	return isDark ? "#5EEAD4" : "#0F172A";
-};
-
-const PercentGauge = ({ value, isDark, size = GAUGE_SIZE, strokeWidth = GAUGE_STROKE }: PercentGaugeProps) => {
-	const hasValue = typeof value === "number" && Number.isFinite(value);
-	const safeValue = hasValue ? Math.max(0, Math.min(100, value)) : 0;
-	const radius = (size - strokeWidth) / 2;
-	const circumference = 2 * Math.PI * radius;
-	const dashOffset = circumference - (safeValue / 100) * circumference;
-	const trackColor = isDark ? "#1F2A3C" : "#E2E8F0";
-	const progressColor = getGaugeColor(safeValue, isDark);
-	const label = hasValue ? formatPercent(safeValue) : "—";
-
-	return (
-		<Box className="items-center justify-center" style={{ width: size, height: size }}>
-			<Svg width={size} height={size}>
-				<G rotation="-90" origin={`${size / 2}, ${size / 2}`}>
-					<Circle
-						cx={size / 2}
-						cy={size / 2}
-						r={radius}
-						fill="none"
-						stroke={trackColor}
-						strokeWidth={strokeWidth}
-						opacity={isDark ? 0.55 : 0.4}
-					/>
-					<Circle
-						cx={size / 2}
-						cy={size / 2}
-						r={radius}
-						fill="none"
-						stroke={progressColor}
-						strokeWidth={strokeWidth}
-						strokeDasharray={`${circumference} ${circumference}`}
-						strokeDashoffset={dashOffset}
-						strokeLinecap="round"
-					/>
-				</G>
-			</Svg>
-			<Box className="absolute items-center justify-center">
-				<Text className="text-lg web:text-xl font-semibold text-typography-900 dark:text-[#E8EBF0]">
-					{label}
-				</Text>
-			</Box>
-		</Box>
-	);
 };
 
 const computeDiskTotals = (info?: DiskInfo) => {
@@ -389,10 +328,7 @@ const ZoomVoronoiContainer: React.ComponentType<any> = createContainer("zoom", "
 export default function MachineDetailsScreen() {
 	const router = useRouter();
 	const colorScheme = useColorScheme();
-	const chartWidth = React.useMemo(() => {
-		const screenWidth = Dimensions.get("window").width;
-		return Math.max(320, Math.min(1100, screenWidth - 48));
-	}, []);
+	const [chartWidth, setChartWidth] = React.useState(320);
 	const params = useLocalSearchParams<{ machine?: string }>();
 	const machineName = React.useMemo(() => {
 		if (!params.machine) return "";
@@ -824,7 +760,7 @@ export default function MachineDetailsScreen() {
 	const cpuRowCapacity = React.useMemo(() => {
 		const fallbackWidth = Math.max(0, chartWidth - 32);
 		const measuredWidth = cpuCoresWidth ?? 0;
-		const width = Math.max(fallbackWidth, measuredWidth);
+		const width = measuredWidth || fallbackWidth;
 		const cardSpan = CPU_CORE_CARD_WIDTH + CPU_CORE_CARD_GAP;
 		return Math.max(1, Math.floor((width + CPU_CORE_CARD_GAP) / cardSpan));
 	}, [cpuCoresWidth, chartWidth]);
@@ -990,7 +926,7 @@ export default function MachineDetailsScreen() {
 
 			return (
 				<Box>
-					<HStack className="items-center justify-between mb-2 flex-wrap gap-2">
+					<HStack className="items-center justify-between mb-2 flex-wrap gap-2 web:flex-wrap">
 						<Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">{title}</Text>
 						<HStack className="gap-3">
 							{series.map((s) => (
@@ -1077,7 +1013,7 @@ export default function MachineDetailsScreen() {
 	return (
 		<Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
 			<ScrollView showsVerticalScrollIndicator={false} refreshControl={refreshControl} contentContainerStyle={{ paddingBottom: 36 }}>
-				<Box className="p-4 pt-14 web:p-20 web:max-w-7xl web:mx-auto web:w-full">
+				<Box className="p-4 pt-14 web:px-6 web:lg:px-10 web:pb-10 web:pt-20 web:max-w-7xl web:mx-auto web:w-full">
 					<HStack className="items-center justify-between mb-4">
 						<HStack className="items-center gap-3 flex-1">
 							<Button size="sm" variant="outline" className="rounded-xl" onPress={() => router.replace("/dashboard")}>
@@ -1092,7 +1028,7 @@ export default function MachineDetailsScreen() {
 									Detailed view with CPU, RAM, disk, and network charts ({selectedRange.label}, {selectedRange.description}).
 								</Text>
 								{machine ? (
-									<HStack className="items-center gap-2 flex-wrap">
+									<HStack className="items-center gap-2 flex-wrap web:flex-wrap">
 										<Badge size="sm" variant="outline" className="border-outline-300 dark:border-[#243247]">
 											<BadgeText className="text-xs text-typography-600 dark:text-typography-950">
 												Last seen: {formatRelative((machine as any).LastSeen)}
@@ -1120,7 +1056,7 @@ export default function MachineDetailsScreen() {
 						</Box>
 					) : null}
 
-					<HStack className="gap-4 flex-wrap">
+					<HStack className="gap-4 flex-wrap web:flex-wrap">
 						<Box className="flex-1 min-w-[200px] rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
 							<HStack className="items-center justify-between mb-2">
 								<Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#5EEAD4] tracking-[0.08em]">
@@ -1128,9 +1064,7 @@ export default function MachineDetailsScreen() {
 								</Text>
 								<Icon as={Cpu} size="md" className="text-primary-700 dark:text-[#5EEAD4]" />
 							</HStack>
-							<Box className="items-center my-2">
-								<PercentGauge value={cpuAvg} isDark={isDark} />
-							</Box>
+							<Heading size="xl" className="mb-2 text-typography-900 dark:text-[#E8EBF0]">{formatPercent(cpuAvg)}</Heading>
 							<Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
 								{cpu?.cores?.length ?? 0} cores • Avg temp {tempAvg ? `${tempAvg.toFixed(1)}ºC` : "—"} • Max {tempMax ? `${tempMax.toFixed(1)}ºC` : "—"}
 							</Text>
@@ -1143,9 +1077,7 @@ export default function MachineDetailsScreen() {
 								</Text>
 								<Icon as={MemoryStick} size="md" className="text-primary-700 dark:text-[#5EEAD4]" />
 							</HStack>
-							<Box className="items-center my-2">
-								<PercentGauge value={ramPercent} isDark={isDark} />
-							</Box>
+							<Heading size="xl" className="mb-2 text-typography-900 dark:text-[#E8EBF0]">{formatPercent(ramPercent)}</Heading>
 							<Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
 								{mbToGb(mem?.usedMb ?? 0)} / {mbToGb(mem?.totalMb ?? 0)} GB
 							</Text>
@@ -1158,9 +1090,7 @@ export default function MachineDetailsScreen() {
 								</Text>
 								<Icon as={HardDrive} size="md" className="text-primary-700 dark:text-[#5EEAD4]" />
 							</HStack>
-							<Box className="items-center my-2">
-								<PercentGauge value={diskPercent} isDark={isDark} />
-							</Box>
+							<Heading size="xl" className="mb-2 text-typography-900 dark:text-[#E8EBF0]">{formatPercent(diskPercent)}</Heading>
 							<Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
 								{formatBytes(diskTotals.used)} / {formatBytes(diskTotals.total)}
 							</Text>
@@ -1191,8 +1121,8 @@ export default function MachineDetailsScreen() {
 							<Cpu size={ICON_SIZE_SM} className="text-primary-700 dark:text-[#5EEAD4]" />
 						</HStack>
 
-						<HStack className="gap-4 flex-wrap">
-							<Box className="flex-1 min-w-[260px] rounded-2xl border border-outline-200 dark:border-[#243247] bg-background-50 dark:bg-[#0E1A2B] p-4">
+						<HStack className="gap-4 flex-wrap items-start web:flex-wrap">
+							<Box className="flex-1 min-w-0 basis-[260px] rounded-2xl border border-outline-200 dark:border-[#243247] bg-background-50 dark:bg-[#0E1A2B] p-4">
 							<HStack className="items-center justify-between mb-2">
 								<Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#5EEAD4] tracking-[0.08em]">
 									irqbalance
@@ -1208,7 +1138,7 @@ export default function MachineDetailsScreen() {
 							<VStack className="gap-3">
 								<HStack className="items-center justify-between gap-3">
 									<VStack className="gap-2 flex-1">
-										<HStack className="items-center gap-2 flex-wrap">
+										<HStack className="items-center gap-2 flex-wrap web:flex-wrap">
 											<Badge
 												size="sm"
 												variant="outline"
@@ -1265,7 +1195,7 @@ export default function MachineDetailsScreen() {
 							</VStack>
 						</Box>
 
-						<Box className="flex-1 min-w-[260px] rounded-2xl border border-outline-200 dark:border-[#243247] bg-background-50 dark:bg-[#0E1A2B] p-4">
+						<Box className="flex-1 min-w-0 basis-[260px] rounded-2xl border border-outline-200 dark:border-[#243247] bg-background-50 dark:bg-[#0E1A2B] p-4">
 							<HStack className="items-center justify-between mb-2">
 								<Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#5EEAD4] tracking-[0.08em]">
 									Core Isolation
@@ -1300,7 +1230,7 @@ export default function MachineDetailsScreen() {
 								</Pressable>
 							</HStack>
 							<VStack className="gap-3">
-								<HStack className="items-center gap-2 flex-wrap">
+								<HStack className="items-center gap-2 flex-wrap web:flex-wrap">
 									<Badge
 										size="sm"
 										variant="outline"
@@ -1340,7 +1270,7 @@ export default function MachineDetailsScreen() {
 									) : null}
 								</HStack>
 
-								<HStack className="gap-2 flex-wrap items-end">
+								<HStack className="gap-2 flex-wrap items-end web:flex-wrap">
 									<Box className="flex-1 min-w-[120px]">
 										<Text className="text-xs text-typography-500 dark:text-[#8A94A8] mb-1">Page Size</Text>
 										<Select
@@ -1382,7 +1312,7 @@ export default function MachineDetailsScreen() {
 									</Box>
 								</HStack>
 
-								<HStack className="items-center gap-2 flex-wrap">
+								<HStack className="items-center gap-2 flex-wrap web:flex-wrap">
 									<Button
 										size="sm"
 										variant="outline"
@@ -1433,8 +1363,8 @@ export default function MachineDetailsScreen() {
 							<Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">CPU per core</Heading>
 							<Icon as={ThermometerSun} size="sm" className="text-primary-700 dark:text-[#5EEAD4]" />
 						</HStack>
-						<HStack
-							className="w-full flex-wrap gap-3 web:flex-wrap justify-center"
+						<Box
+							className="w-full flex-row flex-wrap gap-3 web:flex-wrap justify-center"
 							onLayout={handleCpuCoresLayout}
 						>
 							{visibleCpuCores.map((core, idx) => (
@@ -1460,12 +1390,15 @@ export default function MachineDetailsScreen() {
 								</Box>
 							))}
 							{!cpuCores.length ? <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">No CPU data.</Text> : null}
-						</HStack>
+						</Box>
 						{hasHiddenCpuCores ? (
 							<Pressable
 								className="mt-3"
 								onPress={() => setIsCpuCoresExpanded((prev) => !prev)}
 								accessibilityRole="button"
+								accessibilityLabel={isCpuCoresExpanded ? "Show fewer CPU cores" : "Show all CPU cores"}
+								accessibilityState={{ expanded: isCpuCoresExpanded }}
+								aria-expanded={isCpuCoresExpanded}
 							>
 								<Box className="rounded-full bg-background-50/60 dark:bg-[#0E1A2B]/70 px-4 py-2 shadow-soft-2">
 									<HStack className="items-center justify-center gap-2">
@@ -1530,7 +1463,7 @@ export default function MachineDetailsScreen() {
 								const recv = Number(stat.bytesRecv ?? 0);
 								const totalMb = bytesToGb(sent + recv) * 1024; // convert to MB for display
 								return (
-									<HStack key={stat.name} className="items-center justify-between rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
+									<HStack key={stat.name} className="items-center justify-between flex-wrap web:flex-wrap gap-2 rounded-xl bg-background-100/80 dark:bg-[#0E1A2B] p-3">
 										<VStack className="gap-1">
 											<Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">{stat.name}</Text>
 											<Text className="text-xs text-typography-500 dark:text-[#8A94A8]">{stat.packetsRecv} rx / {stat.packetsSent} tx</Text>
@@ -1547,12 +1480,12 @@ export default function MachineDetailsScreen() {
 					</Box>
 
 					<Box className="mt-6 rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
-						<HStack className="items-center justify-between mb-4">
+						<HStack className="items-center justify-between mb-4 gap-3 flex-wrap web:flex-wrap">
 							<VStack className="gap-1">
 								<Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">History • {selectedRange.label}</Heading>
 								<Text className="text-xs text-typography-600 dark:text-[#8A94A8]">{selectedRange.description}</Text>
 							</VStack>
-							<HStack className="gap-2 items-center">
+							<HStack className="gap-2 items-center flex-wrap web:flex-wrap">
 								{RANGE_OPTIONS.map((option) => (
 									<Button
 										key={option.key}
@@ -1567,7 +1500,10 @@ export default function MachineDetailsScreen() {
 								))}
 							</HStack>
 						</HStack>
-						<VStack className="gap-6">
+						<Box className="gap-6" onLayout={(event) => {
+							const width = event.nativeEvent.layout.width;
+							if (width > 0) setChartWidth(width);
+						}}>
 							{renderMultiHistoryChart("CPU usage (%)", [
 								{ label: "Average", color: "#4F46E5", data: historySeries.cpuUsage.avg },
 								{ label: "Max core", color: "#EF4444", data: historySeries.cpuUsage.max },
@@ -1583,7 +1519,7 @@ export default function MachineDetailsScreen() {
 							{renderHistoryChart("RAM (%)", historySeries.mem, "#10B981")}
 							{renderHistoryChart("Disk (%)", historySeries.disk, "#F59E0B")}
 							{renderHistoryChart("Network (MB)", historySeries.net, "#0EA5E9", "MB")}
-						</VStack>
+						</Box>
 					</Box>
 				</Box>
 			</ScrollView>
