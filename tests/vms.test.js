@@ -8,7 +8,7 @@ jest.mock("../components/ui/vstack", () => ({VStack: mockElement}));
 jest.mock("../components/ui/hstack", () => ({HStack: mockElement}));
 jest.mock("../components/ui/badge", () => ({Badge: mockElement,BadgeText: mockElement}));
 jest.mock("../components/ui/skeleton", () => ({Skeleton: mockElement,SkeletonText: mockElement}));
-jest.mock("../components/ui/pressable", () => ({Pressable: mockElement}));
+jest.mock("../components/ui/pressable", () => ({Pressable: ({children, onPress, accessibilityRole, accessibilityLabel, disabled}) => accessibilityRole === "button" ? <button aria-label={accessibilityLabel} onClick={onPress} disabled={disabled}>{children}</button> : <div>{children}</div>}));
 jest.mock("../components/ui/modal", () => ({Modal: ({isOpen,children}) => isOpen ? <div role="dialog">{children}</div> : null,ModalBackdrop: mockElement,ModalContent: mockElement,ModalHeader: mockElement,ModalBody: mockElement,ModalFooter: mockElement,ModalCloseButton: mockElement}));
 jest.mock("../components/ui/divider", () => ({Divider: mockElement}));
 jest.mock("../components/ui/progress", () => ({Progress: mockElement,ProgressFilledTrack: mockElement}));
@@ -144,4 +144,23 @@ it("shows overallocated resources instead of claiming free capacity", async () =
  await render();
  expect(container.textContent).toContain("vCPU allocated: 20 / 16 · 4 overallocated");
  expect(container.textContent).toContain("RAM allocated: 32.0 GB / 16.0 GB · 16.0 GB overallocated");
+});
+
+it("keeps VM action labels and confirmations available across running, stopped and paused states", async () => {
+ api.getAllVMs.mockResolvedValueOnce([fixture("alpha","slave-a",1),fixture("beta","slave-a",5),fixture("gamma","slave-a",3)]);
+ await render();
+ for (const [label, visible] of [["Pause alpha","Pause"],["Restart alpha","Restart"],["Shutdown alpha","Shutdown"],["View details for alpha","Details"],["View details for beta","Details"],["View details for gamma","Details"]]) {
+  const button = container.querySelector(`[aria-label="${label}"]`);
+  expect(button.textContent).toContain(visible);
+ }
+ expect(container.textContent).toContain("Start");
+ expect(container.textContent).toContain("Resume");
+ for (const [label, prompt] of [["Pause alpha","Pause alpha?"],["Restart alpha","Restart alpha?"],["Shutdown alpha","Shutdown alpha?"]]) {
+  await act(async()=>container.querySelector(`[aria-label="${label}"]`).click());
+  expect(container.querySelector('[role="dialog"]').textContent).toContain(prompt);
+  await click("Cancel");
+  expect(container.querySelector('[role="dialog"]')).toBeNull();
+ }
+ await act(async()=>container.querySelector('[aria-label="View details for beta"]').click());
+ expect(container.querySelector('[role="dialog"]').textContent).toContain("beta · Details");
 });

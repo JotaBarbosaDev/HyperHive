@@ -2376,7 +2376,7 @@ export default function VirtualMachinesScreen() {
                               </Box>
 
                               {/* Botões de Ação */}
-                              <HStack className="gap-3 items-center justify-evenly pt-4">
+                              <HStack className="gap-1 items-center justify-evenly pt-4 flex-wrap web:flex-wrap">
                                 {isStopped && (
                                   <Button
                                     size="sm"
@@ -2409,7 +2409,7 @@ export default function VirtualMachinesScreen() {
                                 {isRunning && (
                                   <>
                                     <Pressable
-                                      className={`${cardIconButtonClass}`}
+                                      className={`${cardIconButtonClass} flex-1 basis-[45%] web:xl:basis-0 min-w-[52px] min-h-[52px] items-center justify-center gap-1 px-1 py-2`}
                                       accessibilityRole="button"
                                       accessibilityLabel={`Pause ${vm.name}`}
                                       onPress={() =>
@@ -2418,12 +2418,14 @@ export default function VirtualMachinesScreen() {
                                       disabled={isLoading}
                                     >
                                       <Pause
+                                        size={18}
                                         className={isWeb ? "text-typography-900 dark:text-[#E8EBF0]" : undefined}
                                         color={!isWeb ? cardIconColor : undefined}
                                       />
+                                      <Text className="text-[11px] text-typography-900 dark:text-[#E8EBF0]">Pause</Text>
                                     </Pressable>
                                     <Pressable
-                                      className={`${cardIconButtonClass}`}
+                                      className={`${cardIconButtonClass} flex-1 basis-[45%] web:xl:basis-0 min-w-[52px] min-h-[52px] items-center justify-center gap-1 px-1 py-2`}
                                       accessibilityRole="button"
                                       accessibilityLabel={`Restart ${vm.name}`}
                                       onPress={() =>
@@ -2432,12 +2434,14 @@ export default function VirtualMachinesScreen() {
                                       disabled={isLoading}
                                     >
                                       <RefreshCcw
+                                        size={18}
                                         className={isWeb ? "text-typography-900 dark:text-[#E8EBF0]" : undefined}
                                         color={!isWeb ? cardIconColor : undefined}
                                       />
+                                      <Text className="text-[11px] text-typography-900 dark:text-[#E8EBF0]">Restart</Text>
                                     </Pressable>
                                     <Pressable
-                                      className={`${cardDangerButtonClass}`}
+                                      className={`${cardDangerButtonClass} flex-1 basis-[45%] web:xl:basis-0 min-w-[52px] min-h-[52px] items-center justify-center gap-1 px-1 py-2`}
                                       accessibilityRole="button"
                                       accessibilityLabel={`Shutdown ${vm.name}`}
                                       onPress={() =>
@@ -2446,9 +2450,11 @@ export default function VirtualMachinesScreen() {
                                       disabled={isLoading}
                                     >
                                       <Square
+                                        size={18}
                                         className={isWeb ? "text-red-600" : undefined}
                                         color={!isWeb ? cardDangerIconColor : undefined}
                                       />
+                                      <Text className="text-[11px] text-red-600 dark:text-red-400">Shutdown</Text>
                                     </Pressable>
                                   </>
                                 )}
@@ -2482,15 +2488,17 @@ export default function VirtualMachinesScreen() {
                                   </Button>
                                 )}
                                 <Pressable
-                                  className={`${cardIconButtonClass}`}
+                                  className={`${cardIconButtonClass} ${isRunning ? "flex-1 basis-[45%] web:xl:basis-0" : "flex-none"} min-w-[52px] min-h-[52px] items-center justify-center gap-1 px-1 py-2`}
                                   accessibilityRole="button"
                                   accessibilityLabel={`View details for ${vm.name}`}
                                   onPress={() => setDetailsVm(vm)}
                                 >
                                   <Monitor
+                                    size={18}
                                     className={isWeb ? "text-typography-900 dark:text-[#E8EBF0]" : undefined}
                                     color={!isWeb ? cardIconColor : undefined}
                                   />
+                                  <Text className="text-[11px] text-typography-900 dark:text-[#E8EBF0]">Details</Text>
                                 </Pressable>
                               </HStack>
                             </Pressable>
