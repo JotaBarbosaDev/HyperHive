@@ -59,6 +59,7 @@ import {
   StickyNote,
   PanelLeftClose,
   PanelLeftOpen,
+  X,
 } from "lucide-react-native";
 import { usePathname, useRouter } from "expo-router";
 import { clearAuthToken } from "@/services/auth-storage";
@@ -236,6 +237,12 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
     if (pathname === "/support" && support.tabId) setExpandedParents((current) => ({ ...current, ["support-tab-" + support.tabId]: true }));
   }, [pathname, support.tabId]);
   const [showSettings, setShowSettings] = React.useState(false);
+  const settingsRef = React.useRef<React.ElementRef<typeof Pressable>>(null);
+  const closeSettings = () => {
+    setShowSettings(false);
+    // Wait for the modal exit animation before restoring focus.
+    if (Platform.OS === "web") setTimeout(() => (settingsRef.current as unknown as HTMLElement | null)?.focus(), 300);
+  };
   const dragging = React.useRef<{ x: number; width: number } | null>(null);
   const resizeRef = React.useRef(onResize);
   resizeRef.current = onResize;
@@ -246,7 +253,7 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
     };
     const stop = () => { dragging.current = null; };
     const key = (event: KeyboardEvent) => {
-      if (event.key === "Escape") { stop(); if (compact && isOpen) onClose(); }
+      if (event.key === "Escape") { stop(); if (compact && isOpen && !showSettings) onClose(); }
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", stop);
@@ -258,7 +265,7 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
       window.removeEventListener("pointercancel", stop);
       window.removeEventListener("keydown", key);
     };
-  }, [compact, isOpen, onClose]);
+  }, [compact, isOpen, onClose, showSettings]);
   const dark = resolvedMode === "dark";
   const muted = dark ? "#94A3B8" : "#64748B";
   const targetHeight = Platform.OS === "android" ? 48 : 44;
@@ -381,7 +388,7 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
         </ScrollView>
         <Box className="px-2 pt-3 pb-2 gap-1 border-t border-[#D9E0E9] dark:border-[#293548] bg-[#F1F5F9] dark:bg-[#111C2D]">
           {[{ label: "Settings", icon: Settings, action: () => setShowSettings(true) }, { label: "Logout", icon: LogOut, action: handleLogout }].map((item) => (
-            <Pressable key={item.label} accessibilityRole="button" accessibilityLabel={item.label} {...(Platform.OS === "web" ? { title: item.label } : {})} onPress={item.action} className="flex-row items-center gap-3 px-3 py-2 rounded-lg active:opacity-70 hover:bg-background-100 dark:hover:bg-[#1A2637] focus-visible:outline-2 focus-visible:outline-[#2DD4BF]" style={{ minWidth: 44, minHeight: targetHeight, justifyContent: isOpen ? "flex-start" : "center" }}>
+            <Pressable key={item.label} ref={item.label === "Settings" ? settingsRef : undefined} accessibilityRole="button" accessibilityLabel={item.label} {...(Platform.OS === "web" ? { title: item.label } : {})} onPress={item.action} className="flex-row items-center gap-3 px-3 py-2 rounded-lg active:opacity-70 hover:bg-background-100 dark:hover:bg-[#1A2637] focus-visible:outline-2 focus-visible:outline-[#2DD4BF]" style={{ minWidth: 44, minHeight: targetHeight, justifyContent: isOpen ? "flex-start" : "center" }}>
               <Box className="w-5 items-center shrink-0"><Icon as={item.icon} size={16} aria-hidden={true} className="text-[#64748B] dark:text-[#94A3B8]" /></Box>
               {isOpen ? <Text className="text-xs" style={{ color: muted }}>{item.label}</Text> : null}
             </Pressable>
@@ -404,7 +411,7 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
 
       <Modal
         isOpen={showSettings}
-        onClose={() => setShowSettings(false)}
+        onClose={closeSettings}
         size="md"
       >
         <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
@@ -430,7 +437,9 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
                 </Text>
               </Box>
             </Box>
-            <ModalCloseButton className="mt-1 rounded-full" />
+            <ModalCloseButton accessibilityLabel="Close settings" className="mt-1 rounded-full">
+              <Icon as={X} size="md" aria-hidden={true} className="text-typography-600 dark:text-[#8A94A8]" />
+            </ModalCloseButton>
           </ModalHeader>
           <ModalBody className="gap-5 pt-5">
             <Box className="rounded-xl bg-background-50/70 dark:bg-[#0F1A2E] p-4 gap-3">
@@ -454,6 +463,7 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
                     <Radio
                       key={option.value}
                       value={option.value}
+                      aria-label={option.label}
                       className={`flex-row items-center gap-3 rounded-xl px-3 py-3 transition-all ${
                         isActive
                           ? "bg-primary-50/60 dark:bg-[#121C2D]"
@@ -512,7 +522,7 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
               variant="outline"
               action="secondary"
               className="rounded-xl px-4 h-11 dark:hover:bg-[#1A2637]/50 dark:active:bg-[#1A2637]"
-              onPress={() => setShowSettings(false)}
+              onPress={closeSettings}
             >
               <ButtonText className="font-semibold text-typography-900 dark:text-[#E8EBF0]">
                 Close
