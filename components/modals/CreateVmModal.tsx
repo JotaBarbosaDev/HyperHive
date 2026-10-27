@@ -592,13 +592,13 @@ export default function CreateVmModal({
                   )}
                 </VStack>
 
-                {/* NFS Share ID */}
+                {/* NFS */}
                 <VStack className="gap-2">
                   <Text
                     className="text-sm text-typography-700 dark:text-[#8A94A8]"
                     style={{fontFamily: "Inter_600SemiBold"}}
                   >
-                    NFS Share ID
+                    NFS
                   </Text>
                   <Select
                     selectedValue={nfsShare}
@@ -645,7 +645,7 @@ export default function CreateVmModal({
                     className="text-sm text-typography-700 dark:text-[#8A94A8]"
                     style={{fontFamily: "Inter_600SemiBold"}}
                   >
-                    ISO ID (Optional)
+                    ISO
                   </Text>
                   <Select
                     selectedValue={iso}

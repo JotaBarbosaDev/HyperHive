@@ -38,10 +38,14 @@ afterEach(async () => {await act(async () => root.unmount());});
 const button=label => [...container.querySelectorAll("button")].find(el => el.textContent===label);
 it("shows mount rules and preserves creation, refresh and removal payloads",async () => {
  await act(async () => root.render(<Mounts/>));
- expect(container.textContent).toContain("/mnt/archive");expect(container.textContent).toContain("UUID: array-1");
+ expect(container.textContent).toContain("/mnt/archive");
+ await act(async () => button("Details").click());expect(container.textContent).toContain("UUID: array-1");
+ await act(async () => button("Close").click());
  await act(async () => button("Refresh").click());expect(btrfs.listAutomaticMounts).toHaveBeenCalledWith("worker-1");
  await act(async () => button("Create auto-mount").click());expect(container.querySelector('[role="dialog"]')).not.toBeNull();expect(btrfs.createAutomaticMount).not.toHaveBeenCalled();
- await act(async () => button("Remove").click());expect(btrfs.deleteAutomaticMount).toHaveBeenCalledWith(7);
+ await act(async () => button("Remove rule").click());expect(btrfs.deleteAutomaticMount).not.toHaveBeenCalled();
+ const confirm=[...container.querySelector('[role="dialog"]').querySelectorAll("button")].find(el => el.textContent==="Remove rule");
+ await act(async () => confirm.click());expect(btrfs.deleteAutomaticMount).toHaveBeenCalledWith(7);
 });
 it("shows unknown disk health and preserves self-test, schedule and refresh entry points",async () => {
  await act(async () => root.render(<Smart/>));

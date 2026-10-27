@@ -117,6 +117,8 @@ export default function GpusScreen() {
   const { selectedMachine, setSelectedMachine } = useSelectedMachine();
 
   const [gpus, setGpus] = React.useState<PciGpu[]>([]);
+  const requestId = React.useRef(0);
+  const [loadedMachine, setLoadedMachine] = React.useState<string | null>(null);
   const [machineVmNames, setMachineVmNames] = React.useState<string[]>([]);
   const [attachModalGpu, setAttachModalGpu] = React.useState<PciGpu | null>(null);
   const [attachVmName, setAttachVmName] = React.useState("");
@@ -150,10 +152,14 @@ export default function GpusScreen() {
         return;
       }
 
+      const currentRequest = ++requestId.current;
       setActionError(null);
+      setError(null);
       if (mode === "refresh") {
         setIsRefreshing(true);
       } else {
+        setGpus([]);
+        setMachineVmNames([]);
         setIsLoading(true);
       }
 
@@ -172,16 +178,19 @@ export default function GpusScreen() {
             .map((vm) => vm.name)
         );
 
+        if (requestId.current !== currentRequest) return;
+        setLoadedMachine(selectedMachine);
         setGpus(normalizedGpus);
         setMachineVmNames(filteredVmNames);
         setError(null);
       } catch (err) {
+        if (requestId.current !== currentRequest) return;
         const message = err instanceof Error ? err.message : "Failed to load GPUs.";
+        setLoadedMachine(selectedMachine);
         setError(message);
       } finally {
-        if (mode === "refresh") {
+        if (requestId.current === currentRequest) {
           setIsRefreshing(false);
-        } else {
           setIsLoading(false);
         }
       }
@@ -193,6 +202,7 @@ export default function GpusScreen() {
     if (selectedMachine) {
       fetchGpuData("initial");
     }
+    return () => { requestId.current += 1; };
   }, [selectedMachine, fetchGpuData]);
 
   const openAttachModal = React.useCallback(
@@ -271,6 +281,7 @@ export default function GpusScreen() {
 
   if (isChecking || !token) return null;
 
+  const awaitingMachine = !!selectedMachine && loadedMachine !== selectedMachine;
   const attachedCount = gpus.filter((gpu) => resolveAttachedVmNames(gpu).length > 0).length;
   const refreshControlTint = colorScheme === "dark" ? "#F8FAFC" : "#0F172A";
   const refreshControlBackground = colorScheme === "dark" ? "#0E1524" : "#E2E8F0";
@@ -307,56 +318,60 @@ export default function GpusScreen() {
 
           <Box className="py-4 mb-6 border-y border-outline-200 dark:border-[#2A3B52]">
             <VStack className="gap-3">
-              <Text className="text-sm text-typography-500 dark:text-[#8A94A8]">
-                Machine
-              </Text>
-              <Select
-                selectedValue={selectedMachine ?? undefined}
-                onValueChange={setSelectedMachine as any}
-                isDisabled={isLoadingMachines || machines.length === 0}
-              >
-                <SelectTrigger className="w-full h-11 rounded-xl border border-outline-300 dark:border-[#29405F] bg-background-0 dark:bg-[#0D1B31] px-3">
-                  <SelectInput placeholder={isLoadingMachines ? "Loading..." : "Select machine"} />
-                  <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-[#93C5FD]" />
-                </SelectTrigger>
-                <SelectPortal>
-                  <SelectBackdrop />
-                  <SelectContent className="rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
-                    <SelectDragIndicatorWrapper>
-                      <SelectDragIndicator />
-                    </SelectDragIndicatorWrapper>
-                    {machines.map((machine) => (
-                      <SelectItem
-                        key={machine.MachineName}
-                        label={machine.MachineName}
-                        value={machine.MachineName}
-                      />
-                    ))}
-                  </SelectContent>
-                </SelectPortal>
-              </Select>
-
-              <HStack className="items-center justify-between gap-3 flex-wrap web:flex-wrap">
-                <Button
-                  variant="outline"
-                  className="rounded-xl"
-                  onPress={() => fetchGpuData("refresh")}
-                  isDisabled={!selectedMachine || isRefreshing}
+              <HStack className="items-end gap-3 flex-wrap">
+                <VStack className="gap-1 flex-1 min-w-[180px]">
+                <Text className="text-sm text-typography-500 dark:text-[#8A94A8]">
+                  Machine
+                </Text>
+                <Select
+                  selectedValue={selectedMachine ?? undefined}
+                  onValueChange={setSelectedMachine as any}
+                  isDisabled={isLoadingMachines || machines.length === 0}
                 >
-                  {isRefreshing ? <ButtonSpinner /> : <ButtonIcon as={RefreshCw} />}
-                  <ButtonText>Refresh</ButtonText>
-                </Button>
-                <HStack className="gap-2">
-                  <Badge variant="outline" className="rounded-lg border-outline-300 dark:border-[#243247]">
-                    <BadgeText className="text-typography-600 dark:text-[#8A94A8]">
-                      Total: {gpus.length}
-                    </BadgeText>
-                  </Badge>
-                  <Badge variant="outline" className="rounded-lg border-outline-300 dark:border-[#243247]">
-                    <BadgeText className="text-typography-600 dark:text-[#8A94A8]">
-                      Attached: {attachedCount}
-                    </BadgeText>
-                  </Badge>
+                  <SelectTrigger className="w-full h-11 rounded-xl border border-outline-300 dark:border-[#29405F] bg-background-0 dark:bg-[#0D1B31] px-3">
+                    <SelectInput placeholder={isLoadingMachines ? "Loading..." : "Select machine"} />
+                    <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-[#93C5FD]" />
+                  </SelectTrigger>
+                  <SelectPortal>
+                    <SelectBackdrop />
+                    <SelectContent className="rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
+                      <SelectDragIndicatorWrapper>
+                        <SelectDragIndicator />
+                      </SelectDragIndicatorWrapper>
+                      {machines.map((machine) => (
+                        <SelectItem
+                          key={machine.MachineName}
+                          label={machine.MachineName}
+                          value={machine.MachineName}
+                        />
+                      ))}
+                    </SelectContent>
+                  </SelectPortal>
+                </Select>
+                </VStack>
+
+                <HStack className="items-center gap-3 flex-wrap">
+                  <Button
+                    variant="outline"
+                    className="rounded-xl"
+                    onPress={() => fetchGpuData("refresh")}
+                    isDisabled={!selectedMachine || isRefreshing || isLoading}
+                  >
+                    {isRefreshing ? <ButtonSpinner /> : <ButtonIcon as={RefreshCw} />}
+                    <ButtonText>Refresh</ButtonText>
+                  </Button>
+                  <HStack className="gap-2">
+                    <Badge variant="outline" className="rounded-lg border-outline-300 dark:border-[#243247]">
+                      <BadgeText className="text-typography-600 dark:text-[#8A94A8]">
+                        Total: {isLoading || isRefreshing || awaitingMachine || error || !selectedMachine ? "—" : gpus.length}
+                      </BadgeText>
+                    </Badge>
+                    <Badge variant="outline" className="rounded-lg border-outline-300 dark:border-[#243247]">
+                      <BadgeText className="text-typography-600 dark:text-[#8A94A8]">
+                        Attached: {isLoading || isRefreshing || awaitingMachine || error || !selectedMachine ? "—" : attachedCount}
+                      </BadgeText>
+                    </Badge>
+                  </HStack>
                 </HStack>
               </HStack>
 
@@ -369,17 +384,23 @@ export default function GpusScreen() {
             </VStack>
           </Box>
 
-          {isLoading && gpus.length === 0 ? (
+          {isLoading || isRefreshing || awaitingMachine ? (
             <Box className="rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
               <Text className="text-typography-600 dark:text-[#8A94A8]">Loading GPUs...</Text>
             </Box>
           ) : error ? (
             <Box className="rounded-2xl border border-[#FCA5A5] dark:border-[#7F1D1D] bg-[#FEF2F2] dark:bg-[#2A1010] p-4">
-              <Text className="text-[#B91C1C] dark:text-[#FCA5A5] text-sm">{error}</Text>
+              <Text className="text-[#B91C1C] dark:text-[#FCA5A5] text-sm">Unable to load GPUs: {error}</Text>
+              <Text className="text-[#B91C1C] dark:text-[#FCA5A5] text-sm mt-2">Use Refresh to retry or select another machine.</Text>
+            </Box>
+          ) : !selectedMachine ? (
+            <Box className="rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
+              <Text className="text-typography-700 dark:text-[#D6DEEA]">Select a machine to view its GPUs.</Text>
             </Box>
           ) : gpus.length === 0 ? (
             <Box className="rounded-xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
               <Text className="text-typography-700 dark:text-[#D6DEEA]">No GPUs found for this machine.</Text>
+              <Text className="text-sm text-typography-600 dark:text-[#A3B1C6] mt-2">Use Refresh to check again or select another machine.</Text>
             </Box>
           ) : (
             <VStack className="gap-4 web:grid web:grid-cols-1 web:sm:grid-cols-2 web:lg:grid-cols-3">

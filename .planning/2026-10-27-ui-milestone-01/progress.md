@@ -1,0 +1,29 @@
+# Progress
+- Read requested grill-me and ponytail skills, HyperHive/SilverBullet rules, UI/UX and planning skills.
+- Captured user clarification and H03 density preference in the grill notes.
+- Inspection error: the frontend parent directory is not a Git root; corrected to its HyperHive subdirectory.
+- No application changes yet.
+- H03 implemented: compact metrics, content-height control panels, explicit responsive wrapping and measured history/core widths. IRQ/hugepage handlers unchanged.
+- Tests: two host-details tests passed; web export passed after the final change.
+- TypeScript initially reported only seven known shared-heading errors; final check pending.
+- Browser: desktop and 375px synthetic populated preview inspected; final screenshot/evidence checks pending.
+- Final H03 commit: c73be1ab6988759c3d02c9bc2f293a4b5ef30c6d; four focused tests pass; final export passes. TSC reports only the seven known heading errors.
+- Checked populated desktop/375px/768px layouts, light/dark, keyboard disclosure and live DOM aria-expanded. Phone chart width 229px fits its container.
+- Added empty/failure regression tests. Initial one-shot empty mock was replaced by a persistent empty response because rerenders/refetches consumed it; final four tests pass.
+- Saved before/after evidence in the backend audit directory, updated H03 to Ready for review. Remaining six tickets are Todo, pending the required review checkpoint.
+- H03 rejected in review: user reports onTouchPinch warning and excessive control-panel empty space; captured answer before edits.
+- Corrected both chart containers and compacted control layout. Four focused tests pass, build passes, TSC has only the known seven heading errors.
+- Disposable preview: ws v7 exports Server rather than WebSocketServer; corrected the fixture constructor. Initial ready frame conflicted with Expo's dev channel and was removed. Main application code is unaffected by these fixture issues.
+- Final phone controls fit within x=88..351 at a 375px viewport; saved revised phone evidence. Development onTouchPinch filter returned no entries.
+- Static fixture process ended during browsing and produced a Failed to fetch modal; restarted the synthetic server and confirmed a stable connected desktop before capturing final evidence. No product API calls were involved.
+- Revised desktop and phone evidence saved; viewport override reset. H03 remains pending user acceptance; G01 is not started.
+- User accepted corrected H03 and authorized G01; checkpoint captured in the grill notes and backlog H03 marked Done.
+- G01 small shared-shell change: banner participates in normal flex flow and shares the sidebar inset with route content. Explicit web wrapping lets its actual height grow on phones. GoAccess tools stay inside the route region below it. No Docker page edits.
+- G01 commit: 0c3f40b2885d3f11d42a784d38cab07aae8d357f. Final build passes, existing 11 sidebar tests pass and diff check passes.
+- Browser verified Notes at desktop/375px/768px, banner absent without a gap, Enter-key tutorial opening and Close dismissal. Banner bottom 113px and Notes heading top153px on phone; heading top40px when absent. Proxy GoAccess top109px is below the 45px desktop banner.
+- Notes header wraps without overlap after its targeted two-class correction. Saved four G01 screenshot artifacts, reset viewport and retained the Notes review tab. No Docker-specific page edits or checks.
+- H03 accepted, G01 Ready for review, VM02 not started. Updated backlog and canonical knowledge.
+- User accepted G01; backlog and grill capture updated. VM02 started.
+- Added visible Pause, Restart, Shut down and Details labels to running-VM controls, retaining accessible names, handlers and confirmation setup; stopped/paused Start/Resume already have text. Action row wraps on narrow screens.
+- VM02 tests: ten pass, including running/stopped/paused label coverage, three named confirmation prompts and the selected Details dialog; web export passes. Test error logs from deliberately simulated failures are expected.
+- Synthetic browser checked the same confirmations by keyboard/pointer and cancelled each; Details opened the selected fixture VM. At 375px controls form balanced two rows with 95px-wide targets. At 768px they form two rows and Resume remains fully visible beside its compact Details button. Desktop shows four labeled controls in one row. Light/dark checked; screenshots saved.

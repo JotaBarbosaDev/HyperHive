@@ -92,6 +92,8 @@ export default function BtrfsAutomaticMountsScreen() {
   const [saving, setSaving] = React.useState(false);
   const [removingId, setRemovingId] = React.useState<number | null>(null);
   const [createModal, setCreateModal] = React.useState(false);
+  const [selectedRule, setSelectedRule] = React.useState<AutomaticMount | null>(null);
+  const [ruleDialog, setRuleDialog] = React.useState<"details" | "remove" | null>(null);
   const [dirListing, setDirListing] = React.useState<DirectoryListing | null>(null);
   const [dirError, setDirError] = React.useState<string | null>(null);
   const [selectedDirectory, setSelectedDirectory] = React.useState<string | null>(null);
@@ -310,7 +312,8 @@ export default function BtrfsAutomaticMountsScreen() {
     setRemovingId(id);
     try {
       await deleteAutomaticMount(id);
-      showToast("Auto-mount removed", "Rule deleted.");
+      setRuleDialog(null);
+      showToast("Rule removed", "Startup rule deleted.");
       await loadData("refresh");
     } catch (err) {
       console.error("Failed to delete auto-mount", err);
@@ -452,9 +455,6 @@ export default function BtrfsAutomaticMountsScreen() {
                           RAID:{" "}
                           {getRaidLabel(rule.uuid || rule.raid_uuid, raids)}
                         </Text>
-                        <Text selectable className="text-typography-600 dark:text-[#9AA4B8] text-xs font-mono break-all">
-                          UUID: {rule.uuid || rule.raid_uuid}
-                        </Text>
                         <HStack className="gap-2 mt-1 flex-wrap">
                           <Badge
                             className={neutralBadgeClass}
@@ -467,42 +467,42 @@ export default function BtrfsAutomaticMountsScreen() {
                               {getCompressionLabel(rule.compression)}
                             </BadgeText>
                           </Badge>
-                          {rule.machine_name ? (
-                            <Badge
-                              className={neutralBadgeClass}
-                              size="sm"
-                              action="muted"
-                              variant="outline"
-                            >
-                              <BadgeText className={neutralBadgeTextClass}>
-                                {rule.machine_name}
-                              </BadgeText>
-                            </Badge>
-                          ) : null}
                         </HStack>
                       </VStack>
-                      <Button
-                        action="negative"
-                        variant="outline"
-                        onPress={() => handleRemove(rule.id)}
-                        isDisabled={removingId !== null}
-                        className={
-                          outlineButtonClass
-                        }
-                      >
-                        {removingId === rule.id ? (
-                          <ButtonSpinner />
-                        ) : (
-                          <ButtonIcon
-                            as={Trash2}
-                            size="sm"
-                            className={dangerOutlineIconClass}
-                          />
-                        )}
-                        <ButtonText className={dangerOutlineTextClass}>
-                          Remove
-                        </ButtonText>
-                      </Button>
+                      <HStack className="gap-2 flex-wrap">
+                        <Button
+                          variant="outline"
+                          action="default"
+                          accessibilityLabel={`Details for ${rule.mount_point}`}
+                          onPress={() => { setSelectedRule(rule); setRuleDialog("details"); }}
+                          className={outlineButtonClass}
+                        >
+                          <ButtonText className={outlineButtonTextClass}>Details</ButtonText>
+                        </Button>
+                        <Button
+                          action="negative"
+                          variant="outline"
+                          accessibilityLabel={`Remove rule for ${rule.mount_point}`}
+                          onPress={() => { setSelectedRule(rule); setRuleDialog("remove"); }}
+                          isDisabled={removingId !== null}
+                          className={
+                            outlineButtonClass
+                          }
+                        >
+                          {removingId === rule.id ? (
+                            <ButtonSpinner />
+                          ) : (
+                            <ButtonIcon
+                              as={Trash2}
+                              size="sm"
+                              className={dangerOutlineIconClass}
+                            />
+                          )}
+                          <ButtonText className={dangerOutlineTextClass}>
+                            Remove rule
+                          </ButtonText>
+                        </Button>
+                      </HStack>
                     </HStack>
                   </Box>
                 ))}
@@ -511,6 +511,40 @@ export default function BtrfsAutomaticMountsScreen() {
           </Box>
         </Box>
       </ScrollView>
+
+      <Modal isOpen={ruleDialog !== null} onClose={() => { if (removingId === null) setRuleDialog(null); }} size="lg">
+        <ModalBackdrop className={modalBackdropClass} />
+        <ModalContent className={`max-w-2xl max-h-[90vh] ${modalShellClass}`}>
+          <ModalHeader className={modalHeaderClass}>
+            <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
+              {ruleDialog === "remove" ? "Remove rule" : "Rule details"}
+            </Heading>
+            <ModalCloseButton className="text-typography-500 dark:text-[#9AA4B8]" />
+          </ModalHeader>
+          <ModalBody className={`${modalBodyClass} gap-3`}>
+            {ruleDialog === "remove" ? (
+              <Text className="text-typography-700 dark:text-[#9AA4B8]">
+                This removes the startup rule. It does not unmount the array.
+              </Text>
+            ) : null}
+            <Text selectable className="text-typography-900 dark:text-[#E8EBF0] break-all">Mount point: {selectedRule?.mount_point}</Text>
+            <Text selectable className="text-typography-700 dark:text-[#9AA4B8] break-all">Machine: {selectedRule?.machine_name || selectedMachine}</Text>
+            <Text selectable className="text-typography-700 dark:text-[#9AA4B8] break-all">UUID: {selectedRule?.uuid || selectedRule?.raid_uuid || "—"}</Text>
+            <Text className="text-typography-700 dark:text-[#9AA4B8]">Compression: {getCompressionLabel(selectedRule?.compression)}</Text>
+          </ModalBody>
+          <ModalFooter className={modalFooterClass}>
+            <Button variant="outline" action="default" onPress={() => setRuleDialog(null)} isDisabled={removingId !== null} className={outlineButtonClass}>
+              <ButtonText className={outlineButtonTextClass}>{ruleDialog === "remove" ? "Cancel" : "Close"}</ButtonText>
+            </Button>
+            {ruleDialog === "remove" && selectedRule ? (
+              <Button action="negative" onPress={() => handleRemove(selectedRule.id)} isDisabled={removingId !== null}>
+                {removingId !== null ? <ButtonSpinner /> : null}
+                <ButtonText>Remove rule</ButtonText>
+              </Button>
+            ) : null}
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
       <Modal
         isOpen={createModal}

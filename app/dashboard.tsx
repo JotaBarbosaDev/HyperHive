@@ -10,7 +10,6 @@ import { Badge, BadgeText } from "@/components/ui/badge";
 import { Button, ButtonIcon, ButtonSpinner, ButtonText } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Pressable } from "@/components/ui/pressable";
-import { Tooltip, TooltipContent, TooltipText } from "@/components/ui/tooltip";
 import {
   Modal,
   ModalBackdrop,
@@ -38,7 +37,6 @@ import {
 } from "@/services/hyperhive";
 import { CpuInfo, DiskInfo, MemInfo, UptimeInfo } from "@/types/metrics";
 import { Machine } from "@/types/machine";
-import { MountUsageGauge } from "@/components/mount/MountUsageGauge";
 import {
   Activity,
   ChevronRight,
@@ -48,7 +46,6 @@ import {
   Link as LinkIcon,
   MemoryStick,
   Power,
-  RefreshCcw,
   RotateCcw,
   Server,
   ThermometerSun,
@@ -85,19 +82,6 @@ type DiskUsageEntry = {
 
 const ICON_SIZE_SM = "sm";
 const ICON_SIZE_MD = "md";
-const DISK_BREAKDOWN_PALETTE = [
-  { used: "#2563EB", free: "#BFDBFE" },
-  { used: "#059669", free: "#A7F3D0" },
-  { used: "#D97706", free: "#FDE68A" },
-  { used: "#E11D48", free: "#FDA4AF" },
-  { used: "#7C3AED", free: "#C4B5FD" },
-  { used: "#0891B2", free: "#A5F3FC" },
-  { used: "#65A30D", free: "#D9F99D" },
-  { used: "#EA580C", free: "#FDBA74" },
-  { used: "#4F46E5", free: "#C7D2FE" },
-  { used: "#0F766E", free: "#99F6E4" },
-] as const;
-
 const resolveActiveCpuProfileName = (
   payload?: Pick<TunedAdmProfilesResponse, "profiles" | "currentActiveProfile"> | null
 ) => {
@@ -142,11 +126,6 @@ const formatGbCompact = (value?: number) => {
   const gb = value / 1024 ** 3;
   if (gb >= 1000) return `${(gb / 1024).toFixed(2)} TB`;
   return `${gb.toFixed(2)} GB`;
-};
-
-const bytesToGb = (value?: number) => {
-  if (value == null || !Number.isFinite(value)) return 0;
-  return Number((value / 1024 ** 3).toFixed(2));
 };
 
 const mbToGb = (value?: number) => {
@@ -916,207 +895,44 @@ export default function DashboardScreen() {
           </HStack>
 
           <Box className="mt-4 rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4">
-            <HStack className="items-center justify-between mb-4">
-              <HStack className="items-center gap-3">
-                <Box className="w-10 h-10 rounded-xl bg-primary-50/70 dark:bg-[#12213A] items-center justify-center">
-                  <Icon
-                    as={HardDrive}
-                    size={ICON_SIZE_MD}
-                    className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80"
-                  />
-                </Box>
-                <VStack className="gap-1">
-                  <Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#5EEAD4] tracking-[0.08em]">
-                    Total disk
-                  </Text>
-                  <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
-                    Uses the same NFS calculation to sum mounts of each node.
-                  </Text>
-                </VStack>
-              </HStack>
-              <Button
-                size="sm"
-                variant="outline"
-                action="default"
-                className="rounded-xl border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E]"
-                onPress={() => refreshDashboardData("refresh")}
-                isDisabled={isLoading || isRefreshing}
-              >
-                <ButtonIcon
-                  as={RefreshCcw}
-                  className="text-typography-900 dark:text-[#E8EBF0]"
-                />
-                <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">
-                  Update
-                </ButtonText>
-              </Button>
-            </HStack>
-            <HStack className="gap-4 items-center flex-wrap">
-              <MountUsageGauge
-                usagePercent={
-                  overallTotals.diskTotals.total
-                    ? (overallTotals.diskTotals.used /
-                      overallTotals.diskTotals.total) *
-                    100
-                    : 0
-                }
-                usedGB={bytesToGb(overallTotals.diskTotals.used)}
-                totalGB={bytesToGb(overallTotals.diskTotals.total)}
-                freeGB={bytesToGb(
-                  overallTotals.diskTotals.total -
-                  overallTotals.diskTotals.used,
-                )}
-              />
-              <VStack className="gap-2 flex-1 min-w-[220px]">
-                <Text className="text-sm text-typography-600 dark:text-typography-950">
+            <HStack className="items-center gap-3 mb-4">
+              <Box className="w-10 h-10 rounded-xl bg-primary-50/70 dark:bg-[#12213A] items-center justify-center">
+                <Icon as={HardDrive} size={ICON_SIZE_MD} className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80" />
+              </Box>
+              <VStack className="gap-1 flex-1">
+                <Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#5EEAD4] tracking-[0.08em]">
+                  Total disk
+                </Text>
+                <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]"
+                  accessibilityLabel={overallTotals.diskTotals.total
+                    ? `${overallTotals.diskTotals.used} bytes used of ${overallTotals.diskTotals.total} bytes`
+                    : "No disk data yet."}>
                   {overallTotals.diskTotals.total
                     ? `${formatGbCompact(overallTotals.diskTotals.used)} used of ${formatGbCompact(overallTotals.diskTotals.total)}`
                     : "No disk data yet."}
                 </Text>
-                <Box className="h-2 rounded-full bg-background-100 dark:bg-[#132032] overflow-hidden">
-                  <Box
-                    className="h-2 rounded-full bg-[#5EEAD4]"
-                    style={{
-                      width: `${overallTotals.diskTotals.total ? (overallTotals.diskTotals.used / overallTotals.diskTotals.total) * 100 : 0}%`,
-                    }}
-                  />
-                </Box>
               </VStack>
             </HStack>
 
             {overallTotals.diskBreakdown.length ? (
-              <VStack className="mt-4 gap-3">
-                <VStack className="gap-1.5">
-                  <Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#5EEAD4] tracking-[0.08em]">
-                    Volume breakdown
-                  </Text>
-                  <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
-                    One bar split by volume. Hover a section to see machine, device, mount and usage details.
-                  </Text>
-                </VStack>
-
-                <Box className="h-5 rounded-full bg-background-100 dark:bg-[#132032] overflow-hidden border border-outline-100 dark:border-[#243247]">
-                  <HStack className="h-full w-full">
-                    {overallTotals.diskBreakdown.map((item, index) => {
-                      const colors = DISK_BREAKDOWN_PALETTE[index % DISK_BREAKDOWN_PALETTE.length];
-                      const widthPercent = overallTotals.diskTotals.total
-                        ? (item.total / overallTotals.diskTotals.total) * 100
-                        : 0;
-                      const usedPercent = item.total ? (item.used / item.total) * 100 : 0;
-                      const freePercent = item.total ? (item.free / item.total) * 100 : 0;
-                      const clusterShare = overallTotals.diskTotals.total
-                        ? (item.total / overallTotals.diskTotals.total) * 100
-                        : 0;
-
-                      return (
-                        <Tooltip
-                          key={`cluster-disk-segment-${item.machineName}-${item.key}`}
-                          placement="top"
-                          offset={8}
-                          trigger={(triggerProps) => (
-                            <Box
-                              className="h-full"
-                              style={{
-                                width: `${Math.max(widthPercent, 0)}%`,
-                                minWidth: widthPercent > 0 ? 4 : 0,
-                                borderRightWidth: 1,
-                                borderRightColor: colorScheme === "dark" ? "#0A1628" : "#FFFFFF",
-                              }}
-                            >
-                              <Pressable
-                                {...triggerProps}
-                                className="h-full w-full"
-                                accessibilityRole="button"
-                                accessibilityLabel={`${item.label} disk usage segment`}
-                              >
-                                <HStack className="h-full w-full">
-                                  <Box
-                                    className="h-full"
-                                    style={{
-                                      width: `${Math.max(0, Math.min(100, usedPercent))}%`,
-                                      backgroundColor: colors.used,
-                                    }}
-                                  />
-                                  <Box
-                                    className="h-full"
-                                    style={{
-                                      width: `${Math.max(0, Math.min(100, freePercent))}%`,
-                                      backgroundColor: colors.free,
-                                    }}
-                                  />
-                                </HStack>
-                              </Pressable>
-                            </Box>
-                          )}
-                        >
-                          <TooltipContent className="mx-3 web:mx-0 max-w-[300px] px-4 py-3 rounded-xl border border-outline-200 dark:border-[#2A3647] bg-background-900 dark:bg-[#E8EBF0]">
-                            <VStack className="gap-2">
-                              <VStack className="gap-0.5">
-                                <Text className="text-sm font-semibold text-typography-50 dark:text-[#0A1628]">
-                                  {item.label}
-                                </Text>
-                                <TooltipText className="text-typography-100 dark:text-[#1F2937] text-xs leading-5">
-                                  {item.subtitle || "—"}
-                                </TooltipText>
-                              </VStack>
-                              <HStack className="gap-4 flex-wrap">
-                                <VStack className="gap-0.5">
-                                  <Text className="text-[10px] uppercase tracking-wide text-typography-200 dark:text-[#475569]">
-                                    Total
-                                  </Text>
-                                  <Text className="text-xs font-semibold text-typography-50 dark:text-[#0A1628]">
-                                    {formatGbCompact(item.total)}
-                                  </Text>
-                                </VStack>
-                                <VStack className="gap-0.5">
-                                  <Text className="text-[10px] uppercase tracking-wide text-typography-200 dark:text-[#475569]">
-                                    Used
-                                  </Text>
-                                  <Text className="text-xs font-semibold" style={{ color: colors.used }}>
-                                    {formatGbCompact(item.used)} ({formatPercent(usedPercent)})
-                                  </Text>
-                                </VStack>
-                                <VStack className="gap-0.5">
-                                  <Text className="text-[10px] uppercase tracking-wide text-typography-200 dark:text-[#475569]">
-                                    Free
-                                  </Text>
-                                  <Text className="text-xs font-semibold" style={{ color: colors.free }}>
-                                    {formatGbCompact(item.free)} ({formatPercent(freePercent)})
-                                  </Text>
-                                </VStack>
-                                <VStack className="gap-0.5">
-                                  <Text className="text-[10px] uppercase tracking-wide text-typography-200 dark:text-[#475569]">
-                                    Cluster share
-                                  </Text>
-                                  <Text className="text-xs font-semibold text-typography-50 dark:text-[#0A1628]">
-                                    {formatPercent(clusterShare)}
-                                  </Text>
-                                </VStack>
-                              </HStack>
-                            </VStack>
-                          </TooltipContent>
-                        </Tooltip>
-                      );
-                    })}
-                  </HStack>
-                </Box>
-                <HStack className="items-center gap-3 flex-wrap">
-                  <HStack className="items-center gap-1.5">
-                    <Box className="w-2.5 h-2.5 rounded-full bg-[#0EA5E9]" />
-                    <Text className="text-[11px] text-typography-500 dark:text-[#8A94A8]">
-                      Darker tone = used
+              <VStack className="gap-3">
+                <Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#5EEAD4] tracking-[0.08em]">
+                  Volume breakdown
+                </Text>
+                {overallTotals.diskBreakdown.map((item) => (
+                  <VStack key={`cluster-disk-${item.machineName}-${item.key}`} className="gap-1.5">
+                    <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">{item.label}</Text>
+                    {item.subtitle ? <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">{item.subtitle}</Text> : null}
+                    <Box className="h-2 rounded-full bg-background-200 dark:bg-[#32445C] overflow-hidden">
+                      <Box className="h-2 rounded-full bg-[#0F766E] dark:bg-[#5EEAD4]"
+                        style={{ width: `${(item.used / item.total) * 100}%` }} />
+                    </Box>
+                    <Text className="text-xs text-typography-700 dark:text-[#E8EBF0]"
+                      accessibilityLabel={`${item.used} bytes used, ${item.free} bytes free, ${item.total} bytes total`}>
+                      {formatGbCompact(item.used)} used · {formatGbCompact(item.free)} free · {formatGbCompact(item.total)} total
                     </Text>
-                  </HStack>
-                  <HStack className="items-center gap-1.5">
-                    <Box className="w-2.5 h-2.5 rounded-full bg-[#BAE6FD]" />
-                    <Text className="text-[11px] text-typography-500 dark:text-[#8A94A8]">
-                      Lighter tone = free
-                    </Text>
-                  </HStack>
-                  <Text className="text-[11px] text-typography-500 dark:text-[#8A94A8]">
-                    Hover (web) or tap a section to inspect details.
-                  </Text>
-                </HStack>
+                  </VStack>
+                ))}
               </VStack>
             ) : null}
           </Box>

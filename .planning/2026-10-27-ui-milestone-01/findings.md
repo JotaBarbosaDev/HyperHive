@@ -1,0 +1,23 @@
+# Findings
+- Frontend checkout is /home/marques/projects/HyperHiveFront/HyperHive; initial git status is clean.
+- H03 gauges are local to the host-details page. Host control HStack stretches shorter children; per-core section already has Show more/less.
+- Notes already has a safe React Text-based Markdown renderer; reuse it rather than add a dependency.
+- Existing focused Jest suites include sidebar and VM tests. Existing docs report seven shared heading TypeScript errors; verify current state.
+- SilverBullet project index consulted; source review is separate from deployment.
+- HStack's web styles include web:flex-nowrap; wrapping must be explicitly overridden with web:flex-wrap at affected host-page rows.
+- Web HStack/VStack render plain divs and do not implement React Native onLayout. Measured core/chart containers now use Box (React Native View).
+- Core capacity previously chose the larger of window-derived and measured widths, so narrow containers could show too many cores; it now prefers a valid measured width.
+- Two focused regression tests pass for measured core disclosure, expanded state, chart resizing and zero-width events. Web export passes.
+- Local preview initially started before export created dist/index.html; restarted after build completion. No production requests were sent.
+- Review correction: victory-native zoomContainerMixin registers onTouchPinch even with allowZoom=false. Both history renderers now use the native VictoryVoronoiContainer directly; this retains the existing Voronoi tooltip layer without zoom events.
+- Replaced three host-control cards with compact full-width rows; hugepages fields/actions wrap together and all configured/active/error text remains visible.
+- React development preview has no onTouchPinch entries. Other native-library accessibilityHint and synthetic WebSocket fixture messages were observed, so do not claim zero console warnings.
+- G01 uses normal flex flow rather than measuring a banner or setting a guessed header offset. The existing sidebar inset now belongs to the shared root containing both banner and route.
+- Banner's HStack explicitly uses web:flex-wrap. GoAccess tools stay within the route container, so their absolute position starts below the banner.
+- G01 web export and the existing 11-test sidebar suite pass. No new business logic or style-mirroring tests were added.
+- Phone preview: Notes header's existing web no-wrap behavior overlaid action buttons on its heading. G01 adds explicit wrapping and a 120px minimum title width; note content, cards and preview behavior remain for NT01/NT02.
+- Desktop banner text now starts within the shared content column rather than behind the sidebar. At 375px it wraps naturally to 113px height.
+- VM02: running cards had icon-only Pause/Restart/Shutdown/Details; stopped/paused cards already label Start/Resume. Accessibility labels include each VM name.
+- The initial label layout wrapped Details alone at phone width. Controls now use two balanced rows on small screens and one row when space permits, with minimum 52px targets.
+- Synthetic browser confirmed Enter on Pause and pointer activation of Restart and Shutdown each opens the corresponding confirmation; each was cancelled. Details opened the selected VM. No lifecycle operation was executed.
+- Existing VM suite passed 9 tests. The first invocation used a support-only Jest testMatch and found no tests; reran with an explicit VM testMatch successfully.

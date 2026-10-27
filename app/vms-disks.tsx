@@ -1,4 +1,5 @@
 import React from "react";
+import * as Clipboard from "expo-clipboard";
 import { RefreshControl, ScrollView, useColorScheme } from "react-native";
 import { AlertTriangle, Plus, RefreshCw, Trash2, TrendingUp } from "lucide-react-native";
 import { Box } from "@/components/ui/box";
@@ -408,18 +409,38 @@ export default function VmsDisksScreen() {
                             </HStack>
                           </VStack>
 
-                          <VStack className="gap-1 mt-4">
-                            <Text className="text-xs text-typography-500 dark:text-[#8A94A8]" numberOfLines={1}>
-                              {attached ? disk.attached_vm_name : "Not attached to a VM"}
+                          <VStack className="gap-2 mt-4">
+                            <Text className="text-sm text-typography-700 dark:text-[#C4CBD6] break-all">
+                              Attached VM: {attached ? disk.attached_vm_name : "None"}
                             </Text>
-                            <Text className="text-xs text-typography-500 dark:text-[#8A94A8]" numberOfLines={1}>
-                              {disk.folder_path || disk.disk_path}
+                            <Text className="text-sm text-typography-700 dark:text-[#C4CBD6]">Disk path</Text>
+                            <Text selectable className="text-sm text-typography-900 dark:text-[#E8EBF0] font-mono break-all">
+                              {disk.disk_path || "Not reported"}
                             </Text>
+                            {disk.disk_path ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="self-start rounded-lg dark:border-[#2A3B52]"
+                                accessibilityLabel={`Copy disk path for ${disk.name}`}
+                                onPress={async () => {
+                                  try {
+                                    const copied = await Clipboard.setStringAsync(disk.disk_path);
+                                    if (!copied) throw new Error("Please select the path to copy it.");
+                                    showToast("Disk path copied");
+                                  } catch (err) {
+                                    showToast("Unable to copy disk path", getErrorMessage(err, "Please select the path to copy it."), "error");
+                                  }
+                                }}
+                              >
+                                <ButtonText>Copy path</ButtonText>
+                              </Button>
+                            ) : null}
                           </VStack>
                         </Box>
                       </VStack>
 
-                      <HStack className="items-center justify-between gap-2 pt-4 mt-4 border-t border-outline-200 dark:border-[#2A3B52]">
+                      <HStack className="items-center justify-between flex-wrap gap-2 pt-4 mt-4 border-t border-outline-200 dark:border-[#2A3B52]">
                         <Text className="text-xs text-typography-500 dark:text-[#6F7A8D]">
                           {formatBytes(disk.occupied_bytes)}
                         </Text>
@@ -444,6 +465,7 @@ export default function VmsDisksScreen() {
                             isDisabled={deletingId === disk.id}
                           >
                             {deletingId === disk.id ? <ButtonSpinner /> : <ButtonIcon as={Trash2} size="sm" className="text-red-500" />}
+                            <ButtonText className="text-red-500">Delete</ButtonText>
                           </Button>
                         </HStack>
                       </HStack>
@@ -611,6 +633,7 @@ export default function VmsDisksScreen() {
           <AlertDialogBody>
             <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
               Are you sure you want to delete {deleteTarget?.name}? This action cannot be undone.
+              {deleteTarget?.attached_vm_name?.trim() ? ` The disk will be detached from ${deleteTarget.attached_vm_name} before deletion.` : ""}
             </Text>
           </AlertDialogBody>
           <AlertDialogFooter>

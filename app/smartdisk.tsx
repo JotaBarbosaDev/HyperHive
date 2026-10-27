@@ -51,6 +51,7 @@ import { Switch } from "@/components/ui/switch";
 import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
 import { Progress, ProgressFilledTrack } from "@/components/ui/progress";
 import { Machine } from "@/types/machine";
+import { cautionCauses } from "@/utils/smartdisk-health";
 import { SmartDiskDevice, SmartDiskReallocStatus, SmartDiskSchedule, SmartDiskSelfTestProgress } from "@/types/smartdisk";
 import { listMachines } from "@/services/hyperhive";
 import { listAllDisks } from "@/services/btrfs";
@@ -86,6 +87,8 @@ const STATUS_ACTION: Record<string, "success" | "warning" | "error"> = {
   healthy: "success",
   pass: "success",
   passed: "success",
+  caution: "warning",
+  failing: "error",
   attention: "warning",
   atencao: "warning",
   warning: "warning",
@@ -794,13 +797,18 @@ export default function SmartDiskScreen() {
                           Capacity: {formatCapacity(disk.capacity)}
                         </Text>
                         <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm">
-                          Reallocated: {disk.reallocated ?? 0}
+                          Reallocated: {disk.reallocated ?? "Unknown"}
                         </Text>
                         <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm">
-                          Pending: {disk.pending ?? 0}
+                          Pending: {disk.pending ?? "Unknown"}
                         </Text>
                       </HStack>
 
+                      {(disk.healthStatus || disk.status || "").toLowerCase() === "caution" ? (
+                        <Text className="mt-3 text-sm text-typography-800 dark:text-[#E8EBF0]">
+                          Caution indicators: {cautionCauses(disk).join(", ") || "Unknown — the server did not provide an identifiable indicator."}
+                        </Text>
+                      ) : null}
                       {renderSelfTestBar(disk.device)}
                       {renderReallocBar(disk.device)}
 
@@ -838,14 +846,14 @@ export default function SmartDiskScreen() {
                           </ButtonText>
                         </Button>
                         <Button
-                          action="primary"
-                          variant="solid"
+                          action="default"
+                          variant="outline"
                           size="sm"
                           onPress={() => openDetail(disk.device, "info")}
-                          className="rounded-xl dark:bg-[#2DD4BF] dark:hover:bg-[#5EEAD4] dark:active:bg-[#14B8A6]"
+                          className={outlineButtonClass}
                         >
-                          <ButtonIcon as={Info} size="sm" />
-                          <ButtonText>Details</ButtonText>
+                          <ButtonIcon as={Info} size="sm" className={outlineButtonIconClass} />
+                          <ButtonText className={outlineButtonTextClass}>Details</ButtonText>
                         </Button>
                       </HStack>
                     </Box>
@@ -905,6 +913,9 @@ export default function SmartDiskScreen() {
                             </BadgeText>
                           </Badge>
                         </HStack>
+                        <Text className="mt-3 text-sm text-typography-700 dark:text-[#9AA4B8]">
+                          {sched.active ? "Next test time: unknown. The server does not provide its timezone or next launch time; checks run approximately every 20 minutes during the configured hour." : "Next test: none while inactive."}
+                        </Text>
                         <HStack className="mt-3 gap-2 flex-wrap">
                           <Button
                             action="default"
@@ -1292,7 +1303,7 @@ export default function SmartDiskScreen() {
                   )}
                 </Box>
                 <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm mt-4">
-                  Choose a realloc mode for this disk:
+                  Reallocation scans the disk with read/write operations to encourage remapping of bad sectors. It can take a long time. Full wipe destroys data; non-destructive mode attempts to preserve data but cannot guarantee it. Back up data before either operation.
                 </Text>
                 <HStack className="gap-2 flex-wrap mt-4">
                   <Button

@@ -11,7 +11,7 @@ const toGpuList = (payload: PciHostResponse): PciGpu[] => {
   if (payload && Array.isArray(payload.gpus)) {
     return payload.gpus;
   }
-  return [];
+  throw new Error("Invalid GPU inventory response. Please refresh or select another machine.");
 };
 
 export async function listHostGpus(machineName: string): Promise<PciGpu[]> {

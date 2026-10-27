@@ -59,6 +59,7 @@ import { ArrowRight, HardDrive, Plus, Power, RefreshCcw, Trash2 } from "lucide-r
 import { Progress, ProgressFilledTrack } from "@/components/ui/progress";
 import { COMPRESSION_OPTIONS, RAID_LEVEL_OPTIONS } from "@/constants/btrfs";
 import { useRouter } from "expo-router";
+import { btrfsUsagePercent } from "@/utils/btrfs-usage";
 
 type FilterTab = "all" | "active" | "inactive";
 type RaidTab = "details" | "actions" | "balance" | "scrub";
@@ -181,8 +182,7 @@ export default function BtrfsRaidsScreen() {
       : Array.isArray(raidModal?.devices)
         ? raidModal.devices.length
         : undefined;
-  const raidUsagePercent =
-    raidModal?.total && raidModal?.used ? (Number(raidModal.used) / Number(raidModal.total)) * 100 : null;
+  const raidUsagePercent = btrfsUsagePercent(raidModal?.used, raidModal?.total);
   const sectionCardClass = "p-4 rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]";
   const softCardClass = "p-3 rounded-xl border border-outline-100 dark:border-[#1E2F47] bg-background-50 dark:bg-[#132038]";
   const balancePollRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
@@ -779,6 +779,7 @@ export default function BtrfsRaidsScreen() {
                   <VStack>
                     {filteredRaids.map((raid) => {
                       const active = isRaidActive(raid);
+                      const usage = btrfsUsagePercent(raid.used, raid.total);
                       const auto = getAutoMountForRaid(raid.uuid);
                       return (
                         <Box
@@ -857,6 +858,14 @@ export default function BtrfsRaidsScreen() {
                                   Free: {formatSize(raid.free)}
                                 </Text>
                               </HStack>
+                              {usage !== null ? (
+                                <VStack className="gap-1 w-full max-w-[400px]">
+                                  <Text className="text-typography-700 dark:text-[#9AA4B8] text-sm">Usage: {usage.toFixed(1)}%</Text>
+                                  <Progress value={usage} className="bg-background-200 dark:bg-background-300 h-2.5" accessibilityLabel={`Usage ${usage.toFixed(1)}%`}>
+                                    <ProgressFilledTrack className="bg-primary-500 dark:bg-primary-400" />
+                                  </Progress>
+                                </VStack>
+                              ) : null}
                               <HStack className="gap-2 flex-wrap">
                                 {(Array.isArray(raid.devices)
                                   ? raid.devices

@@ -2,8 +2,10 @@ import React, { forwardRef, memo } from 'react';
 import { headingStyle } from './styles';
 import type { VariantProps } from '@gluestack-ui/utils/nativewind-utils';
 import { cleanStyle } from '../clean-style';
+import { cleanAccessibilityProps, type WebAccessibilityProps } from '../clean-accessibility';
 type IHeadingProps = VariantProps<typeof headingStyle> &
-  React.ComponentPropsWithoutRef<'h1'> & {
+  React.ComponentPropsWithoutRef<'h1'> &
+  WebAccessibilityProps & {
     as?: React.ElementType;
     numberOfLines?: number;
   };
@@ -26,7 +28,8 @@ const MappedHeading = memo(
     },
     ref
   ) {
-    const safeStyle = {
+    const domProps = cleanAccessibilityProps(props);
+    const safeStyle: React.CSSProperties = {
       ...cleanStyle(style),
       ...(numberOfLines
         ? { display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: numberOfLines, overflow: 'hidden' }
@@ -49,7 +52,7 @@ const MappedHeading = memo(
               highlight: highlight as boolean,
               class: className,
             })}
-            {...props}
+            {...domProps}
             style={safeStyle}
             ref={ref}
           />
@@ -68,7 +71,7 @@ const MappedHeading = memo(
               highlight: highlight as boolean,
               class: className,
             })}
-            {...props}
+            {...domProps}
             style={safeStyle}
             ref={ref}
           />
@@ -87,7 +90,7 @@ const MappedHeading = memo(
               highlight: highlight as boolean,
               class: className,
             })}
-            {...props}
+            {...domProps}
             style={safeStyle}
             ref={ref}
           />
@@ -106,7 +109,7 @@ const MappedHeading = memo(
               highlight: highlight as boolean,
               class: className,
             })}
-            {...props}
+            {...domProps}
             style={safeStyle}
             ref={ref}
           />
@@ -125,7 +128,7 @@ const MappedHeading = memo(
               highlight: highlight as boolean,
               class: className,
             })}
-            {...props}
+            {...domProps}
             style={safeStyle}
             ref={ref}
           />
@@ -145,7 +148,7 @@ const MappedHeading = memo(
               highlight: highlight as boolean,
               class: className,
             })}
-            {...props}
+            {...domProps}
             style={safeStyle}
             ref={ref}
           />
@@ -164,7 +167,7 @@ const MappedHeading = memo(
               highlight: highlight as boolean,
               class: className,
             })}
-            {...props}
+            {...domProps}
             style={safeStyle}
             ref={ref}
           />
@@ -187,9 +190,11 @@ const Heading = memo(
       italic,
       highlight,
       style,
+      ...rawProps
     } = props;
 
     if (AsComp) {
+      const domProps = cleanAccessibilityProps(rawProps);
       return (
         <AsComp
           className={headingStyle({
@@ -203,11 +208,11 @@ const Heading = memo(
             highlight: highlight as boolean,
             class: className,
           })}
-          {...props}
+          {...domProps}
           style={{
             ...cleanStyle(style),
             ...(numberOfLines
-              ? { display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: numberOfLines, overflow: 'hidden' }
+              ? { display: '-webkit-box', WebkitBoxOrient: 'vertical' as const, WebkitLineClamp: numberOfLines, overflow: 'hidden' }
               : {}),
           }}
           ref={ref}

@@ -46,6 +46,7 @@ import {
 import { Textarea, TextareaInput } from "@/components/ui/textarea";
 import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
 import { ApiError } from "@/services/api-client";
+import { formatXmlTemplatePreview } from "@/utils/xml-template-preview";
 import {
   XmlTemplate,
   createXmlTemplate,
@@ -104,6 +105,8 @@ export default function VmXmlTemplatesScreen() {
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [search, setSearch] = React.useState("");
+  const [expandedPreviews, setExpandedPreviews] = React.useState<number[]>([]);
+  const [originalPreviews, setOriginalPreviews] = React.useState<number[]>([]);
 
   const [isEditorOpen, setIsEditorOpen] = React.useState(false);
   const [editorMode, setEditorMode] = React.useState<EditorMode>("create");
@@ -501,6 +504,9 @@ export default function VmXmlTemplatesScreen() {
                     const updatedLabel = formatDateLabel(template.updatedAt);
                     const createdLabel = formatDateLabel(template.createdAt);
                     const isDeletingThis = deletingId === template.id;
+                    const isPreviewExpanded = expandedPreviews.includes(template.id);
+                    const formattedXml = isPreviewExpanded ? formatXmlTemplatePreview(template.xml) : template.xml;
+                    const isOriginalPreview = originalPreviews.includes(template.id);
 
                     return (
                       <Box
@@ -564,17 +570,41 @@ export default function VmXmlTemplatesScreen() {
                             ) : null}
 
                             <Box className="rounded-lg border border-outline-200 dark:border-[#1E2F47] overflow-hidden bg-background-50 dark:bg-[#081122]">
-                              <Box className="px-3 py-2 border-b border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E]">
+                              <HStack className="px-3 py-2 border-b border-outline-200 dark:border-[#1E2F47] bg-background-0 dark:bg-[#0F1A2E] items-center justify-between gap-2">
                                 <Text className="text-xs text-typography-500 dark:text-[#8A94A8] font-mono">
                                   XML Preview
                                 </Text>
-                              </Box>
-                              <Box className="px-3 py-2">
-                                <Text
-                                  numberOfLines={4}
-                                  className="text-xs font-mono text-typography-700 dark:text-[#D6E0EE]"
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  accessibilityLabel={`${isPreviewExpanded ? "Collapse" : "Expand"} XML preview for ${template.name}`}
+                                  accessibilityState={{ expanded: isPreviewExpanded }}
+                                  onPress={() => setExpandedPreviews((ids) => isPreviewExpanded
+                                    ? ids.filter((id) => id !== template.id)
+                                    : [...ids, template.id])}
                                 >
-                                  {compactXmlPreview(template.xml)}
+                                  <ButtonText>{isPreviewExpanded ? "Collapse" : "Expand"}</ButtonText>
+                                </Button>
+                              </HStack>
+                              <Box className="px-3 py-2">
+                                {isPreviewExpanded && formattedXml !== template.xml ? (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    accessibilityLabel={`${isOriginalPreview ? "Show formatted" : "Show original"} XML for ${template.name}`}
+                                    onPress={() => setOriginalPreviews((ids) => isOriginalPreview
+                                      ? ids.filter((id) => id !== template.id)
+                                      : [...ids, template.id])}
+                                  >
+                                    <ButtonText>{isOriginalPreview ? "Show formatted" : "Show original"}</ButtonText>
+                                  </Button>
+                                ) : null}
+                                <Text
+                                  selectable
+                                  numberOfLines={isPreviewExpanded ? undefined : 4}
+                                  className="text-xs font-mono text-typography-700 dark:text-[#D6E0EE] web:whitespace-pre-wrap web:break-words"
+                                >
+                                  {isPreviewExpanded ? (isOriginalPreview ? template.xml : formattedXml) || "No XML content" : compactXmlPreview(template.xml)}
                                 </Text>
                               </Box>
                             </Box>

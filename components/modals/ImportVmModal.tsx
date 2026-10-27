@@ -580,7 +580,7 @@ export default function ImportVmModal({ showModal, setShowModal, onSuccess }: Im
                     className="text-sm text-typography-700 dark:text-[#8A94A8]"
                     style={{fontFamily: "Inter_600SemiBold"}}
                   >
-                    NFS Share ID
+                    NFS
                   </Text>
                   <Select
                     selectedValue={nfsShare}
