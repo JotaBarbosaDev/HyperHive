@@ -11,6 +11,7 @@ import { minimumWidgetHeight } from "./widget-format";
 import { WidgetChart } from "./widget-chart";
 import { WidgetFeed, WidgetTable } from "./widget-feed";
 import { WidgetMetric } from "./widget-metric";
+import { WidgetSnapshot } from "./widget-snapshot";
 export { sampleText } from "./widget-format";
 
 export function movedWidget(widget: Widget, deltaX: number, deltaY: number, cellWidth: number, resize: boolean, snap = true): Widget {
@@ -115,7 +116,8 @@ export function SupportWidget({ widget, stream, page, token, appId, retentionDay
   const rawValue = latest ? typeof latest.value === "object" ? JSON.stringify(latest.value, null, 2) : String(latest.value) : "";
   const numbers = samples.filter((sample) => typeof sample.value === "number" && Number.isFinite(sample.value));
   const trend = trendWidgets.includes(widget.kind);
-  const history = trend || ["logs", "events", "table"].includes(widget.kind);
+  const snapshot = ["events", "table"].includes(widget.kind) && (["filesystems", "network_interfaces", "top_processes", "hardware", "services"].includes(widget.stream) || (widget.kind === "table" && typeof latest?.value === "object" && "fields" in latest.value && Array.isArray(latest.value.fields.items)));
+  const history = !snapshot && (trend || ["logs", "events", "table"].includes(widget.kind));
   const compact = frame.h < 2;
   const loadOlder = async () => {
     if (displayed?.next_before == null) return;
@@ -137,6 +139,7 @@ export function SupportWidget({ widget, stream, page, token, appId, retentionDay
       {!stream ? <Text size="xs" className={muted} style={{ fontSize: 11 }}>Waiting for {widget.stream} ({widget.stream_type ?? "data"}). Send matching samples to populate this widget.</Text>
         : !latest ? <Text size="xs" className={muted} style={{ fontSize: 11 }}>No retained data{trend ? " in this time window" : ""}.</Text>
         : trend ? numbers.length ? <WidgetChart samples={numbers} kind={widget.kind} stream={widget.stream} unit={stream.unit} /> : <Text size="xs" className={muted}>No numeric samples.</Text>
+        : snapshot && typeof latest.value === "object" && "fields" in latest.value ? <WidgetSnapshot key={appId + widget.id} storageKey={`${appId}:${widget.id}`} sample={latest} stream={widget.stream} />
         : widget.kind === "logs" || widget.kind === "events" ? <WidgetFeed key={(older ? "history-" + older.samples[0]?.id : "live") + severityKey} samples={samples} kind={widget.kind} retentionMs={lifetime} />
         : widget.kind === "table" ? <WidgetTable samples={samples} />
         : <WidgetMetric widget={widget} samples={samples} unit={stream.unit} compact={compact} />}

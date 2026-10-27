@@ -33,6 +33,7 @@ export default function SupportScreen() {
   const [credentials, setCredentials] = React.useState<{ id: string; secret: string } | null>(null);
   const [confirmationApp, setConfirmationApp] = React.useState<SupportApp | null>(null);
   const [confirmation, setConfirmation] = React.useState<"delete" | "rotate" | null>(null);
+  const [confirmationName, setConfirmationName] = React.useState("");
   const [editing, setEditing] = React.useState(false);
   const [adding, setAdding] = React.useState(false);
   const [widgetForm, setWidgetForm] = React.useState<Widget | null>(null);
@@ -56,6 +57,7 @@ export default function SupportScreen() {
     if (!selectedId && scopedApps.length && !selectionInitialized.current) { selectionInitialized.current = true; setSelectedId(scopedApps[0].id); setTabId(scopedApps[0].tab_id); }
   }, [selectedId, data.apps, data.hasSnapshot, data.isLoading, tabId]);
   React.useEffect(() => { setEditing(false); setInteractionBottom(null); setError(null); setAdding(false); setWidgetForm(null); setShowDetails(false); }, [selectedId]);
+  React.useEffect(() => { setConfirmationName(""); }, [confirmation, confirmationApp]);
   const choose = (id: string) => { if (dashboard.dirty && id !== selectedId) { setError("Wait for the dashboard to save, or resolve its save error before switching Apps."); return; } selectionInitialized.current = true; setSelectedId(id); setEditing(false); };
   const invoke = async (job: () => Promise<void>) => {
     setBusy(true); setError(null);
@@ -75,7 +77,7 @@ export default function SupportScreen() {
     else if (result.id === selectedId) setTabId(input.tab_id);
   };
   const confirm = async () => {
-    if (!token || !confirmationApp) return;
+    if (!token || !confirmationApp || (confirmation === "delete" && confirmationName !== confirmationApp.name)) return;
     if (confirmation === "rotate") {
       const result = await supportRequest<{ secret: string }>(token, "/apps/" + encodeURIComponent(confirmationApp.id) + "/rotate-secret", "POST");
       setCredentials({ id: confirmationApp.id, secret: result.secret });
@@ -114,11 +116,9 @@ export default function SupportScreen() {
           <Box className="flex-row flex-wrap items-center gap-2" style={{ maxWidth: "100%" }}>
             {editing ? <Action label="Done positioning" onPress={() => setEditing(false)} /> : null}
             <SupportActions createApp={{ label: "Create an App", disabled: dashboard.dirty || !data.tabs.length, onPress: () => setAppForm("new") }} manageApps={[
-              { label: "Create an App", disabled: dashboard.dirty || !data.tabs.length, onPress: () => setAppForm("new") },
               { label: "Edit Apps", disabled: dashboard.dirty || !data.apps.length, onPress: () => { setAppSearch(""); setManagingApps("edit"); } },
               { label: "Delete Apps", disabled: dashboard.dirty || !data.apps.length, onPress: () => { setAppSearch(""); setManagingApps("delete"); } },
-              { label: "Manage workspaces", disabled: dashboard.dirty, onPress: () => setManaging(true) },
-            ]} actions={selected ? [
+            ]} manageTabs={{ label: "Manage Tabs", disabled: dashboard.dirty, onPress: () => setManaging(true) }} actions={selected ? [
               { label: "Add widget", disabled: !detail || busy || dashboard.conflict || (layout?.widgets.length ?? 0) >= 50, onPress: () => { setWidgetForm(null); setAdding(true); } },
               { label: editing ? "Done positioning" : "Edit layout", disabled: !detail || dashboard.conflict, onPress: () => setEditing(!editing) },
               { label: "App details", onPress: () => setShowDetails(true) },
@@ -137,7 +137,7 @@ export default function SupportScreen() {
           </ScrollView>}
         </> : <Box className={surface + " gap-3"}><Heading size="lg" className={ink}>{scopedApps.length ? "Choose an App" : `No Apps in ${scopeName}`}</Heading><Text className={muted}>{scopedApps.length ? "Select an App from HH Support in the navigation menu." : "Register an App in this workspace to start receiving telemetry."}</Text>{!data.tabs.length ? <Action label="Create your first tab" onPress={() => setTabForm("new")} /> : !scopedApps.length ? <Action primary label="Create an App" disabled={dashboard.dirty} onPress={() => setAppForm("new")} /> : null}</Box>}
     </Box>
-    {managing ? <SupportDialog title="Manage workspaces" onClose={() => setManaging(false)} footer={<Action label="Close" onPress={() => setManaging(false)} />}>
+    {managing ? <SupportDialog title="Manage Tabs" onClose={() => setManaging(false)} footer={<Action label="Close" onPress={() => setManaging(false)} />}>
       <Action primary label="Create tab" disabled={dashboard.dirty} onPress={() => { setManaging(false); setTabForm("new"); }} />
       {data.tabs.map((tab) => <Box key={tab.id} className="flex-row flex-wrap items-center justify-between gap-2"><Box><Text className={ink + " font-semibold"}>{tab.name}</Text><Text className={muted}>{data.apps.filter((app) => app.tab_id === tab.id).length} Apps</Text></Box><Action label={`Edit ${tab.name}`} disabled={dashboard.dirty} onPress={() => { setManaging(false); setTabForm(tab); }} /></Box>)}
       <Text className={muted}>Workspaces organize Apps in the navigation menu. Only empty workspaces can be removed.</Text>
@@ -149,8 +149,8 @@ export default function SupportScreen() {
     </SupportDialog> : null}
     {showDetails && selected ? <AppDetails app={selected} tabName={data.tabs.find((tab) => tab.id === selected.tab_id)?.name} streamCount={detail?.streams.length} revision={layout?.revision} onClose={() => setShowDetails(false)} onSettings={() => { setShowDetails(false); setAppForm(selected); }} onRotate={() => { setShowDetails(false); setConfirmationApp(selected); setConfirmation("rotate"); }} /> : null}
     {appForm ? <AppForm key={appForm === "new" ? "new" : appForm.id} app={appForm === "new" ? undefined : appForm} tabs={data.tabs} initialTabId={tabId ?? undefined} apps={data.apps} onClose={() => setAppForm(null)} onSave={saveApp} onDelete={appForm === "new" ? undefined : () => { setConfirmationApp(appForm); setAppForm(null); setConfirmation("delete"); }} /> : null}
-    {tabForm ? <TabForm tab={tabForm === "new" ? undefined : tabForm} onClose={() => setTabForm(null)} onSave={async (name) => { await supportRequest(token, "/tabs" + (tabForm === "new" ? "" : "/" + encodeURIComponent(tabForm.id)), tabForm === "new" ? "POST" : "PUT", { name }); setTabForm(null); data.refresh(); }} onDelete={tabForm === "new" || data.apps.some((app) => app.tab_id === tabForm.id) ? undefined : async () => { await supportRequest(token, "/tabs/" + encodeURIComponent(tabForm.id), "DELETE"); setTabForm(null); setTabId(null); data.refresh(); }} /> : null}
-    {confirmation ? <SupportDialog title={confirmation === "delete" ? "Delete App permanently?" : "Replace the ingestion secret?"} onClose={() => { if (!busy) { setConfirmation(null); setConfirmationApp(null); } }} footer={<><Action label="Cancel" disabled={busy} onPress={() => { setConfirmation(null); setConfirmationApp(null); }} /><Action primary label={busy ? "Working…" : confirmation === "delete" ? "Delete App permanently" : "Replace secret"} disabled={busy} onPress={() => { void invoke(confirm); }} /></>}><Text className={ink}>{confirmation === "delete" ? `This deletes ${confirmationApp?.name}, all its streams, history and layout. This cannot be undone.` : "Existing senders stop authenticating immediately. Save the new secret and update every sender."}</Text><Failure message={error} /></SupportDialog> : null}
+    {tabForm ? <TabForm tabs={data.tabs} tab={tabForm === "new" ? undefined : tabForm} onClose={() => setTabForm(null)} onSave={async (name) => { await supportRequest(token, "/tabs" + (tabForm === "new" ? "" : "/" + encodeURIComponent(tabForm.id)), tabForm === "new" ? "POST" : "PUT", { name }); setTabForm(null); data.refresh(); }} onDelete={tabForm === "new" || data.apps.some((app) => app.tab_id === tabForm.id) ? undefined : async () => { await supportRequest(token, "/tabs/" + encodeURIComponent(tabForm.id), "DELETE"); setTabForm(null); setTabId(null); data.refresh(); }} /> : null}
+    {confirmation ? <SupportDialog title={confirmation === "delete" ? "Delete App permanently?" : "Replace the ingestion secret?"} onClose={() => { if (!busy) { setConfirmation(null); setConfirmationApp(null); } }} footer={<><Action label="Cancel" disabled={busy} onPress={() => { setConfirmation(null); setConfirmationApp(null); }} /><Action primary label={busy ? "Working…" : confirmation === "delete" ? "Delete App permanently" : "Replace secret"} disabled={busy || (confirmation === "delete" && confirmationName !== confirmationApp?.name)} onPress={() => { void invoke(confirm); }} /></>}><Text className={ink}>{confirmation === "delete" ? `This deletes ${confirmationApp?.name}, all its streams, history and layout. This cannot be undone.` : "Existing senders stop authenticating immediately. Save the new secret and update every sender."}</Text>{confirmation === "delete" ? <Field label={`Type ${confirmationApp?.name} to confirm`} value={confirmationName} onChange={setConfirmationName} /> : null}<Failure message={error} /></SupportDialog> : null}
     {credentials ? <CredentialsDialog credentials={credentials} onSaved={() => setCredentials(null)} /> : null}
     {adding && detail ? <WidgetForm key={widgetForm?.id ?? "new"} widget={widgetForm ?? undefined} streams={detail.streams} onSave={saveWidget} onClose={() => { setAdding(false); setWidgetForm(null); }} /> : null}
   </ScrollView>;

@@ -1,11 +1,14 @@
 import React from "react";
 import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";
+import { Select, SelectTrigger, SelectPortal, SelectBackdrop, SelectContent, SelectItem } from "@/components/ui/select";
+import { ChevronDown } from "lucide-react-native";
 import { compatibleWidgets, trendWidgets, widgetLabels } from "@/services/support-client";
 import type { Severity, StreamType, SupportStream, Widget, WidgetKind } from "@/types/support";
 import { SupportDialog } from "./support-dialogs";
-import { Action, Failure, Field, muted } from "./support-ui";
+import { Action, Failure, Field, ink, muted } from "./support-ui";
 import { defaultWidgetSize } from "./widget-format";
+import { WidgetExample } from "./widget-example";
 
 const descriptions: Record<WidgetKind, string> = {
   value: "A compact latest value with its change since the previous measurement. Select the value or copy it from the widget menu.",
@@ -31,6 +34,7 @@ export function WidgetForm({ widget, streams, onSave, onClose }: { widget?: Widg
   const [minutes, setMinutes] = React.useState(String(widget?.window_minutes ?? 60));
   const [severity, setSeverity] = React.useState<Severity[]>(widget?.severity ?? []);
   const [error, setError] = React.useState<string | null>(null);
+  const [showExample, setShowExample] = React.useState(false);
   const stream = streams.find((entry) => entry.name === name.trim());
   const streamType = stream?.type ?? type;
   const options = compatibleWidgets[streamType];
@@ -38,17 +42,23 @@ export function WidgetForm({ widget, streams, onSave, onClose }: { widget?: Widg
   const changeType = (next: StreamType) => { setType(next); if (!compatibleWidgets[next].includes(kind)) setKind(compatibleWidgets[next][0]); };
   const range = display === "gauge" || display === "progress";
   const trend = trendWidgets.includes(display);
+  const exampleRange = Number.isFinite(Number(minimum)) && Number.isFinite(Number(maximum)) && Number(maximum) > Number(minimum) ? { min: Number(minimum), max: Number(maximum) } : { min: 0, max: 100 };
   const save = () => {
     if (!name.trim() || name.trim().length > 128 || (range && (!minimum.trim() || !maximum.trim() || !Number.isFinite(Number(minimum)) || !Number.isFinite(Number(maximum)) || Number(maximum) <= Number(minimum))) || (trend && (!Number.isInteger(Number(minutes)) || Number(minutes) < 1 || Number(minutes) > 525600))) {
       setError("Enter a stream name (up to 128 characters), a maximum above the minimum, and a whole time window from 1 to 525600 minutes."); return;
     }
     onSave({ stream: name.trim(), stream_type: streamType, kind: display, ...(range ? { min: Number(minimum), max: Number(maximum) } : {}), ...(trend ? { window_minutes: Number(minutes) } : {}), ...(display === "logs" ? { severity } : {}) });
   };
+  if (showExample) return <WidgetExample stream={stream ?? { name: name.trim() || `example_${streamType}`, type: streamType, label: name.trim() || "Example stream", unit: "" }} widget={{ id: "example", stream: name.trim() || `example_${streamType}`, kind: display, x: 0, y: 0, w: 12, h: 4, ...exampleRange, window_minutes: 60 }} onClose={() => setShowExample(false)} />;
   return <SupportDialog title={widget ? "Edit telemetry widget" : "Add a telemetry widget"} onClose={onClose} footer={<><Action label="Cancel" onPress={onClose} /><Action primary label={widget ? "Save widget" : "Add to dashboard"} onPress={save} /></>}>
     <Field label="Incoming stream name" value={name} onChange={setName} />
     <Text className={muted}>For example: number_cpu. Choose a received stream below or type the exact name your sender will emit.</Text>
-    <Box className="flex-row flex-wrap gap-2">{streams.filter((entry) => [entry.name, entry.label].join(" ").toLowerCase().includes(name.toLowerCase())).map((entry) => <Action key={entry.name} label={`${entry.label || entry.name} · ${entry.name} · ${entry.type}`} selected={name === entry.name} onPress={() => { setName(entry.name); changeType(entry.type); }} />)}</Box>
-    {!stream ? <><Text className={muted}>Expected incoming data type · this widget waits for matching samples</Text><Box className="flex-row flex-wrap gap-2">{(["number", "text", "boolean", "log", "event"] as StreamType[]).map((option) => <Action key={option} label={option} selected={type === option} onPress={() => changeType(option)} />)}</Box></> : <Text className={muted}>Received data type: {stream.type}{stream.unit ? " · " + stream.unit : ""}</Text>}
+    <Select selectedValue={stream?.name ?? ""} onValueChange={(value) => { if (!value) { setName(""); return; } const entry = streams.find((item) => item.name === value); if (entry) { setName(entry.name); changeType(entry.type); } }}>
+      <SelectTrigger accessibilityLabel="Received streams" className="min-h-11 h-auto px-3 rounded-lg border-outline-200 dark:border-[#2A3B52] justify-between"><Text numberOfLines={1} className={ink + " flex-1"}>{stream ? `${stream.label || stream.name} · ${stream.name}` : "Choose a received stream"}</Text><ChevronDown size={18} color="#8A94A8" /></SelectTrigger>
+      <SelectPortal><SelectBackdrop /><SelectContent><SelectItem label="Type a custom stream name above" value="" />{streams.map((entry) => <SelectItem key={entry.name} label={`${entry.label || entry.name} · ${entry.name} · ${entry.type}`} value={entry.name} />)}</SelectContent></SelectPortal>
+    </Select>
+    <Box className="flex-row items-center justify-between gap-2"><Text className={muted + " flex-1"}>{stream ? `Received data type: ${stream.type}${stream.unit ? " · " + stream.unit : ""}` : "Expected incoming data type"}</Text><Action compact label="See example" onPress={() => setShowExample(true)} /></Box>
+    {!stream ? <Box className="flex-row flex-wrap gap-2">{(["number", "text", "boolean", "log", "event"] as StreamType[]).map((option) => <Action key={option} label={option} selected={type === option} onPress={() => changeType(option)} />)}</Box> : null}
     <Text className={muted}>Display this {streamType} stream as</Text><Box className="flex-row flex-wrap gap-2">{options.map((option) => <Action key={option} label={widgetLabels[option]} selected={display === option} onPress={() => setKind(option)} />)}</Box>
     <Text className={muted}>{descriptions[display]}</Text>
     {!widget ? <Text className={muted}>Starts at {defaultWidgetSize(display).w} columns × {defaultWidgetSize(display).h} rows. Drag the corner to resize.</Text> : null}

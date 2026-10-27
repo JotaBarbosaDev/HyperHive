@@ -1,4 +1,25 @@
 import type { Sample, WidgetKind } from "@/types/support";
+import { bytes } from "@/components/celld/observability";
+
+export function measurementText(value: number, unit?: string): string {
+  const sign = value < 0 ? "-" : "";
+  const absolute = Math.abs(value);
+  if (unit === "%") return value.toLocaleString(undefined, { maximumFractionDigits: 1 }) + " %";
+  if (["bytes", "B", "bytes/s", "B/s"].includes(unit ?? "")) return sign + bytes(absolute) + (unit!.endsWith("/s") ? "/s" : "");
+  if (unit === "s" && absolute >= 60) {
+    const units = [[86400, "d"], [3600, "h"], [60, "m"], [1, "s"]] as const;
+    let remaining = Math.floor(absolute);
+    const parts: string[] = [];
+    for (const [seconds, label] of units) {
+      const count = Math.floor(remaining / seconds);
+      if (count || parts.length) parts.push(count + label);
+      remaining %= seconds;
+      if (parts.length === 2) break;
+    }
+    return sign + parts.join(" ");
+  }
+  return sampleText(value) + (unit ? " " + unit : "");
+}
 
 export function sampleText(value: Sample["value"]): string {
   if (typeof value === "number") return value.toLocaleString(undefined, { maximumFractionDigits: 3 });

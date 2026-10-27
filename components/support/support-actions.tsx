@@ -9,7 +9,7 @@ type Item = { label: string; onPress: () => void; disabled?: boolean };
 const panel = "p-1 rounded-xl border border-outline-200 dark:border-[#26364A] bg-background-0 dark:bg-[#101B2B] shadow-hard-3";
 const row = "min-h-11 px-3 py-2 rounded-lg flex-row items-center justify-between gap-4 web:hover:bg-background-100 dark:web:hover:bg-[#263244] web:focus-visible:outline web:focus-visible:outline-2 web:focus-visible:outline-[#147D78]";
 
-export function SupportActions({ createApp, manageApps, actions }: { createApp: Item; manageApps: Item[]; actions: Item[] }) {
+export function SupportActions({ createApp, manageApps, manageTabs, actions }: { createApp: Item; manageApps: Item[]; manageTabs: Item; actions: Item[] }) {
   const narrow = useWindowDimensions().width < 520;
   const [open, setOpen] = React.useState(false);
   const [managing, setManaging] = React.useState(false);
@@ -47,6 +47,7 @@ export function SupportActions({ createApp, manageApps, actions }: { createApp: 
         {narrow ? manageTrigger() : <Popover isOpen={managing} onOpen={() => setManaging(true)} onClose={() => setManaging(false)} placement="right top" offset={0} trapFocus={false} initialFocusRef={childFirst} finalFocusRef={manage} trigger={manageTrigger}>
           <PopoverContent className={panel} style={{ width: 216, maxWidth: "90%" }}><Box role="menu" accessibilityLabel="Manage Apps">{managementItems}</Box></PopoverContent>
         </Popover>}
+        {item(manageTabs)}
         <Box role="separator" className="h-px my-1 bg-outline-100 dark:bg-[#26364A]" />
         {actions.map((action) => item(action))}
       </Box>}

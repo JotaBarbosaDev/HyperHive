@@ -7,10 +7,12 @@ import { useSupport } from "../hooks/useSupport";
 import { availableWidgetPosition, movedWidget, sampleText, SupportWidget } from "../components/support/support-widget";
 import { chartGeometry, WidgetChart } from "../components/support/widget-chart";
 import { WidgetFeed, WidgetTable } from "../components/support/widget-feed";
-import { defaultWidgetSize, minimumWidgetHeight } from "../components/support/widget-format";
+import { defaultWidgetSize, measurementText, minimumWidgetHeight } from "../components/support/widget-format";
+import { parseColumnWidths, snapshotRows, WidgetSnapshot } from "../components/support/widget-snapshot";
 import SupportScreen from "../app/support";
 import { resetSupportNavigation, selectSupportApp, useSupportNavigation } from "../hooks/useSupportNavigation";
-import { AppForm } from "../components/support/support-dialogs";
+import { AppForm, TabForm } from "../components/support/support-dialogs";
+import { WidgetForm } from "../components/support/widget-form";
 jest.mock("react-native", () => {
   const React = require("react");
   const View = ({ children, accessibilityLabel, style, testID, onPointerMove, onPointerLeave, onFocus, onBlur, onKeyDown, tabIndex }) => React.createElement("div", { "aria-label": accessibilityLabel, style, "data-testid": testID, onPointerMove, onPointerLeave, onFocus, onBlur, onKeyDown, tabIndex }, children);
@@ -19,6 +21,8 @@ jest.mock("react-native", () => {
   return { View, ScrollView, FlatList, Platform: { OS: "web" }, TextInput: React.forwardRef(({ accessibilityLabel, placeholder, value, onChangeText, onSubmitEditing, editable }, ref) => React.createElement("input", { ref, "aria-label": accessibilityLabel, placeholder, value, disabled: editable === false, onChange: (event) => onChangeText(event.target.value), onKeyDown: (event) => { if (event.key === "Enter") onSubmitEditing?.(); } })), Pressable: React.forwardRef(({ children, onPress, onHoverIn, accessibilityLabel, accessibilityRole, accessibilityState, disabled, onKeyDown, tabIndex, nativeID, "aria-controls": controls, "aria-selected": selected, "aria-disabled": ariaDisabled, "aria-expanded": expanded }, ref) => React.createElement("button", { ref, onClick: onPress, onMouseOver: onHoverIn, "aria-label": accessibilityLabel, role: accessibilityRole, "aria-selected": selected ?? accessibilityState?.selected, "aria-disabled": ariaDisabled, "aria-expanded": expanded, disabled, onKeyDown, tabIndex, id: nativeID, "aria-controls": controls }, children)), ActivityIndicator: () => "Loading", useWindowDimensions: jest.fn(() => ({ width: 1400 })), PanResponder: { create: jest.fn((handlers) => ({ panHandlers: handlers })) } };
 });
 jest.mock("react-native-svg", () => ({ __esModule: true, default: ({ children }) => children, Polyline: () => null, Polygon: () => null, Rect: () => null, Circle: () => null, Line: () => null }));
+jest.mock("react-native-web/dist/exports/useWindowDimensions", () => jest.fn(() => ({ width: 1400 })));
+jest.mock("lucide-react-native", () => ({ ChevronDown: () => null }));
 jest.mock("../components/ui/box", () => ({ Box: ({ children, style, testID, nativeID, role, accessibilityRole, accessibilityLabel, "aria-labelledby": labelledBy }) => <div style={style} data-testid={testID} id={nativeID} role={role ?? accessibilityRole} aria-label={accessibilityLabel} aria-labelledby={labelledBy}>{children}</div> }));
 jest.mock("../components/ui/button", () => ({ Button: ({ children, accessibilityLabel, onPress, isDisabled }) => <button aria-label={accessibilityLabel} onClick={onPress} disabled={isDisabled}>{children}</button>, ButtonText: ({ children }) => children }));
 jest.mock("../components/ui/text", () => ({ Text: ({ children }) => children }));
@@ -26,6 +30,15 @@ jest.mock("../components/ui/heading", () => ({ Heading: ({ children }) => childr
 jest.mock("../components/ui/modal", () => {
   const Child = ({ children }) => children;
   return { Modal: Child, ModalBackdrop: () => null, ModalBody: Child, ModalContent: Child, ModalFooter: Child, ModalHeader: Child };
+});
+jest.mock("../components/ui/select", () => {
+  const React = require("react");
+  const Context = React.createContext(null);
+  return {
+    Select: ({ children, selectedValue, onValueChange, isDisabled }) => { const portal = React.Children.toArray(children)[1]; const content = React.Children.toArray(portal.props.children)[1]; const options = React.Children.toArray(content.props.children).flat().map((item) => <option key={item.props.value} value={item.props.value}>{item.props.label}</option>); return <Context.Provider value={{ selectedValue, onValueChange, isDisabled, options }}>{children}</Context.Provider>; },
+    SelectTrigger: ({ accessibilityLabel }) => { const value = React.useContext(Context); return <select aria-label={accessibilityLabel} value={value.selectedValue} disabled={value.isDisabled} onChange={(event) => value.onValueChange(event.target.value)}>{value.options}</select>; },
+    SelectPortal: () => null, SelectBackdrop: () => null, SelectContent: () => null, SelectItem: () => null,
+  };
 });
 jest.mock("../components/ui/popover", () => ({
   Popover: ({ trigger, children, isOpen, onOpen, onClose }) => <>{trigger({ onPress: () => isOpen ? onClose() : onOpen() })}{isOpen ? children : null}</>,
@@ -36,17 +49,46 @@ jest.mock("expo-clipboard", () => ({ setStringAsync: jest.fn(async () => undefin
 jest.mock("../hooks/useAuthGuard", () => ({ useAuthGuard: () => ({ token: "session", isChecking: false }) }));
 jest.mock("../components/support/support-ui", () => {
   const React = require("react");
-  return { Action: ({ label, onPress, disabled }) => React.createElement("button", { onClick: onPress, disabled }, label), Failure: ({ message }) => message, Field: ({ label, value, onChange }) => React.createElement("input", { "aria-label": label, value, onChange: (event) => onChange(event.target.value) }), State: ({ value }) => value };
+  return { Action: ({ label, onPress, disabled }) => React.createElement("button", { onClick: onPress, disabled }, label), Failure: ({ message }) => message, Field: ({ label, value, onChange, error }) => React.createElement(React.Fragment, null, React.createElement("input", { "aria-label": label, value, onChange: (event) => onChange(event.target.value) }), error), State: ({ value }) => value };
 });
 describe("Support dashboard actions", () => {
   let root; let container;
   const click = async (label) => { await act(async () => [...container.querySelectorAll("button")].find((button) => (button.textContent === label || button.getAttribute("aria-label") === label)).click()); };
+  test.each([["number", "Line chart", "68"], ["text", "Text", "v2.4.1"], ["boolean", "Status", "True"], ["log", "Log feed", "Retrying upstream connection"], ["event", "Event feed", "Deployment completed"]])("%s shows example input and the actual selected widget output without saving", async (type, display, expected) => {
+    const onSave = jest.fn(); const onClose = jest.fn();
+    await act(async () => root.render(<WidgetForm streams={[]} onSave={onSave} onClose={onClose} />));
+    await click(type); await click(display); await input("Incoming stream name", "custom_stream");
+    await click("See example");
+    const body = JSON.parse(container.querySelector('[data-testid="widget-example-input"]').textContent);
+    expect(body.streams[0]).toMatchObject({ name: "custom_stream", type });
+    expect(body.samples.every((entry) => entry.stream === "custom_stream")).toBe(true);
+    expect(container.querySelector('[data-testid="widget-example-output"]').textContent).toContain(expected);
+    if (type === "event") { await click("Expand event 1"); expect(container.textContent).toContain("Versionv2.4.1"); }
+    await click("Back to widget settings");
+    expect(container.querySelector('[aria-label="Incoming stream name"]').value).toBe("custom_stream");
+    expect(container.textContent).toContain(`Display this ${type} stream as`);
+    expect(onSave).not.toHaveBeenCalled(); expect(onClose).not.toHaveBeenCalled();
+  });
+  test("received streams use a dropdown and snapshot streams show a real table preview", async () => {
+    const streams = [{ name: "top_processes", label: "Top processes", type: "event", unit: "" }, ...Array.from({ length: 80 }, (_, index) => ({ name: `stream_${index}`, label: `Stream ${index}`, type: "number", unit: "%" }))];
+    await act(async () => root.render(<WidgetForm streams={streams} onSave={jest.fn()} onClose={jest.fn()} />));
+    const select = container.querySelector('select[aria-label="Received streams"]');
+    expect(select.options).toHaveLength(82);
+    expect([...container.querySelectorAll("button")].some((button) => button.textContent.includes("stream_79"))).toBe(false);
+    await act(async () => { select.value = "top_processes"; select.dispatchEvent(new Event("change", { bubbles: true })); });
+    await click("See example");
+    expect(container.querySelector('[data-testid="snapshot-table"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="widget-example-output"]').textContent).toContain("24.5 %");
+    const body = JSON.parse(container.querySelector('[data-testid="widget-example-input"]').textContent);
+    expect(body.samples[0].value.fields.items[0]).toMatchObject({ pid: 1248, name: "worker" });
+  });
   beforeEach(() => { global.IS_REACT_ACT_ENVIRONMENT = true; container = document.createElement("div"); root = createRoot(container); });
   afterEach(async () => { await act(async () => root.unmount()); });
   const input = async (label, value) => {
     const field = container.querySelector(`[aria-label="${label}"]`);
     await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(field, value); field.dispatchEvent(new Event("input", { bubbles: true })); });
   };
+  const choose = async (label, value) => { await act(async () => { const select = container.querySelector(`select[aria-label="${label}"]`); select.value = value; select.dispatchEvent(new Event("change", { bubbles: true })); }); };
   test("creates chips with Enter, deduplicates tags and saves unfinished input", async () => {
     const onSave = jest.fn(async () => undefined);
     await act(async () => root.render(<AppForm tabs={[{ id: "tab", name: "General" }]} apps={[]} onClose={() => {}} onSave={onSave} />));
@@ -55,13 +97,25 @@ describe("Support dashboard actions", () => {
     expect(container.querySelector('[aria-label="Remove tag production"]')).not.toBeNull();
     await input("Add tag", "production"); await click("Add tag");
     expect(container.querySelectorAll('[aria-label="Remove tag production"]')).toHaveLength(1);
+    expect(container.textContent).toContain("A tag with this name already exists");
     await input("Add tag", "worker"); await click("Save App");
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ tags: ["production", "worker"] }), undefined);
+  });
+  test("prevents duplicate App and tab names", async () => {
+    const onSave = jest.fn();
+    await act(async () => root.render(<AppForm tabs={[{ id: "tab", name: "General" }]} apps={[app]} onClose={() => {}} onSave={onSave} />));
+    await input("App name", ` ${app.name.toUpperCase()} `); await click("Save App");
+    expect(onSave).not.toHaveBeenCalled();
+    expect(container.textContent).toContain("An App with this name already exists");
+    await act(async () => root.render(<TabForm tabs={[{ id: "tab", name: "General" }]} onClose={() => {}} onSave={onSave} />));
+    await input("Tab name", " general ");
+    expect(container.textContent).toContain("A tab with this name already exists");
+    expect([...container.querySelectorAll("button")].find((button) => button.textContent === "Save tab").disabled).toBe(true);
   });
   test("edits and removes tags locally, suggests tags across tabs, and persists only on Save", async () => {
     const onSave = jest.fn(async () => undefined);
     const tagged = { ...app, tags: ["api", "old"] };
-    const other = { ...app, id: "other", tab_id: "other-tab", tags: ["production", "worker", "production"] };
+    const other = { ...app, id: "other", name: "Other", tab_id: "other-tab", tags: ["production", "worker", "production"] };
     const render = () => root.render(<AppForm app={tagged} tabs={[{ id: "tab", name: "General" }]} apps={[tagged, other]} onClose={() => {}} onSave={onSave} />);
     await act(async () => render());
     expect(container.querySelectorAll('[aria-label="Use tag production"]')).toHaveLength(1);
@@ -82,11 +136,11 @@ describe("Support dashboard actions", () => {
   test("cancels tag edits, saves an active edit, and resets tag drafts when switching templates", async () => {
     const onSave = jest.fn(async () => undefined);
     await act(async () => root.render(<AppForm tabs={[{ id: "tab", name: "General" }]} apps={[{ ...app, tags: ["source"] }]} onClose={() => {}} onSave={onSave} />));
-    await click("Replicate API"); await input("App name", "Copy"); await click("Edit tag source"); await input("Edit tag", "discarded"); await click("Cancel tag edit");
+    await choose("Start from", "app"); await input("App name", "Copy"); await click("Edit tag source"); await input("Edit tag", "discarded"); await click("Cancel tag edit");
     expect(container.querySelector('[aria-label="Remove tag source"]')).not.toBeNull();
     await click("Edit tag source"); await input("Edit tag", "renamed"); await click("Save App");
     expect(onSave).toHaveBeenLastCalledWith(expect.objectContaining({ tags: ["renamed"] }), "app");
-    await input("Edit tag", "unsaved"); await click("Blank App");
+    await input("Edit tag", "unsaved"); await choose("Start from", "blank");
     expect(container.querySelector('[aria-label="Add tag"]').value).toBe("");
     expect(container.querySelector('[aria-label="Remove tag source"]')).toBeNull();
     await click("Save App"); expect(onSave).toHaveBeenLastCalledWith(expect.objectContaining({ tags: [] }), undefined);
@@ -108,7 +162,7 @@ describe("Support dashboard actions", () => {
     expect(container.textContent).not.toContain("saved on server");
     await click("Dashboard actions");
     expect(container.querySelector('[role="menu"]')).not.toBeNull();
-    expect([...container.querySelectorAll('[role="menuitem"]')].map((item) => item.textContent)).toEqual(["Create an App", "Manage Apps›", "Add widget", "Edit layout", "App details"]);
+    expect([...container.querySelectorAll('[role="menuitem"]')].map((item) => item.textContent)).toEqual(["Create an App", "Manage Apps›", "Manage Tabs", "Add widget", "Edit layout", "App details"]);
     await click("Edit layout");
     expect(container.querySelector('[role="menu"]')).toBeNull();
     expect(container.textContent).toContain("Done positioning");
@@ -163,6 +217,10 @@ describe("Support dashboard actions", () => {
     await click("Dashboard actions"); await click("Manage Apps"); await click("Delete Apps"); await click("Delete Renamed worker");
     expect(container.textContent).toContain("This deletes Renamed worker");
     expect(fetchMock.mock.calls.some(([url, options]) => options.method === "DELETE")).toBe(false);
+    expect([...container.querySelectorAll("button")].find((button) => button.textContent === "Delete App permanently").disabled).toBe(true);
+    await input("Type Renamed worker to confirm", "wrong name");
+    expect([...container.querySelectorAll("button")].find((button) => button.textContent === "Delete App permanently").disabled).toBe(true);
+    await input("Type Renamed worker to confirm", "Renamed worker");
     await click("Delete App permanently");
     expect(apps).toHaveLength(1);
     expect(useSupportNavigation.getState()).toMatchObject({ selectedId: "app", tabId: "tab" });
@@ -201,9 +259,9 @@ describe("Support dashboard actions", () => {
     const original = fetchMock.getMockImplementation();
     fetchMock.mockImplementation(async (url, options) => url.endsWith("/tabs") ? response([{ id: "tab", name: "General" }, { id: "empty", name: "Empty" }]) : original(url, options));
     await act(async () => root.render(React.createElement(SupportScreen)));
-    await click("Dashboard actions"); await click("Manage Apps"); await click("Manage workspaces"); await click("Edit General");
+    await click("Dashboard actions"); await click("Manage Tabs"); await click("Edit General");
     expect(container.textContent).not.toContain("Delete empty tab");
-    await click("Cancel"); await click("Dashboard actions"); await click("Manage Apps"); await click("Manage workspaces"); await click("Edit Empty");
+    await click("Cancel"); await click("Dashboard actions"); await click("Manage Tabs"); await click("Edit Empty");
     expect(container.textContent).toContain("Delete empty tab");
     await click("Delete empty tab");
     expect(fetchMock.mock.calls.some(([url, options]) => url.endsWith("/tabs/empty") && options.method === "DELETE")).toBe(true);
@@ -233,10 +291,11 @@ describe("Support dashboard actions", () => {
     expect(container.textContent).toContain("registration-secret");
     await click("I saved the credentials");
     await click("Dashboard actions"); await click("App details"); await click("App settings"); await input("App name", "Renamed queue"); await click("Save App");
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 150)));
     expect(apps.find((entry) => entry.id === "created").name).toBe("Renamed queue");
     await click("Dashboard actions"); await click("App details"); await click("App settings"); await click("Delete App"); expect(apps).toHaveLength(2);
-    await click("Delete App permanently"); expect(apps).toHaveLength(1);
-    await click("Dashboard actions"); await click("Manage Apps"); await click("Manage workspaces"); await click("Create tab"); await input("Tab name", "Workers"); await click("Save tab");
+    await input("Type Renamed queue to confirm", "Renamed queue"); await click("Delete App permanently"); expect(apps).toHaveLength(1);
+    await click("Dashboard actions"); await click("Manage Tabs"); await click("Create tab"); await input("Tab name", "Workers"); await click("Save tab");
     expect(fetchMock.mock.calls).toContainEqual(["https://hh.test/api/support/tabs", expect.objectContaining({ method: "POST", body: JSON.stringify({ name: "Workers" }) })]);
   });
   test("replicates an existing App through registration with new tags and a destination tab", async () => {
@@ -251,10 +310,10 @@ describe("Support dashboard actions", () => {
       return original(url, options);
     });
     await act(async () => root.render(React.createElement(SupportScreen)));
-    await click("Dashboard actions"); await click("Create an App"); await click(`Replicate ${app.name}`);
-    expect(container.textContent).toContain("Starts with fresh telemetry and new credentials");
+    await click("Dashboard actions"); await click("Create an App"); await choose("Start from", app.id);
+    expect(container.textContent).toContain("Telemetry and credentials are new");
     expect(container.querySelector('[aria-label="Heartbeat timeout (seconds)"]')).toBeNull();
-    await input("App name", "Worker replica"); await input("Add tag", "production, worker"); await click("Workers");
+    await input("App name", "Worker replica"); await input("Add tag", "production, worker"); await choose("Tab", "new-tab");
     await click("Save App");
     expect(saved).toEqual({ name: "Worker replica", tab_id: "new-tab", tags: ["production", "worker"] });
     expect(fetchMock.mock.calls.some(([url, options]) => url.endsWith("/apps") && options.method === "POST")).toBe(false);
@@ -262,13 +321,51 @@ describe("Support dashboard actions", () => {
     await click("I saved the credentials");
     expect(container.textContent).not.toContain("replica-secret");
   });
+  test("offers built-in templates before the first App and clears them when choosing blank", async () => {
+    const onSave = jest.fn(async () => undefined);
+    await act(async () => root.render(<AppForm tabs={[{ id: "tab", name: "General" }]} apps={[]} onClose={() => {}} onSave={onSave} />));
+    expect([...container.querySelectorAll('select[aria-label="Start from"] option')].map((option) => option.textContent)).toEqual(["Blank App", "Small Template", "Linux Machine"]);
+    await choose("Start from", "template:small");
+    expect(container.textContent).toContain("CPU value, CPU trend and log feed");
+    await input("App name", "Small"); await click("Save App");
+    expect(onSave).toHaveBeenLastCalledWith(expect.objectContaining({ template_id: "small", tab_id: "tab" }), undefined);
+    await choose("Start from", "blank"); await click("Save App");
+    expect(onSave.mock.calls[1][0]).not.toHaveProperty("template_id");
+  });
+  test.each([["small", "Small monitor"], ["linux-machine", "Linux server"]])("creates built-in template %s through the normal App request with fresh credentials", async (templateId, name) => {
+    const original = fetchMock.getMockImplementation();
+    let saved;
+    fetchMock.mockImplementation(async (url, options) => {
+      if (url.endsWith("/apps") && options.method === "POST") {
+        saved = JSON.parse(options.body);
+        return response({ app: { ...app, ...saved, id: "small-app" }, secret: "small-secret" });
+      }
+      return original(url, options);
+    });
+    await act(async () => root.render(<SupportScreen />));
+    await click("Dashboard actions"); await click("Create an App");
+    await choose("Start from", app.id); await choose("Start from", "template:" + templateId);
+    await input("App name", name); await input("Add tag", "example"); await click("Save App");
+    expect(saved).toEqual({ name, tab_id: "tab", tags: ["example"], heartbeat_timeout_seconds: 120, retention_days: 7, template_id: templateId });
+    expect(fetchMock.mock.calls.some(([url]) => url.endsWith("/replicate") || url.endsWith("/layout"))).toBe(false);
+    expect(container.textContent).toContain("small-secret");
+    await click("I saved the credentials");
+    expect(container.textContent).not.toContain("small-secret");
+  });
+  test("switches from a built-in template to an existing App without sending template settings", async () => {
+    const onSave = jest.fn(async () => undefined);
+    await act(async () => root.render(<AppForm tabs={[{ id: "tab", name: "General" }]} apps={[app]} onClose={() => {}} onSave={onSave} />));
+    await choose("Start from", "template:small"); await choose("Start from", app.id);
+    await input("App name", "Replica"); await click("Save App");
+    expect(onSave).toHaveBeenCalledWith(expect.not.objectContaining({ template_id: expect.anything() }), app.id);
+  });
   test("switches from a template back to a blank App without replicating", async () => {
     const original = fetchMock.getMockImplementation();
     fetchMock.mockImplementation(async (url, options) => url.endsWith("/apps") && options.method === "POST"
       ? response({ app: { ...app, ...JSON.parse(options.body), id: "blank" }, secret: "blank-secret" })
       : original(url, options));
     await act(async () => root.render(React.createElement(SupportScreen)));
-    await click("Dashboard actions"); await click("Create an App"); await click(`Replicate ${app.name}`); await click("Blank App");
+    await click("Dashboard actions"); await click("Create an App"); await choose("Start from", app.id); await choose("Start from", "blank");
     expect(container.querySelector('[aria-label="Heartbeat timeout (seconds)"]')).not.toBeNull();
     await input("App name", "Blank"); await click("Save App");
     expect(fetchMock.mock.calls.some(([url]) => url.endsWith("/replicate"))).toBe(false);
@@ -345,6 +442,13 @@ beforeEach(() => {
   jest.spyOn(console, "info").mockImplementation(() => {});
 });
 afterEach(() => { jest.restoreAllMocks(); });
+test.each([
+  [0, "s", "0 s"], [59, "s", "59 s"], [60, "s", "1m 0s"], [3661, "s", "1h 1m"], [1250340, "s", "14d 11h"], [-90, "s", "-1m 30s"],
+  [0, "bytes", "0 B"], [1023, "bytes", "1,023 B"], [1024, "bytes", "1 KiB"], [34359738368, "bytes", "32 GiB"],
+  [1572864, "bytes/s", "1.5 MiB/s"], [-1073741824, "B", "-1 GiB"], [42, "requests", "42 requests"], [12.34567, undefined, "12.346"], [62.434, "%", "62.4 %"],
+])("formats measurement %s %s readably", (value, unit, expected) => {
+  expect(measurementText(value, unit)).toBe(expected);
+});
 test("bounded sample merging deduplicates persistent IDs and keeps received order", () => {
   expect(mergeSamples([sample(3), sample(1)], [sample(2), sample(3)], 2).map((entry) => entry.id)).toEqual([2, 3]);
   expect(mergeSamples([], Array.from({ length: 1500 }, (_, index) => sample(index)))).toHaveLength(1000);
@@ -625,6 +729,24 @@ describe("Widget behavior by data type", () => {
     await act(async () => chart.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Escape" })));
     expect(container.textContent).not.toContain("sample 1");
   });
+  test("charts scale byte labels while inspection retains original units and precision", async () => {
+    await render(<WidgetChart samples={[fresh(1, 1073741824), fresh(2, 2147483648)]} kind="line" stream="disk" unit="bytes" />);
+    expect(container.textContent).toContain("2 GiB");
+    expect(container.textContent).toContain("min 1 GiB · max 2 GiB");
+    const chart = container.querySelector('[data-testid="chart-disk-line"]');
+    await act(async () => chart.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Home" })));
+    expect(container.textContent).toContain("1073741824 bytes");
+  });
+  test("metric values scale bytes and uptime without changing copied data", async () => {
+    const props = { widget: { id: "readable", stream: "memory", kind: "value", x: 0, y: 0, w: 3, h: 1 }, stream: { name: "memory", label: "Available memory", type: "number", unit: "bytes" }, page: { samples: [fresh(1, 34359738368)], next_before: null }, token: "session", appId: "app", retentionDays: 7, cellWidth: 60, editing: false, onChange: jest.fn(), onRemove: jest.fn() };
+    await render(<SupportWidget {...props} />);
+    expect(container.textContent).toContain("32 GiB");
+    await click("Widget controls"); await click("Copy latest value");
+    expect(require("expo-clipboard").setStringAsync).toHaveBeenLastCalledWith("34359738368");
+    await click("Close");
+    await render(<SupportWidget {...props} stream={{ ...props.stream, unit: "s" }} page={{ samples: [fresh(2, 1250340)], next_before: null }} />);
+    expect(container.textContent).toContain("14d 11h");
+  });
   test("compact defaults and resize limits let text, values and status fit a single row", async () => {
     for (const kind of ["text", "value", "boolean"]) {
       expect(minimumWidgetHeight(kind)).toBe(1);
@@ -683,9 +805,115 @@ describe("Widget behavior by data type", () => {
   });
   test("event feeds expand structured fields without turning each event into a large card", async () => {
     await render(<WidgetFeed samples={[fresh(1, { name: "release", fields: { version: "2.4.1", nested: { passed: true } } })]} kind="events" retentionMs={86400000} />);
-    expect(container.textContent).toContain("release"); expect(container.textContent).not.toContain('"nested"');
-    await click("Expand event 1"); expect(container.textContent).toContain('"nested"'); expect(container.textContent).toContain('"passed": true');
-    await click("Collapse event 1"); expect(container.textContent).not.toContain('"nested"');
+    expect(container.textContent).toContain("release"); expect(container.textContent).not.toContain("Nested");
+    await click("Expand event 1"); expect(container.textContent).toContain("Nested"); expect(container.textContent).toContain("Passedtrue");
+    await click("Collapse event 1"); expect(container.textContent).not.toContain("Nested");
+  });
+  test("machine information and snapshot fields display readable data while preserving text fallback", async () => {
+    const props = { widget: { id: "info", stream: "machine_info", kind: "text", x: 0, y: 0, w: 3, h: 2 }, stream: { name: "machine_info", label: "Machine information", type: "text" }, page: { samples: [fresh(1, JSON.stringify({ hostname: "host", ram_bytes: 1073741824 }))], next_before: null }, token: "session", appId: "app", retentionDays: 7, cellWidth: 60, editing: false, onChange: jest.fn(), onRemove: jest.fn() };
+    await render(<SupportWidget {...props} />);
+    expect(container.textContent).toContain("Hostnamehost"); expect(container.textContent).toContain("1 GiB");
+    await render(<SupportWidget {...props} page={{ samples: [fresh(2, "plain text")], next_before: null }} />);
+    expect(container.textContent).toContain("plain text");
+    await render(<WidgetFeed samples={[fresh(3, { name: "1 filesystem", fields: { items: [{ mount_point: "/", capacity_bytes: 1073741824 }] } })]} kind="events" retentionMs={86400000} />);
+    await click("Expand event 3"); expect(container.textContent).toContain("Mount point/"); expect(container.textContent).toContain("1 GiB");
+  });
+  test.each(["filesystems", "network_interfaces", "top_processes", "hardware", "services"])("%s shows only the latest snapshot and updates live", async (name) => {
+    const props = { widget: { id: name, stream: name, kind: "events", x: 0, y: 0, w: 6, h: 4 }, stream: { name, label: name, type: "event" }, page: { samples: [fresh(1, { name: "old snapshot", fields: { items: [{ name: "old item" }] } }), fresh(2, { name: "current snapshot", fields: { items: [{ name: "current item" }] } })], next_before: 1 }, token: "session", appId: "app", retentionDays: 7, cellWidth: 60, editing: false, onChange: jest.fn(), onRemove: jest.fn() };
+    await render(<SupportWidget {...props} />);
+    expect(container.textContent).toContain("current item"); expect(container.textContent).not.toContain("old item"); expect(container.textContent).not.toContain("Older page");
+    await render(<SupportWidget {...props} page={{ samples: [...props.page.samples, fresh(3, { name: "new snapshot", fields: { items: [{ name: "new item" }] } })], next_before: 1 }} />);
+    expect(container.textContent).toContain("new item"); expect(container.textContent).not.toContain("current item");
+  });
+  test("snapshot tables sort, filter and follow the selected row across live updates and removal", async () => {
+    const first = { pid: 12, name: "worker", cpu_percent: 25, resident_memory_bytes: 1073741824 };
+    const second = { pid: 13, name: "server", cpu_percent: 50, resident_memory_bytes: 2048 };
+    const view = (items, instance) => <WidgetSnapshot stream="top_processes" sample={fresh(1, { name: "processes", fields: { items } }, instance)} />;
+    await render(view([first, second]));
+    expect(container.textContent).toContain("PIDNameCPU % ↓Memory");
+    const tableText = () => container.querySelector('[data-testid="snapshot-table"]').textContent;
+    expect(tableText().indexOf("server")).toBeLessThan(tableText().indexOf("worker"));
+    await click("Sort by CPU %");
+    expect(tableText().indexOf("worker")).toBeLessThan(tableText().indexOf("server"));
+    await search("Search top_processes", "worker");
+    expect(container.textContent).not.toContain("server");
+    await click("Details for worker (PID 12)");
+    await render(view([second, { ...first, cpu_percent: 88, extra_field: "live detail" }]));
+    expect(container.textContent).toContain("88 %"); expect(container.textContent).toContain("Extra fieldlive detail");
+    await render(view([second]));
+    expect(container.textContent).toContain("no longer present");
+    await render(view([first], "different-sender"));
+    expect(container.textContent).toContain("no longer present");
+    await click("Close");
+    expect(container.textContent).not.toContain("no longer present");
+  });
+  test("custom event tables infer columns and rows from the latest items array", async () => {
+    const props = { widget: { id: "custom", stream: "jobs", kind: "table", x: 0, y: 0, w: 6, h: 4 }, stream: { name: "jobs", label: "Jobs", type: "event" }, page: { samples: [fresh(1, { name: "jobs", fields: { items: [{ name: "backup", duration: 12 }, { name: "sync", result: "complete" }] } })], next_before: 1 }, token: "session", appId: "app", retentionDays: 7, cellWidth: 60, editing: false, onChange: jest.fn(), onRemove: jest.fn() };
+    await render(<SupportWidget {...props} />);
+    expect(container.textContent).toContain("NameDurationResult");
+    expect(container.textContent).toContain("backup"); expect(container.textContent).toContain("sync");
+    expect(container.textContent).not.toContain("Older page");
+    await click("Details for sync"); expect(container.textContent).toContain("Resultcomplete");
+  });
+  test("snapshot column widths validate stored data", () => {
+    expect(parseColumnWidths("invalid JSON")).toEqual({});
+    expect(parseColumnWidths("[]")).toEqual({});
+    expect(parseColumnWidths('{"name":240,"pid":0,"other":2000,"bad":"100","nil":null}')).toEqual({ name: 240, pid: 48, other: 1600 });
+  });
+  test("snapshot columns resize by drag and keyboard and restore per-widget local widths", async () => {
+    jest.useFakeTimers();
+    const key = "hyperhive.support.columns:resize-test";
+    localStorage.setItem(key, '{"name":210}');
+    const props = { stream: "top_processes", storageKey: "resize-test", sample: fresh(1, { name: "processes", fields: { items: [{ pid: 12, name: "worker", cpu_percent: 20, resident_memory_bytes: 1024 }] } }) };
+    const nameWidth = () => container.querySelector('[aria-label="Sort by Name"]').parentElement.style.width;
+    try {
+      await render(<WidgetSnapshot {...props} />);
+      expect(nameWidth()).toBe("210px");
+      const drag = PanResponder.create.mock.calls.slice(-4)[1][0];
+      await act(async () => { drag.onPanResponderGrant(); drag.onPanResponderMove(null, { dx: 80 }); });
+      expect(nameWidth()).toBe("290px");
+      expect(container.querySelector('[data-testid="snapshot-table"]').querySelector('button').children[1].style.width).toBe("290px");
+      await act(async () => drag.onPanResponderRelease(null, { dx: 80 }));
+      await act(async () => container.querySelector('[aria-label="Resize Name column"]').dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+      expect(nameWidth()).toBe("306px");
+      await act(async () => jest.advanceTimersByTime(200));
+      expect(JSON.parse(localStorage.getItem(key)).name).toBe(306);
+      await render(<WidgetSnapshot key="remount" {...props} />);
+      expect(nameWidth()).toBe("306px");
+      await render(<WidgetSnapshot key="other" {...props} storageKey="resize-other-widget" />);
+      expect(nameWidth()).toBe("115px");
+      await render(<WidgetSnapshot key="restored" {...props} />);
+      await act(async () => container.querySelector('[aria-label="Resize Name column"]').dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true })));
+      expect(nameWidth()).toBe("48px");
+      expect(container.textContent).toContain("CPU % ↓");
+    } finally { jest.useRealTimers(); localStorage.removeItem(key); localStorage.removeItem("hyperhive.support.columns:resize-other-widget"); }
+  });
+  test("snapshot resizing remains usable when browser storage is blocked", async () => {
+    const read = jest.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("blocked"); });
+    const write = jest.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("blocked"); });
+    jest.useFakeTimers();
+    try {
+      await render(<WidgetSnapshot stream="services" storageKey="blocked" sample={fresh(1, { name: "services", fields: { items: [{ unit: "worker.service" }] } })} />);
+      await act(async () => container.querySelector('[aria-label="Resize Unit column"]').dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+      expect(container.querySelector('[aria-label="Sort by Unit"]').parentElement.style.width).toBe("216px");
+      await act(async () => jest.advanceTimersByTime(200));
+      expect(write).toHaveBeenCalled();
+    } finally { read.mockRestore(); write.mockRestore(); jest.useRealTimers(); }
+  });
+  test("filesystem usage handles missing and zero capacities, and hardware rows include sensors and disks", async () => {
+    const fs = { mount_point: "/", device: "/dev/sda1", capacity_bytes: 1073741824, free_bytes: 268435456, available_bytes: 134217728 };
+    expect(snapshotRows("filesystems", { items: [fs] })[0].usage_percent).toBe(75);
+    expect(snapshotRows("filesystems", { items: [{ ...fs, capacity_bytes: 0 }] })[0].usage_percent).toBeUndefined();
+    expect(snapshotRows("filesystems", { items: [null, "bad", {}] })).toEqual([{}]);
+    await render(<WidgetSnapshot stream="filesystems" sample={fresh(1, { name: "mounts", fields: { items: [fs] } })} />);
+    expect(container.textContent).toContain("75 %"); expect(container.textContent).toContain("1 GiB");
+    await click("Details for /"); expect(container.textContent).toContain("Free bytes256 MiB");
+    const hw = { sensors: [{ sensor: "cpu-temp", value: 42000, unit: "millidegrees_celsius" }], disk_health: [{ device: "/dev/sda", passed: false, available: true }], smartctl: "available" };
+    expect(snapshotRows("hardware", hw)).toHaveLength(2);
+    await render(<WidgetSnapshot stream="hardware" sample={fresh(2, { name: "hardware", fields: hw })} />);
+    expect(container.textContent).toContain("42 °C"); expect(container.textContent).toContain("SMART passed"); expect(container.textContent).toContain("No");
+    await render(<WidgetSnapshot stream="hardware" sample={fresh(3, { name: "hardware", fields: { sensors: [], disk_health: [], smartctl: "unavailable" } })} />);
+    expect(container.textContent).toContain("No items in the latest snapshot"); expect(container.textContent).toContain("unavailable");
   });
   test("tables align received/sender/value fields and support ordering and loaded-sample search", async () => {
     await render(<WidgetTable samples={[fresh(1, "first-value"), fresh(2, "second-value")]} />);

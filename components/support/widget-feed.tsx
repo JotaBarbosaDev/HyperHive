@@ -5,6 +5,7 @@ import { Text } from "@/components/ui/text";
 import type { Sample } from "@/types/support";
 import { Action, ink, muted } from "./support-ui";
 import { sampleText } from "./widget-format";
+import { WidgetDetails } from "./widget-details";
 
 const logColors: Record<string, string> = { debug: "#8A94A8", info: "#6ED5C4", warn: "#F0CC80", error: "#F4A293", fatal: "#FF8D9B" };
 const mono = { fontFamily: "monospace", fontSize: 12 };
@@ -22,7 +23,7 @@ const FeedLine = React.memo(function FeedLine({ sample, kind, wrap }: { sample: 
     <Pressable accessibilityRole="button" accessibilityLabel={`${expanded ? "Collapse" : "Expand"} event ${sample.id}`} accessibilityState={{ expanded }} onPress={() => setExpanded(!expanded)} className="flex-row items-center gap-2 web:focus-visible:ring-2 web:focus-visible:ring-[#147D78]">
       <Text size="xs" className={muted} style={{ ...mono, fontSize: 10 }}>{time}</Text><Text size="xs" className={ink + " flex-1"} style={{ fontSize: 12 }} numberOfLines={1}>{event?.name ?? sampleText(value)}</Text><Text size="xs" className={muted} style={{ fontSize: 10 }}>{sample.instance_id ?? "App"} {expanded ? "▾" : "▸"}</Text>
     </Pressable>
-    {expanded ? <Text size="xs" selectable className={ink + " leading-[18px]"} style={{ ...mono, padding: 6 }}>{new Date(sample.received_at).toLocaleString()}{"\n"}{event ? JSON.stringify(event.fields, null, 2) : sampleText(value)}</Text> : null}
+    {expanded ? <Box style={{ padding: 6, gap: 6 }}><Text size="xs" className={muted}>{new Date(sample.received_at).toLocaleString()}</Text>{event ? <WidgetDetails value={event.fields} /> : <Text size="xs" selectable className={ink}>{sampleText(value)}</Text>}</Box> : null}
   </Box>;
 });
 

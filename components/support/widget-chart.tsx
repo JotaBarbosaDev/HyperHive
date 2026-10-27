@@ -5,7 +5,7 @@ import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";
 import type { Sample, WidgetKind } from "@/types/support";
 import { ink, muted } from "./support-ui";
-import { sampleText } from "./widget-format";
+import { measurementText } from "./widget-format";
 
 export function chartGeometry(samples: Sample[], kind: WidgetKind) {
   const values = samples.map((sample) => sample.value as number);
@@ -26,7 +26,7 @@ export function WidgetChart({ samples, kind, stream, unit }: { samples: Sample[]
   const index = samples.findIndex((sample) => sample.id === selectedId);
   const selected = samples[index];
   const latest = samples.at(-1)!;
-  const valueLabel = selected ? String(selected.value) : sampleText(latest.value);
+  const valueLabel = selected ? String(selected.value) + (unit ? " " + unit : "") : measurementText(latest.value as number, unit);
   const { points, baseline } = chartGeometry(samples, kind);
   const inspect = (fraction: number) => {
     const x = Math.max(0, Math.min(1, fraction)) * 320;
@@ -46,8 +46,8 @@ export function WidgetChart({ samples, kind, stream, unit }: { samples: Sample[]
   const spark = kind === "sparkline";
   return <Box style={{ flex: 1, minHeight: 0, gap: 3 }}>
     <Box className="flex-row flex-wrap items-baseline justify-between gap-x-2">
-      <Text size="xs" selectable numberOfLines={1} className={ink + " font-semibold max-w-full " + (spark ? "leading-[20px]" : "leading-[26px]")} style={{ fontSize: spark ? 16 : 22 }}>{valueLabel}{unit ? ` ${unit}` : ""}</Text>
-      {!spark && !selected ? <Text size="xs" className={muted} style={{ fontSize: 10 }}>min {sampleText(Math.min(...samples.map((s) => s.value as number)))} · max {sampleText(Math.max(...samples.map((s) => s.value as number)))}</Text> : null}
+      <Text size="xs" selectable numberOfLines={1} className={ink + " font-semibold max-w-full " + (spark ? "leading-[20px]" : "leading-[26px]")} style={{ fontSize: spark ? 16 : 22 }}>{valueLabel}</Text>
+      {!spark && !selected ? <Text size="xs" className={muted} style={{ fontSize: 10 }}>min {measurementText(Math.min(...samples.map((s) => s.value as number)), unit)} · max {measurementText(Math.max(...samples.map((s) => s.value as number)), unit)}</Text> : null}
     </Box>
     <View {...keyboard} testID={`chart-${stream}-${kind}`} tabIndex={0} accessibilityRole="adjustable" accessibilityLabel={`${kind} chart of ${stream}, ${samples.length} samples. Hover or use left and right arrows to inspect.`} accessibilityValue={{ min: 1, max: samples.length, now: (index < 0 ? samples.length - 1 : index) + 1, text: valueLabel }} accessibilityActions={[{ name: "increment" }, { name: "decrement" }]} onAccessibilityAction={(event) => step(event.nativeEvent.actionName === "increment" ? 1 : -1)} onFocus={() => setSelectedId(latest.id)} onBlur={() => setSelectedId(null)} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
       onPointerMove={(event) => {
