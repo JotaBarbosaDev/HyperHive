@@ -384,8 +384,8 @@ export default function NotesScreen() {
         contentContainerStyle={{ paddingBottom: 32 }}
       >
         <Box className="p-4 pt-16 web:p-10 web:max-w-6xl web:mx-auto web:w-full">
-          <HStack className="items-center justify-between gap-3 mb-6">
-            <Box className="flex-1">
+          <HStack className="items-center justify-between gap-3 mb-6 flex-wrap web:flex-wrap">
+            <Box className="flex-1 min-w-[120px]">
               <Heading
                 size="2xl"
                 className="text-typography-900 dark:text-[#E8EBF0] web:text-4xl"

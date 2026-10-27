@@ -322,6 +322,7 @@ function RootLayoutNav() {
   const isWeb = Platform.OS === "web";
   const { height: screenHeight, width: screenWidth } = useWindowDimensions();
   const compactSidebar = screenWidth < 768;
+  const contentInset = pathname === "/" ? 0 : (!compactSidebar && showSidebar ? sidebar.width : SIDEBAR_RAIL_WIDTH);
   const tutorialBodyMaxHeight = Math.min(screenHeight * 0.6, 520);
 
   const handleCloseApiErrorModal = React.useCallback(() => {
@@ -653,13 +654,13 @@ function RootLayoutNav() {
                 <NewSlaveCountToastListener />
                 <SocketErrorModalListener />
                 <SocketNotificationModalListener />
-                <Box className="flex-1">
+                <Box className="flex-1" style={{ marginLeft: contentInset }}>
                   {apiBaseMismatch && (
                     <Box
-                      className="absolute top-0 left-0 right-0 z-10 bg-warning-100 border-b border-warning-300 px-4 py-2"
+                      className="shrink-0 z-10 bg-warning-100 border-b border-warning-300 px-4 py-2"
                       pointerEvents="box-none"
                     >
-                      <HStack className="items-center gap-2 flex-wrap justify-center" pointerEvents="box-none">
+                      <HStack className="items-center gap-2 flex-wrap web:flex-wrap justify-center" pointerEvents="box-none">
                         <Text className="text-warning-800 text-xs web:text-sm" pointerEvents="none">
                           To unlock all features, go to the Proxy Hosts page in NPM and click the
                           "Setup FrontEnd Page" button.
@@ -678,8 +679,8 @@ function RootLayoutNav() {
                       </HStack>
                     </Box>
                   )}
-                  <GoAccessStreamButtons />
-                  <Box className="flex-1" style={{ marginLeft: pathname === "/" ? 0 : (!compactSidebar && showSidebar ? sidebar.width : SIDEBAR_RAIL_WIDTH) }}>
+                  <Box className="flex-1 min-h-0">
+                    <GoAccessStreamButtons />
                     <Slot />
                   </Box>
                 </Box>
