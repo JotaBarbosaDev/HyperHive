@@ -30,12 +30,8 @@ import {
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { createNote, deleteNote, getNote, listNotes, updateNote } from "@/services/notes";
 import { Note } from "@/types/notes";
+import { noteExcerpt, noteMatches } from "@/utils/note-preview";
 import { AlertTriangle, Edit3, Eye, FileText, Plus, RefreshCw, Save, Trash2, X } from "lucide-react-native";
-
-const summarizeNote = (value: string) => {
-  const normalized = value.replace(/\s+/g, " ").trim();
-  return normalized.length > 120 ? `${normalized.slice(0, 120)}...` : normalized;
-};
 
 const countLines = (value: string) => {
   if (!value) {
@@ -84,7 +80,7 @@ const MarkdownPreview = ({ value }: { value: string }) => {
   const flushCodeBlock = (key: string) => {
     nodes.push(
       <Box key={key} className="rounded-xl bg-background-100 p-4 dark:bg-[#0B1220]">
-        <Text className="font-mono text-sm leading-6 text-typography-800 dark:text-[#D7DCE5]">
+        <Text className="font-mono text-sm leading-6 text-typography-800 dark:text-[#D7DCE5] web:break-words">
           {codeLines.join("\n")}
         </Text>
       </Box>
@@ -155,7 +151,7 @@ const MarkdownPreview = ({ value }: { value: string }) => {
     }
 
     nodes.push(
-      <Text key={`paragraph-${index}`} className="text-base leading-7 text-typography-800 dark:text-[#D7DCE5]">
+      <Text key={`paragraph-${index}`} className="text-base leading-7 text-typography-800 dark:text-[#D7DCE5] web:break-words">
         {renderInlineMarkdown(trimmed)}
       </Text>
     );
@@ -171,8 +167,12 @@ const MarkdownPreview = ({ value }: { value: string }) => {
 export default function NotesScreen() {
   const { token, isChecking } = useAuthGuard();
   const toast = useToast();
+  const toastRef = React.useRef(toast);
+  toastRef.current = toast;
   const { width, height } = useWindowDimensions();
   const [notes, setNotes] = React.useState<Note[]>([]);
+  const [search, setSearch] = React.useState("");
+  const visibleNotes = notes.filter((note) => noteMatches(note, search));
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [creating, setCreating] = React.useState(false);
@@ -189,7 +189,8 @@ export default function NotesScreen() {
   const [formTitle, setFormTitle] = React.useState("");
   const [formText, setFormText] = React.useState("");
 
-  const contentWidth = Math.min(width - 32, 1104);
+  const [gridWidth, setGridWidth] = React.useState(0);
+  const contentWidth = gridWidth || Math.min(width - 32, 1104);
   const columns = contentWidth >= 960 ? 4 : contentWidth >= 700 ? 3 : contentWidth >= 460 ? 2 : 1;
   const cardGap = 16;
   const cardSize = Math.floor((contentWidth - cardGap * (columns - 1)) / columns);
@@ -200,7 +201,7 @@ export default function NotesScreen() {
 
   const showToast = React.useCallback(
     (title: string, description: string, action: "success" | "error" = "success") => {
-      toast.show({
+      toastRef.current.show({
         placement: "top",
         render: ({ id }) => (
           <Toast
@@ -214,7 +215,7 @@ export default function NotesScreen() {
         ),
       });
     },
-    [toast]
+    []
   );
 
   const loadNotes = React.useCallback(
@@ -413,6 +414,10 @@ export default function NotesScreen() {
             </Button>
           </HStack>
 
+          <Input className="mb-6 rounded-xl" size="md">
+            <InputField aria-label="Search notes" accessibilityLabel="Search notes" placeholder="Search notes" value={search} onChangeText={setSearch} />
+          </Input>
+
           {loading && notes.length === 0 ? (
             <Box className="rounded-2xl border border-outline-100 bg-background-0 p-8 shadow-soft-2 dark:border-[#2A3B52] dark:bg-[#0E1524]">
               <Text className="text-center text-typography-600 dark:text-[#8A94A8]">Loading notes...</Text>
@@ -437,20 +442,23 @@ export default function NotesScreen() {
                 </VStack>
               </VStack>
             </Box>
+          ) : visibleNotes.length === 0 ? (
+            <Text className="text-typography-600 dark:text-[#8A94A8]">No notes match your search.</Text>
           ) : (
             <Box
-              className="flex-row flex-wrap"
-              style={{ gap: cardGap }}
+              className="flex-row flex-wrap items-start"
+              onLayout={(event) => setGridWidth(event.nativeEvent.layout.width)}
+              style={{ gap: cardGap, width: "100%" }}
             >
-              {notes.map((note) => (
+              {visibleNotes.map((note) => (
                 <Box
                   key={note.id}
                   className="rounded-xl border border-outline-100 bg-background-0 p-4 shadow-soft-1 dark:border-[#2A3B52] dark:bg-[#0E1524]"
-                  style={{ width: cardSize, height: cardSize }}
+                  style={{ width: cardSize, maxWidth: "100%" }}
                 >
-                    <VStack className="h-full justify-between gap-3">
-                      <VStack className="gap-2 flex-1">
-                        <Box className="flex-1">
+                    <VStack className="gap-3">
+                      <VStack className="gap-2">
+                        <Box>
                           <HStack className="items-start justify-between gap-2">
                             <Heading
                               size="sm"
@@ -471,15 +479,12 @@ export default function NotesScreen() {
                               <ButtonIcon as={Trash2} />
                             </Button>
                           </HStack>
-                          <Text
-                            numberOfLines={4}
-                            className="text-sm text-typography-600 dark:text-[#8A94A8] mt-2"
-                          >
-                          {summarizeNote(note.nota) || "Empty note"}
-                        </Text>
+                          <Box className="mt-2">
+                            <MarkdownPreview value={noteExcerpt(note.nota) || "Empty note"} />
+                          </Box>
                       </Box>
                     </VStack>
-                    <HStack className="items-center justify-between gap-2">
+                    <HStack className="items-center justify-between gap-2 flex-wrap web:flex-wrap">
                       <Text className="text-xs text-typography-500 dark:text-[#6F7A8D]">
                         {countLines(note.nota)} {countLines(note.nota) === 1 ? "line" : "lines"}
                       </Text>
