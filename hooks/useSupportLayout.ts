@@ -46,9 +46,10 @@ export function useSupportLayout(token: string | null, appId: string | null, rem
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [draft]);
+  const change = React.useCallback((widgets: SupportLayout["widgets"]) => { if (base) setDraft((latest) => ({ revision: latest?.revision ?? base.revision, widgets })); }, [base]);
   return {
     layout: ownsState ? draft ?? base : remote, dirty: ownsState && !!draft, saving: ownsState && saving, error: ownsState ? error : null, conflict: ownsState && conflict,
-    change: (widgets: SupportLayout["widgets"]) => { if (base) setDraft((latest) => ({ revision: latest?.revision ?? base.revision, widgets })); },
+    change,
     retry: () => { if (!conflict) setError(null); },
     discard: () => { if (!inFlight.current) { setDraft(null); setSaved(null); setError(null); setConflict(false); } },
   };

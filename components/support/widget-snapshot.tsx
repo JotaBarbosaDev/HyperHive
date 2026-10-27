@@ -76,7 +76,7 @@ function cellText(row: RecordRow, key: string): string {
   return typeof value === "boolean" ? value ? "Yes" : "No" : typeof value === "object" ? JSON.stringify(value) : String(value);
 }
 
-export function WidgetSnapshot({ sample, stream, storageKey = `${sample.app_id}:${stream}` }: { sample: Sample; stream: string; storageKey?: string }) {
+export const WidgetSnapshot = React.memo(function WidgetSnapshot({ sample, stream, storageKey = `${sample.app_id}:${stream}` }: { sample: Sample; stream: string; storageKey?: string }) {
   const localKey = `hyperhive.support.columns:${storageKey}`;
   const [widths, setWidths] = React.useState<Record<string, number>>(() => {
     try { return Platform.OS === "web" ? parseColumnWidths(window.localStorage.getItem(localKey)) : {}; }
@@ -91,13 +91,16 @@ export function WidgetSnapshot({ sample, stream, storageKey = `${sample.app_id}:
     return () => clearTimeout(timer);
   }, [localKey, widths]);
   const [search, setSearch] = React.useState("");
+  const [allColumns, setAllColumns] = React.useState(false);
   const [sort, setSort] = React.useState<{ key: string; descending: boolean } | null>(stream === "top_processes" ? { key: "cpu_percent", descending: true } : null);
   const [selected, setSelected] = React.useState<{ key: string; name: string; instance: string | null } | null>(null);
   const fields = isRecord(sample.value) && "fields" in sample.value && isRecord(sample.value.fields) ? sample.value.fields : {};
   const rows = snapshotRows(stream, fields);
   const keys = [...new Set(rows.flatMap(Object.keys))];
-  const columns = [...(preferredColumns[stream] ?? []).filter((key) => keys.includes(key)), ...keys.filter((key) => !preferredColumns[stream]?.includes(key))];
-  const filtered = rows.filter((row) => Object.keys(row).some((key) => cellText(row, key).toLowerCase().includes(search.toLowerCase())));
+  const primary = (preferredColumns[stream] ?? keys.slice(0, 4)).filter((key) => keys.includes(key));
+  const columns = allColumns || !primary.length ? [...primary, ...keys.filter((key) => !primary.includes(key))] : primary;
+  const query = search.toLowerCase();
+  const filtered = query ? rows.filter((row) => Object.keys(row).some((key) => cellText(row, key).toLowerCase().includes(query))) : [...rows];
   if (sort) filtered.sort((a, b) => {
     const first = a[sort.key], second = b[sort.key];
     if (first == null) return second == null ? 0 : 1;
@@ -116,7 +119,7 @@ export function WidgetSnapshot({ sample, stream, storageKey = `${sample.app_id}:
   const tableWidth = columns.reduce((sum, key) => sum + width(key), 0);
   const metadata = Object.fromEntries(Object.entries(fields).filter(([key, value]) => key !== "items" && !Array.isArray(value)));
   return <Box style={{ flex: 1, minHeight: 0, gap: 6 }}>
-    <Box className="flex-row items-center gap-2"><TextInput accessibilityLabel={`Search ${stream}`} placeholder="Filter rows…" value={search} onChangeText={setSearch} className="flex-1 min-w-0 rounded border border-outline-200 dark:border-[#26364A] text-typography-900 dark:text-[#E8EBF0]" style={{ height: 32, paddingHorizontal: 8, fontSize: 12 }} /><Text size="xs" className={muted}>{filtered.length}/{rows.length} rows</Text></Box>
+    <Box className="flex-row items-center gap-2"><TextInput accessibilityLabel={`Search ${stream}`} placeholder="Filter rows…" value={search} onChangeText={setSearch} className="flex-1 min-w-0 rounded border border-outline-200 dark:border-[#26364A] text-typography-900 dark:text-[#E8EBF0]" style={{ height: 32, paddingHorizontal: 8, fontSize: 12 }} /><Text size="xs" className={muted}>{filtered.length}/{rows.length} rows</Text>{primary.length && keys.length > primary.length ? <Action compact label={allColumns ? "Key columns" : "All columns"} onPress={() => setAllColumns(!allColumns)} /> : null}</Box>
     <Text size="xs" className={muted} style={{ fontSize: 11 }}>Updated {new Date(sample.received_at).toLocaleTimeString()} · {sample.instance_id ?? "App"} · Select a row for live details</Text>
     <ScrollView horizontal nestedScrollEnabled style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }}><Box style={{ flex: 1, minWidth: Math.max(320, tableWidth) }}>
       <Box className="flex-row border-b border-outline-200 dark:border-[#26364A]">{columns.map((key) => <SnapshotColumn key={key} name={label(key)} width={width(key)} sortLabel={sort?.key === key ? sort.descending ? " ↓" : " ↑" : ""} onSort={() => setSort({ key, descending: sort?.key === key ? !sort.descending : false })} onResize={(value) => setWidths((previous) => ({ ...previous, [key]: value }))} />)}</Box>
@@ -130,4 +133,4 @@ export function WidgetSnapshot({ sample, stream, storageKey = `${sample.app_id}:
       {detail ? <WidgetDetails value={detail} /> : <Text className={muted}>This item is no longer present in the latest snapshot.</Text>}
     </SupportDialog> : null}
   </Box>;
-}
+});

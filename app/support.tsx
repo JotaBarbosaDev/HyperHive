@@ -9,11 +9,13 @@ import { useSupport } from "@/hooks/useSupport";
 import { useSupportNavigation } from "@/hooks/useSupportNavigation";
 import { useSupportLayout } from "@/hooks/useSupportLayout";
 import { WidgetForm } from "@/components/support/widget-form";
-import { replicateSupportApp, saveSupportApp, supportRequest } from "@/services/support-client";
+import { replicateSupportApp, saveSupportApp, supportRequest, trendWidgets } from "@/services/support-client";
 import type { AppInput, SupportApp, SupportTab, Widget } from "@/types/support";
 import { Action, Failure, Field, ink, muted, State, surface } from "@/components/support/support-ui";
 import { AppDetails, AppForm, CredentialsDialog, SupportDialog, TabForm } from "@/components/support/support-dialogs";
 import { availableWidgetPosition, SupportWidget } from "@/components/support/support-widget";
+import { SupportTimeframeControl } from "@/components/support/support-timeframe";
+import type { SupportTimeframe } from "@/types/support";
 import { defaultWidgetSize } from "@/components/support/widget-format";
 
 export default function SupportScreen() {
@@ -26,8 +28,10 @@ export default function SupportScreen() {
   const [appSearch, setAppSearch] = React.useState("");
   const setSelectedId = (selectedId: string | null) => useSupportNavigation.setState({ selectedId });
   const setTabId = (tabId: string | null) => useSupportNavigation.setState({ tabId });
+  const [expandedWidgetId, setExpandedWidgetId] = React.useState<string | null>(null);
   const [showDetails, setShowDetails] = React.useState(false);
-  const data = useSupport(token, selectedId);
+  const [timeframe, setTimeframe] = React.useState<SupportTimeframe>({ minutes: 1440 });
+  const data = useSupport(token, selectedId, timeframe);
   const [appForm, setAppForm] = React.useState<SupportApp | "new" | null>(null);
   const [tabForm, setTabForm] = React.useState<SupportTab | "new" | null>(null);
   const [credentials, setCredentials] = React.useState<{ id: string; secret: string } | null>(null);
@@ -56,7 +60,7 @@ export default function SupportScreen() {
   React.useEffect(() => {
     if (!selectedId && scopedApps.length && !selectionInitialized.current) { selectionInitialized.current = true; setSelectedId(scopedApps[0].id); setTabId(scopedApps[0].tab_id); }
   }, [selectedId, data.apps, data.hasSnapshot, data.isLoading, tabId]);
-  React.useEffect(() => { setEditing(false); setInteractionBottom(null); setError(null); setAdding(false); setWidgetForm(null); setShowDetails(false); }, [selectedId]);
+  React.useEffect(() => { setEditing(false); setInteractionBottom(null); setError(null); setAdding(false); setWidgetForm(null); setShowDetails(false); setExpandedWidgetId(null); }, [selectedId]);
   React.useEffect(() => { setConfirmationName(""); }, [confirmation, confirmationApp]);
   const choose = (id: string) => { if (dashboard.dirty && id !== selectedId) { setError("Wait for the dashboard to save, or resolve its save error before switching Apps."); return; } selectionInitialized.current = true; setSelectedId(id); setEditing(false); };
   const invoke = async (job: () => Promise<void>) => {
@@ -64,9 +68,15 @@ export default function SupportScreen() {
     try { await job(); } catch (err) { setError(err instanceof Error ? err.message : "Unable to save the change."); }
     finally { setBusy(false); }
   };
-  const updateWidget = (widget: Widget) => {
+  const updateWidget = React.useCallback((widget: Widget) => {
     if (layout) dashboard.change(layout.widgets.map((current) => current.id === widget.id ? widget : current));
-  };
+  }, [layout, dashboard.change]);
+  const expandWidget = React.useCallback((widget: Widget) => setExpandedWidgetId(widget.id), []);
+  const closeWidgetPanel = React.useCallback(() => setExpandedWidgetId(null), []);
+  const editWidget = React.useCallback((widget: Widget) => { setWidgetForm(widget); setAdding(true); }, []);
+  const removeWidget = React.useCallback((widget: Widget) => {
+    if (layout) dashboard.change(layout.widgets.filter((entry) => entry.id !== widget.id));
+  }, [layout, dashboard.change]);
   const saveApp = async (input: AppInput, sourceId?: string) => {
     if (!token) return;
     const result = sourceId
@@ -104,6 +114,7 @@ export default function SupportScreen() {
     <Box className="flex-row flex-wrap items-center justify-between gap-3">
       <Box className="flex-row flex-wrap items-center gap-3"><Heading size="2xl" className={ink}>HH Support</Heading><State value={data.connection} /></Box>
     </Box>
+    <SupportTimeframeControl value={timeframe} onChange={setTimeframe} />
     <Failure message={data.error} /><Failure message={data.liveError} /><Failure message={error} /><Failure message={dashboard.error} />
     {data.isLoading && !data.hasSnapshot ? <ActivityIndicator accessibilityLabel="Loading Apps" /> : null}
     <Box nativeID="support-workspace" accessibilityLabel={scopeName} className="gap-3 min-w-0">
@@ -132,7 +143,7 @@ export default function SupportScreen() {
           {!detail ? <ActivityIndicator accessibilityLabel="Loading App telemetry" /> : !layout?.widgets.length ? <Box className={surface + " gap-3"}><Heading size="md" className={ink}>{detail.streams.length ? "Build your App’s dashboard" : "Waiting for the first sender"}</Heading><Text className={muted}>{detail.streams.length ? "Choose an incoming stream and display it as a value, chart, gauge, progress, text, status, feed or table." : "Add widgets now using incoming stream names, or send samples to discover streams automatically."}</Text></Box> : <ScrollView horizontal nestedScrollEnabled scrollEnabled={interactionBottom === null} contentContainerStyle={{ minWidth: "100%" }}>
             <Box onLayout={(event) => { const measured = event.nativeEvent.layout.width; if (measured > 0) setGridWidth(measured); }} style={{ width: "100%", minWidth: 680, height: (Math.max(1, interactionBottom ?? 0, ...layout.widgets.map((widget) => widget.y + widget.h)) + (editing ? 4 : 0)) * 60 + 8, position: "relative", ...(editing ? { backgroundColor: "rgba(20,125,120,0.04)" } : {}) }}>
               {editing ? Array.from({ length: 13 }, (_, column) => <Box key={column} pointerEvents="none" style={{ position: "absolute", top: 0, bottom: 0, left: column * gridWidth / 12, borderLeftWidth: 1, borderColor: "rgba(20,125,120,0.16)" }} />) : null}
-              {layout.widgets.map((widget) => <SupportWidget key={selectedId + widget.id} widget={widget} stream={detail.streams.find((stream) => stream.name === widget.stream)} page={data.history[widget.stream]} token={token} appId={selectedId!} retentionDays={selected.retention_days} cellWidth={gridWidth / 12} editing={editing && !dashboard.conflict} onChange={updateWidget} onInteraction={setInteractionBottom} onEdit={() => { setWidgetForm(widget); setAdding(true); }} onRemove={() => dashboard.change(layout.widgets.filter((entry) => entry.id !== widget.id))} />)}
+              {layout.widgets.map((widget) => <SupportWidget key={selectedId + widget.id + JSON.stringify(timeframe)} timeframe={timeframe} expanded={expandedWidgetId === widget.id} onExpand={expandWidget} onClosePanel={closeWidgetPanel} widget={widget} stream={detail.streams.find((stream) => stream.name === widget.stream)} page={trendWidgets.includes(widget.kind) ? data.chartHistory[widget.stream] ?? data.history[widget.stream] : data.history[widget.stream]} token={token} appId={selectedId!} retentionDays={selected.retention_days} cellWidth={gridWidth / 12} editing={editing && !dashboard.conflict} onChange={updateWidget} onInteraction={setInteractionBottom} onEdit={editWidget} onRemove={removeWidget} />)}
             </Box>
           </ScrollView>}
         </> : <Box className={surface + " gap-3"}><Heading size="lg" className={ink}>{scopedApps.length ? "Choose an App" : `No Apps in ${scopeName}`}</Heading><Text className={muted}>{scopedApps.length ? "Select an App from HH Support in the navigation menu." : "Register an App in this workspace to start receiving telemetry."}</Text>{!data.tabs.length ? <Action label="Create your first tab" onPress={() => setTabForm("new")} /> : !scopedApps.length ? <Action primary label="Create an App" disabled={dashboard.dirty} onPress={() => setAppForm("new")} /> : null}</Box>}

@@ -7,20 +7,24 @@ import { useSupport } from "../hooks/useSupport";
 import { availableWidgetPosition, movedWidget, sampleText, SupportWidget } from "../components/support/support-widget";
 import { chartGeometry, WidgetChart } from "../components/support/widget-chart";
 import { WidgetFeed, WidgetTable } from "../components/support/widget-feed";
-import { defaultWidgetSize, measurementText, minimumWidgetHeight } from "../components/support/widget-format";
+import { defaultWidgetSize, eventSummary, measurementText, minimumWidgetHeight } from "../components/support/widget-format";
 import { parseColumnWidths, snapshotRows, WidgetSnapshot } from "../components/support/widget-snapshot";
 import SupportScreen from "../app/support";
 import { resetSupportNavigation, selectSupportApp, useSupportNavigation } from "../hooks/useSupportNavigation";
 import { AppForm, TabForm } from "../components/support/support-dialogs";
 import { WidgetForm } from "../components/support/widget-form";
+import { SupportSidePanel } from "../components/support/support-side-panel.web";
 jest.mock("react-native", () => {
   const React = require("react");
-  const View = ({ children, accessibilityLabel, style, testID, onPointerMove, onPointerLeave, onFocus, onBlur, onKeyDown, tabIndex }) => React.createElement("div", { "aria-label": accessibilityLabel, style, "data-testid": testID, onPointerMove, onPointerLeave, onFocus, onBlur, onKeyDown, tabIndex }, children);
+  const View = jest.fn(({ children, accessibilityLabel, style, testID, onPointerMove, onPointerLeave, onFocus, onBlur, onKeyDown, tabIndex }) => React.createElement("div", { "aria-label": accessibilityLabel, style, "data-testid": testID, onPointerMove, onPointerLeave, onFocus, onBlur, onKeyDown, tabIndex }, children));
   const ScrollView = React.forwardRef(({ children }, ref) => { React.useImperativeHandle(ref, () => ({ scrollToEnd: jest.fn() })); return React.createElement("div", null, children); });
   const FlatList = React.forwardRef(({ data, renderItem, ListEmptyComponent, testID, onScroll }, ref) => { React.useImperativeHandle(ref, () => ({ scrollToEnd: jest.fn() })); return React.createElement("div", { "data-testid": testID, onScroll: (event) => onScroll?.({ nativeEvent: { contentOffset: { y: event.currentTarget.scrollTop }, contentSize: { height: event.currentTarget.scrollHeight }, layoutMeasurement: { height: event.currentTarget.clientHeight } } }) }, data.length ? data.map((item, index) => React.createElement(React.Fragment, { key: item.id }, renderItem({ item, index }))) : ListEmptyComponent); });
   return { View, ScrollView, FlatList, Platform: { OS: "web" }, TextInput: React.forwardRef(({ accessibilityLabel, placeholder, value, onChangeText, onSubmitEditing, editable }, ref) => React.createElement("input", { ref, "aria-label": accessibilityLabel, placeholder, value, disabled: editable === false, onChange: (event) => onChangeText(event.target.value), onKeyDown: (event) => { if (event.key === "Enter") onSubmitEditing?.(); } })), Pressable: React.forwardRef(({ children, onPress, onHoverIn, accessibilityLabel, accessibilityRole, accessibilityState, disabled, onKeyDown, tabIndex, nativeID, "aria-controls": controls, "aria-selected": selected, "aria-disabled": ariaDisabled, "aria-expanded": expanded }, ref) => React.createElement("button", { ref, onClick: onPress, onMouseOver: onHoverIn, "aria-label": accessibilityLabel, role: accessibilityRole, "aria-selected": selected ?? accessibilityState?.selected, "aria-disabled": ariaDisabled, "aria-expanded": expanded, disabled, onKeyDown, tabIndex, id: nativeID, "aria-controls": controls }, children)), ActivityIndicator: () => "Loading", useWindowDimensions: jest.fn(() => ({ width: 1400 })), PanResponder: { create: jest.fn((handlers) => ({ panHandlers: handlers })) } };
 });
-jest.mock("react-native-svg", () => ({ __esModule: true, default: ({ children }) => children, Polyline: () => null, Polygon: () => null, Rect: () => null, Circle: () => null, Line: () => null }));
+jest.mock("react-native-svg", () => {
+  const React = require("react");
+  return { __esModule: true, default: ({ children, viewBox }) => React.createElement("svg", { viewBox }, children), Polyline: () => null, Polygon: () => null, Rect: () => null, Circle: ({ cx, cy, r, testID }) => React.createElement("circle", { cx, cy, r, "data-testid": testID }), Line: () => null };
+});
 jest.mock("react-native-web/dist/exports/useWindowDimensions", () => jest.fn(() => ({ width: 1400 })));
 jest.mock("lucide-react-native", () => ({ ChevronDown: () => null }));
 jest.mock("../components/ui/box", () => ({ Box: ({ children, style, testID, nativeID, role, accessibilityRole, accessibilityLabel, "aria-labelledby": labelledBy }) => <div style={style} data-testid={testID} id={nativeID} role={role ?? accessibilityRole} aria-label={accessibilityLabel} aria-labelledby={labelledBy}>{children}</div> }));
@@ -585,9 +589,9 @@ test("severity searches retained history beyond 200 newer info logs, paginates m
   } finally { await act(async () => root.unmount()); }
 });
 describe("Support realtime reconciliation", () => {
-  let root; let latest;
-  function Harness() { latest = useSupport("session", "app"); return null; }
-  beforeEach(() => { jest.useFakeTimers(); global.IS_REACT_ACT_ENVIRONMENT = true; root = createRoot(document.createElement("div")); });
+  let root; let latest; let renders;
+  function Harness() { renders++; latest = useSupport("session", "app"); return null; }
+  beforeEach(() => { renders = 0; jest.useFakeTimers(); global.IS_REACT_ACT_ENVIRONMENT = true; root = createRoot(document.createElement("div")); });
   afterEach(async () => { await act(async () => root.unmount()); jest.useRealTimers(); });
   const mount = async () => { await act(async () => root.render(React.createElement(Harness))); };
   test("loads REST before ready, reconciles buffered live/history IDs, never polls and clears on reconnect", async () => {
@@ -601,6 +605,74 @@ describe("Support realtime reconciliation", () => {
     await act(async () => jest.advanceTimersByTime(1000)); expect(sockets).toHaveLength(2);
     await act(async () => sockets[1].sendFrame({ type: "ready" }));
     expect(latest.history.cpu.samples.map((entry) => entry.id)).toEqual([1]);
+  });
+  test("batches 3000 live samples across 30 streams and preserves unrelated histories", async () => {
+    await mount(); await act(async () => sockets[0].sendFrame({ type: "ready" }));
+    const untouched = latest.history.cpu;
+    const previous = latest.history;
+    const previousRenders = renders;
+    const requests = fetchMock.mock.calls.length;
+    await act(async () => {
+      for (let batch = 0; batch < 300; batch++) sockets[0].sendFrame({ type: "samples", app_id: "app", samples: Array.from({ length: 10 }, (_, i) => sample(10 + batch * 10 + i, `stream-${batch % 30}`)) });
+    });
+    expect(latest.history).toBe(previous);
+    expect(renders).toBe(previousRenders);
+    await act(async () => jest.advanceTimersByTime(100));
+    expect(renders - previousRenders).toBe(1);
+    expect(Object.keys(latest.history)).toHaveLength(31);
+    expect(latest.history.cpu).toBe(untouched);
+    expect(Object.values(latest.history).reduce((sum, page) => sum + page.samples.length, 0)).toBe(3001);
+    expect(fetchMock).toHaveBeenCalledTimes(requests);
+    const page = latest.history["stream-0"];
+    expect(page.samples).toHaveLength(100);
+    expect(page.samples.map((entry) => entry.id)).toEqual(page.samples.map((entry) => entry.id).sort((a, b) => a - b));
+  });
+  test("bounds burst buffers and discards queued samples on disconnect", async () => {
+    await mount(); await act(async () => sockets[0].sendFrame({ type: "ready" }));
+    await act(async () => {
+      for (let batch = 0; batch < 3; batch++) sockets[0].sendFrame({ type: "samples", app_id: "app", samples: Array.from({ length: 1000 }, (_, i) => sample(10 + batch * 1000 + i)) });
+      jest.advanceTimersByTime(100);
+    });
+    expect(latest.history.cpu.samples).toHaveLength(1000);
+    expect(latest.history.cpu.samples[0].id).toBe(2010);
+    expect(latest.history.cpu.next_before).toBe(2010);
+    await act(async () => {
+      for (let batch = 0; batch < 3; batch++) sockets[0].sendFrame({ type: "samples", app_id: "app", samples: Array.from({ length: 1000 }, (_, i) => sample(10 + batch * 1000 + i, "new-stream")) });
+      jest.advanceTimersByTime(100);
+    });
+    expect(latest.history["new-stream"].samples).toHaveLength(1000);
+    expect(latest.history["new-stream"].next_before).toBe(2010);
+    await act(async () => { sockets[0].sendFrame({ type: "samples", app_id: "app", samples: [sample(9999)] }); sockets[0].close(); jest.advanceTimersByTime(100); });
+    expect(latest.history.cpu.samples.at(-1).id).toBe(3009);
+  });
+  test("keeps receiving bursts during REST reconciliation without reconnecting or losing live samples", async () => {
+    await mount(); await act(async () => sockets[0].sendFrame({ type: "ready" }));
+    const originalFetch = fetchMock.getMockImplementation();
+    let finish;
+    fetchMock.mockImplementation((url, options) => url.includes("/samples?") ? new Promise((resolve) => { finish = () => resolve(response({ samples: [sample(1)], next_before: null })); }) : originalFetch(url, options));
+    await act(async () => { latest.refresh(); jest.advanceTimersByTime(100); });
+    await act(async () => {
+      for (let id = 2; id < 302; id++) sockets[0].sendFrame({ type: "samples", app_id: "app", samples: [sample(id)] });
+      jest.advanceTimersByTime(100);
+    });
+    expect(latest.connection).toBe("live");
+    expect(latest.history.cpu.samples).toHaveLength(1);
+    await act(async () => finish());
+    expect(latest.history.cpu.samples).toHaveLength(301);
+    expect(latest.history.cpu.samples.at(-1).id).toBe(301);
+    expect(sockets).toHaveLength(1);
+  });
+  test("live updates preserve unrelated chart pages and timeframe filtering", async () => {
+    const timeframe = { since: "2026-10-26T11:00:00Z", until: "2026-10-26T13:00:00Z" };
+    const originalFetch = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation((url, options) => url.endsWith("/apps/app") ? response({ app, streams: [stream, { ...stream, name: "memory" }], layout: { revision: 0, widgets: [{ stream: "cpu", kind: "line" }, { stream: "memory", kind: "line" }] } }) : originalFetch(url, options));
+    function Charts() { latest = useSupport("session", "app", timeframe); return null; }
+    await act(async () => root.render(<Charts />));
+    const untouched = latest.chartHistory.memory;
+    await act(async () => { sockets[0].sendFrame({ type: "samples", app_id: "app", samples: [sample(2), { ...sample(3), received_at: "2026-10-26T14:00:00Z" }] }); jest.advanceTimersByTime(100); });
+    expect(latest.chartHistory.memory).toBe(untouched);
+    expect(latest.chartHistory.cpu.samples.map((entry) => entry.id)).toEqual([1, 2]);
+    expect(latest.history.cpu.samples.map((entry) => entry.id)).toEqual([1, 2]);
   });
   test("saved dashboard remains usable when live tickets fail", async () => {
     fetchMock.mockImplementation(async (url) => {
@@ -632,7 +704,7 @@ describe("Support realtime reconciliation", () => {
   });
   test("accepts discovered stream names matching object prototype properties", async () => {
     await mount(); await act(async () => sockets[0].sendFrame({ type: "ready" }));
-    await act(async () => sockets[0].sendFrame({ type: "samples", app_id: "app", samples: [sample(2, "constructor"), sample(3, "__proto__")] }));
+    await act(async () => { sockets[0].sendFrame({ type: "samples", app_id: "app", samples: [sample(2, "constructor"), sample(3, "__proto__")] }); jest.advanceTimersByTime(100); });
     expect(latest.history.constructor.samples[0].id).toBe(2);
     expect(latest.history.__proto__.samples[0].id).toBe(3);
     expect(latest.connection).toBe("live");
@@ -729,6 +801,32 @@ describe("Widget behavior by data type", () => {
     await act(async () => chart.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Escape" })));
     expect(container.textContent).not.toContain("sample 1");
   });
+  test("charts map to actual plot dimensions with readable axes and a fixed-radius value marker", async () => {
+    const samples = [fresh(1, -12.3456789), fresh(2, 45.5)];
+    const geometry = chartGeometry(samples, "line", 900, 80);
+    expect(geometry.points).toEqual([{ x: 10, y: 70 }, { x: 890, y: 10 }]);
+    await render(<WidgetChart samples={samples} kind="line" stream="cpu" unit="%" />);
+    const chart = container.querySelector('[data-testid="chart-cpu-line"]');
+    const viewProps = require("react-native").View.mock.calls.findLast(([props]) => props.testID === "chart-cpu-line")[0];
+    await act(async () => viewProps.onLayout({ nativeEvent: { layout: { width: 900, height: 80 } } }));
+    await act(async () => chart.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true })));
+    expect(chart.querySelector("svg").getAttribute("viewBox")).toBe("0 0 900 80");
+    const marker = chart.querySelector('[data-testid="chart-marker"]');
+    expect([marker.getAttribute("cx"), marker.getAttribute("cy"), marker.getAttribute("r")]).toEqual(["10", "70", "4"]);
+    expect(chart.querySelector('[data-testid="chart-value-tooltip"]').textContent).toContain("-12.3456789 %");
+    expect(container.querySelector('[data-testid="chart-y-axis"]').textContent).toContain("45.5 %");
+    expect(container.querySelector('[data-testid="chart-x-axis"]')).not.toBeNull();
+  });
+  test("expanded sparklines expose full axes, summary statistics and sample details", async () => {
+    await render(<WidgetChart detailed samples={[fresh(1, -5), fresh(2, 10)]} kind="sparkline" stream="cpu" unit="%" />);
+    expect(container.textContent).toContain("Minimum-5 %"); expect(container.textContent).toContain("Maximum10 %");
+    expect(container.textContent).toContain("Value (%)"); expect(container.textContent).toContain("Receipt time");
+    expect(container.querySelector('[data-testid="chart-sample-details"]').textContent).toContain("worker-a");
+    expect(container.querySelector('[data-testid="chart-y-axis"]')).not.toBeNull();
+    const chart = container.querySelector('[data-testid="chart-cpu-sparkline"]');
+    await act(async () => chart.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true })));
+    expect(container.querySelector('[data-testid="chart-sample-details"]').textContent).toContain("Selected sampleValue-5 %");
+  });
   test("charts scale byte labels while inspection retains original units and precision", async () => {
     await render(<WidgetChart samples={[fresh(1, 1073741824), fresh(2, 2147483648)]} kind="line" stream="disk" unit="bytes" />);
     expect(container.textContent).toContain("2 GiB");
@@ -761,14 +859,13 @@ describe("Widget behavior by data type", () => {
     await click("Widget controls"); expect(container.textContent).toContain("Shorter");
     await click("Copy latest value"); expect(require("expo-clipboard").setStringAsync).toHaveBeenCalledWith("2.4.1");
   });
-  test("log lines are chronological, pause freezes the view while live samples arrive, resume catches up", async () => {
+  test("log lines stay chronological and update live without pause controls", async () => {
     const first = fresh(1, { severity: "info", message: "first-line" });
     const second = fresh(2, { severity: "error", message: "second-line" });
     await render(<WidgetFeed samples={[first]} kind="logs" retentionMs={86400000} />);
-    await click("Pause");
     await render(<WidgetFeed samples={[first, second]} kind="logs" retentionMs={86400000} />);
-    expect(container.textContent).toContain("first-line"); expect(container.textContent).not.toContain("second-line");
-    await click("Resume");
+    expect(container.textContent).toContain("first-line");
+    expect([...container.querySelectorAll("button")].some((button) => /^(Pause|Resume)$/.test(button.textContent))).toBe(false);
     expect(container.textContent).toContain("second-line");
     expect(container.textContent.indexOf("first-line")).toBeLessThan(container.textContent.indexOf("second-line"));
     await search("Search loaded logs", "second-line");
@@ -791,23 +888,67 @@ describe("Widget behavior by data type", () => {
     expect(container.textContent).toContain("Follow live");
     await click("Follow live"); expect(container.textContent).not.toContain("Follow live");
   });
-  test("paused entries still expire at the retention boundary", async () => {
-    jest.useFakeTimers();
-    try {
-      const entry = fresh(1, { severity: "info", message: "expired-line" });
-      await render(<WidgetFeed samples={[entry]} kind="logs" retentionMs={10000} />);
-      await click("Pause");
-      await render(<WidgetFeed samples={[]} kind="logs" retentionMs={10000} />);
-      expect(container.textContent).toContain("expired-line");
-      await act(async () => jest.advanceTimersByTime(1001));
-      expect(container.textContent).not.toContain("expired-line");
-    } finally { jest.useRealTimers(); }
+  test.each(["logs", "events"])("%s feeds have no pause controls and exclude expired entries", async (kind) => {
+    const value = kind === "logs" ? { severity: "info", message: "expired-line" } : { name: "expired-line", fields: {} };
+    const expired = { ...fresh(1, value), received_at: new Date(Date.now() - 20000).toISOString() };
+    await render(<WidgetFeed samples={[expired]} kind={kind} retentionMs={10000} />);
+    expect(container.textContent).not.toContain("expired-line");
+    expect([...container.querySelectorAll("button")].some((button) => /^(Pause|Resume)$/.test(button.textContent))).toBe(false);
   });
   test("event feeds expand structured fields without turning each event into a large card", async () => {
     await render(<WidgetFeed samples={[fresh(1, { name: "release", fields: { version: "2.4.1", nested: { passed: true } } })]} kind="events" retentionMs={86400000} />);
     expect(container.textContent).toContain("release"); expect(container.textContent).not.toContain("Nested");
     await click("Expand event 1"); expect(container.textContent).toContain("Nested"); expect(container.textContent).toContain("Passedtrue");
     await click("Collapse event 1"); expect(container.textContent).not.toContain("Nested");
+  });
+  test.each([
+    [{ name: "Network link changed", fields: { interface: "eth0", previous: "up", state: "down" } }, "eth0: up → down"],
+    [{ name: "Network link changed", fields: { interface: "veth0", previous: null, state: "up" } }, "veth0: not present → up"],
+    [{ name: "Network link changed", fields: { interface: "veth0", previous: "up", state: null } }, "veth0: up → not present"],
+    [{ name: "Mounts changed", fields: { added: [["/dev/sdb1", "/data", "ext4"]], removed: [["/dev/sdc1", "/backup", "xfs"]] } }, "Mounted /data (/dev/sdb1, ext4) · Unmounted /backup (/dev/sdc1, xfs)"],
+    [{ name: "Mounts changed", fields: {} }, "Filesystem mounts changed"],
+    [{ name: "Network link changed", fields: {} }, "Unknown interface: not reported → not reported"],
+    [{ name: "Machine rebooted", fields: { boot_id: "boot-123" } }, "New boot detected · boot-123. Reboot cause was not reported."],
+    [{ name: "custom", fields: { result: false, count: 0, nested: {} } }, "result: false · count: 0"],
+    ["plain event", "plain event"],
+  ])("event summaries explain reported changes without guessing missing data", (value, expected) => {
+    expect(eventSummary(value)).toBe(expected);
+  });
+  test("machine event details label mount tuples, include provenance, and copy the original event", async () => {
+    const event = { ...fresh(7, { name: "Mounts changed", fields: { added: [["/dev/sdb1", "/data", "ext4"]], removed: [] } }), stream: "machine_events", instance_id: "host-a" };
+    await render(<WidgetFeed samples={[event]} kind="events" retentionMs={86400000} />);
+    expect(container.textContent).toContain("Mounted /data (/dev/sdb1, ext4)");
+    await click("Expand event 7");
+    expect(container.textContent).toContain("Device/dev/sdb1");
+    expect(container.textContent).toContain("Mount point/data");
+    expect(container.textContent).toContain("Source time");
+    expect(container.textContent).toContain("Senderhost-a");
+    expect(container.textContent).toContain("Streammachine_events");
+    await click("Copy event JSON");
+    expect(require("expo-clipboard").setStringAsync).toHaveBeenLastCalledWith(JSON.stringify(event, null, 2));
+    require("expo-clipboard").setStringAsync.mockRejectedValueOnce(new Error("blocked"));
+    await click("Event JSON copied");
+    expect(container.textContent).toContain("Unable to copy");
+  });
+  test("event explorer retains the selected event during incoming updates and closes details when filtered out", async () => {
+    const event = fresh(8, { name: "Network link changed", fields: { interface: "eth0", previous: "up", state: "down" } });
+    await render(<WidgetFeed samples={[event]} kind="events" detailed retentionMs={86400000} />);
+    await click("Inspect event 8");
+    expect(container.querySelector('[data-testid="event-entry-details"]')).not.toBeNull();
+    await render(<WidgetFeed samples={[event, fresh(9, { name: "Machine rebooted", fields: {} })]} kind="events" detailed retentionMs={86400000} />);
+    expect(container.querySelector('[data-testid="event-entry-details"]').textContent).toContain("Interfaceeth0");
+    await search("Search loaded events", "Machine rebooted");
+    expect(container.querySelector('[data-testid="event-entry-details"]')).toBeNull();
+  });
+  test("machine event widgets open the existing side panel with event inspection", async () => {
+    const props = { widget: { id: "machine-events", stream: "machine_events", kind: "events", x: 0, y: 0, w: 6, h: 4 }, stream: { name: "machine_events", label: "Machine Events", type: "event" }, page: { samples: [fresh(1, { name: "Machine rebooted", fields: { boot_id: "abc" } })], next_before: null }, token: "session", appId: "app", retentionDays: 7, cellWidth: 60, editing: false, onChange: jest.fn(), onRemove: jest.fn(), onExpand: jest.fn(), onClosePanel: jest.fn() };
+    await render(<SupportWidget {...props} />);
+    await click("Open in side panel"); expect(props.onExpand).toHaveBeenCalledWith(props.widget);
+    await render(<SupportWidget {...props} expanded />);
+    const panel = document.querySelector('[data-testid="support-side-panel"]');
+    expect(panel.textContent).toContain("Event explorer");
+    await act(async () => panel.querySelector('[aria-label="Inspect event 1"]').click());
+    expect(panel.querySelector('[data-testid="event-entry-details"]').textContent).toContain("Boot idabc");
   });
   test("machine information and snapshot fields display readable data while preserving text fallback", async () => {
     const props = { widget: { id: "info", stream: "machine_info", kind: "text", x: 0, y: 0, w: 3, h: 2 }, stream: { name: "machine_info", label: "Machine information", type: "text" }, page: { samples: [fresh(1, JSON.stringify({ hostname: "host", ram_bytes: 1073741824 }))], next_before: null }, token: "session", appId: "app", retentionDays: 7, cellWidth: 60, editing: false, onChange: jest.fn(), onRemove: jest.fn() };
@@ -927,5 +1068,187 @@ describe("Widget behavior by data type", () => {
     const props = { widget: { id: "progress", stream: "cpu", kind: "progress", x: 0, y: 0, w: 4, h: 2, min: 0, max: 100 }, stream, page: { samples: [fresh(1, value)], next_before: null }, token: "session", appId: "app", retentionDays: 7, cellWidth: 60, editing: false, onChange: jest.fn(), onRemove: jest.fn() };
     await render(<SupportWidget {...props} />);
     expect(container.textContent).toContain(String(value)); expect(container.textContent).toContain(label); expect(container.textContent).not.toContain("NaN");
+  });
+});
+
+describe("Page timeframe and dense chart data", () => {
+  const { timeframeBounds, inTimeframe, SupportTimeframeControl } = require("../components/support/support-timeframe");
+  const { chartSamples } = require("../components/support/widget-chart");
+  test("custom date pickers apply a valid local range and cancel discards edits", async () => {
+    global.IS_REACT_ACT_ENVIRONMENT = true;
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    const onChange = jest.fn();
+    const click = async (label) => act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === label).click());
+    const input = async (label, value) => act(async () => {
+      const field = container.querySelector(`[aria-label="${label}"]`);
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(field, value);
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    const value = { since: new Date("2026-10-26T09:30").toISOString(), until: new Date("2026-10-27T10:45").toISOString() };
+    try {
+      await act(async () => root.render(<SupportTimeframeControl value={value} onChange={onChange} />));
+      expect(container.querySelector("input")).toBeNull();
+      await click("Custom timeframe");
+      expect(container.querySelectorAll('input[type="datetime-local"]')).toHaveLength(2);
+      expect(container.querySelector('[aria-label="Start time"]').value).toBe("2026-10-26T09:30");
+      expect(container.querySelector('[aria-label="End time"]').value).toBe("2026-10-27T10:45");
+      await input("Start time", "2026-10-28T09:30");
+      await click("Apply timeframe");
+      expect(container.textContent).toContain("end after start");
+      expect(onChange).not.toHaveBeenCalled();
+      await input("Start time", "");
+      await click("Apply timeframe");
+      expect(onChange).not.toHaveBeenCalled();
+      await input("Start time", "2026-10-25T08:00");
+      await click("Cancel");
+      expect(container.querySelector("input")).toBeNull();
+      expect(onChange).not.toHaveBeenCalled();
+      await click("Custom timeframe");
+      expect(container.querySelector('[aria-label="Start time"]').value).toBe("2026-10-26T09:30");
+      await input("Start time", "2026-10-25T08:00");
+      await click("Apply timeframe");
+      expect(onChange).toHaveBeenCalledWith({ since: new Date("2026-10-25T08:00").toISOString(), until: value.until });
+      expect(container.querySelector("input")).toBeNull();
+    } finally { await act(async () => root.unmount()); }
+  });
+  test("presets roll and custom receipt bounds include endpoints", () => {
+    const now = Date.parse("2026-10-27T12:00:00Z");
+    expect(timeframeBounds({ minutes: 30 }, now).since).toBe("2026-10-27T11:30:00.000Z");
+    const range = { since: "2026-10-20T12:00:00Z", until: "2026-10-27T12:00:00Z" };
+    expect(inTimeframe(range.since, range, now)).toBe(true);
+    expect(inTimeframe(range.until, range, now)).toBe(true);
+    expect(inTimeframe("2026-10-27T12:00:01Z", range, now)).toBe(false);
+    expect(inTimeframe("2026-10-20T11:59:59Z", range, now)).toBe(false);
+    expect(inTimeframe("invalid", range, now)).toBe(false);
+  });
+  test("dense charts retain extrema and endpoints in chronological order", () => {
+    const samples = Array.from({ length: 1000 }, (_, id) => ({ id, value: id === 438 ? 9999 : id === 439 ? -999 : 5, received_at: new Date(1700000000000 + id * 1000).toISOString() }));
+    const reduced = chartSamples(samples);
+    expect(reduced.length).toBeLessThanOrEqual(122);
+    expect(reduced[0]).toBe(samples[0]); expect(reduced.at(-1)).toBe(samples.at(-1));
+    expect(reduced).toContain(samples[438]); expect(reduced).toContain(samples[439]);
+    expect(reduced.map((sample) => sample.id)).toEqual(reduced.map((sample) => sample.id).sort((a, b) => a - b));
+  });
+});
+
+test("history sends custom bounds, severity and chart bucket size to the API", async () => {
+  await getSupportHistory("session", "app", "cpu", undefined, undefined, { since: "2026-10-20T12:00:00Z", until: "2026-10-27T12:00:00Z", buckets: 60 });
+  const query = new URL(fetchMock.mock.calls[0][0]).searchParams;
+  expect(query.get("since")).toBe("2026-10-20T12:00:00Z");
+  expect(query.get("until")).toBe("2026-10-27T12:00:00Z");
+  expect(query.get("buckets")).toBe("60"); expect(query.get("limit")).toBe("1000");
+});
+test("timeframe reconciliation keeps raw samples separate from chart summaries and excludes later live data", async () => {
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const timeframe = { since: "2026-10-26T11:00:00Z", until: "2026-10-26T13:00:00Z" };
+  const root = createRoot(document.createElement("div")); let latest;
+  const originalFetch = fetchMock.getMockImplementation();
+  fetchMock.mockImplementation(async (url, options) => url.endsWith("/apps/app") ? response({ app, streams: [stream], layout: { revision: 0, widgets: [{ id: "chart", stream: "cpu", kind: "line" }] } }) : url.includes("buckets=") ? response({ samples: [sample(1), sample(3)], next_before: null }) : url.includes("/samples?") ? response({ samples: [sample(1), sample(2), sample(3)], next_before: null }) : originalFetch(url, options));
+  function Harness() { latest = useSupport("session", "app", timeframe); return null; }
+  try {
+    await act(async () => root.render(<Harness />));
+    expect(latest.history.cpu.samples.map((s) => s.id)).toEqual([1, 2, 3]);
+    expect(latest.chartHistory.cpu.samples.map((s) => s.id)).toEqual([1, 3]);
+    await act(async () => sockets[0].sendFrame({ type: "samples", app_id: "app", samples: [{ ...sample(4), received_at: "2026-10-26T14:00:00Z" }] }));
+    expect(latest.history.cpu.samples.map((s) => s.id)).toEqual([1, 2, 3]);
+    expect(latest.chartHistory.cpu.samples.map((s) => s.id)).toEqual([1, 3]);
+  } finally { await act(async () => root.unmount()); }
+});
+
+
+test("snapshot widgets avoid formatting large hidden details and skip unchanged renders", async () => {
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const container = document.createElement("div"); const root = createRoot(container);
+  const format = jest.fn(() => ({ name: "services", fields: { items: [] } }));
+  const value = { name: "services", fields: { items: Array.from({ length: 300 }, (_, id) => ({ unit: `service-${id}`, active_state: "active" })) }, toJSON: format };
+  const props = { widget: { id: "large", stream: "services", kind: "events", x: 0, y: 0, w: 6, h: 6 }, stream: { name: "services", type: "event" }, page: { samples: [{ ...sample(1, "services"), received_at: new Date().toISOString(), value }], next_before: null }, token: "session", appId: "app", retentionDays: 7, cellWidth: 60, editing: false, onChange: jest.fn(), onRemove: jest.fn() };
+  const fields = value.fields;
+  const readFields = jest.fn(() => fields);
+  Object.defineProperty(value, "fields", { get: readFields });
+  const render = () => <SupportWidget {...props} />;
+  try {
+    await act(async () => root.render(render()));
+    expect(container.textContent).toContain("300/300 rows");
+    expect(format).not.toHaveBeenCalled();
+    const reads = readFields.mock.calls.length;
+    await act(async () => root.render(render()));
+    expect(readFields).toHaveBeenCalledTimes(reads);
+    await act(async () => container.querySelector('[aria-label="Widget controls"]').click());
+    expect(format).toHaveBeenCalledTimes(1);
+  } finally { await act(async () => root.unmount()); }
+});
+
+
+describe("Support side panel", () => {
+  let root; let container;
+  const click = async (scope, label) => { await act(async () => [...scope.querySelectorAll("button")].find((button) => button.textContent === label || button.getAttribute("aria-label") === label).click()); };
+  const entry = (id, message) => ({ ...sample(id), stream: "logs", instance_id: "worker-a", timestamp: "2026-10-27T10:00:00Z", received_at: new Date().toISOString(), value: { severity: "error", message } });
+  const props = { widget: { id: "logs-side", stream: "logs", kind: "logs", x: 0, y: 0, w: 4, h: 5 }, stream: { name: "logs", type: "log", label: "Application logs" }, token: "session", appId: "app", retentionDays: 7, cellWidth: 60, editing: false, onChange: jest.fn(), onRemove: jest.fn() };
+  function Explorer({ samples, kind = "logs" }) {
+    const [expanded, setExpanded] = React.useState(false);
+    return <SupportWidget {...props} widget={{ ...props.widget, kind }} page={{ samples, next_before: null }} expanded={expanded} onExpand={() => setExpanded(true)} onClosePanel={() => setExpanded(false)} />;
+  }
+  beforeEach(() => { global.IS_REACT_ACT_ENVIRONMENT = true; container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container); props.onChange.mockClear(); });
+  afterEach(async () => { await act(async () => root.unmount()); container.remove(); });
+  test("opens full-height logs, inspects and copies receipt details, follows updates and closes without saving layout", async () => {
+    const first = entry(1, "Full multiline message\nwith receipt context");
+    await act(async () => root.render(<Explorer samples={[first]} />));
+    const trigger = container.querySelector('[aria-label="Open in side panel"]'); trigger.focus();
+    await click(container, "Open in side panel");
+    const panel = document.querySelector('[data-testid="support-side-panel"]');
+    expect(panel.parentElement).toBe(document.body); expect(panel.style.top).toBe("0px"); expect(panel.style.bottom).toBe("0px");
+    expect(document.activeElement.getAttribute("aria-label")).toBe("Close side panel");
+    expect(container.querySelector('[data-testid="feed-logs"]')).not.toBeNull();
+    await click(panel, "Inspect log 1");
+    const details = panel.querySelector('[data-testid="log-entry-details"]');
+    for (const text of [first.value.message, "error", "worker-a", first.timestamp, first.received_at, "logs"]) expect(details.textContent).toContain(text);
+    await click(panel, "Copy message"); expect(require("expo-clipboard").setStringAsync).toHaveBeenLastCalledWith(first.value.message);
+    await click(panel, "Copy JSON"); expect(JSON.parse(require("expo-clipboard").setStringAsync.mock.calls.at(-1)[0])).toEqual(first);
+    await act(async () => root.render(<Explorer samples={[first, entry(2, "new incoming line")]} />));
+    expect(panel.textContent).toContain("new incoming line");
+    expect([...panel.querySelectorAll("button")].some((button) => /^(Pause|Resume)$/.test(button.textContent))).toBe(false);
+    await click(panel, "Close side panel");
+    expect(document.querySelector('[data-testid="support-side-panel"]')).toBeNull(); expect(document.activeElement).toBe(trigger);
+    expect(container.querySelector('[data-testid="feed-logs"]')).not.toBeNull(); expect(props.onChange).not.toHaveBeenCalled();
+  });
+  test("selected entry disappears when removed from the retained feed and reports clipboard failure", async () => {
+    const first = entry(1, "expired receipt");
+    await act(async () => root.render(<WidgetFeed detailed samples={[first]} kind="logs" retentionMs={86400000} />));
+    await click(container, "Inspect log 1");
+    require("expo-clipboard").setStringAsync.mockRejectedValueOnce(new Error("blocked"));
+    await click(container, "Copy JSON"); expect(container.textContent).toContain("Unable to copy");
+    await act(async () => root.render(<WidgetFeed detailed samples={[]} kind="logs" retentionMs={86400000} />));
+    expect(container.querySelector('[data-testid="log-entry-details"]')).toBeNull();
+  });
+  test("charts share the side panel and retain keyboard value inspection", async () => {
+    await act(async () => root.render(<Explorer samples={[{ ...entry(1, ""), value: 12.345 }]} kind="line" />));
+    await click(container, "Open in side panel");
+    const panel = document.querySelector('[data-testid="support-side-panel"]');
+    const chart = panel.querySelector('[data-testid="chart-logs-line"]');
+    await act(async () => chart.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true })));
+    expect(panel.textContent).toContain("12.345"); expect(panel.textContent).toContain("worker-a · sample 1");
+    await act(async () => chart.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })));
+    expect(document.querySelector('[data-testid="support-side-panel"]')).not.toBeNull();
+    await act(async () => panel.querySelector("header button").dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    expect(document.querySelector('[data-testid="support-side-panel"]')).toBeNull();
+  });
+  test("resizes with keyboard and pointer, stops cancelled drags and clamps to the viewport", async () => {
+    await act(async () => root.render(<SupportSidePanel title="Logs" subtitle="Explorer" onClose={() => {}}>Content</SupportSidePanel>));
+    const panel = document.querySelector('[data-testid="support-side-panel"]');
+    const handle = panel.querySelector('[role="separator"]');
+    const key = async (key) => { await act(async () => handle.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }))); };
+    await key("Home"); expect(panel.style.width).toBe("360px");
+    await key("ArrowLeft"); expect(panel.style.width).toBe("392px");
+    await key("ArrowRight"); expect(panel.style.width).toBe("360px");
+    handle.setPointerCapture = jest.fn();
+    await act(async () => { handle.dispatchEvent(new MouseEvent("pointerdown", { clientX: 600, bubbles: true })); handle.dispatchEvent(new MouseEvent("pointermove", { clientX: 400, bubbles: true })); });
+    expect(panel.style.width).toBe("560px");
+    await act(async () => { handle.dispatchEvent(new Event("pointercancel", { bubbles: true })); handle.dispatchEvent(new MouseEvent("pointermove", { clientX: 200, bubbles: true })); });
+    expect(panel.style.width).toBe("560px");
+    await key("End"); expect(panel.style.width).toBe(`${window.innerWidth}px`);
+    const previous = window.innerWidth;
+    try { Object.defineProperty(window, "innerWidth", { value: 320, configurable: true }); await act(async () => window.dispatchEvent(new Event("resize"))); expect(panel.style.width).toBe("320px"); }
+    finally { Object.defineProperty(window, "innerWidth", { value: previous, configurable: true }); }
   });
 });

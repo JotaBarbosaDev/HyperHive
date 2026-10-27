@@ -29,6 +29,15 @@ export function sampleText(value: Sample["value"]): string {
   return value.name + (Object.keys(value.fields).length ? " · " + Object.entries(value.fields).map(([key, field]) => key + ": " + (typeof field === "object" ? JSON.stringify(field) : String(field))).join(" · ") : "");
 }
 
+export function eventSummary(value: Sample["value"]): string {
+  if (typeof value !== "object" || !("name" in value)) return sampleText(value);
+  const fields = value.fields;
+  if (value.name === "Network link changed") return `${fields.interface ?? "Unknown interface"}: ${(fields.previous === null ? "not present" : fields.previous ?? "not reported")} → ${(fields.state === null ? "not present" : fields.state ?? "not reported")}`;
+  if (value.name === "Mounts changed") return ["added", "removed"].flatMap((key) => Array.isArray(fields[key]) ? fields[key].map((mount) => `${key === "added" ? "Mounted" : "Unmounted"} ${Array.isArray(mount) ? `${mount[1]} (${mount[0]}, ${mount[2]})` : String(mount)}`) : []).join(" · ") || "Filesystem mounts changed";
+  if (value.name === "Machine rebooted") return `New boot detected${typeof fields.boot_id === "string" ? " · " + fields.boot_id : ""}. Reboot cause was not reported.`;
+  return Object.entries(fields).filter(([, field]) => field != null && typeof field !== "object").map(([key, field]) => `${key.replace(/_/g, " ")}: ${String(field)}`).join(" · ");
+}
+
 export function minimumWidgetHeight(kind: WidgetKind): number {
   if (["value", "text", "boolean"].includes(kind)) return 1;
   return ["sparkline", "progress"].includes(kind) ? 2 : 3;

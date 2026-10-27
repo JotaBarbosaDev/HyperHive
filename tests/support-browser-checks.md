@@ -76,3 +76,29 @@ HH Support is a top-level sidebar item; Logs opens system logs directly. Expand 
 The page has no tab strip or App switcher. The plus beside HH Support in the sidebar or page header opens workspace management. Create a tab or edit an existing one; only empty tabs expose deletion. The API still rejects deletion when populated. Register App remains in Dashboard actions and the empty-workspace state. Check that unsaved dashboard layouts prevent App/workspace and sidebar route changes until saved/discarded. Status uses the existing Support connection; outside this page the cached tree remains available with unavailable status.
 
 Sidebar hierarchy validation: 58 Support and 11 sidebar tests pass, web export passes, and TypeScript reports only seven existing shared-heading errors. Local browser checks verified both branches with three Apps each, App/dashboard selection, phone overlay dismissal, nonempty deletion omission, and dark/light status/tag rendering.
+
+## Page timeframe and dense widgets — 2026-10-27
+
+The header applies 30 minutes, 1 day, 7 days or an inclusive custom local interval to every widget by receipt time; health/connectivity badges remain current. Rolling ranges reconcile once per minute. Charts request a separate 60-bucket min/max summary with endpoints; raw table/metric/feed data stays separate. Key columns appear initially in machine snapshot tables; All columns reveals extras. Event details use a dialog to keep the feed compact.
+
+Local checks: 105 Support tests and web export pass; 37 Support backend tests pass. Tests cover receipt boundaries, live samples outside a fixed range, separate raw/chart histories, preserved spikes/endpoints, and invalid bucket/cursor combinations. The browser verified seven-day selection, invalid custom-range feedback and applying a custom interval at localhost:8081/support. Existing seven shared-heading TypeScript errors remain; no Support diagnostics. The running preview's backend was not rebuilt/redeployed for this check, so its handling of new query parameters is covered by local backend tests rather than the browser. Native devices and a full responsive/theme sweep were not checked.
+
+## Widget side inspector — 2026-10-27
+
+Log and chart headers expose an Open in side panel arrow. One full-height right-side explorer opens at a time; the dashboard tile stays visible. Drag the left edge horizontally; keyboard users can use Left/Right (32px), Home (minimum 360px, bounded by viewport) or End (viewport width). Escape closes with focus return, while a chart first consumes Escape to clear value inspection. A narrow viewport bounds the inspector to screen width. Native uses a full-screen modal fallback.
+
+Logs start wrapped and retain search, pause/resume, following, existing shared severity filtering and history paging. Select an entry to inspect its full message, severity, sender, source/receipt timestamps, stream and App ID; copy message or JSON. Entries removed from the displayed feed no longer show details. Opening/resizing does not save layout geometry; severity changes keep existing shared-widget persistence.
+
+Validation: 114 Support tests and web export passed. Browser checked desktop log details, actual pointer resizing from 800px to 620px, chart expansion, and a 375×812 viewport with no panel horizontal overflow. Existing seven shared-heading TypeScript errors remain; no Support errors. Native devices, light theme and production deployment were not checked. Knowledge K6 size exception: retained the existing broad `support-widget-layout` topic for this focused inspector addition; splitting unrelated widget documentation is outside this change.
+
+## Chart axes, marker and expanded layout — 2026-10-27
+
+Line/area/bar charts show value ticks and receipt-time ticks. Compact sparklines retain their small footprint and show full axes when expanded. Measured plot dimensions now drive SVG coordinates, preventing stretched markers. Selection adds an exact-value/time tooltip beside the round dot. Expanded charts have a bounded plot, minimum/maximum/sample-count summaries, and selected/latest value, sender, receipt and sample details in a scrolling panel.
+
+Validation: 116 Support tests and web export passed. Regression tests cover geometry at 900×80, a fixed four-pixel marker radius, exact tooltip precision and expanded sparkline axes/details. Browser verified a circular 8×8-pixel marker at narrow and desktop sizes, keyboard inspection, labeled axes and a 375×812 panel without horizontal overflow. TypeScript retains only the seven pre-existing shared-heading errors. Native devices, light theme and production deployment were not checked.
+
+## Continuous feeds — 2026-10-27
+
+Removed Pause/Resume controls and frozen sample state from Support log/event feeds, including the side inspector. Incoming samples always update the current feed; scrolling upward still stops automatic scrolling and Follow live returns to the bottom. Wrap fits long lines to the available width; No wrap retains horizontal scrolling. These are display settings and do not modify received messages.
+
+Validation: 117 Support tests pass, including continuous dashboard/inspector updates, no Pause/Resume controls for either feed type, retained-entry filtering and scroll-follow behavior. Browser verified zero Pause/Resume buttons with the log inspector open. Native-device checks and a production deployment were not performed.

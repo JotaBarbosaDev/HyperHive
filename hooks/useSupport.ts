@@ -1,13 +1,15 @@
 import React from "react";
+import { timeframeBounds, inTimeframe } from "@/components/support/support-timeframe";
 import { ApiError } from "@/services/api-client";
-import { getSupportApp, getSupportHistory, listSupportApps, listSupportTabs, mergeSamples, parseFrame, supportRequest, supportSocketUrl } from "@/services/support-client";
-import type { AppDetail, History, SupportApp, SupportFrame, SupportTab } from "@/types/support";
+import { getSupportApp, getSupportHistory, listSupportApps, listSupportTabs, mergeSamples, parseFrame, supportRequest, supportSocketUrl, trendWidgets } from "@/services/support-client";
+import type { AppDetail, History, Sample, SupportApp, SupportFrame, SupportTab, SupportTimeframe } from "@/types/support";
 
-export function useSupport(token: string | null, selectedId: string | null) {
+export function useSupport(token: string | null, selectedId: string | null, timeframe?: SupportTimeframe) {
   const [tabs, setTabs] = React.useState<SupportTab[]>([]);
   const [apps, setApps] = React.useState<SupportApp[]>([]);
   const [detail, setDetail] = React.useState<AppDetail | null>(null);
   const [history, setHistory] = React.useState<Record<string, History>>({});
+  const [chartHistory, setChartHistory] = React.useState<Record<string, History>>({});
   const [connection, setConnection] = React.useState("connecting");
   const [error, setError] = React.useState<string | null>(null);
   const [liveError, setLiveError] = React.useState<string | null>(null);
@@ -28,21 +30,52 @@ export function useSupport(token: string | null, selectedId: string | null) {
     let generation = 0;
     let ready = false;
     const controller = new AbortController();
+    let liveTimer: ReturnType<typeof setTimeout> | undefined;
+    let pendingSamples = new Map<string, Sample[]>();
+    let truncatedStreams = new Set<string>();
+    const flushSamples = () => {
+      clearTimeout(liveTimer); liveTimer = undefined;
+      if (loading) return;
+      const incoming = pendingSamples; pendingSamples = new Map();
+      const truncated = truncatedStreams; truncatedStreams = new Set();
+      if (!incoming.size || stopped) return;
+      const merge = (current: Record<string, History>, charts: boolean) => {
+        const next: Record<string, History> = Object.assign(Object.create(null), current);
+        let changed = false;
+        for (const [stream, samples] of incoming) {
+          if (charts && !Object.hasOwn(current, stream)) continue;
+          const page = Object.hasOwn(current, stream) ? current[stream] : { samples: [], next_before: null };
+          const retained = page.samples.filter((sample) => !timeframe || inTimeframe(sample.received_at, timeframe));
+          const merged = mergeSamples(retained, samples);
+          next[stream] = { samples: merged, next_before: charts ? null : (truncated.has(stream) || retained.length + samples.length > merged.length) ? merged[0]?.id ?? null : page.next_before };
+          changed = true;
+        }
+        return changed ? next : current;
+      };
+      setHistory((current) => merge(current, false));
+      setChartHistory((current) => merge(current, true));
+    };
     const apply = (frame: SupportFrame) => {
       if (frame.type === "state") {
         setApps((current) => current.map((app) => app.id === frame.app.id ? frame.app : app));
         setDetail((current) => current?.app.id === frame.app.id ? { ...current, app: frame.app } : current);
       }
-      if (frame.type === "samples" && frame.app_id === selectedId) setHistory((current) => {
-        const next: Record<string, History> = Object.assign(Object.create(null), current);
-        for (const stream of new Set(frame.samples.map((sample) => sample.stream))) {
-          const page = next[stream] ?? { samples: [], next_before: null };
-          const incoming = frame.samples.filter((sample) => sample.stream === stream);
-          const merged = mergeSamples(page.samples, incoming);
-          next[stream] = { samples: merged, next_before: page.samples.length + incoming.length > merged.length ? merged[0]?.id ?? null : page.next_before };
+      if (frame.type === "samples" && frame.app_id === selectedId) {
+        const grouped = new Map<string, Sample[]>();
+        for (const sample of frame.samples) {
+          if (timeframe && !inTimeframe(sample.received_at, timeframe)) continue;
+          const group = grouped.get(sample.stream) ?? [];
+          group.push(sample); grouped.set(sample.stream, group);
         }
-        return next;
-      });
+        for (const [stream, samples] of grouped) {
+          const previous = pendingSamples.get(stream) ?? [];
+          const merged = mergeSamples(previous, samples);
+          if (previous.length + samples.length > merged.length) truncatedStreams.add(stream);
+          pendingSamples.set(stream, merged);
+        }
+        // Bound rendering work during bursts while keeping each stream's existing history limit.
+        if (pendingSamples.size && !liveTimer) liveTimer = setTimeout(flushSamples, 100);
+      }
       if (frame.type === "changed") schedule();
     };
     const snapshot = async () => {
@@ -51,16 +84,24 @@ export function useSupport(token: string | null, selectedId: string | null) {
       const started = generation;
       try {
         const [nextTabs, nextApps, nextDetail] = await Promise.all([listSupportTabs(token, controller.signal), listSupportApps(token, controller.signal), selectedId ? getSupportApp(token, selectedId, controller.signal).catch((err) => { if (err instanceof ApiError && err.status === 404) return null; throw err; }) : Promise.resolve(null)]);
-        const pages = nextDetail ? await Promise.all(nextDetail.streams.map(async (stream) => [stream.name, await getSupportHistory(token, nextDetail.app.id, stream.name, undefined, controller.signal)] as const)) : [];
+        const pages = nextDetail ? await Promise.all(nextDetail.streams.map(async (stream) => {
+          const filters = timeframe ? timeframeBounds(timeframe) : undefined;
+          const [raw, chart] = await Promise.all([
+            getSupportHistory(token, nextDetail.app.id, stream.name, undefined, controller.signal, filters),
+            timeframe && stream.type === "number" && nextDetail.layout.widgets.some((widget) => widget.stream === stream.name && trendWidgets.includes(widget.kind))
+              ? getSupportHistory(token, nextDetail.app.id, stream.name, undefined, controller.signal, { ...filters, buckets: 60 }) : Promise.resolve(null),
+          ]);
+          return [stream.name, raw, chart] as const;
+        })) : [];
         if (stopped || started !== generation) return;
-        setTabs(nextTabs); setApps(nextApps); setDetail(nextDetail); setHistory(Object.fromEntries(pages)); setError(null); setHasSnapshot(true);
+        setTabs(nextTabs); setApps(nextApps); setDetail(nextDetail); setHistory(Object.fromEntries(pages.map(([name, raw]) => [name, raw]))); setChartHistory(Object.fromEntries(pages.flatMap(([name, , chart]) => chart ? [[name, chart]] : []))); setError(null); setHasSnapshot(true);
         if (ready) { setConnection("live"); setLiveError(null); attempts = 0; }
       } catch (err) {
         if (!stopped && started === generation) setError(err instanceof Error ? err.message : "Unable to load Support.");
       } finally {
         loading = false;
         if (!stopped) setIsLoading(false);
-        if (!stopped) { const pending = buffered; buffered = []; pending.forEach(apply); if (dirty) { dirty = false; schedule(); } }
+        if (!stopped) { const pending = buffered; buffered = []; pending.forEach(apply); flushSamples(); if (dirty) { dirty = false; schedule(); } }
       }
     };
     const schedule = () => { if (!scheduled && !stopped) scheduled = setTimeout(() => { scheduled = undefined; void snapshot(); }, 100); };
@@ -76,20 +117,22 @@ export function useSupport(token: string | null, selectedId: string | null) {
           try {
             const frame = parseFrame(String(event.data));
             if (frame.type === "ready") { ready = true; clearTimeout(handshake); setHistory({}); void snapshot(); }
+            else if (frame.type === "samples") apply(frame);
             else if (loading) { if (buffered.length >= 64) { buffered = []; socket?.close(); } else buffered.push(frame); }
             else apply(frame);
           } catch (err) { setLiveError((err as Error).message); socket?.close(); }
         };
         socket.onerror = () => setLiveError("Live updates are interrupted. Saved data and management are still available.");
-        socket.onclose = () => { ready = false; clearTimeout(handshake); generation++; buffered = []; if (loading) dirty = true; if (!stopped) { setConnection("reconnecting"); retry = setTimeout(() => { void connect(); }, Math.min(30000, 1000 * 2 ** attempts++)); } };
+        socket.onclose = () => { ready = false; clearTimeout(handshake); generation++; buffered = []; clearTimeout(liveTimer); liveTimer = undefined; pendingSamples.clear(); truncatedStreams.clear(); if (loading) dirty = true; if (!stopped) { setConnection("reconnecting"); retry = setTimeout(() => { void connect(); }, Math.min(30000, 1000 * 2 ** attempts++)); } };
       } catch (err) {
         if (stopped) return;
         setLiveError(err instanceof Error ? err.message : "Unable to connect live updates."); setConnection("disconnected");
         if (!(err instanceof ApiError && [401, 403].includes(err.status))) retry = setTimeout(() => { void connect(); }, Math.min(30000, 1000 * 2 ** attempts++));
       }
     };
-    setDetail(null); setHistory({}); setIsLoading(true); setError(null); void snapshot(); void connect();
-    return () => { stopped = true; controller.abort(); clearTimeout(retry); clearTimeout(scheduled); clearTimeout(handshake); socket?.close(); reload.current = () => {}; };
-  }, [token, selectedId]);
-  return { tabs, apps, detail, history, setHistory, connection, error, liveError, isLoading, hasSnapshot, refresh: () => reload.current() };
+    setDetail(null); setHistory({}); setChartHistory({}); setIsLoading(true); setError(null); void snapshot(); void connect();
+    const refreshTimer = timeframe?.minutes ? setInterval(schedule, 60000) : undefined;
+    return () => { clearInterval(refreshTimer); stopped = true; controller.abort(); clearTimeout(retry); clearTimeout(scheduled); clearTimeout(handshake); clearTimeout(liveTimer); pendingSamples.clear(); truncatedStreams.clear(); socket?.close(); reload.current = () => {}; };
+  }, [token, selectedId, timeframe]);
+  return { tabs, apps, detail, history, chartHistory, setHistory, connection, error, liveError, isLoading, hasSnapshot, refresh: () => reload.current() };
 }

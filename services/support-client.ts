@@ -46,8 +46,11 @@ export const getSupportApp = (token: string, id: string, signal?: AbortSignal) =
 export const saveSupportApp = (token: string, input: AppInput, id?: string) => id ? supportRequest<SupportApp>(token, "/apps/" + encodeURIComponent(id), "PUT", input) : supportRequest<{ app: SupportApp; secret: string }>(token, "/apps", "POST", input);
 export const replicateSupportApp = (token: string, sourceId: string, input: Pick<AppInput, "name" | "tab_id" | "tags">) => supportRequest<{ app: SupportApp; secret: string }>(token, "/apps/" + encodeURIComponent(sourceId) + "/replicate", "POST", input);
 export const saveSupportLayout = (token: string, id: string, layout: SupportLayout) => supportRequest<SupportLayout>(token, "/apps/" + encodeURIComponent(id) + "/layout", "PUT", layout);
-export const getSupportHistory = async (token: string, id: string, stream: string, before?: number, signal?: AbortSignal, filters?: { severity?: Severity[] }) => {
+export const getSupportHistory = async (token: string, id: string, stream: string, before?: number, signal?: AbortSignal, filters?: { severity?: Severity[]; since?: string; until?: string; buckets?: number }) => {
   const query = new URLSearchParams({ stream, limit: "200" });
+  if (filters?.buckets) { query.set("buckets", String(filters.buckets)); query.set("limit", "1000"); }
+  if (filters?.since) query.set("since", filters.since);
+  if (filters?.until) query.set("until", filters.until);
   if (before !== undefined) query.set("before", String(before));
   if (filters?.severity?.length) query.set("severity", filters.severity.join(","));
   return parseHistory(await supportRequest<History>(token, "/apps/" + encodeURIComponent(id) + "/samples?" + query, "GET", undefined, signal));

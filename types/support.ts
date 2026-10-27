@@ -12,3 +12,5 @@ export type SupportLayout = { revision: number; widgets: Widget[] };
 export type AppDetail = { app: SupportApp; streams: SupportStream[]; layout: SupportLayout };
 export type History = { samples: Sample[]; next_before: number | null };
 export type SupportFrame = { type: "ready" } | { type: "changed"; app_id?: string } | { type: "state"; app: SupportApp } | { type: "samples"; app_id: string; samples: Sample[] };
+
+export type SupportTimeframe = { minutes?: number; since?: string; until?: string };
