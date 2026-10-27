@@ -1,0 +1,18 @@
+# Progress
+Implemented continuous drag/resize with snapped release saves, header drag, corner resize, visible telemetry, optional button controls, editing grid and gap-aware insertion. 35 focused tests pass; web export passes. TypeScript has the same seven pre-existing heading WebkitBoxOrient errors and no support errors. Browser mouse resize visibly changes width; fixture process received SIGTERM during persistence check and was restarted with a PTY. Initial preview opened before server startup and returned connection refused; new tab loaded after server was ready.
+
+Browser verification complete: mouse resize w4→w3, move x0→x1, revision 2 saved, full reload restored both. 390px viewport inspected and reset. Screenshot saved as preview.png. Browser semantic click immediately after viewport reset had no effect; refreshed DOM and coordinate click verified Done positioning. No production access or deployment.
+
+Canonical SilverBullet page frontend/support-widget-layout created, linked from frontend/index and reread for verification. Existing planning pointer restored; generated Serena config removed. All task phases complete. Preview server stopped after validation.
+
+New phase: redesign each widget for its actual data. Relevant SilverBullet layout page consulted.
+
+Implemented per-type components, keyboard/pointer chart inspection with proportional receipt-time spacing, terminal feeds with pause/search/follow, structured event expansion, table ordering/search, responsive meters and one-row compact chrome. Existing history/severity/persistence tests still pass. 45 focused tests passed; browser verification pending. Full type check retains only the 7 pre-existing heading errors. Added synthetic live samples to fixture.
+
+Browser found a platform-specific layout bug: the house web Text component renders spans, so numeric lineHeight:18 becomes CSS line-height:18 (234px at 13px font). Replaced new widget line heights with explicit pixel Tailwind utilities and compact text variants; no shared component changes. Also fixed auto-follow toggling off during initial content growth by tracking upward scroll movement instead of treating every non-bottom scroll event as user intent. Rebuilding to verify these corrections.
+
+Browser verified exact hover value/time/sender for line chart, 52px text tile with visible 18px text, 18px terminal rows with intrinsic horizontal scrolling, frozen paused feed across incoming frames and catch-up after resume, loaded-entry no-match search, and structured event expansion. Added wrap toggle to terminal, kept native default wrapping. Final responsive/table/resize checks pending.
+
+Final result: 46 focused tests and web export pass. Full TypeScript reports only the seven existing heading WebkitBoxOrient errors. A fake-timer test confirms paused records expire even after falling out of the live buffer. Browser verified 390px layout, tiny-widget menu and size autosave (h1→h2→h1, revision 2), terminal wrapping toggle, full-precision hover, raw-value copying in tests, and 24px table rows. Console has an existing library Animated useNativeDriver fallback warning from modal use, with no widget errors observed. Screenshots: widget-types.png and widget-table.png. SilverBullet support-widget-layout and frontend index updated and reread; parent link verified. No production operations or deployment.
+
+Follow-up: reduced text widget minimum width from two columns to one in the shared move/resize helper. Added regression coverage for live preview, saved geometry, movement to the right edge and unchanged minimum widths for other kinds. No browser recheck or deployment for this focused change.

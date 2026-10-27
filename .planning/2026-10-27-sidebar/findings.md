@@ -1,0 +1,2 @@
+# Findings
+Existing AppSidebar is an overlay; one caller in app/_layout.tsx. Preserve uncommitted support route and layout changes. Reuse Inter, lucide icons, gluestack controls and existing settings modal. Design: navy #0E1524, slate #1A2637, muted #94A3B8, teal #2DD4BF, light #F8FAFC; Inter labels and compact utility text. H anchor and active teal inset mark are the signature. Desktop persistent rail; phone overlay expansion with rail retained when collapsed. No backend changes.

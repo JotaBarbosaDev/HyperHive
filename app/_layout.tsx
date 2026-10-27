@@ -70,6 +70,7 @@ const APP_TITLE = "HyperHive";
 const APP_CORNER_ICON = require("../assets/images/android-chrome-192x192.png");
 
 const ROUTE_TITLE_MAP: Record<string, string> = {
+  "/support": "HH Support",
   "/": "Login",
   "/dashboard": "Dashboard",
   "/btrfs-raids": "BTRFS / RAIDs",

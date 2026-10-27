@@ -159,7 +159,10 @@ const MENU_ITEMS: MenuItem[] = [
   {
     label: "Logs",
     icon: FileText,
-    route: "/logs",
+    children: [
+      { label: "System logs", route: "/logs", icon: FileText },
+      { label: "HH Support", route: "/support", icon: Gauge },
+    ],
   },
   {
     label: "Nginx",

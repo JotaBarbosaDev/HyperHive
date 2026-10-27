@@ -1,0 +1,14 @@
+export type Severity = "debug" | "info" | "warn" | "error" | "fatal";
+export type StreamType = "number" | "text" | "boolean" | "log" | "event";
+export type SupportTab = { id: string; name: string };
+export type Participant = { connectivity: "unknown" | "online" | "offline"; health: "unknown" | "healthy" | "degraded" | "unhealthy"; health_message: string; last_heartbeat_at: string | null };
+export type SupportApp = Participant & { id: string; name: string; tab_id: string; tags: string[]; heartbeat_timeout_seconds: number; retention_days: number; instances: (Participant & { instance_id: string })[] };
+export type AppInput = Pick<SupportApp, "name" | "tab_id" | "tags" | "heartbeat_timeout_seconds" | "retention_days">;
+export type SupportStream = { name: string; type: StreamType; unit: string; label: string };
+export type Sample = { id: number; app_id: string; stream: string; instance_id: string | null; timestamp: string; received_at: string; value: number | string | boolean | { message: string; severity: Severity } | { name: string; fields: Record<string, unknown> } };
+export type WidgetKind = "value" | "line" | "area" | "bar" | "sparkline" | "gauge" | "progress" | "text" | "boolean" | "logs" | "events" | "table";
+export type Widget = { id: string; stream: string; stream_type?: StreamType; kind: WidgetKind; x: number; y: number; w: number; h: number; min?: number; max?: number; window_minutes?: number; severity?: Severity[] };
+export type SupportLayout = { revision: number; widgets: Widget[] };
+export type AppDetail = { app: SupportApp; streams: SupportStream[]; layout: SupportLayout };
+export type History = { samples: Sample[]; next_before: number | null };
+export type SupportFrame = { type: "ready" } | { type: "changed"; app_id?: string } | { type: "state"; app: SupportApp } | { type: "samples"; app_id: string; samples: Sample[] };
