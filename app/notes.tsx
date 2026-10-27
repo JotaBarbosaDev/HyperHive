@@ -493,7 +493,7 @@ export default function NotesScreen() {
                           isDisabled={viewingId === note.id}
                         >
                           {viewingId === note.id ? <ButtonSpinner /> : <ButtonIcon as={Eye} />}
-                          <ButtonText>Ver</ButtonText>
+                          <ButtonText>View</ButtonText>
                         </Button>
                         <Button
                           size="sm"
