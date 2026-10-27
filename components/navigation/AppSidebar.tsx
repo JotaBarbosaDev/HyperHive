@@ -231,7 +231,7 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
   React.useEffect(() => () => resetSupportNavigation(), []);
   const systemScheme = useColorScheme();
   const resolvedMode = themePreference === "system" ? (systemScheme === "dark" ? "dark" : "light") : themePreference;
-  const { width: viewportWidth } = useWindowDimensions();
+  const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
   const [expandedParents, setExpandedParents] = React.useState<Record<string, boolean>>({});
   React.useEffect(() => {
     if (pathname === "/support" && support.tabId) setExpandedParents((current) => ({ ...current, ["support-tab-" + support.tabId]: true }));
@@ -415,7 +415,7 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
         size="md"
       >
         <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
-        <ModalContent className="bg-background-0 dark:bg-[#0E1524] rounded-2xl shadow-soft-2 web:max-w-xl">
+        <ModalContent className="bg-background-0 dark:bg-[#0E1524] rounded-2xl shadow-soft-2" style={{ maxHeight: viewportHeight - 32 }}>
           <ModalHeader className="flex-row items-start justify-between gap-3 pb-4">
             <Box className="flex-row items-center gap-3 flex-1">
               <Box className="w-11 h-11 rounded-xl items-center justify-center from-primary-50 to-background-0 dark:from-[#16263D] dark:to-[#0F1A2E]">
@@ -441,7 +441,7 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
               <Icon as={X} size="md" aria-hidden={true} className="text-typography-600 dark:text-[#8A94A8]" />
             </ModalCloseButton>
           </ModalHeader>
-          <ModalBody className="gap-5 pt-5">
+          <ModalBody className="gap-5 pt-5" style={{ flexGrow: 0, flexShrink: 1 }}>
             <Box className="rounded-xl bg-background-50/70 dark:bg-[#0F1A2E] p-4 gap-3">
               <Text
                 className="text-xs font-semibold uppercase text-typography-500 dark:text-[#8A94A8] tracking-[0.08em]"
