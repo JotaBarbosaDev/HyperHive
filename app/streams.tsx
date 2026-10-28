@@ -1,4 +1,5 @@
 import React from "react";
+import * as Clipboard from "expo-clipboard";
 import {UpstreamPoolsProvider, UpstreamSelector, upstreamTargetLabel, useUpstreamPools} from "@/components/UpstreamSelector";
 import { RefreshControl, ScrollView, useWindowDimensions, Platform, useColorScheme } from "react-native";
 import { Box } from "@/components/ui/box";
@@ -53,6 +54,7 @@ import { Badge, BadgeText } from "@/components/ui/badge";
 import { Pressable } from "@/components/ui/pressable";
 import {
   ArrowLeftRight,
+  Copy,
   ChevronDown,
   Lock,
   Pencil,
@@ -129,6 +131,13 @@ function StreamsContent() {
     },
     [toast]
   );
+
+  const copyValue = async (value: string) => {
+    try {
+      if (!await Clipboard.setStringAsync(value)) throw new Error("Clipboard unavailable");
+      showToast("Copied", "Value copied to the clipboard.");
+    } catch { showToast("Unable to copy", "Select the value and copy it manually.", "error"); }
+  };
 
   const handleCertificatesError = React.useCallback(
     (_error: unknown) => {
@@ -388,49 +397,22 @@ function StreamsContent() {
                 if (host.tcp_forwarding) protocols.push("TCP");
                 if (host.udp_forwarding) protocols.push("UDP");
                 return (
-                  <Box className={`rounded-2xl p-5 border border-outline-100 dark:border-[#2A3B52] shadow-soft-1 ${enabled ? "bg-background-0 dark:bg-[#0F1A2E]" : "bg-background-50 dark:bg-[#0E1524]"}`} key={host.id}>
-                    <HStack className="items-start justify-between gap-4 flex-wrap">
-                      <VStack className="gap-2 flex-1">
-                        <HStack className="items-center gap-2 flex-wrap">
-                          <Box className={`h-2.5 w-2.5 rounded-full ${enabled ? "bg-success-500" : "bg-outline-400"}`} />
-                          <Text
-                            className={`text-base ${enabled ? "text-typography-900" : "text-typography-500"}`}
-                            style={{ fontFamily: "Inter_700Bold" }}
-                          >
-                            Port {host.incoming_port}
-                          </Text>
-                        </HStack>
-                        {host.description ? (
-                          <Text className={`text-sm ${enabled ? "text-typography-600 dark:text-[#8A94A8]" : "text-typography-500"}`}>
-                            {host.description}
-                          </Text>
-                        ) : null}
-                        <HStack className="items-center gap-2 flex-wrap">
-                          <ArrowLeftRight size={16} color={enabled ? "#0f172a" : "#9ca3af"} />
-                          <Text className={`text-sm ${enabled ? "text-typography-800" : "text-typography-500"}`}>
-                            :{host.incoming_port} → {upstreamTargetLabel(host.upstream_id, `${host.forwarding_host}:${host.forwarding_port}`)}
-                          </Text>
-                        </HStack>
-                        <HStack className="gap-2 flex-wrap">
-                          {protocols.map((p) => (
-                            <Badge key={p} className="rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
-                              <BadgeText className="text-xs text-typography-800">{p}</BadgeText>
-                            </Badge>
-                          ))}
-                          {host.certificate_id ? (
-                            <HStack className="items-center gap-1">
-                              <Lock size={16} color="#16a34a" />
-                              <Text className="text-success-600 text-sm">SSL</Text>
-                            </HStack>
-                          ) : (
-                            <HStack className="items-center gap-1">
-                              <Shield size={16} color="#9ca3af" />
-                              <Text className="text-typography-600 text-sm">No SSL</Text>
-                            </HStack>
-                          )}
-                        </HStack>
+                  <Box className={`rounded-xl px-4 py-3 border border-outline-100 dark:border-[#2A3B52] ${enabled ? "bg-background-0 dark:bg-[#0F1A2E]" : "bg-background-50 dark:bg-[#0E1524]"}`} key={host.id}>
+                    <HStack className="items-center justify-between gap-3 flex-wrap">
+                      <VStack className="gap-1 min-w-[110px]">
+                        <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Listener</Text>
+                        <HStack className="items-center gap-1"><Text selectable className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">:{host.incoming_port}</Text><Button variant="link" size="sm" accessibilityLabel={`Copy listener port ${host.incoming_port}`} onPress={() => void copyValue(String(host.incoming_port))}><ButtonIcon as={Copy} size="sm" /></Button></HStack>
                       </VStack>
-
+                      <VStack className="gap-1 flex-1 min-w-[180px]">
+                        <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Target</Text>
+                        <HStack className="items-center gap-1"><Text selectable className="text-sm text-typography-900 dark:text-[#E8EBF0] web:[overflow-wrap:anywhere]">{upstreamTargetLabel(host.upstream_id, `${host.forwarding_host}:${host.forwarding_port}`)}</Text>{!host.upstream_id ? <Button variant="link" size="sm" accessibilityLabel={`Copy target for port ${host.incoming_port}`} onPress={() => void copyValue(`${host.forwarding_host}:${host.forwarding_port}`)}><ButtonIcon as={Copy} size="sm" /></Button> : null}</HStack>
+                        {host.description ? <Text className="text-xs text-typography-600 dark:text-[#8A94A8]">{host.description}</Text> : null}
+                      </VStack>
+                      <HStack className="gap-2 items-center flex-wrap">
+                        {protocols.length ? protocols.map(p => <Badge key={p} size="sm" action="muted" variant="solid"><BadgeText>{p}</BadgeText></Badge>) : <Text className="text-xs text-typography-500">No protocol</Text>}
+                        <Text className="text-sm text-typography-700 dark:text-[#E8EBF0]">{host.certificate_id ? "SSL" : "No SSL"}</Text>
+                        <Badge size="sm" action={enabled ? "success" : "muted"} variant="solid"><BadgeText>{enabled ? "Enabled" : "Disabled"}</BadgeText></Badge>
+                      </HStack>
                       <HStack className="gap-2 items-center">
                         <Button
                           action="default"
@@ -447,6 +429,7 @@ function StreamsContent() {
                           action="default"
                           variant="outline"
                           size="sm"
+                          accessibilityLabel={`Edit stream on port ${host.incoming_port}`}
                           onPress={() => openEditModal(host)}
                           className="border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E] rounded-xl px-3"
                         >
@@ -456,6 +439,7 @@ function StreamsContent() {
                           action="negative"
                           variant="solid"
                           size="sm"
+                          accessibilityLabel={`Delete stream on port ${host.incoming_port}`}
                           onPress={() => setDeleteTarget(host)}
                           className="px-3 rounded-xl"
                         >
@@ -561,6 +545,10 @@ function StreamsContent() {
                     </Text>
                   </HStack>
                 </VStack>
+                <HStack className="gap-2 flex-wrap">
+                  <Button variant="outline" size="sm" onPress={() => void copyValue(String(selectedHost.incoming_port))}><ButtonText>Copy listener port</ButtonText></Button>
+                  {!selectedHost.upstream_id ? <Button variant="outline" size="sm" onPress={() => void copyValue(`${selectedHost.forwarding_host}:${selectedHost.forwarding_port}`)}><ButtonText>Copy target</ButtonText></Button> : null}
+                </HStack>
                 <HStack className="gap-2 flex-wrap">
                   {selectedHost.tcp_forwarding ? (
                     <Badge className="rounded-full px-3 py-1" size="sm" action="muted" variant="solid">
