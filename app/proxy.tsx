@@ -49,6 +49,7 @@ import {
 } from "@/components/ui/form-control";
 import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
 import { ProxyHost, ProxyPayload, ProxyLocation } from "@/types/proxy";
+import { matchesProxySearch } from "@/utils/proxy-search";
 import { AccessList } from "@/types/access-list";
 import {
   createProxyHost,
@@ -159,6 +160,7 @@ function ProxyHostsContent() {
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [filter, setFilter] = React.useState<FilterTab>("all");
+  const [search, setSearch] = React.useState("");
   const [domainFilter, setDomainFilter] = React.useState(ALL_DOMAINS);
   const [domainSort, setDomainSort] = React.useState<DomainSort>("none");
   const [modalOpen, setModalOpen] = React.useState(false);
@@ -281,10 +283,10 @@ function ProxyHostsContent() {
   const selectedSortLabel =
     domainSort === "domain-asc" ? "Domain A-Z" : domainSort === "domain-desc" ? "Domain Z-A" : "Original";
 
-  const hasListFilters = filter !== "all" || domainFilter !== ALL_DOMAINS;
+  const hasListFilters = filter !== "all" || domainFilter !== ALL_DOMAINS || !!search.trim();
 
   const filteredHosts = React.useMemo(() => {
-    let next = hosts;
+    let next = hosts.filter(host => matchesProxySearch(host, search));
     if (filter === "active") next = next.filter((h) => isEnabled(h));
     if (filter === "inactive") next = next.filter((h) => !isEnabled(h));
     if (domainFilter !== ALL_DOMAINS) next = next.filter((host) => hostMatchesDomain(host, domainFilter));
@@ -293,7 +295,7 @@ function ProxyHostsContent() {
       const result = getHostDomainKey(a).localeCompare(getHostDomainKey(b));
       return domainSort === "domain-asc" ? result || a.id - b.id : -result || a.id - b.id;
     });
-  }, [domainFilter, domainSort, filter, hosts]);
+  }, [domainFilter, domainSort, filter, hosts, search]);
 
   const stats = React.useMemo(() => {
     const active = hosts.filter((h) => isEnabled(h)).length;
@@ -562,6 +564,8 @@ function ProxyHostsContent() {
                 return (
                   <Pressable
                     key={tab.key}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
                     onPress={() => setFilter(tab.key)}
                     className={`px-4 py-2 rounded-full border ${
                       active
@@ -613,6 +617,9 @@ function ProxyHostsContent() {
               {filteredHosts.length}/{hosts.length}
             </Text>
 
+            <Input size="sm" className="min-w-[200px] flex-1 rounded-lg border-outline-200 dark:border-[#2A3B52]">
+              <InputField aria-label="Search proxy hosts" autoComplete="off" placeholder="Search domains or destinations" value={search} onChangeText={setSearch} />
+            </Input>
             <Select selectedValue={domainFilter} onValueChange={(value) => setDomainFilter(value)}>
               <SelectTrigger className="rounded-lg border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524] h-9 px-3 min-w-44">
                 <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">{selectedDomainLabel}</Text>
@@ -665,12 +672,13 @@ function ProxyHostsContent() {
               </SelectPortal>
             </Select>
 
-            {(domainFilter !== ALL_DOMAINS || domainSort !== "none") ? (
+            {(domainFilter !== ALL_DOMAINS || domainSort !== "none" || search.trim()) ? (
               <Button
                 action="default"
                 variant="link"
                 size="sm"
                 onPress={() => {
+                  setSearch("");
                   setDomainFilter(ALL_DOMAINS);
                   setDomainSort("none");
                 }}
@@ -689,7 +697,7 @@ function ProxyHostsContent() {
               <Text className="text-typography-700 font-semibold text-base">No proxies found</Text>
               <Text className="text-typography-500 text-sm mt-1 text-center">
                 {hasListFilters
-                  ? "No proxy hosts match the selected filters. Clear filters or choose another domain."
+                  ? "No proxy hosts match. Clear filters or try another search."
                   : 'Click "Add Proxy Host" to create the first reverse proxy host.'}
               </Text>
             </Box>
@@ -698,50 +706,19 @@ function ProxyHostsContent() {
               {filteredHosts.map((host) => {
                 const enabled = isEnabled(host);
                 return (
-                  <Box className="bg-background-0 dark:bg-[#0F1A2E] rounded-2xl p-5 border border-outline-100 dark:border-[#2A3B52] shadow-soft-1" key={host.id}>
-                    <HStack className="items-start justify-between gap-4 flex-wrap">
-                      <VStack className="gap-2 flex-1">
-                        <HStack className="items-center gap-2 flex-wrap">
-                          <Box className={`h-2.5 w-2.5 rounded-full ${enabled ? "bg-success-500" : "bg-outline-400"}`} />
-                          <HStack className="flex-wrap">
-                            {(host.domain_names ?? []).map((d, idx) => (
-                              <React.Fragment key={d}>
-                                <ExternalLink href={(d.includes("//") ? d : `https://${d}`) as any}>
-                                  <Text className="text-typography-900 text-base" style={{ fontFamily: "Inter_700Bold" }}>
-                                    {d}
-                                  </Text>
-                                </ExternalLink>
-                                {idx < (host.domain_names ?? []).length - 1 ? <Text className="text-typography-900 text-base">{", "}</Text> : null}
-                              </React.Fragment>
-                            ))}
-                          </HStack>
-                        </HStack>
-                        <HStack className="items-center gap-3 flex-wrap">
-                          <HStack className="items-center gap-1">
-                            <Globe size={16} color="#0f172a" />
-                            <Text className="text-typography-800 text-sm">
-                              {upstreamTargetLabel(host.upstream_id, `${host.forward_scheme}://${host.forward_host}:${host.forward_port}`)}
-                            </Text>
-                          </HStack>
-                          {host.ssl_forced ? (
-                            <HStack className="items-center gap-1">
-                              <Lock size={16} color="#16a34a" />
-                              <Text className="text-success-600 text-sm">SSL (Forced)</Text>
-                            </HStack>
-                          ) : (
-                            <HStack className="items-center gap-1">
-                              <Shield size={16} color="#9ca3af" />
-                              <Text className="text-typography-600 text-sm">SSL</Text>
-                            </HStack>
-                          )}
-                        </HStack>
-                        <HStack className="gap-2 flex-wrap">
-                          {host.certificate_id ? <StatusChip label="Certificate" /> : null}
-                          {host.block_exploits ? <StatusChip label="Block Exploits" /> : null}
-                          {host.allow_websocket_upgrade ? <StatusChip label="WebSockets" /> : null}
-                        </HStack>
+                  <Box className="bg-background-0 dark:bg-[#0F1A2E] rounded-xl px-4 py-3 border border-outline-100 dark:border-[#2A3B52]" key={host.id}>
+                    <HStack className="items-center justify-between gap-3 flex-wrap">
+                      <VStack className="gap-1 flex-1 min-w-[180px]">
+                        {(host.domain_names ?? []).map((domain) => <ExternalLink key={domain} href={(domain.includes("//") ? domain : `https://${domain}`) as any}><Text className="text-typography-900 dark:text-[#E8EBF0] text-sm font-semibold">{domain}</Text></ExternalLink>)}
                       </VStack>
-
+                      <VStack className="gap-1 flex-1 min-w-[160px]">
+                        <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">Destination</Text>
+                        <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">{upstreamTargetLabel(host.upstream_id, `${host.forward_scheme}://${host.forward_host}:${host.forward_port}`)}</Text>
+                      </VStack>
+                      <HStack className="gap-2 items-center flex-wrap">
+                        <StatusChip label={host.certificate_id ? (host.ssl_forced ? "TLS · forced" : "TLS · available") : "No certificate"} action="muted" />
+                        <StatusChip label={enabled ? "Enabled" : "Disabled"} action={enabled ? "success" : "muted"} />
+                      </HStack>
                       <HStack className="gap-2 items-center">
                         <Button
                           action="default"
@@ -758,6 +735,7 @@ function ProxyHostsContent() {
                           action="default"
                           variant="outline"
                           size="sm"
+                          accessibilityLabel={`Edit ${host.domain_names?.[0] || "proxy"}`}
                           onPress={() => openEditModal(host)}
                           className="border-outline-200 dark:border-[#243247] bg-background-0 dark:bg-[#0F1A2E] px-3 rounded-xl"
                         >
@@ -767,6 +745,7 @@ function ProxyHostsContent() {
                           action="negative"
                           variant="solid"
                           size="sm"
+                          accessibilityLabel={`Delete ${host.domain_names?.[0] || "proxy"}`}
                           onPress={() => setDeleteTarget(host)}
                           className="px-3 rounded-xl"
                         >
@@ -814,7 +793,7 @@ function ProxyHostsContent() {
                         </Text>
                       </HStack>
                       <HStack className="gap-2 flex-wrap">
-                        {host.certificate_id ? <StatusChip label="Certificate" /> : null}
+                        <StatusChip label={host.certificate_id ? (host.ssl_forced ? "TLS · forced" : "TLS · available") : "No certificate"} />
                         {host.block_exploits ? <StatusChip label="Block Exploits" /> : null}
                         {host.allow_websocket_upgrade ? <StatusChip label="WebSockets" /> : null}
                       </HStack>
