@@ -40,6 +40,7 @@ import {
 import { Pressable } from "@/components/ui/pressable";
 import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
 import { Certificate, CreateLetsEncryptPayload } from "@/types/certificate";
+import { certificateExpiry } from "@/utils/certificate-expiry";
 import {
   createLetsEncryptCertificate,
   createManualCertificate,
@@ -112,7 +113,7 @@ const formatDate = (value?: string | number | Date | null) => {
   const date = parseDateValue(value);
   if (!date) return "—";
   try {
-    return new Intl.DateTimeFormat("pt-PT", {
+    return new Intl.DateTimeFormat("en-GB", {
       day: "2-digit",
       month: "short",
       year: "numeric",
@@ -130,15 +131,7 @@ const resolveExpiry = (cert: Certificate) => {
   );
 };
 
-const isExpired = (cert: Certificate) => {
-  const expiry = resolveExpiry(cert);
-  if (!expiry) return false;
-  const parsed = parseDateValue(expiry);
-  if (!parsed) return false;
-  const expires = parsed.getTime();
-  const now = Date.now();
-  return expires < now;
-};
+const isExpired = (cert: Certificate) => certificateExpiry(cert).label === "Expired";
 
 const resolveCreated = (cert: Certificate) => {
   return (
@@ -164,6 +157,12 @@ const TOGGLE_PROPS = {
 export default function CertificatesScreen() {
   const toast = useToast();
   const [certs, setCerts] = React.useState<Certificate[]>([]);
+  const [dueSoon, setDueSoon] = React.useState(false);
+  const visibleCerts = React.useMemo(() => {
+    const now = Date.now();
+    return certs.filter(cert => !dueSoon || (certificateExpiry(cert, now).time !== null && certificateExpiry(cert, now).time! <= now + 30 * 86400000))
+      .slice().sort((a, b) => (certificateExpiry(a, now).time ?? Infinity) - (certificateExpiry(b, now).time ?? Infinity));
+  }, [certs, dueSoon]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [modalOpen, setModalOpen] = React.useState(false);
@@ -497,6 +496,9 @@ export default function CertificatesScreen() {
             </Button>
           </HStack>
 
+          {certs.length ? <Button variant="outline" className="self-start mt-4 rounded-xl" onPress={() => setDueSoon(!dueSoon)} accessibilityState={{ selected: dueSoon }}>
+            <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">{dueSoon ? "Show all certificates" : "Due within 30 days"}</ButtonText>
+          </Button> : null}
           {loading && certs.length === 0 ? (
             renderLoading()
           ) : certs.length === 0 ? (
@@ -506,9 +508,11 @@ export default function CertificatesScreen() {
                 Click "New Certificate" to issue via Let's Encrypt.
               </Text>
             </Box>
+          ) : visibleCerts.length === 0 ? (
+            <Text className="mt-6 text-typography-600 dark:text-[#8A94A8]">No certificates expire within 30 days.</Text>
           ) : isWeb ? (
             <VStack className="mt-6 gap-4">
-              {certs.map((cert) => {
+              {visibleCerts.map((cert) => {
                 const expired = isExpired(cert);
                 return (
                   <Box
@@ -520,7 +524,7 @@ export default function CertificatesScreen() {
                         <HStack className="items-center gap-2 flex-wrap">
                           <Shield
                             size={18}
-                            color={expired ? "#ef4444" : "#16a34a"}
+                            color={expired ? "#ef4444" : certificateExpiry(cert).time === null ? "#8A94A8" : "#16a34a"}
                           />
                           <Text
                             className="text-typography-900 text-base"
@@ -577,12 +581,12 @@ export default function CertificatesScreen() {
                             <Text
                               className={`text-sm ${expired ? "text-error-600 font-semibold" : "text-typography-800"}`}
                             >
-                              Expires: {formatDate(resolveExpiry(cert))}
+                              Expires: {certificateExpiry(cert).time === null ? "Unknown" : formatDate(resolveExpiry(cert))}
                             </Text>
                           </HStack>
                           <StatusChip
-                            label={expired ? "Expired" : "Valid"}
-                            action={expired ? "error" : "success"}
+                            label={certificateExpiry(cert).label}
+                            action={expired ? "error" : "muted"}
                           />
                           {cert.meta?.dns_challenge ? (
                             <StatusChip
@@ -648,7 +652,7 @@ export default function CertificatesScreen() {
             </VStack>
           ) : (
             <VStack className="mt-6 gap-3">
-              {certs.map((cert) => {
+              {visibleCerts.map((cert) => {
                 const expired = isExpired(cert);
                 const title = cert.nice_name ?? (cert.domain_names ?? [])[0] ?? "-";
                 return (
@@ -660,12 +664,12 @@ export default function CertificatesScreen() {
                     <VStack className="gap-2">
                       <HStack className="items-center justify-between gap-2">
                         <HStack className="items-center gap-2 flex-1 flex-wrap">
-                          <Shield size={16} color={expired ? "#ef4444" : isDarkMode ? "#22c55e" : "#16a34a"} />
+                          <Shield size={16} color={expired ? "#ef4444" : certificateExpiry(cert).time === null ? "#8A94A8" : isDarkMode ? "#22c55e" : "#16a34a"} />
                           <Text className="text-typography-900 dark:text-[#E8EBF0] text-sm" style={{ fontFamily: "Inter_700Bold" }}>
                             {title}
                           </Text>
                         </HStack>
-                        <StatusChip label={expired ? "Expired" : "Valid"} action={expired ? "error" : "success"} />
+                        <StatusChip label={certificateExpiry(cert).label} action={expired ? "error" : "muted"} />
                       </HStack>
                       <HStack className="gap-2 flex-wrap">
                         <StatusChip
@@ -681,7 +685,7 @@ export default function CertificatesScreen() {
                       <HStack className="items-center gap-2 flex-wrap">
                         <Calendar color={expired ? "#ef4444" : isDarkMode ? "#E2E8F0" : "#0f172a"} size={14} />
                         <Text className={`text-xs ${expired ? "text-error-600" : "text-typography-600 dark:text-[#8A94A8]"}`}>
-                          Expires {formatDate(resolveExpiry(cert))}
+                          Expires {certificateExpiry(cert).time === null ? "Unknown" : formatDate(resolveExpiry(cert))}
                         </Text>
                       </HStack>
                       <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
@@ -730,7 +734,7 @@ export default function CertificatesScreen() {
                     label={selectedCert.provider?.toLowerCase() === "letsencrypt" ? "Let's Encrypt" : "Custom"}
                     action="muted"
                   />
-                  <StatusChip label={isExpired(selectedCert) ? "Expired" : "Valid"} action={isExpired(selectedCert) ? "error" : "success"} />
+                  <StatusChip label={certificateExpiry(selectedCert).label} action={isExpired(selectedCert) ? "error" : "muted"} />
                   {selectedCert.meta?.dns_challenge ? (
                     <StatusChip label={`DNS Challenge - ${selectedCert.meta?.dns_provider || "provider"}`} action="muted" />
                   ) : (
@@ -741,7 +745,7 @@ export default function CertificatesScreen() {
                   <HStack className="items-center gap-2">
                     <Calendar color={isExpired(selectedCert) ? "#ef4444" : isDarkMode ? "#E2E8F0" : "#0f172a"} size={16} />
                     <Text className={`text-sm ${isExpired(selectedCert) ? "text-error-600 font-semibold" : "text-typography-800 dark:text-typography-200"}`}>
-                      Expires: {formatDate(resolveExpiry(selectedCert))}
+                      Expires: {certificateExpiry(selectedCert).time === null ? "Unknown" : formatDate(resolveExpiry(selectedCert))}
                     </Text>
                   </HStack>
                   <HStack className="items-center gap-2">
