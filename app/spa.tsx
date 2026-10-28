@@ -136,7 +136,7 @@ export default function SpaScreen() {
 
   const handleCreate = async () => {
     const parsedPort = Number(portInput);
-    if (!Number.isInteger(parsedPort) || parsedPort <= 0 || parsedPort > 65535) {
+    if (!/^\d+$/.test(portInput) || !Number.isInteger(parsedPort) || parsedPort <= 0 || parsedPort > 65535) {
       showToast("Invalid port", "Enter a port number between 1 and 65535.", "error");
       return;
     }
@@ -315,6 +315,9 @@ export default function SpaScreen() {
                     >
                       <InputField
                         keyboardType="numeric"
+                        inputMode="numeric"
+                        aria-label="Port"
+                        autoComplete="off"
                         placeholder="25565"
                         value={portInput}
                         onChangeText={setPortInput}
@@ -336,6 +339,8 @@ export default function SpaScreen() {
                     >
                       <InputField
                         secureTextEntry
+                        aria-label="Password"
+                        autoComplete="new-password"
                         placeholder="SPA password"
                         value={password}
                         onChangeText={setPassword}
@@ -357,6 +362,8 @@ export default function SpaScreen() {
                     className={inputShellClass}
                   >
                     <InputField
+                      aria-label="Description"
+                      autoComplete="off"
                       placeholder="Administration SSH"
                       value={description}
                       onChangeText={setDescription}

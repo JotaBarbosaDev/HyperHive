@@ -40,6 +40,9 @@ export async function listSpaPorts(): Promise<SpaPort[]> {
 }
 
 export async function createSpaPort(payload: SpaPortPayload) {
+  if (!Number.isInteger(payload.port) || payload.port < 1 || payload.port > 65535) {
+    throw new Error("Port must be between 1 and 65535.");
+  }
   const authToken = await resolveToken();
   return apiFetch<void>("/spa", {
     method: "POST",
