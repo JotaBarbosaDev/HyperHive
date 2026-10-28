@@ -26,7 +26,7 @@ jest.mock("../components/ui/heading", () => ({Heading:mockElement}));
 const mockToast = {show:jest.fn()};
 jest.mock("lucide-react-native", () => new Proxy({}, {get: () => () => null}));
 jest.mock("../hooks/useAppTheme", () => ({useAppTheme: () => ({resolvedMode:"dark"})}));
-jest.mock("expo-clipboard", () => ({}));
+jest.mock("expo-clipboard", () => ({setStringAsync:jest.fn(async()=>true)}));
 jest.mock("expo-file-system/legacy", () => ({}));
 jest.mock("expo-sharing", () => ({}));
 jest.mock("expo-web-browser", () => ({}));
@@ -163,4 +163,18 @@ it("keeps VM action labels and confirmations available across running, stopped a
  }
  await act(async()=>container.querySelector('[aria-label="View details for beta"]').click());
  expect(container.querySelector('[role="dialog"]').textContent).toContain("beta · Details");
+});
+
+it("shows and copies the complete disk path and all reported addresses", async () => {
+ const path = "/mnt/storage/long-folder-name/virtual-machines/alpha/system-disk.qcow2";
+ api.getAllVMs.mockResolvedValueOnce([{...fixture("alpha","slave-a",1), diskPath:path, ip:["192.0.2.7", "2001:db8::7"]}]);
+ await render();
+ await act(async()=>container.querySelector('[aria-label="View details for alpha"]').click());
+ const dialog = container.querySelector('[role="dialog"]');
+ expect(dialog.textContent).toContain(path);
+ expect(dialog.textContent).toContain("192.0.2.7");
+ expect(dialog.textContent).toContain("2001:db8::7");
+ expect(dialog.textContent).toContain("Open console");
+ await click("Copy disk path");
+ expect(require("expo-clipboard").setStringAsync).toHaveBeenCalledWith(path);
 });

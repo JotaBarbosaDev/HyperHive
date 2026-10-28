@@ -2520,20 +2520,6 @@ export default function VirtualMachinesScreen() {
                 <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
                   {detailsVm?.name} · Details
                 </Heading>
-                <VStack className="gap-2">
-                  <HStack className="">
-                    <Button
-                      className={`rounded-xl px-4 py-2 ${primaryButtonClass}`}
-                      onPress={() => {
-                        if (!detailsVm) return;
-                        setConsoleOptionsVm(detailsVm);
-                        setShowConsoleOptions(true);
-                      }}
-                    >
-                      <ButtonText className={`${primaryButtonTextClass}`}>Open console</ButtonText>
-                    </Button>
-                  </HStack>
-                </VStack>
                 <ModalCloseButton accessibilityLabel="Close VM details"><X className="text-typography-700 dark:text-[#E8EBF0]" /></ModalCloseButton>
               </ModalHeader>
               <ModalBody className="p-0">
@@ -2587,12 +2573,6 @@ export default function VirtualMachinesScreen() {
                             {detailsVm.machineType || "Unknown"}
                           </Text>
                         </HStack>
-                        <HStack className="justify-between">
-                          <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">Disk Path</Text>
-                          <Text className="text-sm text-typography-900 dark:text-[#E8EBF0] truncate max-w-[200px]">
-                            {detailsVm.diskPath}
-                          </Text>
-                        </HStack>
                         {detailsVmNfsName ? (
                           <HStack className="justify-between">
                             <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">NFS</Text>
@@ -2601,14 +2581,6 @@ export default function VirtualMachinesScreen() {
                             </Text>
                           </HStack>
                         ) : null}
-                        {detailsVm.ip.length > 0 && (
-                          <HStack className="justify-between col-span-2">
-                            <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">IP</Text>
-                            <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">
-                              {detailsVm.ip.join(", ")}
-                            </Text>
-                          </HStack>
-                        )}
                         <HStack className="justify-between col-span-2">
                           <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                             Auto-start
@@ -2624,8 +2596,41 @@ export default function VirtualMachinesScreen() {
                           </Text>
                         </HStack>
                       </VStack>
+                      <VStack className="gap-2">
+                        <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">Disk path</Text>
+                        <Text selectable className="text-sm text-typography-900 dark:text-[#E8EBF0]" style={{ overflowWrap: "anywhere" } as any}>
+                          {detailsVm.diskPath || "Not reported"}
+                        </Text>
+                        {detailsVm.diskPath ? (
+                          <Button variant="outline" className="self-start rounded-xl border-outline-200 dark:border-[#2A3B52]" onPress={async () => {
+                            try {
+                              const copied = await Clipboard.setStringAsync(detailsVm.diskPath);
+                              if (!copied) throw new Error("Clipboard unavailable");
+                              showToastMessage("Path copied", "Disk path copied to the clipboard.");
+                            } catch {
+                              showToastMessage("Unable to copy path", "Select the disk path and copy it manually.", "error");
+                            }
+                          }}>
+                            <ButtonIcon as={Copy} className="text-typography-900 dark:text-[#E8EBF0]" />
+                            <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Copy disk path</ButtonText>
+                          </Button>
+                        ) : null}
+                      </VStack>
+                      <VStack className="gap-2">
+                        <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">IP addresses</Text>
+                        {detailsVm.ip.length ? detailsVm.ip.map((address, index) => (
+                          <Text key={`${index}-${address}`} selectable className="text-sm text-typography-900 dark:text-[#E8EBF0]" style={{ overflowWrap: "anywhere" } as any}>{address}</Text>
+                        )) : <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">Not reported</Text>}
+                      </VStack>
                       <Divider className="my-2" />
                       <HStack className="gap-2 flex-wrap web:justify-start">
+                        <Button className={`rounded-xl px-4 py-2 ${primaryButtonClass}`} onPress={() => {
+                          setConsoleOptionsVm(detailsVm);
+                          setShowConsoleOptions(true);
+                        }}>
+                          <Monitor size={18} color={resolvedMode === "dark" ? "#0A1628" : "#FFFFFF"} />
+                          <ButtonText className={primaryButtonTextClass}>Open console</ButtonText>
+                        </Button>
                         <Button
                           variant="outline"
                           className="rounded-xl px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
