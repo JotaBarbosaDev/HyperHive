@@ -1,0 +1,1 @@
+int drawable hyperhive_notification 0x0

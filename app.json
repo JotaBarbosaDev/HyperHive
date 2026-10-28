@@ -15,7 +15,8 @@
         "foregroundImage": "./assets/images/android-chrome-512x512.png",
         "backgroundColor": "#0E1524"
       },
-      "softwareKeyboardLayoutMode": "resize"
+      "softwareKeyboardLayoutMode": "resize",
+      "package": "com.anonymous.hyperhive"
     },
     "web": {
       "bundler": "metro",

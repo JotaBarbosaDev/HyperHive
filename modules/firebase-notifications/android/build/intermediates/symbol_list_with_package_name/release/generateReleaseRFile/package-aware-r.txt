@@ -1,0 +1,2 @@
+expo.modules.firebasenotifications
+drawable hyperhive_notification

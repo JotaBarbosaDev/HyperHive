@@ -1,0 +1,71 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    xmlns:tools="http://schemas.android.com/tools"
+4    package="expo.modules.firebasenotifications" >
+5
+6    <uses-sdk android:minSdkVersion="24" />
+7
+8    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+8-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:2:3-75
+8-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:2:20-72
+9
+10    <application>
+10-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:3:3-13:17
+11        <meta-data
+11-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:4:5-92
+12            android:name="firebase_messaging_auto_init_enabled"
+12-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:4:16-67
+13            android:value="false" />
+13-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:4:68-89
+14        <meta-data
+14-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:5:5-93
+15            android:name="firebase_analytics_collection_enabled"
+15-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:5:16-68
+16            android:value="false" />
+16-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:5:69-90
+17        <meta-data
+17-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:6:5-126
+18            android:name="com.google.firebase.messaging.default_notification_channel_id"
+18-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:6:16-92
+19            android:value="hyperhive_test" />
+19-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:6:93-123
+20        <meta-data
+20-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:7:5-141
+21            android:name="com.google.firebase.messaging.default_notification_icon"
+21-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:7:16-86
+22            android:resource="@drawable/hyperhive_notification" />
+22-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:7:87-138
+23
+24        <provider
+24-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:8:5-102
+25            android:name="com.google.firebase.provider.FirebaseInitProvider"
+25-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:8:15-79
+26            tools:node="remove" />
+26-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:8:80-99
+27        <provider
+27-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:9:5-161
+28            android:name="expo.modules.firebasenotifications.RuntimeFirebaseProvider"
+28-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:9:15-54
+29            android:authorities="${applicationId}.runtimefirebase"
+29-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:9:55-109
+30            android:exported="false"
+30-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:9:110-134
+31            android:initOrder="101" />
+31-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:9:135-158
+32
+33        <service
+33-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:10:5-12:15
+34            android:name="expo.modules.firebasenotifications.TestMessagingService"
+34-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:10:14-50
+35            android:exported="false" >
+35-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:10:51-75
+36            <intent-filter>
+36-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:11:7-99
+37                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+37-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:11:22-83
+37-->/home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:11:30-80
+38            </intent-filter>
+39        </service>
+40    </application>
+41
+42</manifest>

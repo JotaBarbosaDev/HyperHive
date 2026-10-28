@@ -818,10 +818,9 @@ export default function DashboardScreen() {
         </Text>
         <Box className="w-9 h-9 rounded-xl bg-primary-50/70 dark:bg-[#12213A] items-center justify-center shrink-0">
           <Icon
-            as={(props) =>
-              React.createElement(icon, { ...props, strokeWidth: 1.5 })
-            }
-            size={ICON_SIZE_MD}
+            as={icon}
+            strokeWidth={1.5}
+            size={18}
             className="text-outline-950 opacity-80 dark:text-[#5EEAD4] dark:opacity-80 flex-none"
           />
         </Box>

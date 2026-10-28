@@ -55,8 +55,16 @@ export const triggerUnauthorized = () => {
   notifyUnauthorized();
 };
 
+const authTokenListeners = new Set<() => void>();
+export const onAuthTokenChange = (listener: () => void) => {
+  authTokenListeners.add(listener);
+  return () => { authTokenListeners.delete(listener); };
+};
 export const setAuthToken = (token: string | null) => {
-  currentAuthToken = token ?? null;
+  const next = token ?? null;
+  if (next === currentAuthToken) return;
+  currentAuthToken = next;
+  authTokenListeners.forEach((listener) => listener());
 };
 
 export const getAuthToken = () => currentAuthToken;

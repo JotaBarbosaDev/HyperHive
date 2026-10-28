@@ -1,7 +1,6 @@
 import React from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Platform,
   RefreshControl,
@@ -12,12 +11,10 @@ import {
   ScrollView,
   View,
 } from "react-native";
-import * as Linking from "expo-linking";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useLogs } from "@/hooks/useLogs";
 import { LogEntry, LogLevel } from "@/types/log";
 import { useAppTheme } from "@/hooks/useAppTheme";
-import { getApiBaseUrl } from "@/config/apiConfig";
 import { StableTextInput } from "@/components/ui/stable-text-input";
 
 const LEVEL_LABEL: Record<LogLevel, string> = {
@@ -213,11 +210,6 @@ const makeStyles = (theme: Theme) =>
       paddingHorizontal: 14,
       paddingVertical: 10,
       borderRadius: 10,
-    },
-    registerRow: {
-      flexDirection: "row",
-      justifyContent: "flex-end",
-      marginTop: 10,
     },
     buttonText: {
       color: "#0A1628",
@@ -501,35 +493,6 @@ export default function LogsScreen() {
     }
   };
 
-  const handleRegisterNotifications = React.useCallback(async () => {
-    const baseUrl = getApiBaseUrl();
-    if (!baseUrl) {
-      Alert.alert("API not configured", "Set the API base URL to open the notification log.");
-      return;
-    }
-    if (!token) {
-      Alert.alert("Token unavailable", "Sign in again to generate the registration link.");
-      return;
-    }
-    const normalizedBase = baseUrl.replace(/\/+$/, "");
-    const url = `${normalizedBase}/nots/register?token=${encodeURIComponent(token)}`;
-    try {
-      if (Platform.OS === "web") {
-        if (typeof window !== "undefined" && typeof window.open === "function") {
-          window.open(url, "_blank", "noopener,noreferrer");
-        } else {
-          throw new Error("Browser unavailable to open a new tab");
-        }
-      } else {
-        await Linking.openURL(url);
-      }
-    } catch (err) {
-      console.warn("Failed to open notification registration URL", err);
-      const message = err instanceof Error ? err.message : String(err);
-      Alert.alert("Failed to open link", message);
-    }
-  }, [token]);
-
   const renderItem = ({ item }: { item: LogEntry }) => (
     <TouchableOpacity onPress={() => setSelected(item)} activeOpacity={0.6}>
       <View style={styles.row}>
@@ -652,11 +615,6 @@ export default function LogsScreen() {
             </View>
             <TouchableOpacity style={styles.button} onPress={refresh} activeOpacity={0.7}>
               <Text style={styles.buttonText}>Reload</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.registerRow}>
-            <TouchableOpacity style={styles.button} onPress={handleRegisterNotifications} activeOpacity={0.7}>
-              <Text style={styles.buttonText}>Register Notifications</Text>
             </TouchableOpacity>
           </View>
         </View>

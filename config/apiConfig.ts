@@ -27,8 +27,17 @@ export const normalizeApiBaseUrl = (value?: string | null) => {
   return sanitizeUrl(value);
 };
 
+const apiBaseUrlListeners = new Set<() => void>();
+export const onApiBaseUrlChange = (listener: () => void) => {
+  apiBaseUrlListeners.add(listener);
+  return () => { apiBaseUrlListeners.delete(listener); };
+};
+
 export const setApiBaseUrl = (value?: string | null) => {
-  apiBaseUrl = value ? sanitizeUrl(value) : null;
+  const next = value ? sanitizeUrl(value) : null;
+  if (next === apiBaseUrl) return apiBaseUrl;
+  apiBaseUrl = next;
+  apiBaseUrlListeners.forEach((listener) => listener());
   return apiBaseUrl;
 };
 

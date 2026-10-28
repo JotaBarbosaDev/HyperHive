@@ -1,0 +1,76 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:1:1-14:12
+INJECTED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:1:1-14:12
+	package
+		INJECTED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml
+	xmlns:tools
+		ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:1:70-116
+	xmlns:android
+		ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:1:11-69
+uses-permission#android.permission.POST_NOTIFICATIONS
+ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:2:3-75
+	android:name
+		ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:2:20-72
+application
+ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:3:3-13:17
+meta-data#firebase_messaging_auto_init_enabled
+ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:4:5-92
+	android:value
+		ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:4:68-89
+	android:name
+		ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:4:16-67
+meta-data#firebase_analytics_collection_enabled
+ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:5:5-93
+	android:value
+		ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:5:69-90
+	android:name
+		ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:5:16-68
+meta-data#com.google.firebase.messaging.default_notification_channel_id
+ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:6:5-129
+	android:value
+		ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:6:93-126
+	android:name
+		ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:6:16-92
+meta-data#com.google.firebase.messaging.default_notification_icon
+ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:7:5-141
+	android:resource
+		ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:7:87-138
+	android:name
+		ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:7:16-86
+provider#com.google.firebase.provider.FirebaseInitProvider
+ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:8:5-102
+	tools:node
+		ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:8:80-99
+	android:name
+		ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:8:15-79
+provider#expo.modules.firebasenotifications.RuntimeFirebaseProvider
+ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:9:5-161
+	android:authorities
+		ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:9:55-109
+	android:exported
+		ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:9:110-134
+	android:initOrder
+		ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:9:135-158
+	android:name
+		ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:9:15-54
+service#expo.modules.firebasenotifications.TestMessagingService
+ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:10:5-12:15
+	android:exported
+		ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:10:51-75
+	android:name
+		ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:10:14-50
+intent-filter#action:name:com.google.firebase.MESSAGING_EVENT
+ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:11:7-99
+action#com.google.firebase.MESSAGING_EVENT
+ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:11:22-83
+	android:name
+		ADDED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml:11:30-80
+uses-sdk
+INJECTED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml
+INJECTED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /home/marques/projects/HyperHiveFront/HyperHive/modules/firebase-notifications/android/src/main/AndroidManifest.xml

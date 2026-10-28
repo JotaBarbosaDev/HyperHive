@@ -35,3 +35,7 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Generated Android project and runtime-only Firebase client configuration
+/android/
+google-services.json
