@@ -492,12 +492,12 @@ test("widget gestures clamp position and size to the twelve-column grid", () => 
   expect(movedWidget(widget, 900, -900, 60, true)).toMatchObject({ w: 12, h: 3 });
   expect(movedWidget({ ...widget, x: 11, w: 1 }, 900, 0, 60, true)).toMatchObject({ x: 11, w: 1 });
 });
-test("text widgets resize down to one column in both preview and saved geometry", () => {
+test("text widgets keep a usable minimum width", () => {
   const widget = { kind: "text", x: 0, y: 0, w: 3, h: 1 };
-  expect(movedWidget(widget, -900, 0, 60, true)).toMatchObject({ w: 1, h: 1 });
-  expect(movedWidget(widget, -900, 0, 60, true, false)).toMatchObject({ w: 1, h: 1 });
+  expect(movedWidget(widget, -900, 0, 60, true)).toMatchObject({ w: 3, h: 2 });
+  expect(movedWidget(widget, -900, 0, 60, true, false)).toMatchObject({ w: 3, h: 2 });
   expect(movedWidget({ ...widget, w: 1 }, 900, 0, 60, false)).toMatchObject({ x: 11, w: 1 });
-  expect(movedWidget({ ...widget, kind: "value" }, -900, 0, 60, true)).toMatchObject({ w: 2 });
+  expect(movedWidget({ ...widget, kind: "value" }, -900, 0, 60, true)).toMatchObject({ w: 3, h: 2 });
 });
 test("new widgets fill available gaps before extending the dashboard", () => {
   expect(availableWidgetPosition([], 6, 6)).toEqual({ x: 0, y: 0 });
@@ -847,10 +847,10 @@ describe("Widget behavior by data type", () => {
   });
   test("compact defaults and resize limits let text, values and status fit a single row", async () => {
     for (const kind of ["text", "value", "boolean"]) {
-      expect(minimumWidgetHeight(kind)).toBe(1);
-      expect(movedWidget({ kind, x: 0, y: 0, w: 3, h: 4 }, 0, -900, 60, true).h).toBe(1);
+      expect(minimumWidgetHeight(kind)).toBe(2);
+      expect(movedWidget({ kind, x: 0, y: 0, w: 3, h: 4 }, 0, -900, 60, true).h).toBe(2);
     }
-    expect(defaultWidgetSize("text")).toEqual({ w: 3, h: 1 });
+    expect(defaultWidgetSize("text")).toEqual({ w: 3, h: 2 });
     expect(defaultWidgetSize("logs").h).toBeGreaterThan(defaultWidgetSize("text").h);
     const props = { widget: { id: "tiny", stream: "version", kind: "text", x: 0, y: 0, w: 3, h: 1 }, stream: { name: "version", label: "Version", type: "text", unit: "" }, page: { samples: [fresh(1, "2.4.1")], next_before: null }, token: "session", appId: "app", retentionDays: 7, cellWidth: 60, editing: true, onChange: jest.fn(), onRemove: jest.fn() };
     await render(<SupportWidget {...props} />);
@@ -1251,4 +1251,13 @@ describe("Support side panel", () => {
     try { Object.defineProperty(window, "innerWidth", { value: 320, configurable: true }); await act(async () => window.dispatchEvent(new Event("resize"))); expect(panel.style.width).toBe("320px"); }
     finally { Object.defineProperty(window, "innerWidth", { value: previous, configurable: true }); }
   });
+});
+
+test("restored widgets grow to their minimum without overlap", () => {
+  const { normalizeWidgetLayout } = require("../components/support/widget-layout");
+  const widgets = [{id:"a", kind:"text", x:11, y:0, w:1, h:1}, {id:"b", kind:"logs", x:9, y:0, w:2, h:1}];
+  const result = normalizeWidgetLayout(widgets);
+  expect(result[0]).toMatchObject({x:9, y:0, w:3, h:2});
+  expect(result[1]).toMatchObject({x:8, y:2, w:4, h:4});
+  expect(widgets[0]).toMatchObject({x:11, w:1, h:1});
 });

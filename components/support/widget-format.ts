@@ -38,14 +38,18 @@ export function eventSummary(value: Sample["value"]): string {
   return Object.entries(fields).filter(([, field]) => field != null && typeof field !== "object").map(([key, field]) => `${key.replace(/_/g, " ")}: ${String(field)}`).join(" · ");
 }
 
+export function minimumWidgetWidth(kind: WidgetKind): number {
+  return ["logs", "events", "table"].includes(kind) ? 4 : 3;
+}
+
 export function minimumWidgetHeight(kind: WidgetKind): number {
-  if (["value", "text", "boolean"].includes(kind)) return 1;
-  return ["sparkline", "progress"].includes(kind) ? 2 : 3;
+  if (["text", "boolean", "value", "sparkline", "progress"].includes(kind)) return 2;
+  return ["logs", "events", "table"].includes(kind) ? 4 : 3;
 }
 
 export function defaultWidgetSize(kind: WidgetKind): { w: number; h: number } {
-  if (kind === "text") return { w: 3, h: 1 };
-  if (kind === "boolean") return { w: 2, h: 1 };
+  if (kind === "text") return { w: 3, h: 2 };
+  if (kind === "boolean") return { w: 3, h: 2 };
   if (kind === "value") return { w: 3, h: 2 };
   if (["sparkline", "progress"].includes(kind)) return { w: 4, h: 2 };
   if (kind === "gauge") return { w: 3, h: 3 };

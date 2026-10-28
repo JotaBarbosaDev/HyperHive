@@ -8,7 +8,7 @@ import type { History, Sample, Severity, SupportStream, SupportTimeframe, Widget
 import { Action, Failure, ink, muted, surface } from "./support-ui";
 import { SupportDialog } from "./support-dialogs";
 import { SupportSidePanel } from "./support-side-panel";
-import { minimumWidgetHeight } from "./widget-format";
+import { minimumWidgetHeight, minimumWidgetWidth } from "./widget-format";
 import { WidgetChart } from "./widget-chart";
 import { WidgetFeed, WidgetTable } from "./widget-feed";
 import { WidgetMetric } from "./widget-metric";
@@ -19,7 +19,7 @@ export { sampleText } from "./widget-format";
 export function movedWidget(widget: Widget, deltaX: number, deltaY: number, cellWidth: number, resize: boolean, snap = true): Widget {
   const columns = snap ? Math.round(deltaX / cellWidth) : deltaX / cellWidth;
   const rows = snap ? Math.round(deltaY / 60) : deltaY / 60;
-  return resize ? { ...widget, w: Math.min(12 - widget.x, Math.max(widget.kind === "text" ? 1 : 2, widget.w + columns)), h: Math.max(minimumWidgetHeight(widget.kind), widget.h + rows) } : { ...widget, x: Math.max(0, Math.min(12 - widget.w, widget.x + columns)), y: Math.max(0, widget.y + rows) };
+  return resize ? { ...widget, w: Math.min(12 - widget.x, Math.max(minimumWidgetWidth(widget.kind), widget.w + columns)), h: Math.max(minimumWidgetHeight(widget.kind), widget.h + rows) } : { ...widget, x: Math.max(0, Math.min(12 - widget.w, widget.x + columns)), y: Math.max(0, widget.y + rows) };
 }
 export function availableWidgetPosition(widgets: Widget[], w: number, h: number): { x: number; y: number } {
   const rows = [...new Set([0, ...widgets.map((widget) => widget.y + widget.h)])].sort((a, b) => a - b);

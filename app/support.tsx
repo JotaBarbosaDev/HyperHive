@@ -16,7 +16,7 @@ import { AppDetails, AppForm, CredentialsDialog, SupportDialog, TabForm } from "
 import { availableWidgetPosition, SupportWidget } from "@/components/support/support-widget";
 import { SupportTimeframeControl } from "@/components/support/support-timeframe";
 import type { SupportTimeframe } from "@/types/support";
-import { defaultWidgetSize } from "@/components/support/widget-format";
+import { defaultWidgetSize, minimumWidgetHeight, minimumWidgetWidth } from "@/components/support/widget-format";
 
 export default function SupportScreen() {
   const { token, isChecking } = useAuthGuard();
@@ -101,7 +101,8 @@ export default function SupportScreen() {
     if (!layout) return;
     if (widgetForm) {
       const { min, max, window_minutes, severity, ...unchanged } = widgetForm;
-      updateWidget({ ...unchanged, ...settings });
+      const w = Math.max(widgetForm.w, minimumWidgetWidth(settings.kind));
+      updateWidget({ ...unchanged, ...settings, w, h: Math.max(widgetForm.h, minimumWidgetHeight(settings.kind)), x: Math.min(widgetForm.x, 12 - w) });
     } else {
       const { w, h } = defaultWidgetSize(settings.kind);
       const widget: Widget = { id: "widget-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8), ...settings, ...availableWidgetPosition(layout.widgets, w, h), w, h };

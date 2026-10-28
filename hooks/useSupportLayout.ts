@@ -2,6 +2,7 @@ import React from "react";
 import { ApiError } from "@/services/api-client";
 import { saveSupportLayout } from "@/services/support-client";
 import type { SupportLayout } from "@/types/support";
+import { normalizeWidgetLayout } from "@/components/support/widget-layout";
 
 // One writer per dashboard: edits made during a request use its returned revision.
 export function useSupportLayout(token: string | null, appId: string | null, remote?: SupportLayout) {
@@ -19,7 +20,8 @@ export function useSupportLayout(token: string | null, appId: string | null, rem
     generation.current++; inFlight.current = false;
     setSaved(null); setDraft(null); setSaving(false); setError(null); setConflict(false);
   }, [token, appId]);
-  const base = ownsState && saved && (!remote || saved.revision >= remote.revision) ? saved : remote;
+  const source = ownsState && saved && (!remote || saved.revision >= remote.revision) ? saved : remote;
+  const base = React.useMemo(() => source ? { ...source, widgets: normalizeWidgetLayout(source.widgets) } : source, [source]);
   React.useEffect(() => {
     if (!ownsState || !token || !appId || !draft || inFlight.current || error) return;
     const current = generation.current;
