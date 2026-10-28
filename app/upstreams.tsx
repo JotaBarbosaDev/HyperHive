@@ -42,9 +42,9 @@ export default function UpstreamsScreen() {
   const methods = capabilities?.contexts[form.context] ?? [];
   const selectedMethod = methods.find(m => m.name === form.loadbalancer_type);
   const canApply = capabilities?.status === "verified";
-  const edit = (pool?: Upstream) => {
+  const edit = (pool?: Upstream, context: UpstreamContext = "http") => {
     setEditing(pool ?? null);
-    setForm(pool ? {name: pool.name, context: pool.context, loadbalancer_type: pool.loadbalancer_type, loadbalancer_options: pool.loadbalancer_options ? {...pool.loadbalancer_options} : undefined, server_arr: pool.server_arr.map(m => ({...m})), revision: pool.revision} : blank());
+    setForm(pool ? {name: pool.name, context: pool.context, loadbalancer_type: pool.loadbalancer_type, loadbalancer_options: pool.loadbalancer_options ? {...pool.loadbalancer_options} : undefined, server_arr: pool.server_arr.map(m => ({...m})), revision: pool.revision} : {...blank(), context});
     setFormError(""); setOpen(true);
   };
   const save = async () => {
@@ -80,7 +80,16 @@ export default function UpstreamsScreen() {
     {error ? <Text accessibilityRole="alert" className="text-error-700 dark:text-error-400">{error}</Text> : null}
     {capabilities && !canApply ? <Text className="text-error-700 dark:text-error-400">Pool application is {capabilities.status}. Check NPM image compatibility and recovery status before making changes.</Text> : null}
     <FlatList showsVerticalScrollIndicator={false} contentContainerStyle={{paddingBottom: 32}} data={visibleItems} keyExtractor={p => String(p.id)} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => void load()}/>}
-      ListEmptyComponent={<Box className="p-6 border border-dashed border-outline-200 dark:border-[#2A3B52] rounded-2xl bg-background-0 dark:bg-[#0A1628] items-center"><Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold">{loading ? "Loading pools…" : "No pools found"}</Text><Text className="text-typography-600 dark:text-[#8A94A8] text-sm mt-1 text-center">{filter === "all" ? "Add an HTTP pool for proxies or a stream pool for TCP and UDP." : "Add a pool or choose another filter."}</Text></Box>}
+      ListEmptyComponent={<Box className="p-6 border border-dashed border-outline-200 dark:border-[#2A3B52] rounded-2xl bg-background-0 dark:bg-[#0A1628] items-start gap-3">
+        <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold">{loading ? "Loading pools…" : error ? "Unable to load pools" : filter === "http" ? "No HTTP pools" : filter === "stream" ? "No TCP/UDP pools" : "No upstream pools"}</Text>
+        {!loading && !error ? <>
+          <Text className="text-typography-600 dark:text-[#8A94A8] text-sm">{filter === "http" ? "HTTP pools provide destinations for proxy hosts and locations." : filter === "stream" ? "TCP/UDP pools provide destinations for streams." : "HTTP pools serve proxy hosts and locations. TCP/UDP pools serve streams."}</Text>
+          <HStack className="gap-2 flex-wrap">
+            {filter !== "stream" ? <Button className="rounded-xl bg-typography-900 dark:bg-[#2DD4BF]" isDisabled={!canApply} onPress={() => edit(undefined, "http")}><ButtonText className="text-background-0 dark:text-[#0A1628]">Create HTTP pool</ButtonText></Button> : null}
+            {filter !== "http" ? <Button variant="outline" className="rounded-xl border-outline-200 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E]" isDisabled={!canApply} onPress={() => edit(undefined, "stream")}><ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Create TCP/UDP pool</ButtonText></Button> : null}
+          </HStack>
+        </> : null}
+      </Box>}
       renderItem={({item}) => <Box className="rounded-2xl p-5 mb-4 gap-3 border border-outline-100 dark:border-[#2A3B52] shadow-soft-1 bg-background-0 dark:bg-[#0F1A2E]">
         <HStack className="justify-between flex-wrap gap-2"><Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">{item.name}</Heading><HStack className="gap-2 items-center flex-wrap"><Box className={`h-2.5 w-2.5 rounded-full ${item.apply_status === "applied" ? "bg-success-500" : "bg-warning-500"}`}/><Text className="text-sm text-typography-600 dark:text-[#8A94A8]">{item.context.toUpperCase()} · {item.apply_status}</Text></HStack></HStack>
         <Text className="text-sm text-typography-700 dark:text-[#8A94A8]">{names[item.loadbalancer_type] ?? item.loadbalancer_type} · {item.server_arr.length} members · revision {item.revision} · generation {item.applied_generation}</Text>

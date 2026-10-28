@@ -89,7 +89,16 @@ it("requires a confirmation and sends the deletion revision", async () => {
   await click(button("Delete pool"));const [,o]=fetchMock.mock.calls.find(([,o])=>o.method==="DELETE");expect(o.headers["If-Match"]).toBe('"4"');
   expect(parseEmptyJSON).not.toHaveBeenCalled();
   expect(container.querySelector('[role="dialog"]')).toBeNull();
-  expect(container.textContent).toContain("No pools found");
+  expect(container.textContent).toContain("No upstream pools");
+});
+it("opens empty-state creation with the requested pool context", async () => {
+  fetchMock.mockImplementation(async url => reply(url.endsWith("/capabilities") ? caps : []));
+  await mount(<UpstreamsScreen/>);
+  await click(button("Create TCP/UDP pool"));
+  expect(container.querySelector('[role="dialog"] select').value).toBe("stream");
+  await click(button("Cancel"));
+  await click(button("Create HTTP pool"));
+  expect(container.querySelector('[role="dialog"] select').value).toBe("http");
 });
 it("filters target contexts, shares reads, and emits null for direct mode", async () => {
   fetchMock.mockImplementation(async u => reply(u.endsWith("/capabilities") ? caps : [pool,{...pool,id:18,name:"tcp_pool",context:"stream"}]));
