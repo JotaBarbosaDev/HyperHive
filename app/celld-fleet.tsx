@@ -8,6 +8,7 @@ import { Button, ButtonIcon, ButtonSpinner, ButtonText } from "@/components/ui/b
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useMachines } from "@/hooks/useMachines";
 import { useCelldFleets } from "@/hooks/useCelldFleets";
+import { celldSummary } from "@/utils/celld-summary";
 import { getCelldFleet, runCelldAction, saveCelldFleet } from "@/services/celld";
 import type { CelldAction, CelldDetailTab, CelldFleet } from "@/types/celld";
 import { FleetHistoryModal } from "@/components/celld/FleetHistoryModal";
@@ -75,7 +76,7 @@ export default function CelldFleetScreen() {
   const fleets = data?.fleets ?? [];
   const selected = fleets.find((fleet) => fleet.id === detailsId);
   const expected = fleets.filter((fleet) => fleet.desired_state === "running");
-  const healthy = data?.storage.healthy && !data.reset_pending && expected.every((fleet) => fleet.status === "running" && fleet.servers.every((node) => node.running && node.healthy));
+  const summary = celldSummary(data, error);
   const machineNames = [...new Set([...machines.map((machine) => machine.MachineName), ...fleets.flatMap((fleet) => fleet.servers.map((node) => node.name))])];
 
   return <Box className="flex-1 bg-background-0 dark:bg-[#070D19]">
@@ -91,7 +92,7 @@ export default function CelldFleetScreen() {
           </Button>
         </Box>
         <Box className="flex-row flex-wrap justify-between items-center gap-3">
-          <Text className={mutedClassName}>Background status</Text>
+          <Box className="flex-row items-center gap-2"><Text className={mutedClassName}>Fleet service</Text><StatusBadge value={summary.service} /></Box>
           <Button className="rounded-xl gap-2" variant="outline" action="secondary" isDisabled={isRefreshing} onPress={() => { void refresh(); void refreshMachines(); }}>
             {isRefreshing ? <ButtonSpinner /> : <ButtonIcon as={RefreshCw} />}<ButtonText>{isRefreshing ? "Refreshing…" : "Refresh"}</ButtonText>
           </Button>
@@ -108,12 +109,12 @@ export default function CelldFleetScreen() {
         {isLoading ? <Box className={cardClassName}><Text accessibilityLiveRegion="polite" className={mutedClassName}>Loading fleets…</Text></Box> : data ? <>
           <Box className="flex-col md:flex-row gap-4">
             <Box className={cardClassName + " md:flex-1 gap-3"}>
-              <Box className="flex-row justify-between items-center gap-3"><Heading size="md" className={titleClassName}>Fleets</Heading><StatusBadge value={healthy ? "healthy" : data.reset_pending ? "cleanup pending" : "degraded"} /></Box>
+              <Box className="flex-row justify-between items-center gap-3"><Heading size="md" className={titleClassName}>Fleets</Heading><StatusBadge value={summary.runtime} /></Box>
               <Text className={titleClassName + " text-3xl font-semibold"}>{fleets.length}</Text>
-              <Text className={mutedClassName}>{expected.length} expected to run · {fleets.filter((fleet) => fleet.status === "stopped").length} stopped</Text>
+              <Text className={mutedClassName}>{expected.length} expected to run · {fleets.filter((fleet) => fleet.status === "stopped").length} stopped. Workload health is not assessed here.</Text>
             </Box>
             <Box className={cardClassName + " md:flex-1 gap-3"}>
-              <Box className="flex-row justify-between items-center gap-3"><Heading size="md" className={titleClassName}>SILO storage</Heading><StatusBadge value={data.storage.healthy ? "healthy" : "unavailable"} /></Box>
+              <Box className="flex-row justify-between items-center gap-3"><Heading size="md" className={titleClassName}>SILO storage</Heading><StatusBadge value={error ? "unknown" : data.storage.healthy ? "connected" : "unavailable"} /></Box>
               <Text className={titleClassName + " text-3xl font-semibold"}>{data.storage.bucket_count === null ? "Unknown" : data.storage.bucket_count} <Text className={mutedClassName}>buckets</Text></Text>
               <Text className={mutedClassName}>{data.storage.managed_bucket_count} managed fleets · Checked: {observedAt(data.storage.checked_at)}</Text>
               <ErrorMessage message={data.storage.error} />
