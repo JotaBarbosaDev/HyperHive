@@ -21,6 +21,15 @@ export function movedWidget(widget: Widget, deltaX: number, deltaY: number, cell
   const rows = snap ? Math.round(deltaY / 60) : deltaY / 60;
   return resize ? { ...widget, w: Math.min(12 - widget.x, Math.max(minimumWidgetWidth(widget.kind), widget.w + columns)), h: Math.max(minimumWidgetHeight(widget.kind), widget.h + rows) } : { ...widget, x: Math.max(0, Math.min(12 - widget.w, widget.x + columns)), y: Math.max(0, widget.y + rows) };
 }
+export function alignWidget(widget: Widget, others: Widget[]): Widget {
+  const nearby = (value: number, targets: number[]) => {
+    const closest = targets.reduce((best, target) => Math.abs(target - value) < Math.abs(best - value) ? target : best, value + 1);
+    return Math.abs(closest - value) <= 0.4 ? closest : value;
+  };
+  const x = nearby(widget.x, others.flatMap(other => [other.x, other.x + other.w, other.x - widget.w, other.x + other.w - widget.w]));
+  const y = nearby(widget.y, others.flatMap(other => [other.y, other.y + other.h, other.y - widget.h, other.y + other.h - widget.h]));
+  return { ...widget, x: Math.max(0, Math.min(12 - widget.w, Math.round(x))), y: Math.max(0, Math.round(y)) };
+}
 export function availableWidgetPosition(widgets: Widget[], w: number, h: number): { x: number; y: number } {
   const rows = [...new Set([0, ...widgets.map((widget) => widget.y + widget.h)])].sort((a, b) => a - b);
   for (const y of rows) {
@@ -30,7 +39,7 @@ export function availableWidgetPosition(widgets: Widget[], w: number, h: number)
   }
   return { x: 0, y: Math.max(0, ...widgets.map((widget) => widget.y + widget.h)) };
 }
-export const SupportWidget = React.memo(function SupportWidget({ widget, stream, page, token, appId, retentionDays, timeframe, cellWidth, editing, expanded = false, onExpand, onClosePanel, onChange, onEdit, onRemove, onInteraction, historyError }: { widget: Widget; stream?: SupportStream; page?: History; token: string; appId: string; retentionDays: number; timeframe?: SupportTimeframe; cellWidth: number; editing: boolean; expanded?: boolean; onExpand?: (widget: Widget) => void; onClosePanel?: () => void; onChange: (widget: Widget) => void; onEdit?: (widget: Widget) => void; onRemove: (widget: Widget) => void; onInteraction?: (bottom: number | null) => void; historyError?: string | null }) {
+export const SupportWidget = React.memo(function SupportWidget({ widget, stream, page, token, appId, retentionDays, timeframe, cellWidth, editing, expanded = false, onExpand, onClosePanel, onChange, onEdit, onRemove, onInteraction, historyError, neighbours = [] }: { widget: Widget; stream?: SupportStream; page?: History; token: string; appId: string; retentionDays: number; timeframe?: SupportTimeframe; cellWidth: number; editing: boolean; expanded?: boolean; onExpand?: (widget: Widget) => void; onClosePanel?: () => void; onChange: (widget: Widget) => void; onEdit?: (widget: Widget) => void; onRemove: (widget: Widget) => void; onInteraction?: (bottom: number | null) => void; historyError?: string | null; neighbours?: Widget[] }) {
   const [preview, setPreview] = React.useState<Widget | null>(null);
   const [showControls, setShowControls] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
@@ -67,7 +76,7 @@ export const SupportWidget = React.memo(function SupportWidget({ widget, stream,
       return { samples, next_before: previous.samples.length && samples[0]?.id > previous.samples[0].id ? samples[0].id : previous.next_before };
     });
   }, [page, severityKey]);
-  const current = React.useRef({ widget, cellWidth, editing, onChange, onInteraction }); current.current = { widget, cellWidth, editing, onChange, onInteraction };
+  const current = React.useRef({ widget, cellWidth, editing, onChange, onInteraction, neighbours }); current.current = { widget, cellWidth, editing, onChange, onInteraction, neighbours };
   const origin = React.useRef<{ widget: Widget; cellWidth: number } | null>(null);
   const handles = React.useMemo(() => {
     const cancel = () => { origin.current = null; setPreview(null); current.current.onInteraction?.(null); };
@@ -87,7 +96,8 @@ export const SupportWidget = React.memo(function SupportWidget({ widget, stream,
       },
       onPanResponderRelease: (_event, gesture) => {
         if (origin.current && current.current.editing) {
-          const next = movedWidget(origin.current.widget, gesture.dx, gesture.dy, origin.current.cellWidth, resize);
+          const raw = movedWidget(origin.current.widget, gesture.dx, gesture.dy, origin.current.cellWidth, resize, false);
+          const next = resize ? movedWidget(origin.current.widget, gesture.dx, gesture.dy, origin.current.cellWidth, true) : alignWidget(raw, current.current.neighbours);
           const previous = current.current.widget;
           if (next.x !== previous.x || next.y !== previous.y || next.w !== previous.w || next.h !== previous.h) current.current.onChange(next);
         }

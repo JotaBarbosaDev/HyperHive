@@ -44,6 +44,8 @@ export default function SupportScreen() {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [gridWidth, setGridWidth] = React.useState(720);
+  const [layoutPreview, setLayoutPreview] = React.useState<Widget[] | null>(null);
+  const [undoLayout, setUndoLayout] = React.useState<Widget[] | null>(null);
   const [interactionBottom, setInteractionBottom] = React.useState<number | null>(null);
   const selectionInitialized = React.useRef(false);
   const narrow = width < 768;
@@ -60,7 +62,7 @@ export default function SupportScreen() {
   React.useEffect(() => {
     if (!selectedId && scopedApps.length && !selectionInitialized.current) { selectionInitialized.current = true; setSelectedId(scopedApps[0].id); setTabId(scopedApps[0].tab_id); }
   }, [selectedId, data.apps, data.hasSnapshot, data.isLoading, tabId]);
-  React.useEffect(() => { setEditing(false); setInteractionBottom(null); setError(null); setAdding(false); setWidgetForm(null); setShowDetails(false); setExpandedWidgetId(null); }, [selectedId]);
+  React.useEffect(() => { setEditing(false); setInteractionBottom(null); setError(null); setAdding(false); setWidgetForm(null); setShowDetails(false); setExpandedWidgetId(null); setLayoutPreview(null); setUndoLayout(null); }, [selectedId]);
   React.useEffect(() => { setConfirmationName(""); }, [confirmation, confirmationApp]);
   const choose = (id: string) => { if (dashboard.dirty && id !== selectedId) { setError("Wait for the dashboard to save, or resolve its save error before switching Apps."); return; } selectionInitialized.current = true; setSelectedId(id); setEditing(false); };
   const invoke = async (job: () => Promise<void>) => {
@@ -69,13 +71,13 @@ export default function SupportScreen() {
     finally { setBusy(false); }
   };
   const updateWidget = React.useCallback((widget: Widget) => {
-    if (layout) dashboard.change(layout.widgets.map((current) => current.id === widget.id ? widget : current));
+    if (layout) { setUndoLayout(null); dashboard.change(layout.widgets.map((current) => current.id === widget.id ? widget : current)); }
   }, [layout, dashboard.change]);
   const expandWidget = React.useCallback((widget: Widget) => setExpandedWidgetId(widget.id), []);
   const closeWidgetPanel = React.useCallback(() => setExpandedWidgetId(null), []);
   const editWidget = React.useCallback((widget: Widget) => { setWidgetForm(widget); setAdding(true); }, []);
   const removeWidget = React.useCallback((widget: Widget) => {
-    if (layout) dashboard.change(layout.widgets.filter((entry) => entry.id !== widget.id));
+    if (layout) { setUndoLayout(null); dashboard.change(layout.widgets.filter((entry) => entry.id !== widget.id)); }
   }, [layout, dashboard.change]);
   const saveApp = async (input: AppInput, sourceId?: string) => {
     if (!token) return;
@@ -106,7 +108,7 @@ export default function SupportScreen() {
     } else {
       const { w, h } = defaultWidgetSize(settings.kind);
       const widget: Widget = { id: "widget-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8), ...settings, ...availableWidgetPosition(layout.widgets, w, h), w, h };
-      dashboard.change([...layout.widgets, widget]);
+      setUndoLayout(null); dashboard.change([...layout.widgets, widget]);
     }
     setAdding(false); setWidgetForm(null);
   };
@@ -126,13 +128,13 @@ export default function SupportScreen() {
             {selected ? <><State value={selected.connectivity} /><State value={selected.health} /></> : null}
           </Box>
           <Box className="flex-row flex-wrap items-center gap-2" style={{ maxWidth: "100%" }}>
-            {editing ? <Action label="Done positioning" onPress={() => setEditing(false)} /> : null}
+            {editing ? <Action label="Done positioning" onPress={() => { setEditing(false); setLayoutPreview(null); }} /> : null}
             <SupportActions createApp={{ label: "Create an App", disabled: dashboard.dirty || !data.tabs.length, onPress: () => setAppForm("new") }} manageApps={[
               { label: "Edit Apps", disabled: dashboard.dirty || !data.apps.length, onPress: () => { setAppSearch(""); setManagingApps("edit"); } },
               { label: "Delete Apps", disabled: dashboard.dirty || !data.apps.length, onPress: () => { setAppSearch(""); setManagingApps("delete"); } },
             ]} manageTabs={{ label: "Manage Tabs", disabled: dashboard.dirty, onPress: () => setManaging(true) }} actions={selected ? [
-              { label: "Add widget", disabled: !detail || busy || dashboard.conflict || (layout?.widgets.length ?? 0) >= 50, onPress: () => { setWidgetForm(null); setAdding(true); } },
-              { label: editing ? "Done positioning" : "Edit layout", disabled: !detail || dashboard.conflict, onPress: () => setEditing(!editing) },
+              { label: "Add widget", disabled: !detail || busy || dashboard.conflict || !!layoutPreview || (layout?.widgets.length ?? 0) >= 50, onPress: () => { setWidgetForm(null); setAdding(true); } },
+              { label: editing ? "Done positioning" : "Edit layout", disabled: !detail || dashboard.conflict, onPress: () => { setEditing(!editing); setLayoutPreview(null); } },
               { label: "App details", onPress: () => setShowDetails(true) },
             ] : []} />
           </Box>
@@ -140,11 +142,20 @@ export default function SupportScreen() {
         {dashboard.error && !dashboard.conflict ? <Action primary label="Retry saving" disabled={dashboard.saving} onPress={dashboard.retry} /> : null}
         {dashboard.dirty && !dashboard.saving ? <Action label={dashboard.conflict ? "Reload saved layout" : "Discard unsaved changes"} onPress={() => { dashboard.discard(); setEditing(false); data.refresh(); }} /> : null}
         {selected ? <>
+          {editing && layout?.widgets.length ? <Box className="flex-row flex-wrap gap-2">
+            {layoutPreview ? <><Action primary label="Apply arrangement" disabled={dashboard.dirty} onPress={() => { setUndoLayout(layout.widgets); dashboard.change(layoutPreview); setLayoutPreview(null); }} /><Action label="Cancel preview" onPress={() => setLayoutPreview(null)} /></> : <Action label="Preview tidy layout" disabled={dashboard.dirty} onPress={() => {
+              const arranged: Widget[] = [];
+              for (const widget of layout.widgets) arranged.push({ ...widget, ...availableWidgetPosition(arranged, widget.w, widget.h) });
+              setLayoutPreview(arranged);
+            }} />}
+            {undoLayout && !layoutPreview ? <Action label="Undo arrangement" disabled={dashboard.dirty} onPress={() => { dashboard.change(undoLayout); setUndoLayout(null); }} /> : null}
+          </Box> : null}
+          {layoutPreview ? <Text className={muted}>Preview only. Apply to save this arrangement, or cancel to keep the current layout.</Text> : null}
           {editing ? <Text className={muted}>Drag a widget’s header to move it anywhere. Drag its bottom-right corner to resize. Widgets snap to the grid when released; gaps stay where you leave them. Changes save automatically.</Text> : null}
           {!detail ? <ActivityIndicator accessibilityLabel="Loading App telemetry" /> : !layout?.widgets.length ? <Box className={surface + " gap-3"}><Heading size="md" className={ink}>{detail.streams.length ? "Build your App’s dashboard" : "Waiting for the first sender"}</Heading><Text className={muted}>{detail.streams.length ? "Choose an incoming stream and display it as a value, chart, gauge, progress, text, status, feed or table." : "Add widgets now using incoming stream names, or send samples to discover streams automatically."}</Text></Box> : <ScrollView horizontal nestedScrollEnabled scrollEnabled={interactionBottom === null} contentContainerStyle={{ minWidth: "100%" }}>
-            <Box onLayout={(event) => { const measured = event.nativeEvent.layout.width; if (measured > 0) setGridWidth(measured); }} style={{ width: "100%", minWidth: 680, height: (Math.max(1, interactionBottom ?? 0, ...layout.widgets.map((widget) => widget.y + widget.h)) + (editing ? 4 : 0)) * 60 + 8, position: "relative", ...(editing ? { backgroundColor: "rgba(20,125,120,0.04)" } : {}) }}>
+            <Box onLayout={(event) => { const measured = event.nativeEvent.layout.width; if (measured > 0) setGridWidth(measured); }} style={{ width: "100%", minWidth: 680, height: (Math.max(1, interactionBottom ?? 0, ...(layoutPreview ?? layout.widgets).map((widget) => widget.y + widget.h)) + (editing ? 4 : 0)) * 60 + 8, position: "relative", ...(editing ? { backgroundColor: "rgba(20,125,120,0.04)" } : {}) }}>
               {editing ? Array.from({ length: 13 }, (_, column) => <Box key={column} pointerEvents="none" style={{ position: "absolute", top: 0, bottom: 0, left: column * gridWidth / 12, borderLeftWidth: 1, borderColor: "rgba(20,125,120,0.16)" }} />) : null}
-              {layout.widgets.map((widget) => <SupportWidget key={selectedId + widget.id + JSON.stringify(timeframe)} timeframe={timeframe} expanded={expandedWidgetId === widget.id} onExpand={expandWidget} onClosePanel={closeWidgetPanel} widget={widget} historyError={data.error} stream={detail.streams.find((stream) => stream.name === widget.stream)} page={trendWidgets.includes(widget.kind) ? data.chartHistory[widget.stream] ?? data.history[widget.stream] : data.history[widget.stream]} token={token} appId={selectedId!} retentionDays={selected.retention_days} cellWidth={gridWidth / 12} editing={editing && !dashboard.conflict} onChange={updateWidget} onInteraction={setInteractionBottom} onEdit={editWidget} onRemove={removeWidget} />)}
+              {(layoutPreview ?? layout.widgets).map((widget) => <SupportWidget key={selectedId + widget.id + JSON.stringify(timeframe)} timeframe={timeframe} expanded={expandedWidgetId === widget.id} onExpand={expandWidget} onClosePanel={closeWidgetPanel} widget={widget} neighbours={layout.widgets.filter(other => other.id !== widget.id)} historyError={data.error} stream={detail.streams.find((stream) => stream.name === widget.stream)} page={trendWidgets.includes(widget.kind) ? data.chartHistory[widget.stream] ?? data.history[widget.stream] : data.history[widget.stream]} token={token} appId={selectedId!} retentionDays={selected.retention_days} cellWidth={gridWidth / 12} editing={editing && !dashboard.conflict && !layoutPreview} onChange={updateWidget} onInteraction={setInteractionBottom} onEdit={editWidget} onRemove={removeWidget} />)}
             </Box>
           </ScrollView>}
         </> : <Box className={surface + " gap-3"}><Heading size="lg" className={ink}>{scopedApps.length ? "Choose an App" : `No Apps in ${scopeName}`}</Heading><Text className={muted}>{scopedApps.length ? "Select an App from HH Support in the navigation menu." : "Register an App in this workspace to start receiving telemetry."}</Text>{!data.tabs.length ? <Action label="Create your first tab" onPress={() => setTabForm("new")} /> : !scopedApps.length ? <Action primary label="Create an App" disabled={dashboard.dirty} onPress={() => setAppForm("new")} /> : null}</Box>}

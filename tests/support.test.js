@@ -4,7 +4,7 @@ import { PanResponder, useWindowDimensions } from "react-native";
 import { compatibleWidgets, getSupportHistory, mergeSamples, parseFrame, parseHistory, supportSocketUrl } from "../services/support-client";
 import { useSupportLayout } from "../hooks/useSupportLayout";
 import { useSupport } from "../hooks/useSupport";
-import { availableWidgetPosition, movedWidget, sampleText, SupportWidget } from "../components/support/support-widget";
+import { alignWidget, availableWidgetPosition, movedWidget, sampleText, SupportWidget } from "../components/support/support-widget";
 import { chartGeometry, WidgetChart } from "../components/support/widget-chart";
 import { WidgetFeed, WidgetTable } from "../components/support/widget-feed";
 import { defaultWidgetSize, eventSummary, measurementText, minimumWidgetHeight } from "../components/support/widget-format";
@@ -403,6 +403,22 @@ describe("Support dashboard actions", () => {
     expect(JSON.parse(request[1].body)).toMatchObject({ revision: 0, widgets: [expect.objectContaining({ kind: "value", stream: "cpu", w: 3 })] });
     await click("Reload saved layout");
     expect(container.textContent).not.toContain("Your draft is preserved");
+  });
+  test("layout preview can be cancelled, applied and undone", async () => {
+    const original = fetchMock.getMockImplementation();
+    let saved = { revision:0, widgets:[{id:"one", stream:"cpu", kind:"value", x:4, y:3, w:3, h:2}] };
+    fetchMock.mockImplementation(async (url, options) => {
+      if (url.endsWith("/layout") && options.method === "PUT") { saved = {...JSON.parse(options.body), revision:saved.revision + 1}; return response(saved); }
+      if (url.endsWith("/apps/app")) { const result = await original(url, options); const value = await result.json(); return response({...value, layout:saved}); }
+      return original(url, options);
+    });
+    await act(async () => root.render(React.createElement(SupportScreen)));
+    await click("Dashboard actions"); await click("Edit layout"); await click("Preview tidy layout");
+    expect(container.textContent).toContain("Preview only.");
+    await click("Cancel preview"); expect(saved.widgets[0].x).toBe(4);
+    await click("Preview tidy layout"); await click("Apply arrangement");
+    expect(saved.widgets[0]).toMatchObject({x:0,y:0});
+    await click("Undo arrangement"); expect(saved.widgets[0]).toMatchObject({x:4,y:3});
   });
   test("configures a future numeric stream before samples, and saves its chart settings automatically", async () => {
     const original = fetchMock.getMockImplementation();
@@ -1272,4 +1288,11 @@ test("restored widgets grow to their minimum without overlap", () => {
   expect(result[0]).toMatchObject({x:9, y:0, w:3, h:2});
   expect(result[1]).toMatchObject({x:8, y:2, w:4, h:4});
   expect(widgets[0]).toMatchObject({x:11, w:1, h:1});
+});
+
+test("dragging aligns to nearby widget edges and keeps free grid placement", () => {
+  const widget = { id:"a", x:3.7, y:2.2, w:3, h:2 };
+  const other = { id:"b", x:4, y:4, w:4, h:2 };
+  expect(alignWidget(widget, [other])).toMatchObject({x:4, y:2});
+  expect(alignWidget({...widget, x:8.49, y:7.49}, [other])).toMatchObject({x:8, y:7});
 });
