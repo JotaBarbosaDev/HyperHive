@@ -41,6 +41,7 @@ import { Pressable } from "@/components/ui/pressable";
 import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
 import { Certificate, CreateLetsEncryptPayload } from "@/types/certificate";
 import { certificateExpiry } from "@/utils/certificate-expiry";
+import { certificateAction } from "@/utils/certificate-action";
 import {
   createLetsEncryptCertificate,
   createManualCertificate,
@@ -410,8 +411,14 @@ export default function CertificatesScreen() {
     </FormControl>
   );
 
+  const openReplacement = () => {
+    setSelectedCert(null);
+    openCreateModal();
+    setCreationMode("manual");
+  };
+
   const handleRenew = async (cert: Certificate) => {
-    if (!cert.id) return;
+    if (!cert.id || certificateAction(cert) !== "renew") return;
     setRenewingId(cert.id);
     try {
       await renewCertificate(cert.id);
@@ -536,9 +543,7 @@ export default function CertificatesScreen() {
                           </Text>
                           <StatusChip
                             label={
-                              cert.provider?.toLowerCase() === "letsencrypt"
-                                ? "Let's Encrypt"
-                                : "Custom"
+                              certificateAction(cert) === "renew" ? "Let's Encrypt" : certificateAction(cert) === "upload" ? "Custom" : "Unknown provider"
                             }
                             action="muted"
                           />
@@ -605,14 +610,14 @@ export default function CertificatesScreen() {
                           <HStack className="items-center gap-2">
                             <AlertTriangle size={16} color="#ef4444" />
                             <Text className="text-error-600 text-sm font-semibold">
-                              This certificate has expired and needs to be
-                              renewed
+                              This certificate has expired.
                             </Text>
                           </HStack>
                         ) : null}
                       </VStack>
 
                       <HStack className="gap-2 items-center">
+                        {certificateAction(cert) === "renew" ? (
                         <Button
                           action="default"
                           variant="outline"
@@ -630,6 +635,11 @@ export default function CertificatesScreen() {
                             Renew
                           </ButtonText>
                         </Button>
+                        ) : certificateAction(cert) === "upload" ? (
+                          <Button variant="outline" size="sm" onPress={openReplacement} className="rounded-xl border-outline-200 dark:border-[#243247]">
+                            <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Upload new certificate</ButtonText>
+                          </Button>
+                        ) : null}
                         {/* Download removed per request */}
                         <Button
                           action="negative"
@@ -673,7 +683,7 @@ export default function CertificatesScreen() {
                       </HStack>
                       <HStack className="gap-2 flex-wrap">
                         <StatusChip
-                          label={cert.provider?.toLowerCase() === "letsencrypt" ? "Let's Encrypt" : "Custom"}
+                          label={certificateAction(cert) === "renew" ? "Let's Encrypt" : certificateAction(cert) === "upload" ? "Custom" : "Unknown provider"}
                           action="muted"
                         />
                         {cert.meta?.dns_challenge ? (
@@ -731,7 +741,7 @@ export default function CertificatesScreen() {
                 </VStack>
                 <HStack className="items-center gap-2 flex-wrap">
                   <StatusChip
-                    label={selectedCert.provider?.toLowerCase() === "letsencrypt" ? "Let's Encrypt" : "Custom"}
+                    label={certificateAction(selectedCert) === "renew" ? "Let's Encrypt" : certificateAction(selectedCert) === "upload" ? "Custom" : "Unknown provider"}
                     action="muted"
                   />
                   <StatusChip label={certificateExpiry(selectedCert).label} action={isExpired(selectedCert) ? "error" : "muted"} />
@@ -759,7 +769,7 @@ export default function CertificatesScreen() {
                   <HStack className="items-center gap-2">
                     <AlertTriangle size={16} color="#ef4444" />
                     <Text className="text-error-600 text-sm font-semibold">
-                      This certificate has expired and needs to be renewed
+                      This certificate has expired.
                     </Text>
                   </HStack>
                 ) : null}
@@ -768,6 +778,7 @@ export default function CertificatesScreen() {
           </ModalBody>
           <ModalFooter className="px-6 pb-6 pt-4 border-t border-outline-100 dark:border-[#2A3B52]">
             <HStack className="gap-2 w-full">
+              {selectedCert && certificateAction(selectedCert) === "renew" ? (
               <Button
                 action="default"
                 variant="outline"
@@ -787,6 +798,11 @@ export default function CertificatesScreen() {
                 )}
                 <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Renew</ButtonText>
               </Button>
+              ) : selectedCert && certificateAction(selectedCert) === "upload" ? (
+                <Button variant="outline" size="sm" onPress={openReplacement} className="flex-1 rounded-xl border-outline-200 dark:border-[#243247]">
+                  <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Upload new certificate</ButtonText>
+                </Button>
+              ) : null}
               <Button
                 action="negative"
                 variant="solid"
@@ -817,7 +833,7 @@ export default function CertificatesScreen() {
               <Text className="text-typography-600 dark:text-[#8A94A8] mt-1">
                 {creationMode === "letsencrypt"
                   ? "Generate SSL certificates via ACME with HTTP or DNS challenge."
-                  : "Upload an existing certificate and its private key."}
+                  : "Upload a new certificate and its private key. Existing certificates and their assignments remain unchanged."}
               </Text>
             </VStack>
             <ModalCloseButton className="text-typography-500" />
