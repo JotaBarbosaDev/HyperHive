@@ -183,7 +183,7 @@ export default function K8ClusterScreen() {
 
 	const renderNodes = (label: string, nodes: K8sClusterNode[], isConnected: boolean) => {
 		return (
-			<Box className="mt-4">
+			<Box className="mt-3">
 				<HStack className="items-center justify-between mb-2">
 					<Text className="text-xs font-semibold uppercase text-typography-500 dark:text-[#8A94A8] tracking-[0.08em]" style={{ fontFamily: "Inter_600SemiBold" }}>
 						{label}
@@ -193,7 +193,7 @@ export default function K8ClusterScreen() {
 					</Text>
 				</HStack>
 				{!nodes.length ? (
-					<Box className="p-3 rounded-lg border border-outline-100 dark:border-[#2A3B52] bg-background-50/70 dark:bg-[#0F1A2E]">
+					<Box className="py-1">
 						<Text className="text-sm text-typography-600 dark:text-[#8A94A8]">No nodes in this state.</Text>
 					</Box>
 				) : (
@@ -288,6 +288,34 @@ export default function K8ClusterScreen() {
                 className="text-typography-900 dark:text-[#E8EBF0] mb-1"
                 style={{fontFamily: "Inter_700Bold"}}
               >
+                Cluster Status
+              </Heading>
+              <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
+                Current connectivity for each node in the cluster.
+              </Text>
+              {isLoading && !status ? (
+                <Text className="text-sm text-typography-600 dark:text-[#8A94A8] mt-3">
+                  Loading status...
+                </Text>
+              ) : null}
+              {status ? (
+                <>
+                  {renderNodes("Connected", status.connected || [], true)}
+                  {renderNodes(
+                    "Disconnected",
+                    status.disconnected || [],
+                    false,
+                  )}
+                </>
+              ) : null}
+            </Box>
+
+            <Box className="p-5 rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524] shadow-soft-1">
+              <Heading
+                size="md"
+                className="text-typography-900 dark:text-[#E8EBF0] mb-1"
+                style={{fontFamily: "Inter_700Bold"}}
+              >
                 Connection File
               </Heading>
               <Text className="text-sm text-typography-600 dark:text-[#8A94A8] mb-4">
@@ -355,33 +383,6 @@ export default function K8ClusterScreen() {
               </Button>
             </Box>
 
-            <Box className="p-5 rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0E1524] shadow-soft-1">
-              <Heading
-                size="md"
-                className="text-typography-900 dark:text-[#E8EBF0] mb-1"
-                style={{fontFamily: "Inter_700Bold"}}
-              >
-                Cluster Status
-              </Heading>
-              <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
-                Current connectivity for each node in the cluster.
-              </Text>
-              {isLoading && !status ? (
-                <Text className="text-sm text-typography-600 dark:text-[#8A94A8] mt-3">
-                  Loading status...
-                </Text>
-              ) : null}
-              {status ? (
-                <>
-                  {renderNodes("Connected", status.connected || [], true)}
-                  {renderNodes(
-                    "Disconnected",
-                    status.disconnected || [],
-                    false,
-                  )}
-                </>
-              ) : null}
-            </Box>
           </Box>
         </Box>
       </ScrollView>
