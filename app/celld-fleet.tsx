@@ -126,7 +126,8 @@ export default function CelldFleetScreen() {
           </Box>
           {fleets.length === 0 ? <Box className={cardClassName + " items-start gap-3"}>
             <Heading size="md" className={titleClassName}>Create your first fleet</Heading>
-            <Text className={mutedClassName}>Select one or more servers to provision an isolated bucket and start your application runtime.</Text>
+            <Text className={mutedClassName}>Choose servers to run your fleet. SILO stores its data in an isolated bucket.</Text>
+            <Button className="rounded-xl h-11 gap-2" isDisabled={data.reset_pending || Boolean(busy)} onPress={() => { setNotice(""); setForm("create"); }}><ButtonIcon as={Plus} /><ButtonText>Create fleet</ButtonText></Button>
           </Box> : <Box className="gap-4">{fleets.map((fleet) => <FleetCard key={fleet.id} fleet={fleet} busy={Boolean(busy)} onInspect={(tab) => { setDetailsTab(tab); setDetailsId(fleet.id); }} onDetails={() => { void details(fleet); }} onEdit={() => setForm(fleet)} onAction={(selectedAction) => action(fleet, selectedAction)} />)}</Box>}
         </> : null}
         <Control label={showHistory ? "Hide deleted fleet history" : "Find a deleted fleet"} onPress={() => setShowHistory((value) => !value)} />
