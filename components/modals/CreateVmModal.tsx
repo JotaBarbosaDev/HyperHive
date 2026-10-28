@@ -35,9 +35,10 @@ import { Cpu, X, Copy, Trash2, ChevronDown, Check, ChevronDownIcon } from "lucid
 import { Pressable } from "@/components/ui/pressable";
 import { useAppTheme } from "@/hooks/useAppTheme";
 import { useToast, Toast, ToastTitle, ToastDescription } from "@/components/ui/toast";
-import { createVm, listIsos, listSlaves, IsoApiResponse, Slave, getCpuDisableFeatures } from "@/services/vms-client";
-import { listMounts } from "@/services/hyperhive";
+import { createVm, listIsos, listSlaves, IsoApiResponse, Slave, getCpuDisableFeatures, getAllVMs } from "@/services/vms-client";
+import { listMounts, getCpuInfo, getMemInfo } from "@/services/hyperhive";
 import { Mount } from "@/types/mount";
+import { vmAllocation } from "@/utils/vm-capacity";
 import { listXmlTemplates, XmlTemplate } from "@/services/xml-templates-client";
 import { XML_TEMPLATE_NONE_OPTION_LABEL, XML_TEMPLATE_NONE_OPTION_VALUE } from "@/utils/xml-template";
 
@@ -99,6 +100,31 @@ export default function CreateVmModal({
   const [xmlTemplateOptions, setXmlTemplateOptions] = useState<XmlTemplate[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [capacity, setCapacity] = useState<{ loading: boolean; cpu: number | null; ram: number | null; allocatedCpu: number | null; allocatedRam: number | null }>({ loading: false, cpu: null, ram: null, allocatedCpu: null, allocatedRam: null });
+
+  useEffect(() => {
+    if (!showModal || !slave) return;
+    let cancelled = false;
+    setCapacity({ loading: true, cpu: null, ram: null, allocatedCpu: null, allocatedRam: null });
+    Promise.allSettled([getCpuInfo(slave), getMemInfo(slave), getAllVMs()]).then(([cpu, ram, inventory]) => {
+      if (cancelled) return;
+      const vms = inventory.status === "fulfilled" && Array.isArray(inventory.value) ? inventory.value : null;
+      const allocation = vmAllocation(vms, slave);
+      const valid = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0;
+      setCapacity({
+        loading: false,
+        cpu: cpu.status === "fulfilled" && Array.isArray(cpu.value?.cores) && cpu.value.cores.length > 0 ? cpu.value.cores.length : null,
+        ram: ram.status === "fulfilled" && valid(ram.value?.totalMb) && ram.value.totalMb > 0 ? ram.value.totalMb : null,
+        allocatedCpu: allocation.cpu,
+        allocatedRam: allocation.ram,
+      });
+    });
+    return () => { cancelled = true; };
+  }, [showModal, slave]);
+  const selectedMount = mountOptions.find(mount => String(mount.NfsShare.Id) === nfsShare);
+  const space = selectedMount?.Status;
+  const knownSpace = space?.working && Number.isFinite(space.spaceTotalGB) && space.spaceTotalGB > 0 && Number.isFinite(space.spaceFreeGB) && space.spaceFreeGB >= 0;
+
   const quickMemoryGb = [2, 4, 8, 16, 32, 64];
   const quickDiskGb = [20, 50, 100, 200, 500];
 
@@ -422,6 +448,7 @@ export default function CreateVmModal({
                       </SelectContent>
                     </SelectPortal>
                   </Select>
+                  {slave ? <Text className="text-xs text-typography-600 dark:text-[#AAB5C5]">{capacity.loading ? "Loading host capacity…" : `Configured VM allocation: ${capacity.allocatedCpu ?? "unknown"} vCPU / ${capacity.cpu ?? "unknown"} host CPUs · ${capacity.allocatedRam === null ? "unknown" : (capacity.allocatedRam / 1024).toFixed(1) + " GB"} RAM / ${capacity.ram === null ? "unknown" : (capacity.ram / 1024).toFixed(1) + " GB"} host RAM. Allocation is not live utilization.`}</Text> : null}
                 </VStack>
 
                 {/* vCPU */}
@@ -637,6 +664,7 @@ export default function CreateVmModal({
                       </SelectContent>
                     </SelectPortal>
                   </Select>
+                  {nfsShare ? <Text className="text-xs text-typography-600 dark:text-[#AAB5C5]">{knownSpace ? `NFS capacity: ${space!.spaceFreeGB} GB free of ${space!.spaceTotalGB} GB total.` : "NFS capacity: unknown."}</Text> : null}
                 </VStack>
 
                 {/* ISO ID */}
