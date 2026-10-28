@@ -410,7 +410,7 @@ function StreamsContent() {
                       </VStack>
                       <HStack className="gap-2 items-center flex-wrap">
                         {protocols.length ? protocols.map(p => <Badge key={p} size="sm" action="muted" variant="solid"><BadgeText>{p}</BadgeText></Badge>) : <Text className="text-xs text-typography-500">No protocol</Text>}
-                        <Text className="text-sm text-typography-700 dark:text-[#E8EBF0]">{host.certificate_id ? "SSL" : "No SSL"}</Text>
+                        <Text className="text-sm text-typography-700 dark:text-[#E8EBF0]">{host.certificate_id ? "Certificate configured" : "No certificate configured"}</Text>
                         <Badge size="sm" action={enabled ? "success" : "muted"} variant="solid"><BadgeText>{enabled ? "Enabled" : "Disabled"}</BadgeText></Badge>
                       </HStack>
                       <HStack className="gap-2 items-center">
@@ -496,12 +496,12 @@ function StreamsContent() {
                         {host.certificate_id ? (
                           <HStack className="items-center gap-1">
                             <Lock size={16} color="#16a34a" />
-                            <Text className="text-success-600 text-sm">SSL</Text>
+                            <Text className="text-success-600 text-sm">Certificate configured</Text>
                           </HStack>
                         ) : (
                           <HStack className="items-center gap-1">
                             <Shield size={16} color="#9ca3af" />
-                            <Text className="text-typography-600 dark:text-[#8A94A8] text-sm">No SSL</Text>
+                            <Text className="text-typography-600 dark:text-[#8A94A8] text-sm">No certificate configured</Text>
                           </HStack>
                         )}
                       </HStack>
@@ -563,12 +563,12 @@ function StreamsContent() {
                   {selectedHost.certificate_id ? (
                     <HStack className="items-center gap-1">
                       <Lock size={16} color="#16a34a" />
-                      <Text className="text-success-600 text-sm">SSL</Text>
+                      <Text className="text-success-600 text-sm">Certificate configured</Text>
                     </HStack>
                   ) : (
                     <HStack className="items-center gap-1">
                       <Shield size={16} color="#9ca3af" />
-                      <Text className="text-typography-600 dark:text-[#8A94A8] text-sm">No SSL</Text>
+                      <Text className="text-typography-600 dark:text-[#8A94A8] text-sm">No certificate configured</Text>
                     </HStack>
                   )}
                 </HStack>
