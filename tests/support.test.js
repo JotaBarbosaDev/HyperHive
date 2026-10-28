@@ -788,6 +788,18 @@ describe("Widget behavior by data type", () => {
     expect(chartGeometry(timed, "line").points.map((point) => point.x)).toEqual([10, 40, 310]);
     expect(chartGeometry(timed, "bar").points.map((point) => point.x)).toEqual([60, 160, 260]);
   });
+  test("empty widgets distinguish waiting, loading, failure and no data", async () => {
+    const props = { widget: { id:"empty", stream:"queue_depth", kind:"value", x:0, y:0, w:3, h:2 }, token:"session", appId:"app", retentionDays:7, cellWidth:60, editing:false, onChange:jest.fn(), onRemove:jest.fn() };
+    const stream = {name:"queue_depth", label:"Queue depth", type:"number"};
+    await render(<SupportWidget {...props} />);
+    expect(container.textContent).toContain("Waiting for queue_depth.");
+    await render(<SupportWidget {...props} stream={stream} />);
+    expect(container.textContent).toContain("Loading queue_depth");
+    await render(<SupportWidget {...props} stream={stream} historyError="Offline" />);
+    expect(container.textContent).toContain("Unable to load queue_depth.");
+    await render(<SupportWidget {...props} stream={stream} page={{samples:[], next_before:null}} />);
+    expect(container.textContent).toContain("No queue_depth data.");
+  });
   test("charts inspect exact values and sender details with pointer and keyboard", async () => {
     await render(<WidgetChart samples={[fresh(1, 11.123456789, "first-worker"), fresh(2, 22.5)]} kind="line" stream="cpu" unit="%" />);
     const chart = container.querySelector('[data-testid="chart-cpu-line"]');

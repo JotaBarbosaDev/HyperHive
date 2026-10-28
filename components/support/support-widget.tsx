@@ -30,7 +30,7 @@ export function availableWidgetPosition(widgets: Widget[], w: number, h: number)
   }
   return { x: 0, y: Math.max(0, ...widgets.map((widget) => widget.y + widget.h)) };
 }
-export const SupportWidget = React.memo(function SupportWidget({ widget, stream, page, token, appId, retentionDays, timeframe, cellWidth, editing, expanded = false, onExpand, onClosePanel, onChange, onEdit, onRemove, onInteraction }: { widget: Widget; stream?: SupportStream; page?: History; token: string; appId: string; retentionDays: number; timeframe?: SupportTimeframe; cellWidth: number; editing: boolean; expanded?: boolean; onExpand?: (widget: Widget) => void; onClosePanel?: () => void; onChange: (widget: Widget) => void; onEdit?: (widget: Widget) => void; onRemove: (widget: Widget) => void; onInteraction?: (bottom: number | null) => void }) {
+export const SupportWidget = React.memo(function SupportWidget({ widget, stream, page, token, appId, retentionDays, timeframe, cellWidth, editing, expanded = false, onExpand, onClosePanel, onChange, onEdit, onRemove, onInteraction, historyError }: { widget: Widget; stream?: SupportStream; page?: History; token: string; appId: string; retentionDays: number; timeframe?: SupportTimeframe; cellWidth: number; editing: boolean; expanded?: boolean; onExpand?: (widget: Widget) => void; onClosePanel?: () => void; onChange: (widget: Widget) => void; onEdit?: (widget: Widget) => void; onRemove: (widget: Widget) => void; onInteraction?: (bottom: number | null) => void; historyError?: string | null }) {
   const [preview, setPreview] = React.useState<Widget | null>(null);
   const [showControls, setShowControls] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
@@ -132,8 +132,11 @@ export const SupportWidget = React.memo(function SupportWidget({ widget, stream,
   const severityControls = widget.kind === "logs" ? <><Text size="xs" className={muted}>Severity filters · none selected means all</Text><Box className="flex-row flex-wrap gap-1">{(["debug", "info", "warn", "error", "fatal"] as Severity[]).map((severity) => <Action compact key={severity} label={severity + (widget.severity?.includes(severity) ? " ✓" : "")} onPress={() => onChange({ ...widget, severity: widget.severity?.includes(severity) ? widget.severity.filter((value) => value !== severity) : [...widget.severity ?? [], severity] })} />)}</Box></> : null;
   const content = (detailed = false) => <>
     <Box style={{ flex: 1, minHeight: 0, paddingRight: editing && compact && !detailed ? 12 : 0 }}>
-      {!stream ? <Text size="xs" className={muted} style={{ fontSize: 11 }}>Waiting for {widget.stream} ({widget.stream_type ?? "data"}). Send matching samples to populate this widget.</Text>
-        : !latest ? <Text size="xs" className={muted} style={{ fontSize: 11 }}>No retained data{timeframe || trend ? " in this time window" : ""}.</Text>
+      {!stream ? <Text size="xs" className={muted + " web:[overflow-wrap:anywhere]"} style={{ fontSize: 11 }}>Waiting for {widget.stream}.</Text>
+        : !page ? <Text size="xs" className={muted} style={{ fontSize: 11 }}>{historyError ? `Unable to load ${widget.stream}.` : `Loading ${widget.stream}…`}</Text>
+        : !latest && busy ? <Text size="xs" className={muted} style={{ fontSize: 11 }}>Loading {widget.stream}…</Text>
+        : !latest && error ? <Text size="xs" className={muted} style={{ fontSize: 11 }}>Unable to load {widget.stream}.</Text>
+        : !latest ? <Text size="xs" className={muted + " web:[overflow-wrap:anywhere]"} style={{ fontSize: 11 }}>No {widget.stream} data{timeframe || trend ? " in this time window" : ""}.</Text>
         : trend ? numbers.length ? <WidgetChart samples={numbers} kind={widget.kind} stream={widget.stream} unit={stream.unit} detailed={detailed} /> : <Text size="xs" className={muted}>No numeric samples.</Text>
         : snapshot && typeof latest.value === "object" && "fields" in latest.value ? <WidgetSnapshot key={appId + widget.id} storageKey={`${appId}:${widget.id}`} sample={latest} stream={widget.stream} />
         : widget.kind === "logs" || widget.kind === "events" ? <WidgetFeed key={(older ? "history-" + older.samples[0]?.id : "live") + severityKey} samples={samples} kind={widget.kind} retentionMs={lifetime} detailed={detailed} />
