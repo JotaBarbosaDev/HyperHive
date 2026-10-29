@@ -255,3 +255,31 @@ export async function apiFetch<T = unknown>(
 
   return (await response.text()) as unknown as T;
 }
+
+// Shared browser upload transport for VM and managed-disk images.
+export function uploadBrowserFile(url: string, token: string | null | undefined, file: Blob, options?: { onProgress?: (percent: number) => void; signal?: AbortSignal }): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const abort = () => xhr.abort();
+    const finish = (error?: Error) => {
+      options?.signal?.removeEventListener("abort", abort);
+      if (error) reject(error); else resolve(xhr.responseText);
+    };
+    xhr.open("PUT", url);
+    xhr.setRequestHeader("Content-Type", "application/octet-stream");
+    if (token) xhr.setRequestHeader("Authorization", token);
+    xhr.upload.onprogress = event => {
+      if (event.lengthComputable && event.total > 0) options?.onProgress?.(Math.round(event.loaded / event.total * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status === 401 || xhr.status === 403) triggerUnauthorized();
+      if (xhr.status >= 200 && xhr.status < 300) options?.onProgress?.(100);
+      finish(xhr.status >= 200 && xhr.status < 300 ? undefined : new Error(xhr.responseText || `Upload failed (${xhr.status})`));
+    };
+    xhr.onerror = () => finish(new Error("Network error while uploading image; check transfer status before retrying."));
+    xhr.onabort = () => finish(new Error("Upload cancelled. Check transfer status to discard any staging files."));
+    if (options?.signal?.aborted) { finish(new Error("Upload cancelled.")); return; }
+    options?.signal?.addEventListener("abort", abort, { once: true });
+    xhr.send(file);
+  });
+}

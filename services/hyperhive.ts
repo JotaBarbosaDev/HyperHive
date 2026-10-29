@@ -11,7 +11,7 @@ import {
   UptimeInfo,
 } from "@/types/metrics";
 import { getApiBaseUrl, setApiBaseUrl } from "@/config/apiConfig";
-import { apiFetch, setAuthToken, triggerUnauthorized } from "./api-client";
+import { apiFetch, setAuthToken, triggerUnauthorized, uploadBrowserFile } from "./api-client";
 import { loadAuthToken, loadApiBaseUrl } from "./auth-storage";
 
 export type DeleteMountOptions = {
@@ -209,6 +209,12 @@ export async function deleteIso(id: string): Promise<void> {
     method: "DELETE",
     token: authToken,
   });
+}
+
+export async function getVmDiskDownloadUrl(id: number) {
+  const token = await resolveToken();
+  const base = await ensureApiBaseUrl();
+  return `${base.replace(/\/+$/, "")}/vm-disk/${encodeURIComponent(String(id))}/download${token ? `?token=${encodeURIComponent(token)}` : ""}`;
 }
 
 export async function listVmDisks(): Promise<VmDisk[]> {
@@ -424,4 +430,27 @@ export async function shutdownMachine(machineName: string, now: boolean = false)
       now: Boolean(now),
     },
   });
+}
+
+
+export type DiskOperation = {
+  id: string; kind: string; disk_id: number; name: string;
+  phase: string; error?: string; source_nfs: number; destination_nfs: number;
+};
+export async function listDiskOperations(): Promise<DiskOperation[]> {
+  return apiFetch<DiskOperation[]>("/vm-disk/operations", { token: await resolveToken() });
+}
+export async function reconcileDiskOperation(id: string, action: "finish" | "abort"): Promise<DiskOperation> {
+  return apiFetch<DiskOperation>(`/vm-disk/operations/${encodeURIComponent(id)}/reconcile`, { method: "POST", token: await resolveToken(), body: { action } });
+}
+export async function moveVmDisk(id: number, nfsId: number): Promise<DiskOperation> {
+  return apiFetch<DiskOperation>(`/vm-disk/${id}/move`, { method: "POST", token: await resolveToken(), body: { nfs_id: nfsId } });
+}
+export async function importVmDisk(name: string, nfsId: number, file: Blob, options?: { onProgress?: (percent: number) => void; signal?: AbortSignal }): Promise<VmDisk> {
+  if (typeof window === "undefined" || !(file instanceof Blob)) throw new Error("Disk import is available in the browser only.");
+  const token = await resolveToken();
+  const base = await ensureApiBaseUrl();
+  const query = new URLSearchParams({ name, nfs_id: String(nfsId), length: String(file.size) });
+  const response = await uploadBrowserFile(`${base.replace(/\/+$/, "")}/vm-disk/import?${query}`, token, file, options);
+  return JSON.parse(response) as VmDisk;
 }

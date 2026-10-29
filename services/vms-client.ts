@@ -1,3 +1,4 @@
+import { uploadBrowserFile } from "./api-client";
 import { apiFetch } from "./api-client";
 import { loadAuthToken } from "./auth-storage";
 import { setAuthToken, triggerUnauthorized } from "./api-client";
@@ -643,39 +644,8 @@ export async function importVm(
 
   // Web: use XMLHttpRequest to expose upload progress events
   if (typeof XMLHttpRequest !== "undefined" && typeof window !== "undefined" && file instanceof Blob) {
-    return new Promise<void>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("PUT", url);
-      xhr.setRequestHeader("Content-Type", "application/octet-stream");
-      if (authToken) {
-        xhr.setRequestHeader("Authorization", authToken);
-      }
-
-      const onProgress = options?.onProgress;
-
-      if (xhr.upload && onProgress) {
-        xhr.upload.onprogress = (evt) => {
-          if (evt.lengthComputable && evt.total > 0) {
-            const percent = Math.round((evt.loaded / evt.total) * 100);
-            onProgress(percent);
-          }
-        };
-      }
-
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          options?.onProgress?.(100);
-          resolve();
-        } else {
-          reject(new Error(xhr.statusText || `Upload failed (${xhr.status})`));
-        }
-      };
-      xhr.onerror = () => {
-        reject(new Error("Network error while uploading VM image"));
-      };
-
-      xhr.send(file);
-    });
+    await uploadBrowserFile(url, authToken, file, options);
+    return;
   }
 
   // Fallback (non-web / non-Blob): no progress
