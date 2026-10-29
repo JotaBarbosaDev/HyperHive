@@ -1,7 +1,12 @@
 name: Build Android APK (Expo)
 
 on:
-  workflow_dispatch: {}   # podes correr à mão
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Optional app version to build (for example 1.0.2)
+        required: false
+        type: string
   push:
     tags:
       - 'android-v*'      # opcional: corre quando fizeres tag tipo android-v1.0.0
@@ -23,9 +28,20 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Set or validate app version
+        env:
+          HH_VERSION: ${{ inputs.version }}
+        run: |
+          if [ -n "$HH_VERSION" ]; then
+            npm run version:set -- "$HH_VERSION"
+          elif [[ "$GITHUB_REF_NAME" == android-v* ]]; then
+            npm run version:set -- "${GITHUB_REF_NAME#android-v}"
+          else
+            npm run version:check
+          fi
+
       - name: Install JS deps
-        # Usa npm install por agora; quando o lockfile estiver estável podes trocar para npm ci
-        run: npm install
+        run: npm ci
 
       # Não precisas do expo-cli global, usamos sempre npx
 
@@ -42,7 +58,7 @@ jobs:
           packages: platform-tools
 
       - name: Prebuild Android (Expo -> projeto nativo)
-        run: npx expo prebuild --platform android --non-interactive
+        run: CI=1 npx expo prebuild --platform android
 
       - name: Fix duplicated AppTheme in styles.xml
         run: |

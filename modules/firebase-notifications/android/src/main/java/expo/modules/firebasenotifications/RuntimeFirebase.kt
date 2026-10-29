@@ -3,6 +3,8 @@ package expo.modules.firebasenotifications
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.media.AudioAttributes
+import android.net.Uri
 import android.os.Build
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
@@ -11,7 +13,18 @@ import org.json.JSONObject
 import org.json.JSONException
 
 internal object RuntimeFirebase {
+  data class ChannelDefaults(val importance: Int, val sound: Boolean, val vibration: Boolean)
+
   const val CHANNEL = "hyperhive_test_v2"
+  val TEST_CHANNELS = listOf("info", "warn", "error", "critical").associateWith { "hyperhive_test_$it" }
+  val TEST_CHANNEL_DEFAULTS = mapOf(
+    "info" to ChannelDefaults(NotificationManager.IMPORTANCE_LOW, false, false),
+    "warn" to ChannelDefaults(NotificationManager.IMPORTANCE_LOW, false, false),
+    "error" to ChannelDefaults(NotificationManager.IMPORTANCE_DEFAULT, true, true),
+    "critical" to ChannelDefaults(NotificationManager.IMPORTANCE_HIGH, true, true)
+  )
+  fun channelForSeverity(severity: String?) = severity?.let { TEST_CHANNELS[it] } ?: CHANNEL
+  fun criticalSound(context: Context): Uri = Uri.parse("android.resource://${context.packageName}/raw/${context.resources.getResourceEntryName(R.raw.hyperhive_critical)}")
   fun preferences(context: Context) = context.getSharedPreferences("hyperhive_firebase", Context.MODE_PRIVATE)
 
   fun validate(raw: String, packageName: String): JSONObject = try {
@@ -52,11 +65,21 @@ internal object RuntimeFirebase {
     return app
   }
 
-  fun createChannel(context: Context) {
+  fun createChannels(context: Context) {
     if (Build.VERSION.SDK_INT < 26) return
     val manager = context.getSystemService(NotificationManager::class.java)
     val oldChannelBlocked = manager.getNotificationChannel("hyperhive_test")?.importance == NotificationManager.IMPORTANCE_NONE
+    val legacyChannelBlocked = oldChannelBlocked || manager.getNotificationChannel(CHANNEL)?.importance == NotificationManager.IMPORTANCE_NONE
     manager.createNotificationChannel(NotificationChannel(CHANNEL, "HyperHive test notifications",
       if (oldChannelBlocked) NotificationManager.IMPORTANCE_NONE else NotificationManager.IMPORTANCE_HIGH))
+    TEST_CHANNELS.forEach { (severity, id) ->
+      val defaults = TEST_CHANNEL_DEFAULTS.getValue(severity)
+      val label = if (severity == "warn") "warning" else severity
+      val channel = NotificationChannel(id, "HyperHive test $label", if (legacyChannelBlocked) NotificationManager.IMPORTANCE_NONE else defaults.importance)
+      if (!defaults.sound) channel.setSound(null, null)
+      else if (severity == "critical") channel.setSound(criticalSound(context), AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION).build())
+      channel.enableVibration(defaults.vibration)
+      manager.createNotificationChannel(channel)
+    }
   }
 }

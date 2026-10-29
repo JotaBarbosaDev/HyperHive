@@ -33,9 +33,13 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Apply release version
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: npm run version:set -- "$RELEASE_TAG"
+
       - name: Install JS deps
-        # Quando o lockfile estiver estável podes trocar para `npm ci`
-        run: npm install
+        run: npm ci
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -50,7 +54,7 @@ jobs:
           packages: platform-tools
 
       - name: Prebuild Android (Expo -> projeto nativo)
-        run: npx expo prebuild --platform android --non-interactive
+        run: CI=1 npx expo prebuild --platform android
 
       - name: Fix duplicated AppTheme in styles.xml
         run: |
@@ -118,8 +122,13 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Apply release version
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: npm run version:set -- "$RELEASE_TAG"
+
       - name: Install JS deps
-        run: npm install
+        run: npm ci
 
       - name: Build web bundle (Expo)
         # Gera ficheiros estáticos para web em dist/

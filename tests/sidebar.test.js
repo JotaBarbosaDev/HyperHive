@@ -6,8 +6,10 @@ import { resetSupportNavigation, useSupportNavigation } from "../hooks/useSuppor
 let mockPathname = "/vms";
 const mockReplace = jest.fn();
 jest.mock("expo-router", () => ({ useRouter: () => ({ replace: mockReplace }), usePathname: () => mockPathname }));
+jest.mock("expo-linking", () => ({ openURL: jest.fn() }));
 jest.mock("expo-secure-store", () => ({ getItemAsync: jest.fn(), setItemAsync: jest.fn(async () => {}) }));
 jest.mock("../components/useColorScheme", () => ({ useColorScheme: () => "dark" }));
+jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ bottom: 0 }) }));
 jest.mock("../services/auth-storage", () => ({ clearAuthToken: jest.fn() }));
 jest.mock("../services/api-client", () => ({ setAuthToken: jest.fn() }));
 jest.mock("../assets/images/android-chrome-192x192.png", () => 1);
@@ -24,7 +26,7 @@ jest.mock("../components/ui/image", () => ({ Image: () => <img alt="HyperHive" /
 jest.mock("../components/ui/icon", () => ({ Icon: ({ as: Glyph, size }) => <span data-icon={Glyph.displayName} data-icon-size={size} /> }));
 jest.mock("../components/ui/pressable", () => ({ Pressable: require("react").forwardRef(({ children, onPress, accessibilityLabel, accessibilityState, title }, ref) => <button ref={ref} onClick={onPress} aria-label={accessibilityLabel} aria-expanded={accessibilityState?.expanded} title={title}>{children}</button>) }));
 jest.mock("../components/ui/button", () => ({ Button: ({ children, onPress }) => <button onClick={onPress}>{children}</button>, ButtonText: ({ children }) => children }));
-jest.mock("../components/ui/modal", () => ({ Modal: ({ children, isOpen }) => isOpen ? children : null, ModalBackdrop: () => null, ModalBody: ({ children }) => children, ModalContent: ({ children }) => children, ModalFooter: ({ children }) => children, ModalHeader: ({ children }) => children, ModalCloseButton: () => null }));
+jest.mock("../components/ui/modal", () => { const Context = require("react").createContext(); return { Modal: ({ children, isOpen, onClose }) => isOpen ? <Context.Provider value={onClose}>{children}</Context.Provider> : null, ModalBackdrop: () => null, ModalBody: ({ children }) => children, ModalContent: ({ children }) => children, ModalFooter: ({ children }) => children, ModalHeader: ({ children }) => children, ModalCloseButton: () => <button aria-label="Close settings" onClick={require("react").useContext(Context)} /> }; });
 jest.mock("../components/ui/radio", () => ({ Radio: ({ children }) => children, RadioGroup: ({ children }) => children, RadioIndicator: ({ children }) => children, RadioLabel: ({ children }) => children }));
 let root, container;
 beforeEach(() => { resetSupportNavigation(); mockPathname = "/vms"; global.IS_REACT_ACT_ENVIRONMENT = true; localStorage.clear(); jest.clearAllMocks(); container = document.createElement("div"); root = createRoot(container); });
@@ -151,9 +153,15 @@ test("settings dismissal returns focus and leaves phone navigation open", async 
   props.onClose.mockClear();
   await act(async () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })));
   expect(props.onClose).not.toHaveBeenCalled();
-  const close = Array.from(container.querySelectorAll("button")).find((button) => button.textContent === "Close");
+  const close = container.querySelector('[aria-label="Close settings"]');
   await act(async () => close.click());
   await act(async () => jest.runAllTimers());
   expect(document.activeElement.getAttribute("aria-label")).toBe("Settings");
   container.remove();
+});
+
+test("compact closed navigation leaves no persistent rail", async () => {
+  await act(async () => root.render(<AppSidebar {...props} compact isOpen={false} />));
+  expect(container.querySelector('[aria-label="Settings"]')).toBeNull();
+  expect(container.querySelector('[aria-label="Expand sidebar"]')).toBeNull();
 });

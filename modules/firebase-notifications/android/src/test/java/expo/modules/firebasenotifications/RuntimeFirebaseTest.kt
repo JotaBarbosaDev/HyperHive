@@ -44,4 +44,20 @@ class RuntimeFirebaseTest {
     source.getJSONObject("project_info").put("project_number", "999")
     assertThrows(IllegalArgumentException::class.java) { RuntimeFirebase.validate(source.toString(), "com.anonymous.hyperhive") }
   }
+
+  @Test fun exposesStableSeverityChannelsAndSafeMapping() {
+    assertEquals(listOf("info", "warn", "error", "critical"), RuntimeFirebase.TEST_CHANNELS.keys.toList())
+    assertEquals("hyperhive_test_critical", RuntimeFirebase.TEST_CHANNELS["critical"])
+    assertNull(RuntimeFirebase.TEST_CHANNELS["urgent"])
+    assertEquals("hyperhive_test_v2", RuntimeFirebase.channelForSeverity("urgent"))
+    assertEquals("hyperhive_test_error", RuntimeFirebase.channelForSeverity("error"))
+    assertEquals("hyperhive_test_v2", RuntimeFirebase.CHANNEL)
+  }
+
+  @Test fun channelDefaultsMatchTheSettingsDescriptions() {
+    assertEquals(RuntimeFirebase.ChannelDefaults(android.app.NotificationManager.IMPORTANCE_LOW, false, false), RuntimeFirebase.TEST_CHANNEL_DEFAULTS["info"])
+    assertEquals(RuntimeFirebase.ChannelDefaults(android.app.NotificationManager.IMPORTANCE_LOW, false, false), RuntimeFirebase.TEST_CHANNEL_DEFAULTS["warn"])
+    assertEquals(RuntimeFirebase.ChannelDefaults(android.app.NotificationManager.IMPORTANCE_DEFAULT, true, true), RuntimeFirebase.TEST_CHANNEL_DEFAULTS["error"])
+    assertEquals(RuntimeFirebase.ChannelDefaults(android.app.NotificationManager.IMPORTANCE_HIGH, true, true), RuntimeFirebase.TEST_CHANNEL_DEFAULTS["critical"])
+  }
 }

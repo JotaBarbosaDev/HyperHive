@@ -9,7 +9,7 @@ import android.net.Uri
 class RuntimeFirebaseProvider : ContentProvider() {
   override fun onCreate(): Boolean {
     val appContext = context ?: return false
-    RuntimeFirebase.createChannel(appContext)
+    RuntimeFirebase.createChannels(appContext)
     try { RuntimeFirebase.initialize(appContext) } catch (_: Exception) {
       RuntimeFirebase.preferences(appContext).edit().putBoolean("enabled", false).commit()
     }

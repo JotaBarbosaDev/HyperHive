@@ -59,6 +59,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   X,
+  ArrowLeft,
+  Bell,
 } from "lucide-react-native";
 import { usePathname, useRouter } from "expo-router";
 import { clearAuthToken } from "@/services/auth-storage";
@@ -67,6 +69,7 @@ import { Image } from "@/components/ui/image";
 import type { SupportApp } from "@/types/support";
 import { resetSupportNavigation, selectSupportApp, useSupportNavigation } from "@/hooks/useSupportNavigation";
 import { SIDEBAR_RAIL_WIDTH } from "@/hooks/useSidebarLayout";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export type AppSidebarProps = {
   isOpen: boolean;
@@ -225,11 +228,13 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
   const systemScheme = useColorScheme();
   const resolvedMode = themePreference === "system" ? (systemScheme === "dark" ? "dark" : "light") : themePreference;
   const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const [expandedParents, setExpandedParents] = React.useState<Record<string, boolean>>({});
   React.useEffect(() => {
     if (pathname === "/support" && support.tabId) setExpandedParents((current) => ({ ...current, ["support-tab-" + support.tabId]: true }));
   }, [pathname, support.tabId]);
   const [showSettings, setShowSettings] = React.useState(false);
+  const [settingsPage, setSettingsPage] = React.useState<"home" | "theme" | "android" | "web">("home");
   const [confirmClear, setConfirmClear] = React.useState(false);
   const [clearing, setClearing] = React.useState(false);
   const [notificationMessage, setNotificationMessage] = React.useState("");
@@ -267,6 +272,7 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
   const settingsRef = React.useRef<React.ElementRef<typeof Pressable>>(null);
   const closeSettings = () => {
     setShowSettings(false);
+    setSettingsPage("home");
     setConfirmClear(false);
     setNotificationMessage("");
     // Wait for the modal exit animation before restoring focus.
@@ -397,7 +403,7 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
   return (
     <>
       {compact && isOpen ? <Pressable accessibilityRole="button" accessibilityLabel="Close navigation" onPress={onClose} className="absolute inset-0 bg-black/40" style={{ zIndex: 29 }} /> : null}
-      <Box
+      {(!compact || isOpen) && <Box
         className="absolute left-0 top-0 bottom-0 bg-[#F8FAFC] dark:bg-[#0E1524] border-r border-[#D9E0E9] dark:border-[#293548]"
         style={{ width: isOpen ? Math.min(width, viewportWidth - 48) : SIDEBAR_RAIL_WIDTH, zIndex: 30 }}
       >
@@ -415,8 +421,8 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
         <ScrollView style={{ flex: 1, minHeight: 0 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 8, paddingBottom: 16, gap: 4 }}>
           {renderMenuItems(supportItems)}
         </ScrollView>
-        <Box className="px-2 pt-3 pb-2 gap-1 border-t border-[#D9E0E9] dark:border-[#293548] bg-[#F1F5F9] dark:bg-[#111C2D]">
-          {[{ label: "Settings", icon: Settings, action: () => setShowSettings(true) }, { label: "Logout", icon: LogOut, action: handleLogout }].map((item) => (
+        <Box className="px-2 pt-3 pb-2 gap-1 border-t border-[#D9E0E9] dark:border-[#293548] bg-[#F1F5F9] dark:bg-[#111C2D]" style={{ paddingBottom: Platform.OS === "android" ? insets.bottom + 8 : undefined }}>
+          {[{ label: "Settings", icon: Settings, action: () => { setSettingsPage("home"); setShowSettings(true); } }, { label: "Logout", icon: LogOut, action: handleLogout }].map((item) => (
             <Pressable key={item.label} ref={item.label === "Settings" ? settingsRef : undefined} accessibilityRole="button" accessibilityLabel={item.label} {...(Platform.OS === "web" ? { title: item.label } : {})} onPress={item.action} className="flex-row items-center gap-3 px-3 py-2 rounded-lg active:opacity-70 hover:bg-background-100 dark:hover:bg-[#1A2637] focus-visible:outline-2 focus-visible:outline-[#2DD4BF]" style={{ minWidth: 44, minHeight: targetHeight, justifyContent: isOpen ? "flex-start" : "center" }}>
               <Box className="w-5 items-center shrink-0"><Icon as={item.icon} size={16} aria-hidden={true} className="text-[#64748B] dark:text-[#94A3B8]" /></Box>
               {isOpen ? <Text className="text-xs" style={{ color: muted }}>{item.label}</Text> : null}
@@ -436,7 +442,7 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
           className="absolute top-0 bottom-0 hover:bg-[#2DD4BF]/30 focus-visible:bg-[#2DD4BF]/30"
           style={{ right: -4, width: 8, cursor: "col-resize", touchAction: "none" } as any}
         /> : null}
-      </Box>
+      </Box>}
 
       <Modal
         isOpen={showSettings}
@@ -445,67 +451,58 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
       >
         <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
         <ModalContent className="bg-background-0 dark:bg-[#0E1524] rounded-2xl shadow-soft-2" style={{ width: Math.min(viewportWidth - 32, 480), maxWidth: 480, maxHeight: viewportHeight - 32 }}>
-          <ModalHeader className="flex-row items-center justify-between gap-3 pb-2">
-            <Box className="flex-row items-center gap-3 flex-1">
-              <Box className="flex-1">
-                <Heading
-                  size="md"
-                  className="text-typography-900 dark:text-[#E8EBF0]"
-                >
-                  Settings
-                </Heading>
-              </Box>
+          <ModalHeader className="flex-row items-center justify-between gap-2 pb-2">
+            <Box className="flex-row items-center gap-2 flex-1 min-w-0">
+              {settingsPage !== "home" ? <Pressable accessibilityRole="button" accessibilityLabel="Back to settings" onPress={() => setSettingsPage("home")} className="items-center justify-center rounded-lg" style={{ minWidth: 44, minHeight: 44 }}><Icon as={ArrowLeft} size={20} aria-hidden={true} className="text-typography-700 dark:text-[#CBD5E1]" /></Pressable> : null}
+              <Heading size="md" className="flex-1 text-typography-900 dark:text-[#E8EBF0]">
+                {settingsPage === "home" ? "Settings" : settingsPage === "theme" ? "Theme" : settingsPage === "android" ? "Android notifications" : "Web Notifications"}
+              </Heading>
             </Box>
             <ModalCloseButton accessibilityLabel="Close settings" className="rounded-full items-center justify-center" style={{ minWidth: 44, minHeight: 44 }}>
               <Icon as={X} size="md" aria-hidden={true} className="text-typography-600 dark:text-[#8A94A8]" />
             </ModalCloseButton>
           </ModalHeader>
-          <ModalBody className="mt-0 mb-0" style={{ flexGrow: 0, flexShrink: 1 }}>
-            <Box className="gap-2 pb-4">
-              <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">Appearance</Text>
-              <RadioGroup value={themePreference} onChange={(val: any) => onChangeThemePreference(val)} style={{ flexDirection: "row", gap: 8 }}>
+          <ModalBody className="mt-0 mb-0" style={{ flexGrow: 0, flexShrink: 1, minHeight: 0 }}>
+            {settingsPage === "home" ? <Box className="gap-2 pb-1">
+              {[
+                { page: "theme" as const, label: "Theme", description: "Choose light, dark, or system appearance.", icon: Settings },
+                { page: "android" as const, label: "Android notifications", description: "Firebase delivery and device settings.", icon: Bell },
+                { page: "web" as const, label: "Web Notifications", description: "Register this device and manage notification history.", icon: Globe },
+              ].map((item) => <Pressable key={item.page} accessibilityRole="button" accessibilityLabel={item.label} onPress={() => { setNotificationMessage(""); setConfirmClear(false); setSettingsPage(item.page); }} className="flex-row items-center gap-3 rounded-xl border border-outline-200 dark:border-[#344257] px-3 py-3 active:opacity-70" style={{ minHeight: 64 }}>
+                <Icon as={item.icon} size={20} aria-hidden={true} className="text-[#64748B] dark:text-[#94A3B8]" />
+                <Box className="flex-1 gap-1"><Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">{item.label}</Text><Text className="text-xs text-typography-600 dark:text-[#94A3B8]">{item.description}</Text></Box>
+                <Icon as={ChevronRight} size={18} aria-hidden={true} className="text-[#64748B] dark:text-[#94A3B8]" />
+              </Pressable>)}
+            </Box> : null}
+            {settingsPage === "theme" ? <Box className="gap-3 pb-2">
+              <Text className="text-sm text-typography-700 dark:text-[#CBD5E1]">Choose how HyperHive looks on this device.</Text>
+              <RadioGroup value={themePreference} onChange={(val: any) => onChangeThemePreference(val)} className="gap-2">
                 {THEME_OPTIONS.map((option) => {
                   const isActive = themePreference === option.value;
-                  return (
-                    <Radio key={option.value} value={option.value} aria-label={option.label}
-                      className={`flex-row items-center justify-center gap-2 rounded-lg border px-2 ${isActive
-                        ? "border-primary-600 bg-primary-50 dark:border-[#2DD4BF] dark:bg-[#16263D]"
-                        : "border-outline-200 bg-background-0 dark:border-[#344257] dark:bg-[#0F1A2E]"}`}
-                      style={{ flex: 1, minHeight: 48 }}>
-                      <RadioIndicator className={isActive ? "border-primary-600 dark:border-[#2DD4BF]" : ""}>
-                        {isActive ? <Box className="w-2 h-2 rounded-full bg-primary-700 dark:bg-[#2DD4BF]" /> : null}
-                      </RadioIndicator>
-                      <RadioLabel className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">{option.label}</RadioLabel>
-                    </Radio>
-                  );
+                  return <Radio key={option.value} value={option.value} aria-label={option.label}
+                    className={`flex-row items-center gap-3 rounded-lg border px-3 ${isActive ? "border-primary-600 bg-primary-50 dark:border-[#2DD4BF] dark:bg-[#16263D]" : "border-outline-200 bg-background-0 dark:border-[#344257] dark:bg-[#0F1A2E]"}`}
+                    style={{ minHeight: 48 }}>
+                    <RadioIndicator className={isActive ? "border-primary-600 dark:border-[#2DD4BF]" : ""}>{isActive ? <Box className="w-2 h-2 rounded-full bg-primary-700 dark:bg-[#2DD4BF]" /> : null}</RadioIndicator>
+                    <RadioLabel className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">{option.label}</RadioLabel>
+                  </Radio>;
                 })}
               </RadioGroup>
-            </Box>
-            <Box className="border-t border-outline-200 dark:border-[#344257] pt-4 gap-2">
-              <Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">Notifications</Text>
-              {Platform.OS === "android" ? <FirebaseNotificationSettings /> : null}
-              <Button variant="outline" action="secondary" onPress={registerNotifications} className="h-12 rounded-lg">
-                <ButtonText>Register Notifications</ButtonText>
-              </Button>
+            </Box> : null}
+            {settingsPage === "android" ? <Box className="pb-2"><FirebaseNotificationSettings /></Box> : null}
+            {settingsPage === "web" ? <Box className="gap-3 pb-2">
+              <Text className="text-sm text-typography-700 dark:text-[#CBD5E1]">Legacy web notification registration and history.</Text>
+              <Button variant="outline" action="secondary" onPress={registerNotifications} className="h-12 rounded-lg"><ButtonText>Register Notifications</ButtonText></Button>
               {confirmClear ? (
                 <Box className="gap-2 rounded-lg border border-error-300 dark:border-error-700 p-3">
                   <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">Delete all notification history? This cannot be undone.</Text>
                   <Box className="flex-row gap-2">
-                    <Button action="negative" onPress={clearNotifications} isDisabled={clearing} className="h-12 rounded-lg flex-1">
-                      <ButtonText>{clearing ? "Clearing..." : "Confirm Clear"}</ButtonText>
-                    </Button>
-                    <Button variant="outline" action="secondary" onPress={() => setConfirmClear(false)} isDisabled={clearing} className="h-12 rounded-lg">
-                      <ButtonText>Cancel</ButtonText>
-                    </Button>
+                    <Button action="negative" onPress={clearNotifications} isDisabled={clearing} className="h-12 rounded-lg flex-1"><ButtonText>{clearing ? "Clearing..." : "Confirm Clear"}</ButtonText></Button>
+                    <Button variant="outline" action="secondary" onPress={() => setConfirmClear(false)} isDisabled={clearing} className="h-12 rounded-lg"><ButtonText>Cancel</ButtonText></Button>
                   </Box>
                 </Box>
-              ) : (
-                <Button variant="outline" action="negative" onPress={() => { setNotificationMessage(""); setConfirmClear(true); }} className="h-12 rounded-lg">
-                  <ButtonText>Clear Notifications</ButtonText>
-                </Button>
-              )}
+              ) : <Button variant="outline" action="negative" onPress={() => { setNotificationMessage(""); setConfirmClear(true); }} className="h-12 rounded-lg"><ButtonText>Clear Notifications</ButtonText></Button>}
               {notificationMessage ? <Text accessibilityRole="alert" className="text-sm text-typography-900 dark:text-[#E8EBF0]">{notificationMessage}</Text> : null}
-            </Box>
+            </Box> : null}
           </ModalBody>
         </ModalContent>
       </Modal>

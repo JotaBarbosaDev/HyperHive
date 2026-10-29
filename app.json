@@ -2,7 +2,7 @@
   "expo": {
     "name": "HyperHive",
     "slug": "hyperhive",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/android-chrome-512x512.png",
     "scheme": "hyperhive",
@@ -16,7 +16,8 @@
         "backgroundColor": "#0E1524"
       },
       "softwareKeyboardLayoutMode": "resize",
-      "package": "com.anonymous.hyperhive"
+      "package": "com.anonymous.hyperhive",
+      "versionCode": 1000001
     },
     "web": {
       "bundler": "metro",

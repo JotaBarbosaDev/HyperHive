@@ -13,11 +13,13 @@ import { useEffect } from "react";
 import { useColorScheme } from "@/components/useColorScheme";
 import { DarkTheme, DefaultTheme, Slot, ThemeProvider, usePathname, useRouter } from "expo-router";
 import { StatusBar, setStatusBarHidden } from "expo-status-bar";
-import { AppState, Platform, ScrollView, useWindowDimensions } from "react-native";
+import { AppState, BackHandler, Platform, ScrollView, useWindowDimensions } from "react-native";
 import * as SystemUI from "expo-system-ui";
 import * as NavigationBar from "expo-navigation-bar";
 import { Button, ButtonIcon, ButtonText } from "@/components/ui/button";
-import { EditIcon } from "@/components/ui/icon";
+import { EditIcon, Icon } from "@/components/ui/icon";
+import { Pressable } from "@/components/ui/pressable";
+import { Menu } from "lucide-react-native";
 import GoAccessStreamButtons from "@/components/GoAccessStreamButtons";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import React from "react";
@@ -311,8 +313,7 @@ function RootLayoutNav() {
   const statusBarBackground = resolvedMode === "dark" ? "#070D19" : "#F8FAFC";
   const [showDrawer, setShowDrawer] = React.useState(false);
   const sidebar = useSidebarLayout();
-  const showSidebar = sidebar.open;
-  const setShowSidebar = sidebar.setOpen;
+  const [mobileSidebarOpen, setMobileSidebarOpen] = React.useState(false);
   const [tutorialModalOpen, setTutorialModalOpen] = React.useState(false);
   const [apiErrorModal, setApiErrorModal] = React.useState<
     { status?: number; path?: string; details: string } | null
@@ -322,7 +323,14 @@ function RootLayoutNav() {
   const isWeb = Platform.OS === "web";
   const { height: screenHeight, width: screenWidth } = useWindowDimensions();
   const compactSidebar = screenWidth < 768;
-  const contentInset = pathname === "/" ? 0 : (!compactSidebar && showSidebar ? sidebar.width : SIDEBAR_RAIL_WIDTH);
+  const showSidebar = compactSidebar ? mobileSidebarOpen : sidebar.open;
+  const setShowSidebar = compactSidebar ? setMobileSidebarOpen : sidebar.setOpen;
+  const contentInset = pathname === "/" || compactSidebar ? 0 : (showSidebar ? sidebar.width : SIDEBAR_RAIL_WIDTH);
+  React.useEffect(() => {
+    if (Platform.OS !== "android" || !compactSidebar || !mobileSidebarOpen) return;
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => { setMobileSidebarOpen(false); return true; });
+    return () => subscription.remove();
+  }, [compactSidebar, mobileSidebarOpen]);
   const tutorialBodyMaxHeight = Math.min(screenHeight * 0.6, 520);
 
   const handleCloseApiErrorModal = React.useCallback(() => {
@@ -655,6 +663,7 @@ function RootLayoutNav() {
                 <SocketErrorModalListener />
                 <SocketNotificationModalListener />
                 <Box className="flex-1" style={{ marginLeft: contentInset }}>
+                  {compactSidebar && pathname !== "/" ? <Pressable accessibilityRole="button" accessibilityLabel="Open navigation" onPress={() => setMobileSidebarOpen(true)} className="items-center justify-center self-start" style={{ width: 48, height: 48 }}><Icon as={Menu} size={22} className="text-[#64748B] dark:text-[#94A3B8]" /></Pressable> : null}
                   {apiBaseMismatch && (
                     <Box
                       className="shrink-0 z-10 bg-warning-100 border-b border-warning-300 px-4 py-2"

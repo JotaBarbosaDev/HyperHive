@@ -8,12 +8,13 @@ import { Input, InputField } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { firebaseNotifications as nativeModule } from "@/services/firebase-notifications.android";
 import type { FirebaseNotificationStatus, FirebaseClientConfiguration } from "@/services/firebase-notifications";
-import { apiFetch, getAuthToken, onAuthTokenChange } from "@/services/api-client";
+import { ApiError, apiFetch, getAuthToken, onAuthTokenChange } from "@/services/api-client";
 import { getApiBaseUrl, onApiBaseUrlChange } from "@/config/apiConfig";
 
 type Check = { state: "unchecked" | "working" | "failed"; message: string };
 const unchecked: Check = { state: "unchecked", message: "Not checked" };
 const empty: FirebaseClientConfiguration = { projectId: "", appId: "", senderId: "", apiKey: "" };
+const severityLabel = { info: "info", warn: "warning", error: "error", critical: "critical" } as const;
 
 export default function FirebaseNotificationSettings() {
   const native = nativeModule;
@@ -25,6 +26,9 @@ export default function FirebaseNotificationSettings() {
   const [backendCheck, setBackendCheck] = React.useState<Check>(unchecked);
   const [expectedMessage, setExpectedMessage] = React.useState<string | null>(null);
   const [deliveryLate, setDeliveryLate] = React.useState(false);
+  const [cooldownUntil, setCooldownUntil] = React.useState(0);
+  const [cooldownNow, setCooldownNow] = React.useState(Date.now());
+  const [testSeverity, setTestSeverity] = React.useState<"info" | "warn" | "error" | "critical">("info");
   const [signedIn, setSignedIn] = React.useState(!!getAuthToken() && !!getApiBaseUrl());
   const pending = React.useRef<AbortController | null>(null);
   const refresh = () => { if (native) setStatus(native.getStatus()); };
@@ -51,7 +55,8 @@ export default function FirebaseNotificationSettings() {
     const offBase = onApiBaseUrlChange(cancel);
     const appState = AppState.addEventListener("change", state => { if (state === "active") refresh(); });
     const poll = setInterval(refresh, 1000);
-    return () => { pending.current?.abort(); controller.abort(); clearInterval(poll); offAuth(); offBase(); appState.remove(); };
+    const clock = setInterval(() => setCooldownNow(Date.now()), 1000);
+    return () => { pending.current?.abort(); controller.abort(); clearInterval(poll); clearInterval(clock); offAuth(); offBase(); appState.remove(); };
   }, []);
   React.useEffect(() => {
     if (!expectedMessage) return;
@@ -101,7 +106,8 @@ export default function FirebaseNotificationSettings() {
   </Box>;
   if (!native) return <Text className="text-sm text-typography-700">Firebase requires a new Android build. It is unavailable in Expo Go.</Text>;
   const blocked = !!status && (!status.permissionGranted || !status.channelEnabled);
-  const ready = !!status?.projectId && status.enabled && !status.restartRequired && !blocked && signedIn;
+  const anyTestChannelBlocked = !!status && Object.values(status.testChannels ?? {}).some(enabled => !enabled);
+  const ready = !!status?.projectId && status.enabled && !status.restartRequired && status.permissionGranted && signedIn;
   const received = !!expectedMessage && !!status?.lastMessageId && (expectedMessage === status.lastMessageId || expectedMessage.endsWith("/" + status.lastMessageId));
   return <Box className="gap-3">
     <Text className="text-sm font-semibold text-typography-900">Android Firebase · {status?.projectId ?? "No project configured"}</Text>
@@ -135,16 +141,37 @@ export default function FirebaseNotificationSettings() {
       const disabled = await native.disable();
       if (!signal.aborted) { setStatus(disabled); setClientCheck(unchecked); setBackendCheck(unchecked); setExpectedMessage(null); setMessage("Notifications disabled."); }
     })} className="h-12 rounded-lg"><ButtonText>Disable notifications</ButtonText></Button>
-    {blocked || status?.restartRequired ? <Button variant="link" className="h-12 self-start" onPress={() => Linking.openSettings()}><ButtonText>Open Android app settings</ButtonText></Button> : null}
+    {blocked || anyTestChannelBlocked || status?.restartRequired ? <Button variant="link" className="h-12 self-start" onPress={() => Linking.openSettings()}><ButtonText>Open Android app settings</ButtonText></Button> : null}
     {status?.restartRequired ? <Text accessibilityRole="alert" className="text-sm text-typography-700">Force-stop and reopen the app to use the imported project.</Text> : null}
-    <Button variant="outline" action="secondary" size="sm" isDisabled={busy || !ready || backendCheck.state !== "working" || clientCheck.state !== "working"} onPress={() => run(async signal => {
+    <Box className="gap-2">
+    <Text className="text-sm font-semibold text-typography-900">Send a test notification</Text>
+    {(["info", "warn", "error", "critical"] as const).map(severity => <Box key={severity} className="gap-1">
+      <Text className="text-sm text-typography-900">Test {severityLabel[severity]}</Text>
+      <Text className="text-sm text-typography-700">{severity === "info" || severity === "warn" ? "Quiet notification by default." : severity === "error" ? "Sound and vibration by default." : "High importance with a distinct sound and vibration by default. Existing channel settings remain in control."}</Text>
+      {status?.testChannels?.[severity] === false ? <Text className="text-sm text-error-700">This channel is blocked in Android settings.</Text> : null}
+      <Button variant="outline" action="secondary" size="sm" isDisabled={busy || !ready || backendCheck.state !== "working" || clientCheck.state !== "working" || status?.testChannels?.[severity] === false || cooldownUntil > cooldownNow} onPress={() => { setTestSeverity(severity); void run(async signal => {
       const session = getAuthToken(); const backend = getApiBaseUrl();
       const token = await native.getToken();
       if (signal.aborted || !session || session !== getAuthToken() || backend !== getApiBaseUrl()) return;
-      const result = await apiFetch<{ messageId: string }>("/notification/firebase/test", { method: "POST", token: session, body: { token, projectId: native.getStatus().projectId }, signal, reportResult: false });
-      if (!signal.aborted) { setExpectedMessage(result.messageId); setMessage("Test accepted by Firebase. Waiting for this device to receive it…"); }
-    })} className="h-12 self-start rounded-lg"><ButtonText>{busy ? "Please wait…" : "Send test notification"}</ButtonText></Button>
-    {expectedMessage ? indicator("Device receipt", received ? { state: "working", message: "This app received the test message." } : { state: deliveryLate ? "failed" : "unchecked", message: deliveryLate ? "Firebase accepted the test, but this app has not confirmed receipt. Keep Settings open; check Google Play services, VPN/firewall and battery restrictions. Background display may not report a foreground receipt." : "Waiting for a foreground receipt from Firebase…" }) : null}
+      setCooldownUntil(Date.now() + 30000);
+      try {
+        const result = await apiFetch<{ messageId: string }>("/notification/firebase/test", { method: "POST", token: session, body: { token, projectId: native.getStatus().projectId, severity }, signal, reportResult: false });
+        if (!signal.aborted) { setExpectedMessage(result.messageId); setMessage(`Test ${severityLabel[severity]} accepted by Firebase. Waiting for this device to receive it…`); }
+      } catch (error) {
+        const retry = Number((error as Error & { retryAfter?: string }).retryAfter);
+        if (!signal.aborted && retry > 0) setCooldownUntil(Date.now() + retry * 1000);
+        if (!signal.aborted && error instanceof ApiError && error.status === 400) {
+          setCooldownUntil(Date.now());
+          setMessage("This HyperHive backend does not support typed notification tests. Update the backend, then try again.");
+          return;
+        }
+        throw error;
+      }
+    }); }} className="h-12 self-start rounded-lg"><ButtonText>{busy && testSeverity === severity ? "Please wait…" : `Test ${severityLabel[severity]}`}</ButtonText></Button>
+    </Box>)}
+    {cooldownUntil > cooldownNow ? <Text className="text-sm text-typography-700">Next test available in {Math.ceil((cooldownUntil - cooldownNow) / 1000)} seconds.</Text> : null}
+    </Box>
+    {expectedMessage ? indicator("Device receipt", received ? { state: "working", message: `This app received the test ${severityLabel[testSeverity]} message. Receipt does not confirm sound or vibration.` } : { state: deliveryLate ? "failed" : "unchecked", message: deliveryLate ? `Firebase accepted the test ${severityLabel[testSeverity]}, but this app has not confirmed receipt. Background display may not report a foreground receipt.` : `Waiting for a foreground receipt from the test ${severityLabel[testSeverity]}…` }) : null}
     {message ? <Text accessibilityRole="alert" className="text-sm text-typography-700">{message}</Text> : null}
   </Box>;
 }

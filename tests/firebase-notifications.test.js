@@ -4,7 +4,7 @@ import { getDocumentAsync } from "expo-document-picker";
 import { File } from "expo-file-system";
 import { setAuthToken } from "../services/api-client";
 import { setApiBaseUrl } from "../config/apiConfig";
-const mockStatus = { packageName: "com.anonymous.hyperhive", projectId: "example-project", enabled: true, restartRequired: false, permissionGranted: true, channelEnabled: true, lastMessageId: null };
+const mockStatus = { packageName: "com.anonymous.hyperhive", projectId: "example-project", enabled: true, restartRequired: false, permissionGranted: true, channelEnabled: true, testChannels: {info:true,warn:true,error:true,critical:true}, lastMessageId: null };
 const mockNative = { getStatus: jest.fn(() => ({ ...mockStatus })), getConfiguration: jest.fn(() => ({projectId:"example-project",appId:"1:123:android:abc",senderId:"123",apiKey:"client-key"})), getToken: jest.fn(async () => "device-one"), saveConfiguration: jest.fn(), activate: jest.fn(), disable: jest.fn() };
 jest.mock("../services/firebase-notifications.android", () => ({ firebaseNotifications: mockNative }));
 jest.mock("expo-document-picker", () => ({ getDocumentAsync: jest.fn() }));
@@ -31,20 +31,32 @@ beforeEach(()=>{
 });
 afterEach(async()=>{await act(async()=>root.unmount());jest.useRealTimers();});
 it("requires a real Firebase check before enabling test sends",async()=>{
- await render();expect(button("Send test notification").disabled).toBe(true);
- await check();expect(container.textContent).toContain("Android client: Working");expect(container.textContent).toContain("Backend credentials: Working");expect(callsTo("/test")).toHaveLength(0);expect(button("Send test notification").disabled).toBe(false);
+ await render();expect(button("Test info").disabled).toBe(true);
+ await check();expect(container.textContent).toContain("Android client: Working");expect(container.textContent).toContain("Backend credentials: Working");expect(callsTo("/test")).toHaveLength(0);expect(["Test info","Test warning","Test error","Test critical"].map(label=>button(label)?.disabled)).toEqual([false,false,false,false]);
  expect(JSON.parse(callsTo("/check")[0][1].body)).toEqual({token:"device-one",projectId:"example-project"});
 });
-it.each(["enabled","permissionGranted","channelEnabled"])("blocks testing when %s is false",async key=>{mockStatus[key]=false;await render();expect(button("Send test notification").disabled).toBe(true);expect(button("Check Firebase connection").disabled).toBe(true);});
+it.each(["enabled","permissionGranted"])("blocks testing when %s is false",async key=>{mockStatus[key]=false;await render();expect(button("Test info").disabled).toBe(true);expect(button("Check Firebase connection").disabled).toBe(true);});
+it("blocks only the test whose channel is disabled",async()=>{mockStatus.testChannels.error=false;await render();await check();expect(button("Test error").disabled).toBe(true);expect(button("Test info").disabled).toBe(false);expect(container.textContent).toContain("This channel is blocked");});
 it("sends once and confirms the actual native receipt separately",async()=>{
  await render();await check();let resolve;mockNative.getToken.mockImplementation(()=>new Promise(r=>{resolve=r;}));
- await act(async()=>{button("Send test notification").click();button("Send test notification").click();});
- await act(async()=>resolve("device-now"));expect(callsTo("/test")).toHaveLength(1);expect(JSON.parse(callsTo("/test")[0][1].body)).toEqual({token:"device-now",projectId:"example-project"});expect(container.textContent).toContain("Waiting for this device");
+ await act(async()=>{button("Test info").click();button("Test info").click();});
+ await act(async()=>resolve("device-now"));expect(callsTo("/test")).toHaveLength(1);expect(JSON.parse(callsTo("/test")[0][1].body)).toEqual({token:"device-now",projectId:"example-project",severity:"info"});expect(container.textContent).toContain("test info");
  mockStatus.lastMessageId="id";await act(async()=>jest.advanceTimersByTime(1000));expect(container.textContent).toContain("Device receipt: Working");
 });
 it("shows backend errors in red without claiming working",async()=>{
  await render();fetch.mockImplementationOnce(async()=>({ok:false,status:503,headers:{get:()=>"text/plain"},text:async()=>"Backend needs a service-account JSON, not google-services.json"}));
- await check();expect(container.textContent).toContain("Backend credentials: Not working");expect(container.textContent).toContain("service-account JSON");expect(button("Send test notification").disabled).toBe(true);
+ await check();expect(container.textContent).toContain("Backend credentials: Not working");expect(container.textContent).toContain("service-account JSON");expect(button("Test info").disabled).toBe(true);
+});
+it("explains when the backend predates typed test support",async()=>{
+ await render();await check();fetch.mockImplementationOnce(async()=>({ok:false,status:400,headers:{get:() => "text/plain"},text:async()=>"invalid Firebase device token or project ID"}));
+ await act(async()=>button("Test info").click());expect(container.textContent).toContain("does not support typed notification tests");
+});
+it("uses Retry-After for the shared send cooldown",async()=>{
+ await render();await check();fetch.mockImplementationOnce(async()=>({ok:false,status:429,headers:{get:name=>name==="Retry-After"?"10":"text/plain"},text:async()=>"Wait before trying again."}));
+ await act(async()=>button("Test info").click());expect(button("Test warning").disabled).toBe(true);expect(container.textContent).toContain("Next test available in 10 seconds");
+});
+it.each(["logout","backend"])("cancels pending sends after %s",async change=>{
+ await render();await check();let resolve;mockNative.getToken.mockImplementation(()=>new Promise(r=>{resolve=r;}));await act(async()=>button("Test info").click());await act(async()=>change==="logout"?setAuthToken(null):setApiBaseUrl("https://another.test"));await act(async()=>resolve("late-token"));expect(callsTo("/test")).toHaveLength(0);
 });
 it.each(["logout","backend"])("cancels pending checks after %s",async change=>{
  await render();let resolve;mockNative.getToken.mockImplementation(()=>new Promise(r=>{resolve=r;}));await act(async()=>button("Check Firebase connection").click());await act(async()=>change==="logout"?setAuthToken(null):setApiBaseUrl("https://another.test"));await act(async()=>resolve("old-token"));expect(callsTo("/check")).toHaveLength(0);

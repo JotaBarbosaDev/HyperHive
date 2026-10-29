@@ -23,6 +23,7 @@ class FirebaseNotificationsModule : Module() {
     val saved = prefs.getString("configuration", null)?.let { JSONObject(it) }
     val app = FirebaseApp.getApps(context).firstOrNull { it.name == FirebaseApp.DEFAULT_APP_NAME }
     val manager = context.getSystemService(NotificationManager::class.java)
+    RuntimeFirebase.createChannels(context)
     return mapOf(
       "packageName" to context.packageName,
       "projectId" to saved?.getString("projectId"),
@@ -31,7 +32,8 @@ class FirebaseNotificationsModule : Module() {
       "enabled" to prefs.getBoolean("enabled", false),
       "restartRequired" to (app != null && saved != null && (app.options.applicationId != saved.getString("appId") || app.options.apiKey != saved.getString("apiKey") || app.options.projectId != saved.getString("projectId") || app.options.gcmSenderId != saved.getString("senderId"))),
       "permissionGranted" to (Build.VERSION.SDK_INT < 33 || context.checkSelfPermission("android.permission.POST_NOTIFICATIONS") == PackageManager.PERMISSION_GRANTED),
-      "channelEnabled" to (manager.areNotificationsEnabled() && (Build.VERSION.SDK_INT < 26 || manager.getNotificationChannel(RuntimeFirebase.CHANNEL)?.importance != NotificationManager.IMPORTANCE_NONE))
+      "channelEnabled" to (manager.areNotificationsEnabled() && (Build.VERSION.SDK_INT < 26 || manager.getNotificationChannel(RuntimeFirebase.CHANNEL)?.importance != NotificationManager.IMPORTANCE_NONE)),
+      "testChannels" to RuntimeFirebase.TEST_CHANNELS.mapValues { (_, id) -> manager.areNotificationsEnabled() && (Build.VERSION.SDK_INT < 26 || manager.getNotificationChannel(id)?.importance != NotificationManager.IMPORTANCE_NONE) }
     )
   }
   override fun definition() = ModuleDefinition {

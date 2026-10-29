@@ -5,6 +5,7 @@ export type FirebaseNotificationStatus = {
   restartRequired: boolean;
   permissionGranted: boolean;
   channelEnabled: boolean;
+  testChannels?: Record<"info" | "warn" | "error" | "critical", boolean>;
   lastMessageId?: string | null;
   lastReceivedAt?: number;
 };

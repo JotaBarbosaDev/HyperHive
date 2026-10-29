@@ -1,7 +1,12 @@
 name: Build Web (Expo)
 
 on:
-  workflow_dispatch: {}   # podes correr à mão no GitHub
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Optional app version to build (for example 1.0.2)
+        required: false
+        type: string
   push:
     tags:
       - 'web-v*'          # opcional: corre quando fizeres tag tipo web-v1.0.0
@@ -22,9 +27,20 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Set or validate app version
+        env:
+          HH_VERSION: ${{ inputs.version }}
+        run: |
+          if [ -n "$HH_VERSION" ]; then
+            npm run version:set -- "$HH_VERSION"
+          elif [[ "$GITHUB_REF_NAME" == web-v* ]]; then
+            npm run version:set -- "${GITHUB_REF_NAME#web-v}"
+          else
+            npm run version:check
+          fi
+
       - name: Install JS deps
-        # Se tiveres o package-lock direito podes trocar para `npm ci`
-        run: npm install
+        run: npm ci
 
       - name: Build web bundle (Expo)
         # Gera ficheiros estáticos para web

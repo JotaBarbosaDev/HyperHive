@@ -72,12 +72,14 @@ export const getAuthToken = () => currentAuthToken;
 export class ApiError extends Error {
   status: number;
   data: unknown;
+  retryAfter: string | null;
 
-  constructor(message: string, status: number, data: unknown) {
+  constructor(message: string, status: number, data: unknown, retryAfter: string | null = null) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.data = data;
+    this.retryAfter = retryAfter;
   }
 }
 
@@ -226,7 +228,7 @@ export async function apiFetch<T = unknown>(
       response.statusText ||
       `Request failed with status ${response.status}`;
 
-    throw new ApiError(literalMessage, response.status, errorPayload ?? errorText);
+    throw new ApiError(literalMessage, response.status, errorPayload ?? errorText, response.headers.get("Retry-After"));
   }
 
   console.info("[API]", method, requestPath, "->", response.status);
