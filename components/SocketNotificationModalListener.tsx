@@ -3,8 +3,10 @@ import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";
 import { Button, ButtonText } from "@/components/ui/button";
 import { Modal, ModalBackdrop, ModalBody, ModalContent, ModalFooter, ModalHeader } from "@/components/ui/modal";
+import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
 import { ensureHyperHiveWebsocket, subscribeToHyperHiveWebsocket } from "@/services/websocket-client";
 import { parseHyperHiveSocketPayload } from "@/utils/socketMessages";
+import { normalizeNotificationToast } from "@/utils/notificationToast";
 
 type NotificationSocketMessage = {
   type?: unknown;
@@ -64,6 +66,10 @@ const normalizeNotificationMessage = (
 };
 
 export function SocketNotificationModalListener() {
+  const toast = useToast();
+  // Keep the websocket subscription stable even if the toast handle changes between renders.
+  const toastRef = React.useRef(toast);
+  toastRef.current = toast;
   const [notification, setNotification] = React.useState<NotificationPayload | null>(null);
 
   const handleSocketPayload = React.useCallback(async (payload: unknown) => {
@@ -73,6 +79,19 @@ export function SocketNotificationModalListener() {
       const candidate = normalizeNotificationMessage(message);
       if (candidate) {
         normalized = candidate;
+      }
+      const toastPayload = normalizeNotificationToast(message);
+      if (toastPayload) {
+        toastRef.current.show({
+          placement: "top",
+          duration: toastPayload.severity === "error" ? 10000 : 5000,
+          render: ({ id }) => (
+            <Toast nativeID={"toast-" + id} action={toastPayload.severity} className="px-5 py-3 gap-1 shadow-soft-1 max-w-md">
+              <ToastTitle size="sm">{toastPayload.title}</ToastTitle>
+              {toastPayload.body ? <ToastDescription size="sm">{toastPayload.body}</ToastDescription> : null}
+            </Toast>
+          ),
+        });
       }
     }
     if (normalized) {

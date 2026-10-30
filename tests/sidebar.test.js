@@ -11,7 +11,9 @@ jest.mock("expo-secure-store", () => ({ getItemAsync: jest.fn(), setItemAsync: j
 jest.mock("../components/useColorScheme", () => ({ useColorScheme: () => "dark" }));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ bottom: 0 }) }));
 jest.mock("../services/auth-storage", () => ({ clearAuthToken: jest.fn() }));
-jest.mock("../services/api-client", () => ({ setAuthToken: jest.fn() }));
+jest.mock("../services/firebase-device-registration", () => ({ unregisterFirebaseDevice: jest.fn(async () => {}) }));
+jest.mock("../components/navigation/NotificationRulesSettings", () => ({ __esModule: true, default: () => <div>Notification rules editor</div> }));
+jest.mock("../services/api-client", () => ({ setAuthToken: jest.fn(), getAuthToken: () => null, apiFetch: jest.fn() }));
 jest.mock("../assets/images/android-chrome-192x192.png", () => 1);
 jest.mock("lucide-react-native", () => new Proxy({}, { get: (_, name) => Object.assign(() => null, { displayName: name }) }));
 jest.mock("react-native", () => ({

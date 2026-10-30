@@ -1,5 +1,6 @@
 import React from "react";
 import FirebaseNotificationSettings from "./FirebaseNotificationSettings";
+import NotificationRulesSettings from "./NotificationRulesSettings";
 import { Button, ButtonText } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { Box } from "@/components/ui/box";
@@ -23,11 +24,9 @@ import {
   HardDrive,
   Disc,
   Server,
-  Boxes,
   LogOut,
   Share2,
   Shield,
-  WifiPen,
   CloudCog,
   RefreshCw,
   FileText,
@@ -50,10 +49,6 @@ import {
   GitFork,
   ArrowLeftRight,
   ChevronsLeftRightEllipsis,
-  Image as ImageIcon,
-  Box as BoxIcon,
-  Database,
-  GitBranch,
   Gpu,
   StickyNote,
   PanelLeftClose,
@@ -65,6 +60,7 @@ import {
 import { usePathname, useRouter } from "expo-router";
 import { clearAuthToken } from "@/services/auth-storage";
 import { apiFetch, getAuthToken, setAuthToken } from "@/services/api-client";
+import { unregisterFirebaseDevice } from "@/services/firebase-device-registration";
 import { Image } from "@/components/ui/image";
 import type { SupportApp } from "@/types/support";
 import { listSupportApps, listSupportTabs } from "@/services/support-client";
@@ -189,17 +185,6 @@ const MENU_ITEMS: MenuItem[] = [
     ],
   },
   {
-    label: "Docker",
-    icon: Boxes,
-    children: [
-      {label: "Images", route: "/docker/images", icon: ImageIcon},
-      {label: "Containers", route: "/docker/containers", icon: BoxIcon},
-      {label: "Volumes", route: "/docker/volumes", icon: Database},
-      {label: "Networks", route: "/docker/networks", icon: WifiPen},
-      {label: "Git", route: "/docker/git", icon: GitBranch},
-    ],
-  },
-  {
     label: "Notes",
     icon: StickyNote,
     route: "/notes",
@@ -260,7 +245,7 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
     if (pathname === "/support" && support.tabId) setExpandedParents((current) => ({ ...current, ["support-tab-" + support.tabId]: true }));
   }, [pathname, support.tabId]);
   const [showSettings, setShowSettings] = React.useState(false);
-  const [settingsPage, setSettingsPage] = React.useState<"home" | "theme" | "android" | "web">("home");
+  const [settingsPage, setSettingsPage] = React.useState<"home" | "theme" | "android" | "web" | "rules">("home");
   const [confirmClear, setConfirmClear] = React.useState(false);
   const [clearing, setClearing] = React.useState(false);
   const [notificationMessage, setNotificationMessage] = React.useState("");
@@ -333,6 +318,12 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
 
   const handleLogout = React.useCallback(async () => {
     onClose();
+    try {
+      // Stop Android pushes for this device while the session can still authenticate.
+      await unregisterFirebaseDevice();
+    } catch (err) {
+      console.warn("Failed to unregister Android notifications during logout", err);
+    }
     try {
       await Promise.all([clearAuthToken()]);
     } catch (err) {
@@ -480,7 +471,7 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
             <Box className="flex-row items-center gap-2 flex-1 min-w-0">
               {settingsPage !== "home" ? <Pressable accessibilityRole="button" accessibilityLabel="Back to settings" onPress={() => setSettingsPage("home")} className="items-center justify-center rounded-lg" style={{ minWidth: 44, minHeight: 44 }}><Icon as={ArrowLeft} size={20} aria-hidden={true} className="text-typography-700 dark:text-[#CBD5E1]" /></Pressable> : null}
               <Heading size="md" className="flex-1 text-typography-900 dark:text-[#E8EBF0]">
-                {settingsPage === "home" ? "Settings" : settingsPage === "theme" ? "Theme" : settingsPage === "android" ? "Android notifications" : "Web Notifications"}
+                {settingsPage === "home" ? "Settings" : settingsPage === "theme" ? "Theme" : settingsPage === "android" ? "Android notifications" : settingsPage === "rules" ? "Notification rules" : "Web Notifications"}
               </Heading>
             </Box>
             <ModalCloseButton accessibilityLabel="Close settings" className="rounded-full items-center justify-center" style={{ minWidth: 44, minHeight: 44 }}>
@@ -493,6 +484,7 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
                 { page: "theme" as const, label: "Theme", description: "Choose light, dark, or system appearance.", icon: Settings },
                 { page: "android" as const, label: "Android notifications", description: "Firebase delivery and device settings.", icon: Bell },
                 { page: "web" as const, label: "Web Notifications", description: "Register this device and manage notification history.", icon: Globe },
+                { page: "rules" as const, label: "Notification rules", description: "Choose what pushes, per category, and set quiet hours.", icon: Bell },
               ].map((item) => <Pressable key={item.page} accessibilityRole="button" accessibilityLabel={item.label} onPress={() => { setNotificationMessage(""); setConfirmClear(false); setSettingsPage(item.page); }} className="flex-row items-center gap-3 rounded-xl border border-outline-200 dark:border-[#344257] px-3 py-3 active:opacity-70" style={{ minHeight: 64 }}>
                 <Icon as={item.icon} size={20} aria-hidden={true} className="text-[#64748B] dark:text-[#94A3B8]" />
                 <Box className="flex-1 gap-1"><Text className="text-sm font-semibold text-typography-900 dark:text-[#E8EBF0]">{item.label}</Text><Text className="text-xs text-typography-600 dark:text-[#94A3B8]">{item.description}</Text></Box>
@@ -514,6 +506,7 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
               </RadioGroup>
             </Box> : null}
             {settingsPage === "android" ? <Box className="pb-2"><FirebaseNotificationSettings /></Box> : null}
+            {settingsPage === "rules" ? <NotificationRulesSettings /> : null}
             {settingsPage === "web" ? <Box className="gap-3 pb-2">
               <Text className="text-sm text-typography-700 dark:text-[#CBD5E1]">Legacy web notification registration and history.</Text>
               <Button variant="outline" action="secondary" onPress={registerNotifications} className="h-12 rounded-lg"><ButtonText>Register Notifications</ButtonText></Button>

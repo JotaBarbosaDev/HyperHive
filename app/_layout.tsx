@@ -59,6 +59,7 @@ import { VmProgressToastListener } from "@/components/VmProgressToastListener";
 import { NewSlaveCountToastListener } from "@/components/NewSlaveCountToastListener";
 import { SocketErrorModalListener } from "@/components/SocketErrorModalListener";
 import { SocketNotificationModalListener } from "@/components/SocketNotificationModalListener";
+import { FirebaseDeviceRegistrar } from "@/components/FirebaseDeviceRegistrar";
 import Snowfall from "react-snowfall";
 
 export {
@@ -102,11 +103,6 @@ const ROUTE_TITLE_MAP: Record<string, string> = {
   "/modal": "Modal",
   "/tabs": "Tabs",
   "/spa": "SPA",
-  "/docker/images": "Docker Images",
-  "/docker/containers": "Docker Containers",
-  "/docker/volumes": "Docker Volumes",
-  "/docker/networks": "Docker Networks",
-  "/docker/git": "Docker Git",
   "/notes": "Notes",
 };
 
@@ -662,6 +658,7 @@ function RootLayoutNav() {
                 <NewSlaveCountToastListener />
                 <SocketErrorModalListener />
                 <SocketNotificationModalListener />
+                <FirebaseDeviceRegistrar />
                 <Box className="flex-1" style={{ marginLeft: contentInset }}>
                   {compactSidebar && pathname !== "/" ? <Pressable accessibilityRole="button" accessibilityLabel="Open navigation" onPress={() => setMobileSidebarOpen(true)} className="items-center justify-center self-start" style={{ width: 48, height: 48 }}><Icon as={Menu} size={22} className="text-[#64748B] dark:text-[#94A3B8]" /></Pressable> : null}
                   {apiBaseMismatch && (
