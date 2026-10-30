@@ -2515,14 +2515,14 @@ export default function VirtualMachinesScreen() {
           {/* Modals e Actionsheet */}
           <Modal isOpen={!!detailsVm} onClose={() => setDetailsVm(null)}>
             <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
-            <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] shadow-soft-2 max-w-[720px] w-full">
-              <ModalHeader className="flex justify-between border-b border-outline-100 dark:border-[#2A3B52]">
-                <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">
+            <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] shadow-soft-2 max-w-[720px] w-full p-0">
+              <ModalHeader className="flex-row items-center justify-between border-b border-outline-100 px-6 py-6 dark:border-[#2A3B52]">
+                <Heading size="md" className="min-w-0 flex-1 text-typography-900 dark:text-[#E8EBF0]">
                   {detailsVm?.name} · Details
                 </Heading>
-                <ModalCloseButton accessibilityLabel="Close VM details"><X className="text-typography-700 dark:text-[#E8EBF0]" /></ModalCloseButton>
+                <ModalCloseButton className="p-1" accessibilityLabel="Close VM details"><X className="text-typography-700 dark:text-[#E8EBF0]" /></ModalCloseButton>
               </ModalHeader>
-              <ModalBody className="p-0">
+              <ModalBody className="m-0 p-0">
                 {detailsVm && (
                   <ScrollView
                     className="max-h-[70vh]"
@@ -2530,7 +2530,6 @@ export default function VirtualMachinesScreen() {
                     contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
                   >
                     <VStack className="gap-6">
-                      <Divider className="my-2" />
                       <VStack className="gap-3 web:grid web:grid-cols-2 web:gap-4">
                         <HStack className="justify-between">
                           <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">State</Text>
@@ -2622,7 +2621,6 @@ export default function VirtualMachinesScreen() {
                           <Text key={`${index}-${address}`} selectable className="text-sm text-typography-900 dark:text-[#E8EBF0]" style={{ overflowWrap: "anywhere" } as any}>{address}</Text>
                         )) : <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">Not reported</Text>}
                       </VStack>
-                      <Divider className="my-2" />
                       <HStack className="gap-2 flex-wrap web:justify-start">
                         <Button className={`rounded-xl px-4 py-2 ${primaryButtonClass}`} onPress={() => {
                           setConsoleOptionsVm(detailsVm);
@@ -2660,7 +2658,7 @@ export default function VirtualMachinesScreen() {
                   </ScrollView>
                 )}
               </ModalBody>
-              <ModalFooter>
+              <ModalFooter className="items-center justify-end border-t border-outline-100 px-6 py-6 dark:border-[#2A3B52]">
                 <HStack className="justify-end gap-2">
                   <Button
                     variant="outline"

@@ -67,6 +67,7 @@ import { clearAuthToken } from "@/services/auth-storage";
 import { apiFetch, getAuthToken, setAuthToken } from "@/services/api-client";
 import { Image } from "@/components/ui/image";
 import type { SupportApp } from "@/types/support";
+import { listSupportApps, listSupportTabs } from "@/services/support-client";
 import { resetSupportNavigation, selectSupportApp, useSupportNavigation } from "@/hooks/useSupportNavigation";
 import { SIDEBAR_RAIL_WIDTH } from "@/hooks/useSidebarLayout";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -225,6 +226,31 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
   const pathname = usePathname();
   const support = useSupportNavigation();
   React.useEffect(() => () => resetSupportNavigation(), []);
+  // Off the Support page, poll the inventory so the app status dots stay current.
+  React.useEffect(() => {
+    if (pathname === "/support") return;
+    let stopped = false;
+    let controller: AbortController | undefined;
+    const poll = async () => {
+      const token = getAuthToken();
+      if (!token) return;
+      controller?.abort();
+      controller = new AbortController();
+      const timeout = setTimeout(() => controller?.abort(), 4500);
+      try {
+        const [tabs, apps] = await Promise.all([listSupportTabs(token, controller.signal), listSupportApps(token, controller.signal)]);
+        if (!stopped) useSupportNavigation.setState({ tabs, apps, connection: "live" });
+      } catch {
+        // Polling failure only greys the dots; the next tick retries.
+        if (!stopped) useSupportNavigation.setState({ connection: "disconnected" });
+      } finally {
+        clearTimeout(timeout);
+      }
+    };
+    void poll();
+    const timer = setInterval(() => { void poll(); }, 5000);
+    return () => { stopped = true; clearInterval(timer); controller?.abort(); };
+  }, [pathname]);
   const systemScheme = useColorScheme();
   const resolvedMode = themePreference === "system" ? (systemScheme === "dark" ? "dark" : "light") : themePreference;
   const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
@@ -372,15 +398,14 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
           accessibilityState={{ selected: active, ...(hasChildren ? { expanded: isOpen && expanded } : {}) }}
           {...(Platform.OS === "web" ? { title: app ? `${app.name}: ${appStatus}${app.tags.length ? ". Tags: " + app.tags.join(", ") : ""}` : item.label } : {})}
           onPress={() => {
-            if (item.supportTabId) {
-              const selected = item.supportApp ?? support.apps.find((app) => app.id === support.selectedId && app.tab_id === item.supportTabId) ?? support.apps.find((app) => app.tab_id === item.supportTabId);
-              if (!selectSupportApp(item.supportTabId, selected?.id ?? null)) return;
-              handleNavigate("/support", hasChildren);
+            // Support parents only expand; opening the page happens when an App is picked.
+            if (item.supportApp) {
+              if (!selectSupportApp(item.supportTabId ?? null, item.supportApp.id)) return;
+              handleNavigate("/support");
             }
             if (hasChildren) {
               if (!isOpen) { onToggle(); setExpandedParents((prev) => ({ ...prev, [key]: true })); }
               else setExpandedParents((prev) => ({ ...prev, [key]: !expanded }));
-              if (item.route === "/support" && !item.supportTabId) handleNavigate("/support", true);
             } else if (item.route && !item.supportTabId) handleNavigate(item.route);
           }}
           className={`flex-row items-center gap-3 rounded-lg active:opacity-70 focus-visible:outline-2 focus-visible:outline-[#2DD4BF] ${active ? "bg-[#E2E8F0] dark:bg-[#263244] hover:bg-[#D8E0EA] dark:hover:bg-[#2D3B50]" : "hover:bg-background-100 dark:hover:bg-[#1A2637]"}`}
