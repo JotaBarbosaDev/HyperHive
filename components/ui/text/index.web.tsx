@@ -11,6 +11,9 @@ type ITextProps = React.ComponentProps<'span'> &
     numberOfLines?: number;
     selectable?: boolean;
     accessibilityLiveRegion?: 'none' | 'polite' | 'assertive';
+    onLayout?: (event: {
+      nativeEvent: { layout: { x: number; y: number; width: number; height: number } };
+    }) => void;
   };
 
 const Text = React.forwardRef<React.ComponentRef<'span'>, ITextProps>(
@@ -24,6 +27,7 @@ const Text = React.forwardRef<React.ComponentRef<'span'>, ITextProps>(
       accessibilityLiveRegion,
       accessibilityRole,
       accessibilityLabel,
+      onLayout,
       bold,
       underline,
       strikeThrough,
@@ -36,6 +40,34 @@ const Text = React.forwardRef<React.ComponentRef<'span'>, ITextProps>(
     ref
   ) {
     const safeStyle = React.useMemo(() => cleanStyle(style), [style]);
+
+    const elementRef = React.useRef<HTMLSpanElement | null>(null);
+    const setRef = React.useCallback(
+      (node: HTMLSpanElement | null) => {
+        elementRef.current = node;
+        if (typeof ref === 'function') ref(node);
+        else if (ref) (ref as React.MutableRefObject<HTMLSpanElement | null>).current = node;
+      },
+      [ref]
+    );
+
+    React.useEffect(() => {
+      const element = elementRef.current;
+      if (!onLayout || !element || typeof ResizeObserver === 'undefined') return;
+      let lastWidth = -1;
+      let lastHeight = -1;
+      const observer = new ResizeObserver(() => {
+        const rect = element.getBoundingClientRect();
+        if (rect.width === lastWidth && rect.height === lastHeight) return;
+        lastWidth = rect.width;
+        lastHeight = rect.height;
+        onLayout({
+          nativeEvent: { layout: { x: 0, y: 0, width: rect.width, height: rect.height } },
+        });
+      });
+      observer.observe(element);
+      return () => observer.disconnect();
+    }, [onLayout]);
 
     const roleAliases: Partial<Record<AccessibilityRole, React.AriaRole | undefined>> = {
       header: 'heading', image: 'img', imagebutton: 'button', adjustable: 'slider',
@@ -73,7 +105,7 @@ const Text = React.forwardRef<React.ComponentRef<'span'>, ITextProps>(
         role={props.role ?? webRole}
         aria-label={props["aria-label"] ?? accessibilityLabel}
         aria-live={props['aria-live'] ?? (accessibilityLiveRegion === 'none' ? 'off' : accessibilityLiveRegion)}
-        ref={ref}
+        ref={setRef}
       />
     );
   }

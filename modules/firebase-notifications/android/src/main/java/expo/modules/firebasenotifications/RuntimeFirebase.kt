@@ -75,7 +75,7 @@ internal object RuntimeFirebase {
     TEST_CHANNELS.forEach { (severity, id) ->
       val defaults = TEST_CHANNEL_DEFAULTS.getValue(severity)
       val label = if (severity == "warn") "warning" else severity
-      val channel = NotificationChannel(id, "HyperHive test $label", if (legacyChannelBlocked) NotificationManager.IMPORTANCE_NONE else defaults.importance)
+      val channel = NotificationChannel(id, "HyperHive $label", if (legacyChannelBlocked) NotificationManager.IMPORTANCE_NONE else defaults.importance)
       if (!defaults.sound) channel.setSound(null, null)
       else if (severity == "critical") channel.setSound(criticalSound(context), AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION).build())
       channel.enableVibration(defaults.vibration)

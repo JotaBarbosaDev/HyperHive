@@ -10,6 +10,7 @@ import { firebaseNotifications as nativeModule } from "@/services/firebase-notif
 import type { FirebaseNotificationStatus, FirebaseClientConfiguration } from "@/services/firebase-notifications";
 import { ApiError, apiFetch, getAuthToken, onAuthTokenChange } from "@/services/api-client";
 import { getApiBaseUrl, onApiBaseUrlChange } from "@/config/apiConfig";
+import { registerFirebaseDevice, unregisterFirebaseDevice } from "@/services/firebase-device-registration";
 
 type Check = { state: "unchecked" | "working" | "failed"; message: string };
 const unchecked: Check = { state: "unchecked", message: "Not checked" };
@@ -89,7 +90,10 @@ export default function FirebaseNotificationSettings() {
     }
     try {
       await apiFetch("/notification/firebase/check", { method: "POST", body: { token, projectId: native!.getStatus().projectId }, signal, reportResult: false });
-      if (!signal.aborted) setBackendCheck({ state: "working", message: "Firebase validated credentials, project and device token. No notification was sent." });
+      if (signal.aborted) return;
+      setBackendCheck({ state: "working", message: "Firebase validated credentials, project and device token. No notification was sent." });
+      // A working connection is the point where this device should start receiving real events.
+      await registerFirebaseDevice().catch(() => setMessage("Connection works, but this device could not be registered for HyperHive notifications."));
     } catch (error) {
       if (!signal.aborted) setBackendCheck({ state: "failed", message: error instanceof Error ? error.message : "Firebase validation failed" });
     }
@@ -138,6 +142,7 @@ export default function FirebaseNotificationSettings() {
     })} className="h-12 rounded-lg"><ButtonText>Enable notifications</ButtonText></Button>
     <Button variant="outline" action="secondary" isDisabled={busy || !ready} onPress={() => run(checkConnection)} className="h-12 rounded-lg"><ButtonText>Check Firebase connection</ButtonText></Button>
     <Button variant="outline" action="secondary" isDisabled={busy || !status?.projectId} onPress={() => run(async signal => {
+      await unregisterFirebaseDevice().catch(() => undefined);
       const disabled = await native.disable();
       if (!signal.aborted) { setStatus(disabled); setClientCheck(unchecked); setBackendCheck(unchecked); setExpectedMessage(null); setMessage("Notifications disabled."); }
     })} className="h-12 rounded-lg"><ButtonText>Disable notifications</ButtonText></Button>

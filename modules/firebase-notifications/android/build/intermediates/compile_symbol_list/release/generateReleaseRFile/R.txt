@@ -1,1 +1,2 @@
 int drawable hyperhive_notification 0x0
+int raw hyperhive_critical 0x0
