@@ -9,7 +9,9 @@ jest.mock("../components/ui/box", () => ({ Box: ({ children }) => <div>{children
 jest.mock("../components/ui/text", () => ({ Text: ({ children }) => <span>{children}</span> }));
 jest.mock("../components/ui/heading", () => ({ Heading: ({ children }) => <h2>{children}</h2> }));
 jest.mock("../components/ui/button", () => ({ Button: ({ children, onPress, isDisabled }) => <button disabled={isDisabled} onClick={onPress}>{children}</button>, ButtonText: ({ children }) => children }));
-jest.mock("../components/ui/input", () => ({ Input: ({ children }) => <div>{children}</div>, InputField: ({ value, onChangeText, accessibilityLabel }) => <input aria-label={accessibilityLabel} value={value} onChange={(e) => onChangeText(e.target.value)} /> }));
+jest.mock("react-native", () => ({ Platform: { OS: "web" } }));
+jest.mock("../components/ui/pressable", () => ({ Pressable: ({ children, onPress }) => <button onClick={onPress}>{children}</button> }));
+jest.mock("../components/ui/modal", () => ({ Modal: () => null, ModalBackdrop: () => null, ModalBody: () => null, ModalContent: () => null, ModalHeader: () => null }));
 jest.mock("../components/ui/switch", () => ({ Switch: ({ value, onValueChange, accessibilityLabel }) => <input type="checkbox" aria-label={accessibilityLabel} checked={value} onChange={(e) => onValueChange(e.target.checked)} /> }));
 
 const json = (body, status = 200) => ({ ok: true, status, headers: { get: () => "application/json" }, json: async () => body });
@@ -51,7 +53,7 @@ describe("PowerScheduleCard", () => {
   });
 
 
-  it("says it is cluster-wide, shows host status and saves", async () => {
+  it("shows two clock pickers, host errors and saves", async () => {
     const calls = [];
     global.fetch = jest.fn(async (url, init = {}) => {
       calls.push([init.method || "GET", String(url), init.body]);
@@ -64,17 +66,19 @@ describe("PowerScheduleCard", () => {
     const root = createRoot(container);
     await act(async () => { root.render(<PowerScheduleCard token="session-one" />); });
 
-    expect(container.textContent).toContain("Power schedule (all machines)");
-    expect(container.textContent).toContain("applies to every machine in the cluster");
+    expect(container.textContent).toContain("Power schedule");
+    expect(container.textContent).toContain("All machines · Europe/Lisbon");
     expect(container.textContent).toContain("Power On By RTC");
-    expect(container.textContent).toContain("Last attempt failed: atd down");
+    expect(container.textContent).toContain("slave-a: atd down");
+    const pickers = container.querySelectorAll('input[type="time"]');
+    expect([...pickers].map((p) => p.getAttribute("aria-label"))).toEqual(["Turn off", "Turn on"]);
 
     const save = [...container.querySelectorAll("button")].find((b) => b.textContent.includes("Save"));
     expect(save.disabled).toBe(true);
 
     await act(async () => {
       container.querySelector('[aria-label="Enable cluster power schedule"]').click();
-      setValue(container.querySelector('[aria-label="Power schedule stop time"]'), "01:00");
+      setValue(container.querySelector('[aria-label="Turn off"]'), "01:00");
     });
     expect(save.disabled).toBe(false);
     await act(async () => { save.click(); });

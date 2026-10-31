@@ -52,4 +52,5 @@ export const validatePowerSchedule = (start: string, stop: string): string | nul
   return null;
 };
 
-export const formatEpoch = (unix?: number) => (unix ? new Date(unix * 1000).toLocaleString() : "—");
+export const formatEpochShort = (unix?: number) =>
+  unix ? new Date(unix * 1000).toLocaleString(undefined, { weekday: "short", hour: "2-digit", minute: "2-digit" }) : "—";

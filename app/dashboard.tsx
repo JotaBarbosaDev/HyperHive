@@ -1256,7 +1256,7 @@ export default function DashboardScreen() {
             </VStack>
           </Box>
 
-          <Box className="mt-4">
+          <Box className="mt-8">
             <PowerScheduleCard token={token} />
           </Box>
         </Box>
