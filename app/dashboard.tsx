@@ -1257,7 +1257,7 @@ export default function DashboardScreen() {
           </Box>
 
           <Box className="mt-4">
-            <PowerScheduleCard />
+            <PowerScheduleCard token={token} />
           </Box>
         </Box>
       </ScrollView>

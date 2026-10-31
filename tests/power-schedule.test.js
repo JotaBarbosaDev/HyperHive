@@ -40,6 +40,17 @@ describe("validatePowerSchedule", () => {
 });
 
 describe("PowerScheduleCard", () => {
+  it("waits for the session before calling the API", async () => {
+    global.fetch = jest.fn();
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    await act(async () => { root.render(<PowerScheduleCard token={null} />); });
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(container.textContent).not.toContain("not configured");
+    act(() => root.unmount());
+  });
+
+
   it("says it is cluster-wide, shows host status and saves", async () => {
     const calls = [];
     global.fetch = jest.fn(async (url, init = {}) => {
@@ -51,7 +62,7 @@ describe("PowerScheduleCard", () => {
     });
     const container = document.createElement("div");
     const root = createRoot(container);
-    await act(async () => { root.render(<PowerScheduleCard />); });
+    await act(async () => { root.render(<PowerScheduleCard token="session-one" />); });
 
     expect(container.textContent).toContain("Power schedule (all machines)");
     expect(container.textContent).toContain("applies to every machine in the cluster");

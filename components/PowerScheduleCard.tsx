@@ -31,8 +31,9 @@ function HostRow({ host }: { host: PowerScheduleHost }) {
   </Box>;
 }
 
-// One schedule for the whole cluster, shown on the main dashboard.
-export default function PowerScheduleCard() {
+// One schedule for the whole cluster, shown on the main dashboard. token comes from
+// useAuthGuard: loading waits for it because the API base URL is restored with the session.
+export default function PowerScheduleCard({ token }: { token: string | null }) {
   const [view, setView] = React.useState<PowerScheduleView | null>(null);
   const [draft, setDraft] = React.useState({ enabled: false, start: "", stop: "" });
   const [loadError, setLoadError] = React.useState("");
@@ -53,13 +54,14 @@ export default function PowerScheduleCard() {
   }, []);
 
   React.useEffect(() => {
+    if (!token) return;
     const controller = new AbortController();
     void load(controller.signal, true);
     return () => {
       controller.abort();
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [load]);
+  }, [load, token]);
 
   const schedule = view?.schedule;
   const start = draft.start.trim();
