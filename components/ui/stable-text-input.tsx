@@ -11,137 +11,83 @@ import {
 } from 'react-native';
 
 type Selection = TextInputSelectionChangeEventData['selection'];
+type WebInputTarget = EventTarget & {
+  selectionStart?: number;
+  selectionEnd?: number;
+  setSelectionRange?: (start: number, end: number) => void;
+};
 
+const readSelection = (target?: EventTarget | null): Selection | null => {
+  const node = target as WebInputTarget | null;
+  if (typeof node?.selectionStart !== 'number' || typeof node.selectionEnd !== 'number') {
+    return null;
+  }
+  return { start: node.selectionStart, end: node.selectionEnd };
+};
+
+// React Native Web can move a controlled input's caret to the end after a
+// value render. Capture the browser's post-input selection and restore it once.
 const StableTextInput = React.forwardRef<TextInput, TextInputProps>(
   function StableTextInput(
-    {
-      onChange,
-      onSelectionChange,
-      onFocus,
-      onBlur,
-      selection: selectionProp,
-      value,
-      ...props
-    },
+    { onChange, onFocus, onBlur, selection: selectionProp, value, ...props },
     ref
   ) {
     const inputRef = React.useRef<TextInput | null>(null);
-    const selectionRef = React.useRef<Selection | null>(null);
+    const pendingSelectionRef = React.useRef<Selection | null>(null);
     const isFocusedRef = React.useRef(false);
-    // Preserve cursor position for controlled web inputs.
     const preserveSelection =
-      Platform.OS === 'web' &&
-      selectionProp === undefined &&
-      value !== undefined;
-
-    const updateSelectionFromTarget = React.useCallback(
-      (target?: EventTarget | null) => {
-        if (!preserveSelection) {
-          return;
-        }
-        const node = target as
-          | (EventTarget & { selectionStart?: number; selectionEnd?: number })
-          | null;
-        if (
-          node &&
-          typeof node.selectionStart === 'number' &&
-          typeof node.selectionEnd === 'number'
-        ) {
-          selectionRef.current = {
-            start: node.selectionStart,
-            end: node.selectionEnd,
-          };
-        }
-      },
-      [preserveSelection]
-    );
+      Platform.OS === 'web' && selectionProp === undefined && value !== undefined;
 
     const handleChange = React.useCallback(
       (event: NativeSyntheticEvent<TextInputChangeEventData>) => {
         if (preserveSelection) {
-          updateSelectionFromTarget(event.target as unknown as EventTarget);
+          pendingSelectionRef.current =
+            readSelection(event.target as unknown as EventTarget) ??
+            readSelection(inputRef.current as unknown as EventTarget);
         }
         onChange?.(event);
       },
-      [onChange, preserveSelection, updateSelectionFromTarget]
-    );
-
-    const handleSelectionChange = React.useCallback(
-      (event: NativeSyntheticEvent<TextInputSelectionChangeEventData>) => {
-        selectionRef.current = event.nativeEvent.selection;
-        onSelectionChange?.(event);
-      },
-      [onSelectionChange]
+      [onChange, preserveSelection]
     );
 
     const handleFocus = React.useCallback(
       (event: NativeSyntheticEvent<TextInputFocusEventData>) => {
         isFocusedRef.current = true;
-        if (preserveSelection) {
-          updateSelectionFromTarget(event.target as unknown as EventTarget);
-        }
         onFocus?.(event);
       },
-      [onFocus, preserveSelection, updateSelectionFromTarget]
+      [onFocus]
     );
 
     const handleBlur = React.useCallback(
       (event: NativeSyntheticEvent<TextInputFocusEventData>) => {
         isFocusedRef.current = false;
+        pendingSelectionRef.current = null;
         onBlur?.(event);
       },
       [onBlur]
     );
 
-    const getClampedSelection = React.useCallback(() => {
-      if (!preserveSelection) {
-        return null;
-      }
-      const selection = selectionRef.current;
-      if (!selection) {
-        return null;
-      }
-      const valueLength =
-        typeof value === 'string'
-          ? value.length
-          : String(value ?? '').length;
-      return {
-        start: Math.min(selection.start, valueLength),
-        end: Math.min(selection.end, valueLength),
-      };
-    }, [preserveSelection, value]);
-
-    const applySelection = React.useCallback(() => {
-      if (!preserveSelection || !isFocusedRef.current) {
+    React.useLayoutEffect(() => {
+      const selection = pendingSelectionRef.current;
+      pendingSelectionRef.current = null;
+      if (!preserveSelection || !selection || !isFocusedRef.current) {
         return;
       }
-      const node = inputRef.current as unknown as {
-        value?: string;
-        selectionStart?: number;
-        selectionEnd?: number;
-        setSelectionRange?: (start: number, end: number) => void;
-      } | null;
-      const selection = getClampedSelection();
-      if (!node || !selection || typeof node.setSelectionRange !== 'function') {
+      const node = inputRef.current as unknown as WebInputTarget | null;
+      if (!node || typeof node.setSelectionRange !== 'function') {
         return;
       }
-      if (
-        node.selectionStart !== selection.start ||
-        node.selectionEnd !== selection.end
-      ) {
+      const valueLength = String(value ?? '').length;
+      const start = Math.min(selection.start, valueLength);
+      const end = Math.min(selection.end, valueLength);
+      if (node.selectionStart !== start || node.selectionEnd !== end) {
         try {
-          node.setSelectionRange(selection.start, selection.end);
+          node.setSelectionRange(start, end);
         } catch {
-          // Ignore selection errors on unsupported inputs.
+          // Some input types do not support selection ranges.
         }
       }
-    }, [getClampedSelection, preserveSelection]);
-
-    React.useLayoutEffect(() => {
-      if (preserveSelection) {
-        applySelection();
-      }
-    }, [applySelection, preserveSelection, value]);
+    }, [preserveSelection, value]);
 
     const setCombinedRef = React.useCallback(
       (node: TextInput | null) => {
@@ -160,13 +106,8 @@ const StableTextInput = React.forwardRef<TextInput, TextInputProps>(
         ref={setCombinedRef}
         {...props}
         value={value}
-        selection={
-          preserveSelection ? getClampedSelection() ?? undefined : selectionProp
-        }
+        selection={selectionProp}
         onChange={preserveSelection ? handleChange : onChange}
-        onSelectionChange={
-          preserveSelection ? handleSelectionChange : onSelectionChange
-        }
         onFocus={preserveSelection ? handleFocus as TextInputProps['onFocus'] : onFocus}
         onBlur={preserveSelection ? handleBlur as TextInputProps['onBlur'] : onBlur}
       />

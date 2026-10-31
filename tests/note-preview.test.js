@@ -1,4 +1,4 @@
-const { noteExcerpt, noteMatches } = require('../utils/note-preview');
+const { noteExcerpt, noteLineCount, noteMatches, notePlainExcerpt } = require('../utils/note-preview');
 
 test('limits excerpts without changing their source', () => {
   const source = '# Heading\n**bold**\n<script>alert(1)</script>\nfour\nfive';
@@ -6,6 +6,17 @@ test('limits excerpts without changing their source', () => {
   expect(source).toContain('five');
   expect(noteExcerpt('x'.repeat(241))).toHaveLength(241);
   expect(noteExcerpt('   ')).toBe('');
+});
+
+test('creates readable plain-text card excerpts from Markdown', () => {
+  expect(notePlainExcerpt('# Heading\n- **bold**\n> quote\n`code`')).toBe('Heading\n• bold\nquote\ncode');
+  expect(notePlainExcerpt('one\ntwo\nthree\nfour\nfive')).toBe('one\ntwo\nthree\nfour …');
+});
+
+test('counts lines consistently across platforms and empty notes', () => {
+  expect(noteLineCount('')).toBe(0);
+  expect(noteLineCount('one')).toBe(1);
+  expect(noteLineCount('one\r\ntwo\nthree\rfour')).toBe(4);
 });
 
 test('searches titles and full note content case insensitively', () => {

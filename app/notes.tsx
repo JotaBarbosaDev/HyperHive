@@ -5,7 +5,7 @@ import { Button, ButtonIcon, ButtonSpinner, ButtonText } from "@/components/ui/b
 import { Heading } from "@/components/ui/heading";
 import { HStack } from "@/components/ui/hstack";
 import { Icon } from "@/components/ui/icon";
-import { Input, InputField } from "@/components/ui/input";
+import { Input, InputField, InputIcon, InputSlot } from "@/components/ui/input";
 import {
   Modal,
   ModalBackdrop,
@@ -16,7 +16,6 @@ import {
   ModalHeader,
 } from "@/components/ui/modal";
 import { Text } from "@/components/ui/text";
-import { Textarea, TextareaInput } from "@/components/ui/textarea";
 import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/toast";
 import { VStack } from "@/components/ui/vstack";
 import {
@@ -27,18 +26,23 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
 } from "@/components/ui/alert-dialog";
+import { NoteEditorModal } from "@/components/notes/note-editor-modal";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { createNote, deleteNote, getNote, listNotes, updateNote } from "@/services/notes";
 import { Note } from "@/types/notes";
-import { noteExcerpt, noteMatches } from "@/utils/note-preview";
-import { AlertTriangle, Edit3, Eye, FileText, Plus, RefreshCw, Save, Trash2, X } from "lucide-react-native";
-
-const countLines = (value: string) => {
-  if (!value) {
-    return 0;
-  }
-  return value.split(/\r\n|\r|\n/).length;
-};
+import { noteLineCount, noteMatches, notePlainExcerpt } from "@/utils/note-preview";
+import {
+  AlertTriangle,
+  Edit3,
+  Eye,
+  FileText,
+  Plus,
+  RefreshCw,
+  Search,
+  SearchX,
+  Trash2,
+  X,
+} from "lucide-react-native";
 
 const renderInlineMarkdown = (value: string) => {
   const parts = value.split(/(\*\*[^*]+\*\*|`[^`]+`|\*[^*]+\*)/g);
@@ -128,7 +132,7 @@ const MarkdownPreview = ({ value }: { value: string }) => {
     const quoteMatch = trimmed.match(/^>\s?(.+)$/);
     if (quoteMatch) {
       nodes.push(
-        <Box key={`quote-${index}`} className="border-l-4 border-outline-300 pl-3 dark:border-[#2A3B52]">
+        <Box key={`quote-${index}`} className="border-l-2 border-outline-300 pl-3 dark:border-[#40516B]">
           <Text className="text-base leading-7 text-typography-700 dark:text-[#D7DCE5]">
             {renderInlineMarkdown(quoteMatch[1])}
           </Text>
@@ -141,7 +145,7 @@ const MarkdownPreview = ({ value }: { value: string }) => {
     if (listMatch) {
       nodes.push(
         <HStack key={`list-${index}`} className="items-start gap-3">
-          <Text className="text-base leading-7 text-typography-500 dark:text-[#8A94A8]">-</Text>
+          <Text className="text-base leading-7 text-typography-500 dark:text-[#96A2B8]">-</Text>
           <Text className="flex-1 text-base leading-7 text-typography-800 dark:text-[#D7DCE5]">
             {renderInlineMarkdown(listMatch[1])}
           </Text>
@@ -172,7 +176,7 @@ export default function NotesScreen() {
   const { width, height } = useWindowDimensions();
   const [notes, setNotes] = React.useState<Note[]>([]);
   const [search, setSearch] = React.useState("");
-  const visibleNotes = notes.filter((note) => noteMatches(note, search));
+  const visibleNotes = React.useMemo(() => notes.filter((note) => noteMatches(note, search)), [notes, search]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [creating, setCreating] = React.useState(false);
@@ -186,18 +190,15 @@ export default function NotesScreen() {
   const [editingNote, setEditingNote] = React.useState<Note | null>(null);
   const [previewNote, setPreviewNote] = React.useState<Note | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<Note | null>(null);
-  const [formTitle, setFormTitle] = React.useState("");
-  const [formText, setFormText] = React.useState("");
 
   const [gridWidth, setGridWidth] = React.useState(0);
-  const contentWidth = gridWidth || Math.min(width - 32, 1104);
-  const columns = contentWidth >= 960 ? 4 : contentWidth >= 700 ? 3 : contentWidth >= 460 ? 2 : 1;
+  const contentWidth = gridWidth || Math.min(Math.max(width - 32, 0), 1184);
+  const columns = contentWidth >= 1000 ? 3 : contentWidth >= 640 ? 2 : 1;
   const cardGap = 16;
   const cardSize = Math.floor((contentWidth - cardGap * (columns - 1)) / columns);
-  const modalWidth = Math.min(Math.max(width - 32, 320), 1280);
-  const modalMaxHeight = Math.min(Math.max(height - 48, 520), 900);
-  const editorHeight = Math.max(modalMaxHeight - 156, 360);
-  const previewHeight = Math.max(modalMaxHeight - 170, 360);
+  const modalWidth = Math.min(Math.max(width - 24, 280), 920);
+  const modalMaxHeight = Math.min(Math.max(height - 32, 520), 840);
+  const previewHeight = Math.max(modalMaxHeight - 190, 300);
 
   const showToast = React.useCallback(
     (title: string, description: string, action: "success" | "error" = "success") => {
@@ -206,7 +207,7 @@ export default function NotesScreen() {
         render: ({ id }) => (
           <Toast
             nativeID={"toast-" + id}
-            className="px-5 py-3 gap-3 shadow-soft-1 items-start flex-row"
+            className="flex-row items-start gap-3 rounded-xl px-5 py-3 shadow-soft-1"
             action={action}
           >
             <ToastTitle size="sm">{title}</ToastTitle>
@@ -245,8 +246,6 @@ export default function NotesScreen() {
   const openCreateModal = () => {
     setModalMode("create");
     setEditingNote(null);
-    setFormTitle("");
-    setFormText("");
     setModalOpen(true);
   };
 
@@ -254,8 +253,6 @@ export default function NotesScreen() {
     if (creating || saving) return;
     setModalOpen(false);
     setEditingNote(null);
-    setFormTitle("");
-    setFormText("");
   };
 
   const closePreview = () => {
@@ -263,25 +260,12 @@ export default function NotesScreen() {
     setPreviewNote(null);
   };
 
-  const handleCreate = async () => {
-    const titulo = formTitle.trim();
-    const nota = formText.trim();
-    if (!titulo) {
-      showToast("Required field", "Write the note title before saving.", "error");
-      return;
-    }
-    if (!nota) {
-      showToast("Required field", "Write the note text before saving.", "error");
-      return;
-    }
-
+  const handleCreate = async (titulo: string, nota: string) => {
     setCreating(true);
     try {
       const created = await createNote({ titulo, nota });
       setNotes((prev) => [created, ...prev.filter((note) => note.id !== created.id)]);
       setModalOpen(false);
-      setFormTitle("");
-      setFormText("");
       showToast("Note created", "The note was saved successfully.");
     } catch (err) {
       console.error("Failed to create note", err);
@@ -297,8 +281,6 @@ export default function NotesScreen() {
       const fullNote = await getNote(note.id);
       setModalMode("edit");
       setEditingNote(fullNote);
-      setFormTitle(fullNote.titulo ?? "");
-      setFormText(fullNote.nota ?? "");
       setModalOpen(true);
     } catch (err) {
       console.error("Failed to open note", err);
@@ -322,18 +304,8 @@ export default function NotesScreen() {
     }
   };
 
-  const handleUpdate = async () => {
+  const handleUpdate = async (titulo: string, nota: string) => {
     if (!editingNote) {
-      return;
-    }
-    const titulo = formTitle.trim();
-    const nota = formText.trim();
-    if (!titulo) {
-      showToast("Required field", "Note title cannot be empty.", "error");
-      return;
-    }
-    if (!nota) {
-      showToast("Required field", "Note text cannot be empty.", "error");
       return;
     }
 
@@ -342,8 +314,6 @@ export default function NotesScreen() {
       const updated = await updateNote(editingNote.id, { titulo, nota });
       setNotes((prev) => prev.map((note) => (note.id === updated.id ? updated : note)));
       setEditingNote(updated);
-      setFormTitle(updated.titulo ?? "");
-      setFormText(updated.nota ?? "");
       setModalOpen(false);
       showToast("Note updated", "Changes saved successfully.");
     } catch (err) {
@@ -378,230 +348,193 @@ export default function NotesScreen() {
   }
 
   return (
-    <Box className="flex-1 bg-background-0 dark:bg-[#070D19] web:bg-background-0">
+    <Box className="flex-1 bg-background-0 dark:bg-[#070D19]">
       <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadNotes("refresh")} />}
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom: 48 }}
       >
-        <Box className="p-4 pt-16 web:p-10 web:max-w-6xl web:mx-auto web:w-full">
-          <HStack className="items-center justify-between gap-3 mb-6 flex-wrap web:flex-wrap">
-            <Box className="flex-1 min-w-[120px]">
-              <Heading
-                size="2xl"
-                className="text-typography-900 dark:text-[#E8EBF0] web:text-4xl"
-                style={{ fontFamily: "Inter_700Bold" }}
-              >
-                Notes
-              </Heading>
-              <Text className="text-sm text-typography-600 dark:text-[#8A94A8] mt-1">
-                {notes.length} {notes.length === 1 ? "note" : "notes"}
-              </Text>
-            </Box>
-            <Button className="rounded-xl gap-2" onPress={openCreateModal}>
-              <ButtonIcon as={Plus} />
-              <ButtonText>Create Note</ButtonText>
-            </Button>
-            <Button
-              variant="outline"
-              action="secondary"
-              className="rounded-xl gap-2 dark:border-[#2A3B52]"
-              onPress={() => loadNotes("refresh")}
-              isDisabled={refreshing || loading}
-            >
-              {refreshing ? <ButtonSpinner /> : <ButtonIcon as={RefreshCw} />}
-              <ButtonText>Refresh</ButtonText>
-            </Button>
-          </HStack>
-
-          <Input className="mb-6 rounded-xl" size="md">
-            <InputField aria-label="Search notes" accessibilityLabel="Search notes" placeholder="Search notes" value={search} onChangeText={setSearch} />
-          </Input>
-
-          {loading && notes.length === 0 ? (
-            <Box className="rounded-2xl border border-outline-100 bg-background-0 p-8 shadow-soft-2 dark:border-[#2A3B52] dark:bg-[#0E1524]">
-              <Text className="text-center text-typography-600 dark:text-[#8A94A8]">Loading notes...</Text>
-            </Box>
-          ) : notes.length === 0 ? (
-            <Box className="rounded-2xl border border-outline-100 bg-background-0 p-8 shadow-soft-2 dark:border-[#2A3B52] dark:bg-[#0E1524] web:p-12">
-              <VStack className="gap-4 items-center justify-center">
-                <Box className="w-20 h-20 rounded-full bg-background-50 dark:bg-[#1A2637] items-center justify-center web:w-24 web:h-24">
-                  <Icon as={FileText} size="xl" className="text-typography-400 dark:text-typography-600" />
-                </Box>
-                <VStack className="gap-2 items-center">
-                  <Heading
-                    size="lg"
-                    className="text-typography-900 dark:text-[#E8EBF0] text-center web:text-2xl"
-                    style={{ fontFamily: "Inter_600SemiBold" }}
-                  >
-                    No notes yet
-                  </Heading>
-                  <Text className="text-typography-600 dark:text-[#8A94A8] text-center text-sm web:text-base max-w-md">
-                    Created notes will appear here.
-                  </Text>
-                </VStack>
-              </VStack>
-            </Box>
-          ) : visibleNotes.length === 0 ? (
-            <Text className="text-typography-600 dark:text-[#8A94A8]">No notes match your search.</Text>
-          ) : (
-            <Box
-              className="flex-row flex-wrap items-start"
-              onLayout={(event) => setGridWidth(event.nativeEvent.layout.width)}
-              style={{ gap: cardGap, width: "100%" }}
-            >
-              {visibleNotes.map((note) => (
-                <Box
-                  key={note.id}
-                  className="rounded-xl border border-outline-100 bg-background-0 p-4 shadow-soft-1 dark:border-[#2A3B52] dark:bg-[#0E1524]"
-                  style={{ width: cardSize, maxWidth: "100%" }}
+        <Box className="w-full p-4 pt-10 web:mx-auto web:max-w-7xl web:p-10">
+          <VStack className="gap-6">
+            <HStack className="flex-wrap items-center justify-between gap-4">
+              <VStack className="min-w-[220px] flex-1 gap-2">
+                <Heading
+                  size="2xl"
+                  className="text-typography-900 dark:text-[#E8EBF0] web:text-4xl"
+                  style={{ fontFamily: "Inter_700Bold" }}
                 >
-                    <VStack className="gap-3">
-                      <VStack className="gap-2">
-                        <Box>
-                          <HStack className="items-start justify-between gap-2">
-                            <Heading
-                              size="sm"
-                              numberOfLines={2}
-                              className="flex-1 text-typography-900 dark:text-[#E8EBF0]"
-                            >
-                              {note.titulo || `Note #${note.id}`}
-                            </Heading>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              action="negative"
-                              className="rounded-lg px-2 dark:border-red-900"
-                              onPress={() => setDeleteTarget(note)}
-                              isDisabled={deletingId !== null}
-                              accessibilityLabel={`Delete ${note.titulo || `note ${note.id}`}`}
-                            >
-                              <ButtonIcon as={Trash2} />
-                            </Button>
-                          </HStack>
-                          <Box className="mt-2">
-                            <MarkdownPreview value={noteExcerpt(note.nota) || "Empty note"} />
-                          </Box>
-                      </Box>
-                    </VStack>
-                    <HStack className="items-center justify-between gap-2 flex-wrap web:flex-wrap">
-                      <Text className="text-xs text-typography-500 dark:text-[#6F7A8D]">
-                        {countLines(note.nota)} {countLines(note.nota) === 1 ? "line" : "lines"}
-                      </Text>
-                      <HStack className="gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          action="secondary"
-                          className="rounded-lg gap-2 dark:border-[#2A3B52]"
-                          onPress={() => openPreview(note)}
-                          isDisabled={viewingId === note.id}
-                        >
-                          {viewingId === note.id ? <ButtonSpinner /> : <ButtonIcon as={Eye} />}
-                          <ButtonText>View</ButtonText>
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          action="secondary"
-                          className="rounded-lg gap-2 dark:border-[#2A3B52]"
-                          onPress={() => openEditor(note)}
-                          isDisabled={openingId === note.id}
-                        >
-                          {openingId === note.id ? <ButtonSpinner /> : <ButtonIcon as={Edit3} />}
-                          <ButtonText>Edit</ButtonText>
-                        </Button>
-                      </HStack>
-                    </HStack>
+                  Notes
+                </Heading>
+                <Text className="text-sm leading-5 text-typography-600 dark:text-[#96A2B8]">
+                  A quiet place for ideas, commands, and decisions.
+                </Text>
+              </VStack>
+              <HStack className="gap-2">
+                <Button
+                  variant="outline"
+                  action="secondary"
+                  className="rounded-xl px-3 dark:border-[#34445D] dark:bg-[#0E1524]"
+                  onPress={() => loadNotes("refresh")}
+                  isDisabled={refreshing || loading}
+                  accessibilityLabel="Refresh notes"
+                >
+                  {refreshing ? <ButtonSpinner /> : <ButtonIcon as={RefreshCw} />}
+                </Button>
+                <Button className="gap-2 rounded-xl" onPress={openCreateModal}>
+                  <ButtonIcon as={Plus} />
+                  <ButtonText>New note</ButtonText>
+                </Button>
+              </HStack>
+            </HStack>
+
+            <HStack className="flex-wrap items-center gap-3">
+              <Input className="h-12 min-w-[220px] flex-1 rounded-xl border-outline-200 bg-background-0 dark:border-[#34445D] dark:bg-[#0E1524]" size="md">
+                <InputSlot className="pl-3">
+                  <InputIcon as={Search} className="text-typography-400 dark:text-[#8190A8]" />
+                </InputSlot>
+                <InputField
+                  aria-label="Search notes"
+                  accessibilityLabel="Search notes"
+                  placeholder="Search titles and content"
+                  value={search}
+                  onChangeText={setSearch}
+                  className="text-sm dark:text-[#E8EBF0]"
+                />
+                {search ? (
+                  <InputSlot className="pr-3" onPress={() => setSearch("")} accessibilityLabel="Clear search">
+                    <InputIcon as={X} className="text-typography-400 dark:text-[#96A2B8]" />
+                  </InputSlot>
+                ) : null}
+              </Input>
+              <Text className="text-xs text-typography-500 dark:text-[#96A2B8]" style={{ fontVariant: ["tabular-nums"] }}>
+                {search ? `${visibleNotes.length} of ${notes.length}` : notes.length} {notes.length === 1 && !search ? "note" : "notes"}
+              </Text>
+            </HStack>
+
+            {loading && notes.length === 0 ? (
+              <Box className="items-center rounded-2xl border border-outline-100 bg-background-0 p-12 dark:border-[#263349] dark:bg-[#0E1524]">
+                <Text className="text-sm text-typography-600 dark:text-[#96A2B8]">Loading your notes…</Text>
+              </Box>
+            ) : notes.length === 0 ? (
+              <Box className="rounded-2xl border border-outline-100 bg-background-0 p-8 dark:border-[#263349] dark:bg-[#0E1524] web:p-12">
+                <VStack className="items-center justify-center gap-5">
+                  <Box className="h-16 w-16 items-center justify-center rounded-2xl bg-primary-50 dark:bg-[#15253A]">
+                    <Icon as={FileText} size="xl" className="text-primary-600 dark:text-[#8DB7FF]" />
+                  </Box>
+                  <VStack className="items-center gap-2">
+                    <Heading size="lg" className="text-center text-typography-900 dark:text-[#E8EBF0]">
+                      No notes yet
+                    </Heading>
+                    <Text className="max-w-md text-center text-sm leading-6 text-typography-600 dark:text-[#96A2B8]">
+                      Create your first note to keep ideas, commands, and decisions in one place.
+                    </Text>
                   </VStack>
-                </Box>
-              ))}
-            </Box>
-          )}
+                  <Button className="gap-2 rounded-xl" onPress={openCreateModal}>
+                    <ButtonIcon as={Plus} />
+                    <ButtonText>Create your first note</ButtonText>
+                  </Button>
+                </VStack>
+              </Box>
+            ) : visibleNotes.length === 0 ? (
+              <Box className="items-center rounded-2xl border border-outline-100 bg-background-0 p-10 dark:border-[#263349] dark:bg-[#0E1524]">
+                <VStack className="items-center gap-4">
+                  <Icon as={SearchX} size="xl" className="text-typography-400 dark:text-[#8190A8]" />
+                  <VStack className="items-center gap-2">
+                    <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">No matching notes</Heading>
+                    <Text className="text-center text-sm text-typography-600 dark:text-[#96A2B8]">
+                      Try a different title or phrase, or clear your search.
+                    </Text>
+                  </VStack>
+                  <Button variant="outline" action="secondary" className="rounded-xl dark:border-[#34445D]" onPress={() => setSearch("")}>
+                    <ButtonText>Clear search</ButtonText>
+                  </Button>
+                </VStack>
+              </Box>
+            ) : (
+              <Box
+                className="flex-row flex-wrap items-stretch"
+                onLayout={(event) => setGridWidth(event.nativeEvent.layout.width)}
+                style={{ gap: cardGap, width: "100%" }}
+              >
+                {visibleNotes.map((note) => (
+                  <Box
+                    key={note.id}
+                    className="overflow-hidden rounded-2xl border border-outline-200 bg-background-0 dark:border-[#263349] dark:bg-[#0E1524] web:hover:border-outline-300 dark:web:hover:border-[#40516B]"
+                    style={{ width: cardSize, maxWidth: "100%" }}
+                  >
+                    <VStack className="flex-1">
+                      <Box className="flex-1 p-5">
+                        <HStack className="items-start justify-between gap-3">
+                          <Heading size="md" numberOfLines={2} className="flex-1 leading-6 text-typography-900 dark:text-[#E8EBF0]">
+                            {note.titulo || `Note #${note.id}`}
+                          </Heading>
+                          <Button
+                            size="sm"
+                            variant="link"
+                            action="secondary"
+                            className="-mr-2 -mt-2 px-2"
+                            onPress={() => setDeleteTarget(note)}
+                            isDisabled={deletingId !== null}
+                            accessibilityLabel={`Delete ${note.titulo || `note ${note.id}`}`}
+                          >
+                            <ButtonIcon as={Trash2} className="text-typography-400 dark:text-[#8190A8]" />
+                          </Button>
+                        </HStack>
+                        <Box className="mt-4 h-[120px]">
+                          <Text numberOfLines={5} className="text-sm leading-6 text-typography-600 dark:text-[#AAB5C7]">
+                            {notePlainExcerpt(note.nota) || "Empty note"}
+                          </Text>
+                        </Box>
+                      </Box>
+                      <HStack className="items-center justify-between gap-2 border-t border-outline-100 px-4 py-2 dark:border-[#263349] dark:bg-[#0B1220]">
+                        <Text className="text-xs text-typography-500 dark:text-[#96A2B8]" style={{ fontVariant: ["tabular-nums"] }}>
+                          {noteLineCount(note.nota)} {noteLineCount(note.nota) === 1 ? "line" : "lines"}
+                        </Text>
+                        <HStack className="gap-1">
+                          <Button
+                            size="sm"
+                            variant="link"
+                            action="secondary"
+                            className="gap-1 px-2"
+                            onPress={() => openPreview(note)}
+                            isDisabled={viewingId === note.id}
+                          >
+                            {viewingId === note.id ? <ButtonSpinner /> : <ButtonIcon as={Eye} />}
+                            <ButtonText>View</ButtonText>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="link"
+                            className="gap-1 px-2"
+                            onPress={() => openEditor(note)}
+                            isDisabled={openingId === note.id}
+                          >
+                            {openingId === note.id ? <ButtonSpinner /> : <ButtonIcon as={Edit3} />}
+                            <ButtonText>Edit</ButtonText>
+                          </Button>
+                        </HStack>
+                      </HStack>
+                    </VStack>
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </VStack>
         </Box>
       </ScrollView>
 
-      <Modal isOpen={modalOpen} onClose={closeModal} size="lg">
-        <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
-        <ModalContent
-          className="overflow-hidden bg-background-0 dark:bg-[#1E1E1E] rounded-xl border border-outline-200 dark:border-[#3C3C3C] shadow-soft-2"
-          style={{ width: modalWidth, maxHeight: modalMaxHeight }}
-        >
-          <ModalHeader className="h-12 flex-row items-center justify-between gap-3 px-3 py-0 border-b border-outline-100 bg-background-50 dark:border-[#333333] dark:bg-[#252526]">
-            <HStack className="items-center gap-2 flex-1">
-              <Box className="w-3 h-3 rounded-full bg-[#EF4444]" />
-              <Box className="w-3 h-3 rounded-full bg-[#F59E0B]" />
-              <Box className="w-3 h-3 rounded-full bg-[#22C55E]" />
-              <Box className="ml-3 rounded-t-md border border-b-0 border-outline-100 bg-background-0 px-3 py-2 dark:border-[#3C3C3C] dark:bg-[#1E1E1E]">
-                <Text
-                  className="text-xs font-semibold text-typography-700 dark:text-[#D4D4D4]"
-                  numberOfLines={1}
-                  style={{ fontFamily: "Inter_600SemiBold" }}
-                >
-                  {modalMode === "create" ? "new-note.md" : `${formTitle || "note"}.md`}
-                </Text>
-              </Box>
-            </HStack>
-            <ModalCloseButton className="rounded-md border border-outline-100 bg-background-0 dark:border-[#3C3C3C] dark:bg-[#1E1E1E]" />
-          </ModalHeader>
-          <ModalBody className="p-0">
-            <VStack className="gap-0">
-              <Box className="border-b border-outline-100 bg-background-0 px-5 py-4 dark:border-[#333333] dark:bg-[#1E1E1E]">
-                <Input className="h-12 rounded-md border-outline-100 bg-background-50 dark:border-[#3C3C3C] dark:bg-[#252526]" size="lg">
-                  <InputField
-                    value={formTitle}
-                    onChangeText={setFormTitle}
-                    placeholder="Note title"
-                    className="text-lg text-typography-900 dark:text-[#D4D4D4]"
-                  />
-                </Input>
-              </Box>
-              <Textarea
-                className="rounded-none border-0 bg-background-0 dark:bg-[#1E1E1E]"
-                style={{ height: editorHeight }}
-              >
-                <TextareaInput
-                  value={formText}
-                  onChangeText={setFormText}
-                  placeholder="# Write markdown here..."
-                  multiline
-                  className="px-5 py-4 font-mono text-sm leading-6 text-typography-900 dark:text-[#D4D4D4]"
-                />
-              </Textarea>
-            </VStack>
-          </ModalBody>
-          <ModalFooter className="h-12 flex-row items-center justify-between gap-3 px-4 py-0 border-t border-outline-100 bg-background-50 dark:border-[#333333] dark:bg-[#007ACC]">
-            <HStack className="items-center gap-4">
-              <Text className="text-xs text-typography-600 dark:text-white">
-                {modalMode === "create" ? "Create" : `Note #${editingNote?.id ?? ""}`}
-              </Text>
-              <Text className="text-xs text-typography-600 dark:text-white">
-                Lines {countLines(formText)}
-              </Text>
-              <Text className="text-xs text-typography-600 dark:text-white">
-                Markdown
-              </Text>
-            </HStack>
-            <HStack className="gap-2">
-              <Button variant="outline" action="secondary" size="sm" className="rounded-md gap-2 dark:border-white/60" onPress={closeModal}>
-                <ButtonIcon as={X} />
-                <ButtonText>Cancel</ButtonText>
-              </Button>
-              <Button
-                size="sm"
-                className="rounded-md gap-2 bg-background-950 dark:bg-white"
-                onPress={modalMode === "create" ? handleCreate : handleUpdate}
-                isDisabled={creating || saving}
-              >
-                {creating || saving ? <ButtonSpinner /> : <ButtonIcon as={Save} className="dark:text-[#1E1E1E]" />}
-                <ButtonText className="dark:text-[#1E1E1E]">
-                  {modalMode === "create" ? "Create Note" : "Save Changes"}
-                </ButtonText>
-              </Button>
-            </HStack>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <NoteEditorModal
+        key={`${modalOpen ? "open" : "closed"}-${modalMode}-${editingNote?.id ?? "new"}`}
+        isOpen={modalOpen}
+        mode={modalMode}
+        note={editingNote}
+        saving={creating || saving}
+        width={modalWidth}
+        maxHeight={modalMaxHeight}
+        onClose={closeModal}
+        onSave={modalMode === "create" ? handleCreate : handleUpdate}
+      />
 
       <AlertDialog
         isOpen={deleteTarget !== null}
@@ -610,30 +543,30 @@ export default function NotesScreen() {
         }}
         size="md"
       >
-        <AlertDialogBackdrop />
-        <AlertDialogContent className="rounded-2xl border-outline-100 dark:border-[#243247] dark:bg-[#0F1A2E]">
+        <AlertDialogBackdrop className="bg-background-950/60 dark:bg-black/70" />
+        <AlertDialogContent className="rounded-2xl border border-outline-100 dark:border-[#263349] dark:bg-[#0E1524]">
           <AlertDialogHeader>
             <HStack className="items-center gap-3">
-              <Box className="w-10 h-10 rounded-xl bg-[#EF444419] items-center justify-center">
-                <AlertTriangle size={22} color="#EF4444" />
+              <Box className="h-10 w-10 items-center justify-center rounded-xl bg-error-50 dark:bg-[#3A1820]">
+                <AlertTriangle size={20} color="#EF4444" />
               </Box>
               <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
-                Delete note
+                Delete note?
               </Heading>
             </HStack>
           </AlertDialogHeader>
           <AlertDialogBody>
-            <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
-              Are you sure you want to delete {deleteTarget?.titulo || `Note #${deleteTarget?.id}`}? This action cannot be undone.
+            <Text className="text-sm leading-6 text-typography-600 dark:text-[#AAB5C7]">
+              This will permanently delete “{deleteTarget?.titulo || `Note #${deleteTarget?.id}`}”. This action cannot be undone.
             </Text>
           </AlertDialogBody>
-          <AlertDialogFooter>
-            <Button variant="outline" className="rounded-xl" onPress={() => setDeleteTarget(null)} isDisabled={deletingId !== null}>
-              <ButtonText>Cancel</ButtonText>
+          <AlertDialogFooter className="gap-2">
+            <Button variant="outline" action="secondary" className="rounded-xl dark:border-[#34445D]" onPress={() => setDeleteTarget(null)} isDisabled={deletingId !== null}>
+              <ButtonText>Keep note</ButtonText>
             </Button>
-            <Button action="negative" className="rounded-xl bg-red-500" onPress={handleDelete} isDisabled={deletingId !== null}>
+            <Button action="negative" className="gap-2 rounded-xl bg-red-500" onPress={handleDelete} isDisabled={deletingId !== null}>
               {deletingId !== null ? <ButtonSpinner /> : <ButtonIcon as={Trash2} />}
-              <ButtonText>Delete</ButtonText>
+              <ButtonText>Delete note</ButtonText>
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -642,67 +575,59 @@ export default function NotesScreen() {
       <Modal isOpen={previewOpen} onClose={closePreview} size="lg">
         <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
         <ModalContent
-          className="overflow-hidden bg-background-0 dark:bg-[#1E1E1E] rounded-xl border border-outline-200 dark:border-[#3C3C3C] shadow-soft-2"
+          className="overflow-hidden rounded-2xl border border-outline-100 bg-background-0 p-0 shadow-soft-3 dark:border-[#263349] dark:bg-[#0E1524]"
           style={{ width: modalWidth, maxHeight: modalMaxHeight }}
         >
-          <ModalHeader className="h-12 flex-row items-center justify-between gap-3 px-3 py-0 border-b border-outline-100 bg-background-50 dark:border-[#333333] dark:bg-[#252526]">
-            <HStack className="items-center gap-2 flex-1">
-              <Box className="w-3 h-3 rounded-full bg-[#EF4444]" />
-              <Box className="w-3 h-3 rounded-full bg-[#F59E0B]" />
-              <Box className="w-3 h-3 rounded-full bg-[#22C55E]" />
-              <Box className="ml-3 rounded-t-md border border-b-0 border-outline-100 bg-background-0 px-3 py-2 dark:border-[#3C3C3C] dark:bg-[#1E1E1E]">
-                <Text
-                  className="text-xs font-semibold text-typography-700 dark:text-[#D4D4D4]"
-                  numberOfLines={1}
-                  style={{ fontFamily: "Inter_600SemiBold" }}
-                >
-                  {`${previewNote?.titulo || "note"}.preview.md`}
-                </Text>
+          <ModalHeader className="border-b border-outline-100 px-5 py-5 dark:border-[#263349]">
+            <HStack className="flex-1 items-center gap-3">
+              <Box className="h-10 w-10 items-center justify-center rounded-xl bg-primary-50 dark:bg-[#15253A]">
+                <Icon as={Eye} size="md" className="text-primary-600 dark:text-[#8DB7FF]" />
               </Box>
+              <VStack className="flex-1 gap-1">
+                <Heading size="md" className="text-typography-900 dark:text-[#E8EBF0]">Note preview</Heading>
+                <Text className="text-xs text-typography-500 dark:text-[#96A2B8]">Formatted Markdown</Text>
+              </VStack>
+              <ModalCloseButton
+                accessibilityLabel="Close note preview"
+                className="rounded-lg border border-outline-100 bg-background-0 p-2 dark:border-[#34445D] dark:bg-[#131E30]"
+              >
+                <Icon as={X} size="sm" className="text-typography-500 dark:text-[#D7DCE5]" />
+              </ModalCloseButton>
             </HStack>
-            <ModalCloseButton className="rounded-md border border-outline-100 bg-background-0 dark:border-[#3C3C3C] dark:bg-[#1E1E1E]" />
           </ModalHeader>
           <ModalBody className="p-0">
-            <Box className="border-b border-outline-100 bg-background-0 px-5 py-4 dark:border-[#333333] dark:bg-[#1E1E1E]">
-              <Heading size="lg" className="text-typography-900 dark:text-[#D4D4D4]">
-                {previewNote?.titulo || "Note"}
-              </Heading>
-            </Box>
-            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: previewHeight }}>
-              <Box className="px-5 py-5">
-                <MarkdownPreview value={previewNote?.nota ?? ""} />
-              </Box>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: previewHeight }} contentContainerStyle={{ flexGrow: 1 }}>
+              <VStack className="gap-6 px-6 py-6">
+                <Heading size="xl" className="text-typography-900 dark:text-[#E8EBF0]" style={{ fontFamily: "Inter_700Bold" }}>
+                  {previewNote?.titulo || "Untitled note"}
+                </Heading>
+                {previewNote?.nota ? (
+                  <MarkdownPreview value={previewNote.nota} />
+                ) : (
+                  <Text className="text-sm text-typography-500 dark:text-[#96A2B8]">This note is empty.</Text>
+                )}
+              </VStack>
             </ScrollView>
           </ModalBody>
-          <ModalFooter className="h-12 flex-row items-center justify-between gap-3 px-4 py-0 border-t border-outline-100 bg-background-50 dark:border-[#333333] dark:bg-[#007ACC]">
-            <HStack className="items-center gap-4">
-              <Text className="text-xs text-typography-600 dark:text-white">
-                Preview
-              </Text>
-              <Text className="text-xs text-typography-600 dark:text-white">
-                Lines {countLines(previewNote?.nota ?? "")}
-              </Text>
-              <Text className="text-xs text-typography-600 dark:text-white">
-                Markdown
-              </Text>
-            </HStack>
+          <ModalFooter className="flex-row flex-wrap items-center justify-between gap-3 border-t border-outline-100 px-5 py-4 dark:border-[#263349] dark:bg-[#0B1220]">
+            <Text className="text-xs text-typography-500 dark:text-[#96A2B8]" style={{ fontVariant: ["tabular-nums"] }}>
+              {noteLineCount(previewNote?.nota ?? "")} {noteLineCount(previewNote?.nota ?? "") === 1 ? "line" : "lines"} · Markdown
+            </Text>
             <HStack className="gap-2">
-              <Button variant="outline" action="secondary" size="sm" className="rounded-md gap-2 dark:border-white/60" onPress={closePreview}>
-                <ButtonIcon as={X} />
+              <Button variant="outline" action="secondary" className="rounded-xl dark:border-[#34445D]" onPress={closePreview}>
                 <ButtonText>Close</ButtonText>
               </Button>
               {previewNote ? (
                 <Button
-                  size="sm"
-                  className="rounded-md gap-2 bg-background-950 dark:bg-white"
+                  className="gap-2 rounded-xl"
                   onPress={() => {
                     const note = previewNote;
                     closePreview();
                     openEditor(note);
                   }}
                 >
-                  <ButtonIcon as={Edit3} className="dark:text-[#1E1E1E]" />
-                  <ButtonText className="dark:text-[#1E1E1E]">Edit</ButtonText>
+                  <ButtonIcon as={Edit3} />
+                  <ButtonText>Edit note</ButtonText>
                 </Button>
               ) : null}
             </HStack>
