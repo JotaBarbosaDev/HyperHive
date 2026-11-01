@@ -10,7 +10,7 @@ import { errorText, formatDuration, formatTime, listAutomationRuns, type RunSumm
 import { rowClass, RunStatusBadge } from "./automation-ui";
 
 // `bare` renders just the scrollable list for the IDE bottom panel.
-export function RunHistory({ automationId, selectedRunId, onSelect, bare = false }: { automationId: string; selectedRunId: string | null; onSelect: (runId: string) => void; bare?: boolean }) {
+export const RunHistory = React.memo(function RunHistory({ automationId, selectedRunId, onSelect, bare = false }: { automationId: string; selectedRunId: string | null; onSelect: (runId: string) => void; bare?: boolean }) {
   const [runs, setRuns] = React.useState<RunSummary[] | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -73,4 +73,4 @@ export function RunHistory({ automationId, selectedRunId, onSelect, bare = false
     </Box>
     {rows}
   </Box>;
-}
+});

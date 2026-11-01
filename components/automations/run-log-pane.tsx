@@ -10,7 +10,7 @@ import { mono, RunStatusBadge, SnapshotView } from "./automation-ui";
 
 // Shows one run: existing output from GET /automations/runs/{id}, then live AutomationLog chunks.
 // `bare` drops the card chrome so the IDE bottom panel can fill its height with the log.
-export function RunLogPane({ runId, title = "Run output", onClose, bare = false }: { runId: string | null; title?: string; onClose?: () => void; bare?: boolean }) {
+export const RunLogPane = React.memo(function RunLogPane({ runId, title = "Run output", onClose, bare = false }: { runId: string | null; title?: string; onClose?: () => void; bare?: boolean }) {
   const [run, setRun] = React.useState<RunDetail | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -19,10 +19,21 @@ export function RunLogPane({ runId, title = "Run output", onClose, bare = false 
   const pending = React.useRef<string[]>([]);
   const loaded = React.useRef(false);
   const scrollRef = React.useRef<ScrollView>(null);
+  // Live chunks are buffered and appended once per frame; a chatty script otherwise re-renders the whole log per line.
+  const buffer = React.useRef("");
+  const flushTimer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const flush = React.useCallback(() => {
+    flushTimer.current = undefined;
+    const chunk = buffer.current;
+    buffer.current = "";
+    if (chunk) setRun((r) => (r ? { ...r, output: r.output + chunk } : r));
+  }, []);
+  React.useEffect(() => () => clearTimeout(flushTimer.current), []);
 
   React.useEffect(() => {
     setRun(null); setError(null); setShowSnapshot(false);
     pending.current = []; loaded.current = false;
+    buffer.current = ""; clearTimeout(flushTimer.current); flushTimer.current = undefined;
     if (!runId) return;
     const controller = new AbortController();
     setLoading(true);
@@ -44,10 +55,14 @@ export function RunLogPane({ runId, title = "Run output", onClose, bare = false 
     onLog: (id, chunk) => {
       if (id !== runId) return;
       if (!loaded.current) { pending.current.push(chunk); return; }
-      setRun((r) => (r ? { ...r, output: r.output + chunk } : r));
+      buffer.current += chunk;
+      if (flushTimer.current === undefined) flushTimer.current = setTimeout(flush, 16);
     },
     onRun: (summary) => {
       if (summary.id !== runId) return;
+      // Append buffered output before the final status so nothing lands after "finished".
+      clearTimeout(flushTimer.current);
+      flush();
       setRun((r) => (r ? { ...r, ...summary, output: r.output } : r));
     },
   });
@@ -85,11 +100,11 @@ export function RunLogPane({ runId, title = "Run output", onClose, bare = false 
         style={bare ? { flex: 1, minHeight: 0 } : { maxHeight: 360, minHeight: 120 }}
         className="rounded-xl p-3 border bg-[#F1F5F9] border-outline-100 dark:bg-[#0B1220] dark:border-[#26364A]"
       >
-        <Text selectable accessibilityLiveRegion="polite" className="font-mono text-xs text-[#1E293B] dark:text-[#D6DEEB]">
+        <Text selectable className="font-mono text-xs text-[#1E293B] dark:text-[#D6DEEB]">
           {run.output || (run.status === "running" ? "Waiting for output…" : "No output.")}
         </Text>
       </ScrollView>
       {run.output_truncated ? <Text className={muted}>Output was truncated at 1 MiB.</Text> : null}
     </> : null}
   </Box>;
-}
+});

@@ -25,19 +25,27 @@ function ResizeHandle({ height, onResize }: { height: number; onResize: (h: numb
   if (Platform.OS !== "web") return null;
   const onPointerDown = (e: any) => {
     start.current = { y: e.nativeEvent.clientY ?? e.clientY, h: height };
+    // Pointer events fire faster than the screen refreshes; apply at most one resize per frame.
+    let frame = 0;
+    let lastY = 0;
     const move = (ev: PointerEvent) => {
-      if (!start.current) return;
-      const max = Math.max(PANEL_MIN, window.innerHeight - 260);
-      onResize(Math.min(max, Math.max(PANEL_MIN, start.current.h + start.current.y - ev.clientY)));
+      lastY = ev.clientY;
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        if (!start.current) return;
+        const max = Math.max(PANEL_MIN, window.innerHeight - 260);
+        onResize(Math.min(max, Math.max(PANEL_MIN, start.current.h + start.current.y - lastY)));
+      });
     };
-    const stop = () => { start.current = null; window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", stop); };
+    const stop = () => { start.current = null; cancelAnimationFrame(frame); window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", stop); };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", stop);
   };
   return <Box accessibilityElementsHidden {...({ onPointerDown } as object)} className="h-1.5 web:cursor-row-resize hover:bg-[#2DD4BF]/40 active:bg-[#2DD4BF]/60" />;
 }
 
-export function AutomationDetail({ automation, wide, notices, onChanged, onDeleted, onBack }: {
+export const AutomationDetail = React.memo(function AutomationDetail({ automation, wide, notices, onChanged, onDeleted, onBack }: {
   automation: Automation; wide: boolean; notices?: React.ReactNode;
   onChanged: (a: Automation) => void; onDeleted: () => void; onBack: () => void;
 }) {
@@ -56,7 +64,7 @@ export function AutomationDetail({ automation, wide, notices, onChanged, onDelet
   // Follow a run that started elsewhere (condition fire or another client).
   React.useEffect(() => { if (automation.running_run_id) setLogRunId(automation.running_run_id); }, [automation.running_run_id]);
 
-  const showRun = (runId: string) => { setLogRunId(runId); setPanelTab("output"); setPanelOpen(true); };
+  const showRun = React.useCallback((runId: string) => { setLogRunId(runId); setPanelTab("output"); setPanelOpen(true); }, []);
 
   const run = async () => {
     setBusy("run"); setError(null);
@@ -160,4 +168,4 @@ export function AutomationDetail({ automation, wide, notices, onChanged, onDelet
     </Box>
     {dialog}
   </Box>;
-}
+});

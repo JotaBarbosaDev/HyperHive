@@ -19,14 +19,33 @@ const POLL_MS = 5000;
 // Below this the IDE layout gets cramped, so the workspace stacks into one scrolling column.
 const IDE_MIN_WIDTH = 1100;
 
-function AutomationCard({ automation, selected, onSelect, onToggle }: { automation: Automation; selected: boolean; onSelect: () => void; onToggle: (enabled: boolean) => void }) {
+// Keeps the previous object for every automation that did not change, so a poll that returns the
+// same data re-renders nothing (the IDE, config form and sidebar all key off these references).
+function mergeList(prev: AutomationList | null, next: AutomationList): AutomationList {
+  if (!prev) return next;
+  const old = new Map(prev.automations.map((a) => [a.id, a]));
+  let changed = prev.automations.length !== next.automations.length;
+  const automations = next.automations.map((a, i) => {
+    const before = old.get(a.id);
+    if (before && JSON.stringify(before) === JSON.stringify(a)) {
+      if (prev.automations[i] !== before) changed = true;
+      return before;
+    }
+    changed = true;
+    return a;
+  });
+  if (!changed && prev.paused === next.paused && JSON.stringify(prev.node) === JSON.stringify(next.node)) return prev;
+  return { ...next, automations };
+}
+
+const AutomationCard = React.memo(function AutomationCard({ automation, selected, onSelect, onToggle }: { automation: Automation; selected: boolean; onSelect: (id: string) => void; onToggle: (a: Automation, enabled: boolean) => void }) {
   const state = automation.state;
   const conditionTone = state?.last_error ? "bad" : state?.condition_value ? "ok" : "neutral";
-  return <Pressable onPress={onSelect} accessibilityRole="button" accessibilityLabel={`Open automation ${automation.name}`} accessibilityState={{ selected }}
+  return <Pressable onPress={() => onSelect(automation.id)} accessibilityRole="button" accessibilityLabel={`Open automation ${automation.name}`} accessibilityState={{ selected }}
     className={"gap-2 p-4 rounded-2xl " + rowClass(selected)} style={{ flexBasis: 320, flexGrow: 1, maxWidth: 520 }}>
     <Box className="flex-row items-center gap-2">
       <Text numberOfLines={1} className={ink + " font-semibold flex-1"}>{automation.name}</Text>
-      <Switch accessibilityLabel={`Enable ${automation.name}`} value={automation.enabled} onValueChange={onToggle} />
+      <Switch accessibilityLabel={`Enable ${automation.name}`} value={automation.enabled} onValueChange={(v: boolean) => onToggle(automation, v)} />
     </Box>
     {automation.condition ? <Text numberOfLines={2} className={mono + " p-2 rounded-lg bg-background-50 dark:bg-[#0A1422]"}>{automation.condition}</Text> : <Text className={muted}>Manual runs only</Text>}
     <Box className="flex-row flex-wrap items-center gap-1.5">
@@ -41,7 +60,7 @@ function AutomationCard({ automation, selected, onSelect, onToggle }: { automati
     {state?.disabled_reason ? <Text numberOfLines={2} className="text-xs text-[#946A18] dark:text-[#F0CC80]">Disabled: {state.disabled_reason}</Text> : null}
     <Text className={subtle}>Last fired {formatTime(state?.last_fired_at)}</Text>
   </Pressable>;
-}
+});
 
 export default function AutomationsScreen() {
   const { token, isChecking } = useAuthGuard();
@@ -61,8 +80,8 @@ export default function AutomationsScreen() {
   React.useEffect(() => {
     if (data) useAutomationNavigation.setState({ automations: data.automations, loaded: true });
   }, [data]);
-  const publish = React.useCallback((next: AutomationList | null) => setData(next), []);
-  const update = (fn: (d: AutomationList) => AutomationList) => setData((d) => (d ? fn(d) : d));
+  const publish = React.useCallback((next: AutomationList) => setData((prev) => mergeList(prev, next)), []);
+  const update = React.useCallback((fn: (d: AutomationList) => AutomationList) => setData((d) => (d ? fn(d) : d)), []);
 
   const load = React.useCallback(async (signal?: AbortSignal) => {
     try {
@@ -91,9 +110,9 @@ export default function AutomationsScreen() {
     if (data && selectedId && !data.automations.some((a) => a.id === selectedId)) useAutomationNavigation.setState({ selectedId: null, dirty: {} });
   }, [data, selectedId]);
 
-  const replace = (a: Automation) => update((d) => ({ ...d, automations: d.automations.map((x) => (x.id === a.id ? a : x)) }));
+  const replace = React.useCallback((a: Automation) => update((d) => ({ ...d, automations: d.automations.map((x) => (x.id === a.id ? a : x)) })), [update]);
 
-  const toggle = async (a: Automation, enabled: boolean) => {
+  const toggle = React.useCallback(async (a: Automation, enabled: boolean) => {
     setRowError(null);
     replace({ ...a, enabled });
     try {
@@ -102,7 +121,21 @@ export default function AutomationsScreen() {
       replace(a);
       setRowError(errorText(err, `Could not update ${a.name}.`));
     }
-  };
+  }, [replace]);
+  const onToggle = React.useCallback((a: Automation, enabled: boolean) => void toggle(a, enabled), [toggle]);
+  const onPausedChange = React.useCallback((paused: boolean) => update((d) => ({ ...d, paused })), [update]);
+  const onBack = React.useCallback(() => selectAutomation(null), []);
+  const onDeleted = React.useCallback(() => {
+    const id = useAutomationNavigation.getState().selectedId;
+    useAutomationNavigation.setState({ selectedId: null, dirty: {} });
+    update((d) => ({ ...d, automations: d.automations.filter((x) => x.id !== id) }));
+  }, [update]);
+  const nodeMissing = !!data && !data.node.available;
+  const paused = !!data?.paused;
+  const notices = React.useMemo(() => <>
+    {nodeMissing ? <Banner tone="info">Node.js is not installed on the master yet. It will be installed automatically on the first Install or run.</Banner> : null}
+    {paused ? <Banner tone="warn">All condition fires are paused. Manual runs still work.</Banner> : null}
+  </>, [nodeMissing, paused]);
 
   const create = async () => {
     setBusy(true); setCreateError(null);
@@ -119,10 +152,6 @@ export default function AutomationsScreen() {
 
   const selected = data?.automations.find((a) => a.id === selectedId) ?? null;
   const startCreate = () => { setCreating(true); setCreateError(null); };
-  const notices = <>
-    {data && !data.node.available ? <Banner tone="info">Node.js is not installed on the master yet. It will be installed automatically on the first Install or run.</Banner> : null}
-    {data?.paused ? <Banner tone="warn">All condition fires are paused. Manual runs still work.</Banner> : null}
-  </>;
 
   const createDialog = creating ? <SupportDialog title="New automation" onClose={() => setCreating(false)} footer={<>
     <Action label="Cancel" onPress={() => setCreating(false)} disabled={busy} />
@@ -134,9 +163,7 @@ export default function AutomationsScreen() {
   </SupportDialog> : null;
 
   if (selected) return <>
-    <AutomationDetail key={selected.id} automation={selected} wide={wide} notices={notices} onChanged={replace}
-      onDeleted={() => { useAutomationNavigation.setState({ selectedId: null, dirty: {} }); update((d) => ({ ...d, automations: d.automations.filter((x) => x.id !== selected.id) })); }}
-      onBack={() => selectAutomation(null)} />
+    <AutomationDetail key={selected.id} automation={selected} wide={wide} notices={notices} onChanged={replace} onDeleted={onDeleted} onBack={onBack} />
     {createDialog}
   </>;
 
@@ -159,10 +186,10 @@ export default function AutomationsScreen() {
       <Action label="Create your first automation" primary onPress={startCreate} />
     </Box> : null}
     {data?.automations.length ? <Box className="flex-row flex-wrap gap-3">
-      {data.automations.map((a) => <AutomationCard key={a.id} automation={a} selected={false} onSelect={() => selectAutomation(a.id)} onToggle={(v) => void toggle(a, v)} />)}
+      {data.automations.map((a) => <AutomationCard key={a.id} automation={a} selected={false} onSelect={selectAutomation} onToggle={onToggle} />)}
     </Box> : null}
     <Box style={{ maxWidth: 720 }}>
-      <AutomationSettingsCard onPausedChange={(paused) => update((d) => ({ ...d, paused }))} />
+      <AutomationSettingsCard onPausedChange={onPausedChange} />
     </Box>
     {createDialog}
   </ScrollView>;

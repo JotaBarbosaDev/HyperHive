@@ -51,7 +51,7 @@ function TriggerState({ automation }: { automation: Automation }) {
 // Configuration for one automation, ordered by how often each part is touched:
 // enabled, the trigger, its limits, then name and description.
 // `panel` makes it the IDE's left column (own scroll, save bar pinned when there are edits).
-export function AutomationConfigForm({ automation, onSaved, notices, panel = false }: { automation: Automation; onSaved: (a: Automation) => void; notices?: React.ReactNode; panel?: boolean }) {
+export const AutomationConfigForm = React.memo(function AutomationConfigForm({ automation, onSaved, notices, panel = false }: { automation: Automation; onSaved: (a: Automation) => void; notices?: React.ReactNode; panel?: boolean }) {
   const [draft, setDraft] = React.useState<AutomationConfig>(() => toConfig(automation));
   const [numbers, setNumbers] = React.useState<Record<NumberKey, string>>(() => numbersOf(automation));
   const [saving, setSaving] = React.useState(false);
@@ -206,7 +206,7 @@ export function AutomationConfigForm({ automation, onSaved, notices, panel = fal
     <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, gap: 20 }} keyboardShouldPersistTaps="handled">{body}</ScrollView>
     {bar}
   </Box>;
-}
+});
 
 function numbersOf(a: Automation): Record<NumberKey, string> {
   return Object.fromEntries(LIMITS.map((f) => [f.key, String(a[f.key])])) as Record<NumberKey, string>;

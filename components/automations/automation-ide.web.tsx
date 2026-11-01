@@ -15,6 +15,7 @@ import {
 } from "@/services/automations";
 import { setAutomationDirty } from "@/hooks/useAutomationNavigation";
 import { ConfirmDialog, subtle } from "./automation-ui";
+import { ExamplesDialog } from "./examples-dialog.web";
 import type { AutomationIdeProps } from "./automation-ide";
 
 // Monaco's AMD build is served from the CDN at the same version as the npm dependency,
@@ -74,7 +75,13 @@ const configureTypescript = async (monaco: Monaco) => {
   }
 };
 
-export function AutomationIde({ automationId, onShowRun, fill = false }: AutomationIdeProps) {
+// Stable references: @monaco-editor/react calls editor.updateOptions whenever this object changes.
+const EDITOR_OPTIONS = { fontSize: 13, tabSize: 2, scrollBeyondLastLine: false, automaticLayout: true, padding: { top: 8 } };
+const FILL_OPTIONS = { ...EDITOR_OPTIONS, minimap: { enabled: true } };
+const INLINE_OPTIONS = { ...EDITOR_OPTIONS, minimap: { enabled: false } };
+const beforeMount = (monaco: Monaco) => { defineThemes(monaco); void configureTypescript(monaco); };
+
+export const AutomationIde = React.memo(function AutomationIde({ automationId, onShowRun, fill = false }: AutomationIdeProps) {
   // Follow the app's resolved theme (user preference or system), not the web stub that always says light.
   const { resolvedMode } = useAppTheme();
   const [files, setFiles] = React.useState<AutomationFile[] | null>(null);
@@ -89,6 +96,7 @@ export function AutomationIde({ automationId, onShowRun, fill = false }: Automat
   const [confirmDelete, setConfirmDelete] = React.useState<string | null>(null);
   const [renaming, setRenaming] = React.useState<{ from: string; to: string } | null>(null);
   const [installing, setInstalling] = React.useState(false);
+  const [showExamples, setShowExamples] = React.useState(false);
   const [editorHeight, setEditorHeight] = React.useState(EDITOR_HEIGHT);
   const state = React.useRef({ active, contents });
   state.current = { active, contents };
@@ -151,9 +159,15 @@ export function AutomationIde({ automationId, onShowRun, fill = false }: Automat
   const saveRef = React.useRef(save);
   saveRef.current = save;
 
-  const onMount: OnMount = (editor, monaco) => {
+  const onMount = React.useCallback<OnMount>((editor, monaco) => {
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => void saveRef.current());
-  };
+  }, []);
+  const activeRef = React.useRef(active);
+  activeRef.current = active;
+  const onEditorChange = React.useCallback((value?: string) => {
+    const path = activeRef.current;
+    if (path) setContents((c) => ({ ...c, [path]: value ?? "" }));
+  }, []);
 
   const createFile = async () => {
     const path = (newPath ?? "").trim().replace(/^\/+/, "");
@@ -219,6 +233,15 @@ export function AutomationIde({ automationId, onShowRun, fill = false }: Automat
     finally { setInstalling(false); }
   };
 
+  // An example replaces the open script in the editor only; Save writes it.
+  const exampleTarget = active && active !== PACKAGE_TAB && contents[active] !== undefined ? active : null;
+  const applyExample = (code: string) => {
+    if (!exampleTarget) return;
+    setContents((c) => ({ ...c, [exampleTarget]: code }));
+    setShowExamples(false); setError(null);
+    setMessage(`Example loaded into ${exampleTarget}. Review it, then Save.`);
+  };
+
   const dirty = (path: string) => contents[path] !== undefined && contents[path] !== saved[path];
   const anyDirty = Object.keys(contents).some(dirty);
   React.useEffect(() => { setAutomationDirty("code", anyDirty); }, [anyDirty]);
@@ -280,6 +303,7 @@ export function AutomationIde({ automationId, onShowRun, fill = false }: Automat
     <Text numberOfLines={1} className={"font-mono text-sm mr-auto " + ink}>{active ? label(active) : "No file open"}{active && dirty(active) ? <Text className="text-[#946A18] dark:text-[#F0CC80]">  ● unsaved</Text> : null}</Text>
     {active === PACKAGE_TAB ? <Action label={installing ? "Starting…" : "npm install"} onPress={install} disabled={installing || dirty(PACKAGE_TAB)} /> : null}
     <Box className="flex-row items-center gap-2">
+      <Box><Action label="See examples" onPress={() => setShowExamples(true)} /></Box>
       <Text aria-hidden={true} className="px-1.5 py-0.5 rounded border border-outline-200 dark:border-[#2A3B52] font-mono text-[11px] text-typography-600 dark:text-[#8A94A8]">Ctrl+S</Text>
       {/* Action is self-start; its own wrapper lets the row centre it next to the key hint. */}
       <Box><Action label={busy ? "Saving…" : "Save"} primary onPress={() => void save()} disabled={busy || !active || !dirty(active)} /></Box>
@@ -295,10 +319,10 @@ export function AutomationIde({ automationId, onShowRun, fill = false }: Automat
       language={active === PACKAGE_TAB ? "json" : languageFor(active)}
       value={contents[active]}
       theme={resolvedMode === "dark" ? "hh-dark" : "hh-light"}
-      beforeMount={(monaco) => { defineThemes(monaco); void configureTypescript(monaco); }}
+      beforeMount={beforeMount}
       onMount={onMount}
-      onChange={(value) => setContents((c) => ({ ...c, [active]: value ?? "" }))}
-      options={{ minimap: { enabled: fill }, fontSize: 13, tabSize: 2, scrollBeyondLastLine: false, automaticLayout: true, padding: { top: 8 } }}
+      onChange={onEditorChange}
+      options={fill ? FILL_OPTIONS : INLINE_OPTIONS}
     /> : <Box className="flex-1 items-center justify-center p-6"><Text className={muted}>{active ? "Loading…" : "Select a file to edit."}</Text></Box>}
   </Box>;
 
@@ -307,7 +331,10 @@ export function AutomationIde({ automationId, onShowRun, fill = false }: Automat
     {message ? <Text accessibilityLiveRegion="polite" className={subtle}>{message}</Text> : null}
   </Box> : null;
 
-  const dialog = confirmDelete ? <ConfirmDialog title="Delete file" message={`Delete ${confirmDelete}? This cannot be undone.`} confirmLabel="Delete" busy={busy} onConfirm={removeFile} onClose={() => setConfirmDelete(null)} /> : null;
+  const dialog = <>
+    {confirmDelete ? <ConfirmDialog title="Delete file" message={`Delete ${confirmDelete}? This cannot be undone.`} confirmLabel="Delete" busy={busy} onConfirm={removeFile} onClose={() => setConfirmDelete(null)} /> : null}
+    {showExamples ? <ExamplesDialog theme={resolvedMode === "dark" ? "hh-dark" : "hh-light"} beforeMount={beforeMount} target={exampleTarget} onUse={applyExample} onClose={() => setShowExamples(false)} /> : null}
+  </>;
 
   if (fill) return <Box className="flex-1 min-h-0 flex-row">
     {explorer}
@@ -322,4 +349,4 @@ export function AutomationIde({ automationId, onShowRun, fill = false }: Automat
     <Box className="flex-row gap-3" style={{ minHeight: EDITOR_HEIGHT }}>{explorer}{editor}</Box>
     {dialog}
   </Box>;
-}
+});
