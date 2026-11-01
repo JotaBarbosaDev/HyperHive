@@ -56,6 +56,7 @@ import {
   X,
   ArrowLeft,
   Bell,
+  Workflow,
 } from "lucide-react-native";
 import { usePathname, useRouter } from "expo-router";
 import { clearAuthToken } from "@/services/auth-storage";
@@ -65,6 +66,8 @@ import { Image } from "@/components/ui/image";
 import type { SupportApp } from "@/types/support";
 import { listSupportApps, listSupportTabs } from "@/services/support-client";
 import { resetSupportNavigation, selectSupportApp, useSupportNavigation } from "@/hooks/useSupportNavigation";
+import { confirmDiscardAutomationChanges, selectAutomation, useAutomationNavigation } from "@/hooks/useAutomationNavigation";
+import { listAutomations, type Automation } from "@/services/automations";
 import { SIDEBAR_RAIL_WIDTH } from "@/hooks/useSidebarLayout";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -84,6 +87,8 @@ type MenuItem = {
   key?: string;
   supportTabId?: string;
   supportApp?: SupportApp;
+  automation?: Automation;
+  automationsRoot?: boolean;
   label: string;
   route?: string;
   icon?: React.ComponentType<any>;
@@ -236,6 +241,30 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
     const timer = setInterval(() => { void poll(); }, 5000);
     return () => { stopped = true; clearInterval(timer); controller?.abort(); };
   }, [pathname]);
+  const automationNav = useAutomationNavigation();
+  // Off the Automations page, poll the list so the sidebar dropdown and its status dots stay current.
+  React.useEffect(() => {
+    if (pathname === "/automations") return;
+    let stopped = false;
+    let controller: AbortController | undefined;
+    const poll = async () => {
+      if (!getAuthToken()) return;
+      controller?.abort();
+      controller = new AbortController();
+      const timeout = setTimeout(() => controller?.abort(), 4500);
+      try {
+        const res = await listAutomations(controller.signal);
+        if (!stopped) useAutomationNavigation.setState({ automations: res.automations ?? [], loaded: true });
+      } catch {
+        // Keep the last list; the next tick retries.
+      } finally {
+        clearTimeout(timeout);
+      }
+    };
+    void poll();
+    const timer = setInterval(() => { void poll(); }, 10000);
+    return () => { stopped = true; clearInterval(timer); controller?.abort(); };
+  }, [pathname]);
   const systemScheme = useColorScheme();
   const resolvedMode = themePreference === "system" ? (systemScheme === "dark" ? "dark" : "light") : themePreference;
   const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
@@ -337,6 +366,7 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
   const handleNavigate = React.useCallback(
     (route: string, keepOpen = false) => {
       if (useSupportNavigation.getState().dirty && route !== pathname) return;
+      if (pathname === "/automations" && route !== pathname && !confirmDiscardAutomationChanges()) return;
       if (route !== pathname) {
         router.replace(route as any);
       }
@@ -358,13 +388,16 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
     [pathname]
   );
 
-  const supportItems = MENU_ITEMS.map((item) => item.route !== "/support" ? item : { ...item, children: support.tabs.map((tab) => ({
+  // HH Automations always sits first inside HH Support, ahead of the workspace tabs.
+  const supportItems = MENU_ITEMS.map((item) => item.route !== "/support" ? item : { ...item, children: [{ key: "automations-root", label: "HH Automations", icon: Workflow, route: "/automations", automationsRoot: true,
+    children: automationNav.automations.map((automation) => ({ key: "automation-" + automation.id, label: automation.name, route: "/automations", automation })) }, ...support.tabs.map((tab) => ({
     key: "support-tab-" + tab.id, label: tab.name, route: "/support", supportTabId: tab.id,
     children: support.apps.filter((app) => app.tab_id === tab.id).map((app) => ({ key: "support-app-" + app.id, label: app.name, route: "/support", supportTabId: tab.id, supportApp: app })),
-  })) });
+  }))] });
   const isItemActive = (item: MenuItem): boolean => {
     if (item.supportApp) return pathname === "/support" && support.selectedId === item.supportApp.id;
     if (item.supportTabId) return pathname === "/support" && support.tabId === item.supportTabId;
+    if (item.automation) return pathname === "/automations" && automationNav.selectedId === item.automation.id;
     if (item.route && isRouteActive(item.route)) {
       return true;
     }
@@ -379,17 +412,32 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
     const app = item.supportApp;
     const live = support.connection === "live";
     const appStatus = app ? live ? `${app.connectivity}, ${app.health}` : "status unavailable" : "";
-    const dotColor = !live || app?.connectivity === "unknown" || app?.health === "unknown" ? (dark ? "#94A3B8" : "#64748B") : app?.connectivity === "offline" || app?.health === "unhealthy" ? (dark ? "#E88070" : "#BA4F3D") : app?.health === "degraded" ? (dark ? "#E9BD62" : "#946A18") : (dark ? "#2DD4BF" : "#147D78");
+    const automation = item.automation;
+    const automationStatus = automation ? automation.running_run_id ? "running" : automation.state?.last_error || automation.state?.last_fire_error || automation.state?.disabled_reason ? "needs attention" : automation.enabled ? "enabled" : "disabled" : "";
+    const automationDot = automationStatus === "running" ? (dark ? "#9DBBF2" : "#2F5FB3") : automationStatus === "needs attention" ? (dark ? "#E88070" : "#BA4F3D") : automationStatus === "enabled" ? (dark ? "#2DD4BF" : "#147D78") : (dark ? "#94A3B8" : "#64748B");
+    const dotColor = automation ? automationDot : !live || app?.connectivity === "unknown" || app?.health === "unknown" ? (dark ? "#94A3B8" : "#64748B") : app?.connectivity === "offline" || app?.health === "unhealthy" ? (dark ? "#E88070" : "#BA4F3D") : app?.health === "degraded" ? (dark ? "#E9BD62" : "#946A18") : (dark ? "#2DD4BF" : "#147D78");
     return (
       <React.Fragment key={key}>
         <Box className="flex-row items-center">
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={app ? `${app.name}: ${appStatus}${app.tags.length ? ". Tags: " + app.tags.join(", ") : ""}` : item.label}
+          accessibilityLabel={app ? `${app.name}: ${appStatus}${app.tags.length ? ". Tags: " + app.tags.join(", ") : ""}` : automation ? `${automation.name}: ${automationStatus}` : item.label}
           accessibilityState={{ selected: active, ...(hasChildren ? { expanded: isOpen && expanded } : {}) }}
-          {...(Platform.OS === "web" ? { title: app ? `${app.name}: ${appStatus}${app.tags.length ? ". Tags: " + app.tags.join(", ") : ""}` : item.label } : {})}
+          {...(Platform.OS === "web" ? { title: app ? `${app.name}: ${appStatus}${app.tags.length ? ". Tags: " + app.tags.join(", ") : ""}` : automation ? `${automation.name}: ${automationStatus}` : item.label } : {})}
           onPress={() => {
             // Support parents only expand; opening the page happens when an App is picked.
+            if (automation) {
+              if (selectAutomation(automation.id)) handleNavigate("/automations");
+              return;
+            }
+            // The Automations parent opens the overview first; once there it toggles like other parents.
+            if (item.automationsRoot && (pathname !== "/automations" || automationNav.selectedId)) {
+              if (!selectAutomation(null)) return;
+              if (!isOpen) onToggle();
+              setExpandedParents((prev) => ({ ...prev, [key]: true }));
+              handleNavigate("/automations", true);
+              return;
+            }
             if (item.supportApp) {
               if (!selectSupportApp(item.supportTabId ?? null, item.supportApp.id)) return;
               handleNavigate("/support");
@@ -402,7 +450,7 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
           className={`flex-row items-center gap-3 rounded-lg active:opacity-70 focus-visible:outline-2 focus-visible:outline-[#2DD4BF] ${active ? "bg-[#E2E8F0] dark:bg-[#263244] hover:bg-[#D8E0EA] dark:hover:bg-[#2D3B50]" : "hover:bg-background-100 dark:hover:bg-[#1A2637]"}`}
           style={{ flex: 1, minHeight: targetHeight, paddingVertical: 8, paddingHorizontal: isOpen ? 12 : 0, justifyContent: isOpen ? "flex-start" : "center", marginLeft: isOpen ? level * 16 : 0 }}
         >
-          {app ? <Box accessibilityElementsHidden className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: dotColor }} /> : null}
+          {app || automation ? <Box accessibilityElementsHidden className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: dotColor }} /> : null}
           {item.icon ? <Box className="w-5 items-center shrink-0"><Icon as={item.icon} size={level ? 18 : 20} aria-hidden={true} className={active ? "text-[#1E293B] dark:text-[#F1F5F9]" : "text-[#64748B] dark:text-[#94A3B8]"} /></Box> : null}
           {isOpen ? <>
             {app ? <Box className="flex-1 min-w-0 gap-1"><Text className={`text-sm web:[overflow-wrap:anywhere] ${active ? "text-typography-900 dark:text-[#F1F5F9]" : "text-typography-700 dark:text-[#CBD5E1]"}`}>{app.name}</Text>{app.tags.length ? <Box className="flex-row flex-wrap gap-1">{app.tags.map((tag) => <Text key={tag} className="text-xs px-1 rounded bg-background-100 dark:bg-[#1A2637] text-typography-600 dark:text-[#94A3B8] max-w-full web:[overflow-wrap:anywhere]">{tag}</Text>)}</Box> : null}</Box> : <Text numberOfLines={1} className={`flex-1 text-sm ${active ? "text-typography-900 dark:text-[#F1F5F9]" : "text-typography-700 dark:text-[#CBD5E1]"}`} style={{ fontFamily: active ? "Inter_600SemiBold" : level ? "Inter_400Regular" : "Inter_500Medium" }}>{item.label}</Text>}
@@ -411,7 +459,7 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
         </Pressable>
 
         </Box>
-        {isOpen && hasChildren && expanded ? <Box className="gap-1 my-1">{renderMenuItems(item.children!, level + 1)}{item.supportTabId && !item.children?.length ? <Text className="text-xs px-3 py-2 text-typography-600 dark:text-[#94A3B8]" style={{ marginLeft: (level + 1) * 16 }}>No Apps in this workspace</Text> : null}</Box> : null}
+        {isOpen && hasChildren && expanded ? <Box className="gap-1 my-1">{renderMenuItems(item.children!, level + 1)}{(item.supportTabId || item.automationsRoot) && !item.children?.length ? <Text className="text-xs px-3 py-2 text-typography-600 dark:text-[#94A3B8]" style={{ marginLeft: (level + 1) * 16 }}>{item.automationsRoot ? (automationNav.loaded ? "No automations yet" : "Loading…") : "No Apps in this workspace"}</Text> : null}</Box> : null}
       </React.Fragment>
     );
   });

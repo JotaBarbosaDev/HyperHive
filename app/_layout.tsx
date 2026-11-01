@@ -73,6 +73,7 @@ const APP_TITLE = "HyperHive";
 
 const ROUTE_TITLE_MAP: Record<string, string> = {
   "/support": "HH Support",
+  "/automations": "HH Automations",
   "/": "Login",
   "/dashboard": "Dashboard",
   "/btrfs-raids": "BTRFS / RAIDs",
