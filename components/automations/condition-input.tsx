@@ -13,8 +13,11 @@ const CATALOG_MAX_AGE = 30_000;
 
 type Selection = { start: number; end: number };
 
+export type ConditionAssist = ReturnType<typeof useConditionCatalog>;
+
 // Loads what conditions can read; refreshed on focus when older than 30 s so new streams show up.
-function useConditionCatalog() {
+// `enabled: false` skips loading for inputs that get a shared catalog from their parent.
+export function useConditionCatalog(enabled = true) {
   const [catalog, setCatalog] = React.useState<ConditionCatalog | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const loadedAt = React.useRef(0);
@@ -24,7 +27,7 @@ function useConditionCatalog() {
     getConditionCatalog().then((c) => { setCatalog(c); setError(null); })
       .catch((err) => { loadedAt.current = 0; setError(errorText(err, "Could not load Apps and streams.")); });
   }, []);
-  React.useEffect(() => { refresh(true); }, [refresh]);
+  React.useEffect(() => { if (enabled) refresh(true); }, [enabled, refresh]);
   return { catalog, error, refresh };
 }
 
@@ -79,8 +82,10 @@ function VariableBrowser({ catalog, onInsert }: { catalog: ConditionCatalog; onI
 
 // Condition editor with completions for Apps, instances, streams, comparisons and enum values,
 // plus checks for unknown names and type mismatches before the condition is saved.
-export function ConditionInput({ value, onChange, showVariables }: { value: string; onChange: (value: string) => void; showVariables: boolean }) {
-  const { catalog, error, refresh } = useConditionCatalog();
+export function ConditionInput({ value, onChange, showVariables, label = "Run when", assist, onFocus }:
+  { value: string; onChange: (value: string) => void; showVariables: boolean; label?: string; assist?: ConditionAssist; onFocus?: () => void }) {
+  const own = useConditionCatalog(!assist);
+  const { catalog, error, refresh } = assist ?? own;
   const input = React.useRef<TextInput>(null);
   const [selection, setSelection] = React.useState<Selection>({ start: value.length, end: value.length });
   const [forced, setForced] = React.useState<Selection | undefined>();
@@ -133,7 +138,7 @@ export function ConditionInput({ value, onChange, showVariables }: { value: stri
   return <Box className="gap-2">
     <TextInput
       ref={input}
-      accessibilityLabel="Run when"
+      accessibilityLabel={label}
       accessibilityHint="Condition over HH Support data. Type to get suggestions. Leave empty for manual runs only."
       aria-expanded={open}
       value={value}
@@ -159,7 +164,7 @@ export function ConditionInput({ value, onChange, showVariables }: { value: stri
         setSelection(next);
         setForced(undefined);
       }}
-      onFocus={() => { clearTimeout(blurTimer.current); setFocused(true); refresh(); }}
+      onFocus={() => { clearTimeout(blurTimer.current); setFocused(true); refresh(); onFocus?.(); }}
       // Delayed so a tap on a suggestion lands before the list closes.
       onBlur={() => { blurTimer.current = setTimeout(() => setFocused(false), 200); }}
       onKeyPress={onKeyPress}

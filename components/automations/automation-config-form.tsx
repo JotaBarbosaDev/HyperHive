@@ -8,7 +8,7 @@ import { Action, Failure, ink, surface } from "@/components/support/support-ui";
 import { setAutomationDirty } from "@/hooks/useAutomationNavigation";
 import { errorText, evaluateCondition, formatTime, updateAutomation, type Automation, type AutomationConfig, type EvaluateResult } from "@/services/automations";
 import { Banner, mono, SnapshotView, subtle } from "./automation-ui";
-import { ConditionInput } from "./condition-input";
+import { ConditionGroup } from "./condition-group";
 
 const toConfig = (a: Automation): AutomationConfig => ({
   name: a.name, description: a.description, enabled: a.enabled, condition: a.condition,
@@ -29,6 +29,8 @@ const EXAMPLES = [
   "app('db')['disk.used'] > 90",
   "app('web').connectivity == 'offline'",
   "app('web').health != 'healthy'",
+  "(app('ups').battery < 20) && (app('nas').health != 'healthy')",
+  "(app('web-1').connectivity == 'offline') != (app('web-2').connectivity == 'offline')",
 ];
 
 const field = "border rounded-md text-sm text-typography-900 dark:text-[#E8EBF0] bg-background-0 dark:bg-[#0A1422] border-outline-200 dark:border-[#2A3B52] focus:border-[#147D78] dark:focus:border-[#2DD4BF] ";
@@ -141,7 +143,7 @@ export const AutomationConfigForm = React.memo(function AutomationConfigForm({ a
           <Text className={link}>{showExamples ? "Hide examples" : "Examples"}</Text>
         </Pressable>
       </Box>
-      <ConditionInput value={draft.condition} showVariables={showVariables} onChange={(condition) => { setDraft((d) => ({ ...d, condition })); setTest(null); }} />
+      <ConditionGroup value={draft.condition} showVariables={showVariables} onChange={(condition) => { setDraft((d) => ({ ...d, condition })); setTest(null); }} />
       {showExamples ? <Box>
         {EXAMPLES.map((example) => <Pressable key={example} accessibilityRole="button" accessibilityLabel={`Use ${example}`} onPress={() => { setDraft((d) => ({ ...d, condition: example })); setTest(null); }}
           className="px-2 rounded web:cursor-pointer hover:bg-background-50 dark:hover:bg-[#15233A] focus-visible:outline-2 focus-visible:outline-[#2DD4BF]" style={{ minHeight: 28, justifyContent: "center" }}>
