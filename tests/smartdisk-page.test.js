@@ -17,6 +17,10 @@ jest.mock("lucide-react-native", () => new Proxy({}, {get:() => () => null}));
 jest.mock("../services/hyperhive", () => ({listMachines:jest.fn(async () => [{MachineName:"worker-1"}])}));
 jest.mock("../services/btrfs", () => Object.fromEntries(["createAutomaticMount", "deleteAutomaticMount", "listAllDisks", "listAutomaticMounts", "listRaids"].map(name => [name,jest.fn(async () => [])])));
 jest.mock("../services/smartdisk", () => Object.fromEntries(["cancelSelfTest", "createSchedule", "deleteSchedule", "enableSchedule", "getRealloc", "getReallocStatus", "getSelfTestProgress", "listSchedules", "listSmartDisks", "reallocCancel", "reallocFullWipe", "reallocNonDestructive", "startSelfTest", "updateSchedule"].map(name => [name,jest.fn(async () => [])])));
+const mockPush=jest.fn();
+jest.mock("expo-router", () => ({useRouter:() => ({push:mockPush,replace:jest.fn()})}));
+jest.mock("../services/diskhealth", () => ({listDiskHealth:jest.fn(async () => ({lastPollAt:null,disks:[]}))}));
+const health=require("../services/diskhealth");
 const btrfs=require("../services/btrfs");
 const smart=require("../services/smartdisk");
 const Smart=require("../app/smartdisk").default;
@@ -54,4 +58,29 @@ it("shows inactive schedules without claiming a next run", async () => {
  smart.listSchedules.mockResolvedValue([{id:9,device:"/dev/sda",type:"short",week_day:1,hour:3,active:false}]);
  await act(async () => root.render(<Smart/>));
  expect(container.textContent).toContain("Next test: none while inactive.");
+});
+
+it("shows the health badge, reason and retired disks and opens the disk page", async () => {
+ smart.listSmartDisks.mockResolvedValue([{device:"/dev/sda",model:"Test disk",serial:"S1"}]);
+ health.listDiskHealth.mockResolvedValue({lastPollAt:new Date(Date.now()-3*3600_000).toISOString(),disks:[
+  {serial:"S1",model:"Test disk",machineName:"worker-1",device:"/dev/sda",smartAvailable:true,score:60,band:"watch",reasons:["3 pending sectors (+2 in 7 days)"],retiredAt:null,rotational:true},
+  {serial:"OLD",model:"Old disk",machineName:"worker-1",device:"/dev/sdz",smartAvailable:true,score:90,band:"good",reasons:["No problems found"],retiredAt:"2026-10-01T00:00:00Z",lastSeen:"2026-07-01T00:00:00Z",rotational:true},
+ ]});
+ await act(async () => root.render(<Smart/>));
+ expect(container.textContent).toContain("Watch · 60");
+ expect(container.textContent).toContain("Health: 3 pending sectors (+2 in 7 days)");
+ expect(container.textContent).toContain("Last health poll 3 h ago");
+ expect(container.textContent).toContain("Retired disks");
+ expect(container.textContent).not.toContain("Old disk · OLD");
+ await act(async () => button("Retired disks1 not seen for 90 days").click());
+ expect(container.textContent).toContain("Old disk · OLD");
+ await act(async () => button("Watch · 60").click());
+ expect(mockPush).toHaveBeenCalledWith("/smartdisk/S1");
+});
+
+it("shows No SMART data when disk health is unavailable", async () => {
+ health.listDiskHealth.mockRejectedValue(new Error("503"));
+ await act(async () => root.render(<Smart/>));
+ expect(container.textContent).toContain("No SMART data");
+ expect(container.textContent).toContain("No health poll yet");
 });

@@ -1,5 +1,6 @@
 import React from "react";
 import { RefreshControl, ScrollView } from "react-native";
+import { useRouter } from "expo-router";
 import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";
 import { Heading } from "@/components/ui/heading";
@@ -52,6 +53,9 @@ import { Toast, ToastDescription, ToastTitle, useToast } from "@/components/ui/t
 import { Progress, ProgressFilledTrack } from "@/components/ui/progress";
 import { Machine } from "@/types/machine";
 import { cautionCauses } from "@/utils/smartdisk-health";
+import { bandBadgeAction, bandBadgeLabel, diskHealthSummary, lastPollText, pickDiskHealth } from "@/utils/diskhealth";
+import { DiskHealthDisk, DiskHealthList } from "@/types/diskhealth";
+import { listDiskHealth } from "@/services/diskhealth";
 import { SmartDiskDevice, SmartDiskReallocStatus, SmartDiskSchedule, SmartDiskSelfTestProgress } from "@/types/smartdisk";
 import { listMachines } from "@/services/hyperhive";
 import { listAllDisks } from "@/services/btrfs";
@@ -166,10 +170,13 @@ const badgeStatus = (status?: string) => {
 };
 
 export default function SmartDiskScreen() {
+  const router = useRouter();
   const toast = useToast();
   const [machines, setMachines] = React.useState<Machine[]>([]);
   const [selectedMachine, setSelectedMachine] = React.useState<string>("");
   const [disks, setDisks] = React.useState<SmartDiskDevice[]>([]);
+  const [diskHealth, setDiskHealth] = React.useState<DiskHealthList | null>(null);
+  const [retiredOpen, setRetiredOpen] = React.useState(false);
   const [deviceOptions, setDeviceOptions] = React.useState<string[]>([]);
   const deviceListRef = React.useRef<string[]>([]);
   const [deviceMeta, setDeviceMeta] = React.useState<Record<string, string>>({});
@@ -308,7 +315,13 @@ export default function SmartDiskScreen() {
       if (mode === "full") setLoading(true);
       if (mode === "refresh") setRefreshing(true);
       try {
-        const [rawDevices, schedResp] = await Promise.all([listAllDisks(selectedMachine).catch(() => []), listSchedules(selectedMachine)]);
+        const [rawDevices, schedResp, healthResp] = await Promise.all([
+          listAllDisks(selectedMachine).catch(() => []),
+          listSchedules(selectedMachine),
+          // Disk health is optional: an older master or a disabled feature just shows "No SMART data".
+          listDiskHealth("all").catch(() => null),
+        ]);
+        setDiskHealth(healthResp);
         const meta = buildDeviceMeta(Array.isArray(rawDevices) ? rawDevices : []);
         setDeviceMeta(meta);
         const deviceList = Array.from(
@@ -392,6 +405,35 @@ export default function SmartDiskScreen() {
         .catch((err) => console.warn("Failed to fetch realloc status", err));
     }
   }, [detailDevice, detailTab, refreshStatuses, selectedMachine]);
+
+  // Matches a live disk to its health row by serial, falling back to host and device.
+  const healthFor = (disk: SmartDiskDevice): DiskHealthDisk | undefined => {
+    const rows = diskHealth?.disks ?? [];
+    return (
+      pickDiskHealth(rows, disk.serial) ??
+      rows.find((d) => !d.retiredAt && d.machineName === selectedMachine && d.device === disk.device)
+    );
+  };
+
+  const retiredDisks = (diskHealth?.disks ?? []).filter((d) => d.retiredAt);
+
+  const openHealthPage = (serial: string) => {
+    router.push(`/smartdisk/${encodeURIComponent(serial)}` as any);
+  };
+
+  const renderHealthBadge = (health?: DiskHealthDisk, pressable = true) => {
+    const badge = (
+      <Badge className="rounded-full px-3 py-1" size="sm" action={bandBadgeAction(health)} variant="solid">
+        <BadgeText className="text-xs font-semibold">{bandBadgeLabel(health)}</BadgeText>
+      </Badge>
+    );
+    if (!health || !pressable) return badge;
+    return (
+      <Pressable onPress={() => openHealthPage(health.serial)} accessibilityLabel={`Open health history for ${health.serial}`}>
+        {badge}
+      </Pressable>
+    );
+  };
 
   const openDetail = async (device: string, tab: DetailTab = "info") => {
     if (!device) return;
@@ -730,6 +772,7 @@ export default function SmartDiskScreen() {
           <HStack className="mt-5 py-3 border-y border-outline-100 dark:border-[#1E2F47] gap-x-6 gap-y-2 flex-wrap">
             <Text className="text-sm text-typography-700 dark:text-[#9AA4B8]">{loading ? "Loading disks…" : refreshing ? "Refreshing disks…" : `${disks.length} disks`}</Text>
             <Text className="text-sm text-typography-700 dark:text-[#9AA4B8]">{schedules.length} test schedules</Text>
+            <Text className="text-sm text-typography-700 dark:text-[#9AA4B8]">{lastPollText(diskHealth?.lastPollAt)}</Text>
             <Text className="text-sm text-typography-700 dark:text-[#9AA4B8]">Self-test and reallocation progress updates automatically</Text>
           </HStack>
 
@@ -775,6 +818,7 @@ export default function SmartDiskScreen() {
                           </VStack>
                         </HStack>
                         <HStack className="items-center gap-2">
+                          {renderHealthBadge(healthFor(disk))}
                           {badgeStatus(disk.healthStatus || disk.status || "Unknown")}
                           <Badge
                             className={neutralBadgeClass}
@@ -804,6 +848,9 @@ export default function SmartDiskScreen() {
                         </Text>
                       </HStack>
 
+                      <Text className="mt-2 text-sm text-typography-700 dark:text-[#9AA4B8]" numberOfLines={1}>
+                        Health: {diskHealthSummary(healthFor(disk))}
+                      </Text>
                       {(disk.healthStatus || disk.status || "").toLowerCase() === "caution" ? (
                         <Text className="mt-3 text-sm text-typography-800 dark:text-[#E8EBF0]">
                           Caution indicators: {cautionCauses(disk).join(", ") || "Unknown — the server did not provide an identifiable indicator."}
@@ -860,6 +907,37 @@ export default function SmartDiskScreen() {
                   ))
                 )}
               </VStack>
+
+              {retiredDisks.length > 0 ? (
+                <VStack className={`mt-8 ${cardShellClass}`}>
+                  <Pressable onPress={() => setRetiredOpen((open) => !open)} accessibilityLabel="Toggle retired disks">
+                    <HStack className="px-4 py-3 items-center justify-between">
+                      <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base">Retired disks</Text>
+                      <HStack className="items-center gap-2">
+                        <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">{retiredDisks.length} not seen for 90 days</Text>
+                        <ChevronDown size={16} className={iconPrimaryClass} />
+                      </HStack>
+                    </HStack>
+                  </Pressable>
+                  {retiredOpen
+                    ? retiredDisks.map((d) => (
+                        <Pressable key={d.serial} onPress={() => openHealthPage(d.serial)}>
+                          <HStack className="px-4 py-3 border-t border-outline-100 dark:border-[#1E2F47] items-center justify-between gap-2 flex-wrap">
+                            <VStack className="flex-1 min-w-0">
+                              <Text className="text-typography-900 dark:text-[#E8EBF0] text-sm font-mono break-all">
+                                {d.model || "Unknown model"} · {d.serial}
+                              </Text>
+                              <Text className="text-typography-600 dark:text-[#9AA4B8] text-xs">
+                                Last seen on {d.machineName || "unknown host"} {d.device} · {new Date(d.lastSeen).toLocaleDateString()}
+                              </Text>
+                            </VStack>
+                            {renderHealthBadge(d, false)}
+                          </HStack>
+                        </Pressable>
+                      ))
+                    : null}
+                </VStack>
+              ) : null}
 
               <Box className={`mt-8 ${cardShellClass}`}>
                 <HStack className="px-4 py-3 items-center justify-between">
