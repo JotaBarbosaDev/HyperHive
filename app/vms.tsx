@@ -314,9 +314,8 @@ export default function VirtualMachinesScreen() {
   const [loadingVm, setLoadingVm] = React.useState<string | null>(null);
   const [openMenuFor, setOpenMenuFor] = React.useState<string | null>(null);
   const [detailsVm, setDetailsVm] = React.useState<VM | null>(null);
-  // Set by the "Backups / Revert…" action: scroll the details modal to the timeline.
-  const [detailsScrollToBackups, setDetailsScrollToBackups] = React.useState(false);
-  const detailsScrollRef = React.useRef<ScrollView | null>(null);
+  // VM whose backup timeline modal is open (from details or the Actions menu).
+  const [backupsVm, setBackupsVm] = React.useState<VM | null>(null);
   const router = useRouter();
   const [showActionsheet, setShowActionsheet] = React.useState(false);
   const [selectedVm, setSelectedVm] = React.useState<VM | null>(null);
@@ -2529,7 +2528,7 @@ export default function VirtualMachinesScreen() {
           )}
 
           {/* Modals e Actionsheet */}
-          <Modal isOpen={!!detailsVm} onClose={() => { setDetailsVm(null); setDetailsScrollToBackups(false); }}>
+          <Modal isOpen={!!detailsVm} onClose={() => setDetailsVm(null)}>
             <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
             <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] shadow-soft-2 max-w-[720px] w-full p-0">
               <ModalHeader className="flex-row items-center justify-between border-b border-outline-100 px-6 py-6 dark:border-[#2A3B52]">
@@ -2541,7 +2540,6 @@ export default function VirtualMachinesScreen() {
               <ModalBody className="m-0 p-0">
                 {detailsVm && (
                   <ScrollView
-                    ref={detailsScrollRef}
                     className="max-h-[70vh]"
                     showsVerticalScrollIndicator
                     contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
@@ -2612,26 +2610,7 @@ export default function VirtualMachinesScreen() {
                           </Text>
                         </HStack>
                       </VStack>
-                      <Box
-                        className="rounded-xl border border-outline-100 p-4 dark:border-[#2A3B52]"
-                        onLayout={(event) => {
-                          if (!detailsScrollToBackups) return;
-                          const y = event.nativeEvent.layout.y;
-                          setDetailsScrollToBackups(false);
-                          setTimeout(() => detailsScrollRef.current?.scrollTo({ y, animated: true }), 50);
-                        }}
-                      >
-                        <VmBackupTimeline
-                          vmName={detailsVm.name}
-                          vmRunning={detailsVm.state !== VmState.SHUTOFF}
-                          getShareLabel={getNfsShareLabelById}
-                          onRestoreAsNew={(backup) => {
-                            setDetailsVm(null);
-                            router.push({ pathname: "/backups", params: { restore: backup.id } });
-                          }}
-                          onToast={(title, description, action) => showToastMessage(title, description ?? "", action ?? "success")}
-                        />
-                      </Box>
+
                       <VStack className="gap-2">
                         <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">Disk path</Text>
                         <Text selectable className="text-sm text-typography-900 dark:text-[#E8EBF0]" style={{ overflowWrap: "anywhere" } as any}>
@@ -2658,7 +2637,7 @@ export default function VirtualMachinesScreen() {
                           <Text key={`${index}-${address}`} selectable className="text-sm text-typography-900 dark:text-[#E8EBF0]" style={{ overflowWrap: "anywhere" } as any}>{address}</Text>
                         )) : <Text className="text-sm text-typography-900 dark:text-[#E8EBF0]">Not reported</Text>}
                       </VStack>
-                      <HStack className="gap-2 flex-wrap web:justify-start">
+                      <HStack className="gap-2 flex-wrap web:justify-start" style={{ flexWrap: "wrap" }}>
                         <Button className={`rounded-xl px-4 py-2 ${primaryButtonClass}`} onPress={() => {
                           setConsoleOptionsVm(detailsVm);
                           setShowConsoleOptions(true);
@@ -2695,16 +2674,66 @@ export default function VirtualMachinesScreen() {
                   </ScrollView>
                 )}
               </ModalBody>
-              <ModalFooter className="items-center justify-end border-t border-outline-100 px-6 py-6 dark:border-[#2A3B52]">
+              <ModalFooter className="items-center justify-between border-t border-outline-100 px-6 py-6 dark:border-[#2A3B52]">
+                <Button
+                  variant="outline"
+                  className="rounded-xl px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
+                  onPress={() => detailsVm && setBackupsVm(detailsVm)}
+                >
+                  <ButtonIcon as={History} className="text-typography-900 dark:text-[#E8EBF0]" />
+                  <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Backups</ButtonText>
+                </Button>
                 <HStack className="justify-end gap-2">
                   <Button
                     variant="outline"
                     className="rounded-xl px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
-                    onPress={() => { setDetailsVm(null); setDetailsScrollToBackups(false); }}
+                    onPress={() => setDetailsVm(null)}
                   >
                     <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Close</ButtonText>
                   </Button>
                 </HStack>
+              </ModalFooter>
+            </ModalContent>
+          </Modal>
+          {/* Backup timeline and revert */}
+          <Modal isOpen={!!backupsVm} onClose={() => setBackupsVm(null)}>
+            <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
+            <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] shadow-soft-2 max-w-[720px] w-full p-0">
+              <ModalHeader className="flex-row items-center justify-between border-b border-outline-100 px-6 py-6 dark:border-[#2A3B52]">
+                <Heading size="md" className="min-w-0 flex-1 text-typography-900 dark:text-[#E8EBF0]">
+                  {backupsVm?.name} · Backups
+                </Heading>
+                <ModalCloseButton className="p-1" accessibilityLabel="Close VM backups"><X className="text-typography-700 dark:text-[#E8EBF0]" /></ModalCloseButton>
+              </ModalHeader>
+              <ModalBody className="m-0 p-0">
+                {backupsVm && (
+                  <ScrollView
+                    className="max-h-[70vh]"
+                    showsVerticalScrollIndicator
+                    contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
+                  >
+                    <VmBackupTimeline
+                      vmName={backupsVm.name}
+                      vmRunning={backupsVm.state !== VmState.SHUTOFF}
+                      getShareLabel={getNfsShareLabelById}
+                      onRestoreAsNew={(backup) => {
+                        setBackupsVm(null);
+                        setDetailsVm(null);
+                        router.push({ pathname: "/backups", params: { restore: backup.id } });
+                      }}
+                      onToast={(title, description, action) => showToastMessage(title, description ?? "", action ?? "success")}
+                    />
+                  </ScrollView>
+                )}
+              </ModalBody>
+              <ModalFooter className="items-center justify-end border-t border-outline-100 px-6 py-6 dark:border-[#2A3B52]">
+                <Button
+                  variant="outline"
+                  className="rounded-xl px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
+                  onPress={() => setBackupsVm(null)}
+                >
+                  <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Close</ButtonText>
+                </Button>
               </ModalFooter>
             </ModalContent>
           </Modal>
@@ -4037,8 +4066,7 @@ export default function VirtualMachinesScreen() {
                 <Pressable
                   onPress={() => {
                     if (!selectedVm) return;
-                    setDetailsScrollToBackups(true);
-                    setDetailsVm(selectedVm);
+                    setBackupsVm(selectedVm);
                     setShowActionsheet(false);
                   }}
                   className="px-3 py-3 hover:bg-background-50 dark:hover:bg-[#1E2F47] rounded-md"
@@ -4405,8 +4433,7 @@ export default function VirtualMachinesScreen() {
               <ActionsheetItem
                 onPress={() => {
                   if (!selectedVm) return;
-                  setDetailsScrollToBackups(true);
-                  setDetailsVm(selectedVm);
+                  setBackupsVm(selectedVm);
                   setShowActionsheet(false);
                 }}
               >
