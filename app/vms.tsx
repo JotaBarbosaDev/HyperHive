@@ -152,7 +152,10 @@ import {
   Link,
   Unlink,
   Key,
+  History,
 } from "lucide-react-native";
+import { useRouter } from "expo-router";
+import { VmBackupTimeline } from "@/components/modals/VmBackupTimeline";
 
 const usePrimaryButtonStyles = () => {
   const { resolvedMode } = useAppTheme();
@@ -311,6 +314,10 @@ export default function VirtualMachinesScreen() {
   const [loadingVm, setLoadingVm] = React.useState<string | null>(null);
   const [openMenuFor, setOpenMenuFor] = React.useState<string | null>(null);
   const [detailsVm, setDetailsVm] = React.useState<VM | null>(null);
+  // Set by the "Backups / Revert…" action: scroll the details modal to the timeline.
+  const [detailsScrollToBackups, setDetailsScrollToBackups] = React.useState(false);
+  const detailsScrollRef = React.useRef<ScrollView | null>(null);
+  const router = useRouter();
   const [showActionsheet, setShowActionsheet] = React.useState(false);
   const [selectedVm, setSelectedVm] = React.useState<VM | null>(null);
   const [confirmAction, setConfirmAction] = React.useState<
@@ -388,6 +395,15 @@ export default function VirtualMachinesScreen() {
       };
     });
   }, [mountOptions]);
+  const getNfsShareLabelById = React.useCallback(
+    (nfsShareId: number | null) => {
+      if (nfsShareId == null) return "Unknown NFS share";
+      const share = mountOptions.find((mount) => mount.NfsShare?.Id === nfsShareId)?.NfsShare;
+      if (!share) return `NFS #${nfsShareId}`;
+      return share.Name?.trim() || `${share.MachineName} • ${share.FolderPath}`;
+    },
+    [mountOptions]
+  );
   const getNfsNameByDiskPath = React.useCallback(
     (diskPath?: string) => {
       if (!diskPath) return null;
@@ -2513,7 +2529,7 @@ export default function VirtualMachinesScreen() {
           )}
 
           {/* Modals e Actionsheet */}
-          <Modal isOpen={!!detailsVm} onClose={() => setDetailsVm(null)}>
+          <Modal isOpen={!!detailsVm} onClose={() => { setDetailsVm(null); setDetailsScrollToBackups(false); }}>
             <ModalBackdrop className="bg-background-950/60 dark:bg-black/70" />
             <ModalContent className="rounded-2xl border border-outline-100 dark:border-[#2A3B52] bg-background-0 dark:bg-[#0F1A2E] shadow-soft-2 max-w-[720px] w-full p-0">
               <ModalHeader className="flex-row items-center justify-between border-b border-outline-100 px-6 py-6 dark:border-[#2A3B52]">
@@ -2525,6 +2541,7 @@ export default function VirtualMachinesScreen() {
               <ModalBody className="m-0 p-0">
                 {detailsVm && (
                   <ScrollView
+                    ref={detailsScrollRef}
                     className="max-h-[70vh]"
                     showsVerticalScrollIndicator
                     contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
@@ -2595,6 +2612,26 @@ export default function VirtualMachinesScreen() {
                           </Text>
                         </HStack>
                       </VStack>
+                      <Box
+                        className="rounded-xl border border-outline-100 p-4 dark:border-[#2A3B52]"
+                        onLayout={(event) => {
+                          if (!detailsScrollToBackups) return;
+                          const y = event.nativeEvent.layout.y;
+                          setDetailsScrollToBackups(false);
+                          setTimeout(() => detailsScrollRef.current?.scrollTo({ y, animated: true }), 50);
+                        }}
+                      >
+                        <VmBackupTimeline
+                          vmName={detailsVm.name}
+                          vmRunning={detailsVm.state !== VmState.SHUTOFF}
+                          getShareLabel={getNfsShareLabelById}
+                          onRestoreAsNew={(backup) => {
+                            setDetailsVm(null);
+                            router.push({ pathname: "/backups", params: { restore: backup.id } });
+                          }}
+                          onToast={(title, description, action) => showToastMessage(title, description ?? "", action ?? "success")}
+                        />
+                      </Box>
                       <VStack className="gap-2">
                         <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">Disk path</Text>
                         <Text selectable className="text-sm text-typography-900 dark:text-[#E8EBF0]" style={{ overflowWrap: "anywhere" } as any}>
@@ -2663,7 +2700,7 @@ export default function VirtualMachinesScreen() {
                   <Button
                     variant="outline"
                     className="rounded-xl px-4 py-2 border-outline-200 dark:border-[#2A3B52]"
-                    onPress={() => setDetailsVm(null)}
+                    onPress={() => { setDetailsVm(null); setDetailsScrollToBackups(false); }}
                   >
                     <ButtonText className="text-typography-900 dark:text-[#E8EBF0]">Close</ButtonText>
                   </Button>
@@ -3999,6 +4036,20 @@ export default function VirtualMachinesScreen() {
                 </Pressable>
                 <Pressable
                   onPress={() => {
+                    if (!selectedVm) return;
+                    setDetailsScrollToBackups(true);
+                    setDetailsVm(selectedVm);
+                    setShowActionsheet(false);
+                  }}
+                  className="px-3 py-3 hover:bg-background-50 dark:hover:bg-[#1E2F47] rounded-md"
+                >
+                  <HStack className="items-center gap-3">
+                    <History size={18} className="text-typography-700 dark:text-[#E8EBF0]" />
+                    <Text className="text-typography-900 dark:text-[#E8EBF0]">Backups / Revert…</Text>
+                  </HStack>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
                     if (!selectedVm || isExportingSelectedVm) return;
                     void handleExportVm(selectedVm);
                     setShowActionsheet(false);
@@ -4350,6 +4401,17 @@ export default function VirtualMachinesScreen() {
               >
                 <ActionsheetIcon as={Database} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
                 <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">Backup VM</ActionsheetItemText>
+              </ActionsheetItem>
+              <ActionsheetItem
+                onPress={() => {
+                  if (!selectedVm) return;
+                  setDetailsScrollToBackups(true);
+                  setDetailsVm(selectedVm);
+                  setShowActionsheet(false);
+                }}
+              >
+                <ActionsheetIcon as={History} className="mr-2 text-typography-700 dark:text-[#E8EBF0]" />
+                <ActionsheetItemText className="text-typography-900 dark:text-[#E8EBF0]">Backups / Revert…</ActionsheetItemText>
               </ActionsheetItem>
 
               {/* Remove All ISOs */}

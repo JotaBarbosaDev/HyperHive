@@ -15,31 +15,17 @@ import { Checkbox, CheckboxIndicator, CheckboxIcon, CheckboxLabel } from "@/comp
 import { Pressable } from "@/components/ui/pressable";
 import { ChevronDownIcon } from "@/components/ui/icon";
 import { Search, HardDrive, Calendar, Database, RefreshCw, Trash2, RotateCcw, Plus, Download, X, Cpu, Copy, Check } from "lucide-react-native";
-import { listBackups, deleteBackup as deleteBackupApi, createBackup as createBackupApi, useBackup as useBackupApi, getBackupDownloadUrl } from "@/services/backups";
+import { listBackups, deleteBackup as deleteBackupApi, createBackup as createBackupApi, useBackup as useBackupApi, getBackupDownloadUrl, mapBackupItem, VmBackup } from "@/services/backups";
 import { getAllVMs, listSlaves, VirtualMachine, Slave, getCpuDisableFeatures } from "@/services/vms-client";
 import { listMounts } from "@/services/hyperhive";
 import { Mount } from "@/types/mount";
 import { StableTextInput } from "@/components/ui/stable-text-input";
 import { listXmlTemplates, XmlTemplate } from "@/services/xml-templates-client";
 import { XML_TEMPLATE_NONE_OPTION_LABEL, XML_TEMPLATE_NONE_OPTION_VALUE } from "@/utils/xml-template";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
 // Interfaces TypeScript
-type BackupStatus = "complete" | "partial" | "failed" | string;
-type BackupType = "full" | "incremental" | string;
-
-interface Backup {
-  id: string;
-  vmName: string;
-  machineName: string;
-  backupDate: Date;
-  size: number | null; // em GB
-  nfsShareId: number | null;
-  status?: BackupStatus | null;
-  type?: BackupType | null;
-  live?: boolean;
-  automatic?: boolean;
-  path?: string;
-}
+type Backup = VmBackup;
 
 interface BackupStats {
   total: number;
@@ -101,119 +87,7 @@ export default function BackupsScreen() {
     [toast]
   );
 
-  const parseBackupDate = (value: unknown) => {
-    const candidates = Array.isArray(value) ? value : [value];
-    const knownKeys = [
-      "backupDate",
-      "backup_date",
-      "date",
-      "created_at",
-      "timestamp",
-      "time",
-      "CreatedAt",
-    ];
-    if (value && typeof value === "object") {
-      for (const key of knownKeys) {
-        const candidate = (value as Record<string, unknown>)[key];
-        if (candidate) {
-          const parsed = new Date(String(candidate));
-          if (!Number.isNaN(parsed.getTime())) {
-            return parsed;
-          }
-        }
-      }
-    }
-    for (const candidate of candidates) {
-      if (!candidate) continue;
-      const parsed = new Date(String(candidate));
-      if (!Number.isNaN(parsed.getTime())) {
-        return parsed;
-      }
-    }
-    return new Date();
-  };
-
-  const extractShareFromPath = (path?: string | null) => {
-    if (!path) return "";
-    const parts = path.split("/").filter(Boolean);
-    const sharedIndex = parts.findIndex((p) => p === "shared");
-    if (sharedIndex >= 0 && parts[sharedIndex + 1]) {
-      return parts[sharedIndex + 1];
-    }
-    return "";
-  };
-
-  const mapBackup = React.useCallback((item: any, index: number): Backup => {
-    const source = item?.db_res ?? item;
-    const fallbackId = `backup-${index}`;
-    const id =
-      source?.Id ??
-      item?.id ??
-      item?.backup_id ??
-      item?.bak_id ??
-      item?._id ??
-      source?.Name ??
-      fallbackId;
-    const vmName = source?.Name ?? item?.vm_name ?? item?.vmName ?? item?.vm ?? "Unknown VM";
-    const path = source?.Path ?? item?.path ?? "";
-    const machineName =
-      extractShareFromPath(path) ||
-      item?.machine_name ||
-      item?.slave_name ||
-      item?.machine ||
-      item?.host ||
-      "Unknown host";
-    const sizeRaw =
-      source?.Size ??
-      source?.size ??
-      source?.size_gb ??
-      source?.sizeGB ??
-      source?.total_size_gb ??
-      item?.size ??
-      null;
-    const parsedSize =
-      typeof sizeRaw === "number"
-        ? sizeRaw
-        : typeof sizeRaw === "string"
-          ? Number(sizeRaw)
-          : null;
-    const nfsRaw =
-      source?.NfsId ??
-      item?.nfs_share_id ??
-      item?.nfsShareId ??
-      item?.nfs_id ??
-      item?.nfs ??
-      item?.nfsId;
-    const nfsShareId =
-      nfsRaw === undefined || nfsRaw === null || Number.isNaN(Number(nfsRaw))
-        ? null
-        : Number(nfsRaw);
-    const status =
-      item?.status ??
-      item?.state ??
-      item?.backup_status ??
-      source?.status ??
-      ("complete" as BackupStatus | null);
-    const type = item?.type ?? item?.backup_type ?? source?.type ?? ("full" as BackupType | null);
-    const live = Boolean(item?.live ?? item?.isLive ?? source?.live);
-    const automatic = Boolean(source?.Automatic ?? item?.automatic ?? item?.Automatic);
-
-    return {
-      id: String(id),
-      vmName: String(vmName),
-      machineName: String(machineName),
-      backupDate: parseBackupDate(
-        item?.backupDate ?? item?.created_at ?? item?.date ?? source?.CreatedAt ?? item
-      ),
-      size: Number.isFinite(parsedSize) ? Number(parsedSize) : null,
-      nfsShareId,
-      status,
-      type,
-      live,
-      automatic,
-      path,
-    };
-  }, []);
+  const mapBackup = React.useCallback((item: unknown, index: number): Backup => mapBackupItem(item, index), []);
 
   const loadOptions = React.useCallback(async () => {
     setLoadingOptions(true);
@@ -288,6 +162,20 @@ export default function BackupsScreen() {
     refreshBackups();
     loadOptions();
   }, [refreshBackups, loadOptions]);
+
+  // "Restore as new VM" from the VM backup timeline links here with ?restore=<id>.
+  const { restore: restoreParam } = useLocalSearchParams<{ restore?: string }>();
+  const router = useRouter();
+  React.useEffect(() => {
+    if (!restoreParam || backups.length === 0) return;
+    const target = backups.find((backup) => backup.id === String(restoreParam));
+    if (target) {
+      setRestoreBackup(target);
+    } else {
+      showToastMessage(`Backup ${restoreParam} not found`, "error");
+    }
+    router.setParams({ restore: undefined });
+  }, [restoreParam, backups, router, showToastMessage]);
 
   React.useEffect(() => {
     const interval = setInterval(() => {

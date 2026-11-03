@@ -5,26 +5,17 @@ import { Box } from "@/components/ui/box";
 import { Toast, ToastDescription, ToastTitle } from "@/components/ui/toast";
 import { ensureHyperHiveWebsocket, subscribeToHyperHiveWebsocket } from "@/services/websocket-client";
 import { parseHyperHiveSocketPayload } from "@/utils/socketMessages";
-
-type VmProgressSocketMessage = {
-  type?: unknown;
-  data?: unknown;
-  extra?: unknown;
-};
-
-type NormalizedVmProgressMessage = {
-  id: string;
-  title: string;
-  description: string;
-  vmName?: string;
-};
+import {
+  normalizeVmProgressMessage,
+  NormalizedVmProgressMessage,
+  VmProgressSocketMessage,
+} from "@/utils/vmProgress";
 
 type ToastEntry = NormalizedVmProgressMessage & {
   createdAt: number;
   updatedAt: number;
 };
 
-const SUPPORTED_TYPES = new Set(["backupvm", "migratevm"]);
 const INACTIVITY_TIMEOUT_MS = 8000;
 
 const extractMessages = async (payload: unknown): Promise<VmProgressSocketMessage[]> => {
@@ -32,51 +23,6 @@ const extractMessages = async (payload: unknown): Promise<VmProgressSocketMessag
   return decoded.filter(
     (msg): msg is VmProgressSocketMessage => Boolean(msg) && typeof msg === "object" && !Array.isArray(msg)
   );
-};
-
-const normalizeVmProgressMessage = (raw: VmProgressSocketMessage): NormalizedVmProgressMessage | null => {
-  const rawType = typeof raw.type === "string" ? raw.type : "";
-  const normalizedType = rawType.toLowerCase();
-  if (!SUPPORTED_TYPES.has(normalizedType)) {
-    return null;
-  }
-
-  const description =
-    typeof raw.data === "string"
-      ? raw.data
-      : raw.data !== undefined
-      ? String(raw.data)
-      : "";
-  if (!description) {
-    return null;
-  }
-
-  const rawExtra = typeof raw.extra === "string" ? raw.extra.trim() : "";
-  let idSource = rawExtra || `${normalizedType}-${Date.now()}`;
-  let vmName: string | undefined;
-
-  if (rawExtra) {
-    const firstHyphen = rawExtra.indexOf("-");
-    const lastHyphen = rawExtra.lastIndexOf("-");
-    if (firstHyphen > 0 && firstHyphen === lastHyphen) {
-      const left = rawExtra.slice(0, firstHyphen).trim();
-      const right = rawExtra.slice(firstHyphen + 1).trim();
-      if (left && right) {
-        vmName = left;
-        idSource = right;
-      }
-    }
-  }
-
-  const typeLabel = normalizedType === "migratevm" ? "Migrate VM" : "Copy VM";
-  const title = vmName ? `${vmName} — ${typeLabel}` : typeLabel;
-
-  return {
-    id: idSource,
-    title,
-    description,
-    vmName,
-  };
 };
 
 export function VmProgressToastListener() {
