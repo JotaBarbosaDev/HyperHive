@@ -37,6 +37,7 @@ const button=label => [...container.querySelectorAll("button")].find(el => el.te
 it("shows unknown disk health and preserves self-test, schedule and refresh entry points",async () => {
  await act(async () => root.render(<Smart/>));
  expect(container.textContent).toContain("Unknown");expect(button("Disable")).toBeDefined();expect(button("Delete")).toBeDefined();
+ expect(container.textContent).toContain("SMART · is the drive's own verdict; the health score is HyperHive's forecast from stored SMART counters.");
  await act(async () => button("Refresh").click());expect(smart.listSmartDisks).toHaveBeenCalledWith("worker-1","/dev/sda");
  await act(async () => button("Self-test").click());expect(container.querySelector('[role="dialog"]')).not.toBeNull();expect(smart.startSelfTest).not.toHaveBeenCalled();
  await act(async () => button("Create schedule").click());expect(smart.createSchedule).not.toHaveBeenCalled();
@@ -68,13 +69,15 @@ it("shows the health badge, reason and retired disks and opens the disk page", a
  ]});
  await act(async () => root.render(<Smart/>));
  expect(container.textContent).toContain("Watch · 60");
- expect(container.textContent).toContain("Health: 3 pending sectors (+2 in 7 days)");
+ expect(container.textContent).toContain("3 pending sectors (+2 in 7 days)");
+ expect(container.textContent).toContain("History");
  expect(container.textContent).toContain("Last health poll 3 h ago");
  expect(container.textContent).toContain("Retired disks");
  expect(container.textContent).not.toContain("Old disk · OLD");
- await act(async () => button("Retired disks1 not seen for 90 days").click());
+ await act(async () => button("Retired disks1 not seen for 90 days · all hosts").click());
  expect(container.textContent).toContain("Old disk · OLD");
- await act(async () => button("Watch · 60").click());
+ const healthRow = [...container.querySelectorAll("button")].find(el => el.textContent.includes("Watch · 60"));
+ await act(async () => healthRow.click());
  expect(mockPush).toHaveBeenCalledWith("/smartdisk/S1");
 });
 

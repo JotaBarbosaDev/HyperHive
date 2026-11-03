@@ -75,7 +75,7 @@ import {
   startSelfTest,
   updateSchedule,
 } from "@/services/smartdisk";
-import { Activity, CalendarClock, ChevronDown, HardDrive, Info, Play, RefreshCcw, ShieldCheck, Trash2, XCircle } from "lucide-react-native";
+import { Activity, CalendarClock, ChevronDown, ChevronRight, HardDrive, Info, Play, RefreshCcw, ShieldCheck, Trash2, XCircle } from "lucide-react-native";
 
 type DetailTab = "info" | "selftest" | "realloc";
 
@@ -103,6 +103,11 @@ const STATUS_ACTION: Record<string, "success" | "warning" | "error"> = {
   fail: "error",
 };
 const POLL_INTERVAL = 10_000;
+// Reading self-test progress costs a full smartctl run per disk on the slave, so
+// only running tests are polled. Every FULL_POLL_EVERY ticks (5 min) every disk is
+// swept once to pick up tests started elsewhere; starting a test from this page
+// still refreshes immediately.
+const FULL_POLL_EVERY = 30;
 
 const normalizeDevicePath = (dev?: string | null): string | null => {
   if (!dev) return null;
@@ -156,6 +161,13 @@ const getDeviceLabel = (dev: string, disks: SmartDiskDevice[], meta: Record<stri
   return dev;
 };
 
+// A self-test is worth polling only while smartctl reports it as running.
+const isActiveSelfTest = (progress?: SmartDiskSelfTestProgress | null): boolean => {
+  if (!progress) return false;
+  const status = (progress.status ?? "").toLowerCase();
+  return status.includes("progress") || (progress.remainingPercent ?? 0) > 0;
+};
+
 const badgeStatus = (status?: string) => {
   if (!status) return null;
   const key = status.toLowerCase();
@@ -164,7 +176,7 @@ const badgeStatus = (status?: string) => {
     STATUS_ACTION[normalizedKey] ?? STATUS_ACTION[key] ?? "muted";
   return (
     <Badge className="rounded-full px-3 py-1" size="sm" action={action} variant="solid">
-      <BadgeText className="text-xs font-semibold">{status}</BadgeText>
+      <BadgeText className="text-xs font-semibold">SMART · {status}</BadgeText>
     </Badge>
   );
 };
@@ -210,6 +222,8 @@ export default function SmartDiskScreen() {
   );
 
   const pollRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollTickRef = React.useRef(0);
+  const selfProgressRef = React.useRef<Record<string, SmartDiskSelfTestProgress>>({});
   const modalBackdropClass = "bg-background-950/60 dark:bg-black/70";
   const modalShellClass = "w-full rounded-2xl border border-outline-100 bg-background-0 dark:border-[#1E2F47] dark:bg-[#0F1A2E]";
   const modalHeaderClass = "flex-row items-start justify-between px-6 pt-6 pb-4 border-b border-outline-100 dark:border-[#1E2F47]";
@@ -253,33 +267,36 @@ export default function SmartDiskScreen() {
   const refreshStatuses = React.useCallback(
     async (devices?: string[]) => {
       if (!selectedMachine) return;
-      const list = devices && devices.length > 0 ? devices : deviceListRef.current;
-      if (!list.length) {
+      // An explicit list (even an empty one) limits the poll; omitting it polls every disk.
+      const list = devices ?? deviceListRef.current;
+      if (!deviceListRef.current.length) {
         setSelfProgress({});
         setReallocStatuses({});
         return;
       }
-      try {
-        const progressResults = await Promise.all(
-          list.map(async (dev) => {
-            try {
-              const resp = await getSelfTestProgress(selectedMachine, dev);
-              return resp;
-            } catch (err) {
-              console.warn("self-test progress failed for", dev, err);
-              return null;
-            }
-          })
-        );
-        const progressMap: Record<string, SmartDiskSelfTestProgress> = {};
-        progressResults.forEach((item, idx) => {
-          if (!item) return;
-          const key = item.device || list[idx];
-          progressMap[key] = item;
-        });
-        setSelfProgress((prev) => ({ ...prev, ...progressMap }));
-      } catch (err) {
-        console.warn("self-test polling error", err);
+      if (list.length > 0) {
+        try {
+          const progressResults = await Promise.all(
+            list.map(async (dev) => {
+              try {
+                const resp = await getSelfTestProgress(selectedMachine, dev);
+                return resp;
+              } catch (err) {
+                console.warn("self-test progress failed for", dev, err);
+                return null;
+              }
+            })
+          );
+          const progressMap: Record<string, SmartDiskSelfTestProgress> = {};
+          progressResults.forEach((item, idx) => {
+            if (!item) return;
+            const key = item.device || list[idx];
+            progressMap[key] = item;
+          });
+          setSelfProgress((prev) => ({ ...prev, ...progressMap }));
+        } catch (err) {
+          console.warn("self-test polling error", err);
+        }
       }
       try {
         const reallocList = await getRealloc(selectedMachine);
@@ -294,6 +311,15 @@ export default function SmartDiskScreen() {
     },
     [selectedMachine]
   );
+
+  // Polls only the disks whose self-test is still running. Reads the ref so the
+  // interval is not recreated on every progress update.
+  const refreshActiveStatuses = React.useCallback(async () => {
+    const active = Object.entries(selfProgressRef.current)
+      .filter(([, progress]) => isActiveSelfTest(progress))
+      .map(([device]) => device);
+    await refreshStatuses(active);
+  }, [refreshStatuses]);
 
   const loadMachines = React.useCallback(async () => {
     try {
@@ -379,18 +405,30 @@ export default function SmartDiskScreen() {
   }, [selectedMachine, loadData]);
 
   React.useEffect(() => {
+    selfProgressRef.current = selfProgress;
+  }, [selfProgress]);
+
+  React.useEffect(() => {
     if (!selectedMachine) return;
+    pollTickRef.current = 0;
     refreshStatuses();
     if (pollRef.current) {
       clearInterval(pollRef.current);
     }
     pollRef.current = setInterval(() => {
-      refreshStatuses();
+      pollTickRef.current += 1;
+      if (pollTickRef.current % FULL_POLL_EVERY === 0) {
+        // Full sweep to discover self-tests started outside this page.
+        refreshStatuses();
+      } else {
+        refreshActiveStatuses();
+      }
     }, POLL_INTERVAL);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
+      pollTickRef.current = 0;
     };
-  }, [selectedMachine, refreshStatuses]);
+  }, [selectedMachine, refreshStatuses, refreshActiveStatuses]);
 
   React.useEffect(() => {
     if (!detailDevice) return;
@@ -421,16 +459,38 @@ export default function SmartDiskScreen() {
     router.push(`/smartdisk/${encodeURIComponent(serial)}` as any);
   };
 
-  const renderHealthBadge = (health?: DiskHealthDisk, pressable = true) => {
-    const badge = (
-      <Badge className="rounded-full px-3 py-1" size="sm" action={bandBadgeAction(health)} variant="solid">
-        <BadgeText className="text-xs font-semibold">{bandBadgeLabel(health)}</BadgeText>
-      </Badge>
-    );
-    if (!health || !pressable) return badge;
+  // The band badge is a status pill, not a link. The health row below the disk
+  // counters is the visible entry point to the per-disk page.
+  const renderHealthBadge = (health?: DiskHealthDisk) => (
+    <Badge className="rounded-full px-3 py-1" size="sm" action={bandBadgeAction(health)} variant="solid">
+      <BadgeText className="text-xs font-semibold">{bandBadgeLabel(health)}</BadgeText>
+    </Badge>
+  );
+
+  const renderHealthLink = (disk: SmartDiskDevice) => {
+    const health = healthFor(disk);
+    if (!health) {
+      return (
+        <Text className="mt-2 text-sm text-typography-700 dark:text-[#9AA4B8]" numberOfLines={1}>
+          Health: No SMART data
+        </Text>
+      );
+    }
     return (
-      <Pressable onPress={() => openHealthPage(health.serial)} accessibilityLabel={`Open health history for ${health.serial}`}>
-        {badge}
+      <Pressable
+        onPress={() => openHealthPage(health.serial)}
+        accessibilityRole="button"
+        accessibilityLabel={`View health history for ${health.serial}`}
+        className="mt-3 flex-row items-center gap-3 rounded-xl border border-outline-100 bg-background-50 px-3 py-2.5 active:opacity-70 hover:bg-background-100 focus-visible:outline-2 focus-visible:outline-[#2DD4BF] web:cursor-pointer dark:border-[#1E2F47] dark:bg-[#0A1628] dark:hover:bg-[#1A2637]"
+      >
+        {renderHealthBadge(health)}
+        <Text className="flex-1 text-sm text-typography-800 dark:text-[#E8EBF0]" numberOfLines={1}>
+          {diskHealthSummary(health)}
+        </Text>
+        <HStack className="flex-shrink-0 items-center gap-1">
+          <Text className="text-sm font-semibold text-primary-600 dark:text-[#2DD4BF]">History</Text>
+          <ChevronRight size={16} className="text-primary-600 dark:text-[#2DD4BF]" />
+        </HStack>
       </Pressable>
     );
   };
@@ -707,6 +767,9 @@ export default function SmartDiskScreen() {
           <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm web:text-base max-w-3xl">
             Monitor disks, run self-tests, and track reallocation in real time.
           </Text>
+          <Text className="mt-1 text-typography-500 dark:text-[#7C879B] text-xs web:text-sm max-w-3xl">
+            SMART · is the drive&apos;s own verdict; the health score is HyperHive&apos;s forecast from stored SMART counters.
+          </Text>
 
           <HStack className="mt-6 items-center justify-between flex-wrap gap-3">
             <HStack className="gap-3 items-center flex-wrap">
@@ -769,11 +832,16 @@ export default function SmartDiskScreen() {
             </Button>
           </HStack>
 
-          <HStack className="mt-5 py-3 border-y border-outline-100 dark:border-[#1E2F47] gap-x-6 gap-y-2 flex-wrap">
-            <Text className="text-sm text-typography-700 dark:text-[#9AA4B8]">{loading ? "Loading disks…" : refreshing ? "Refreshing disks…" : `${disks.length} disks`}</Text>
-            <Text className="text-sm text-typography-700 dark:text-[#9AA4B8]">{schedules.length} test schedules</Text>
-            <Text className="text-sm text-typography-700 dark:text-[#9AA4B8]">{lastPollText(diskHealth?.lastPollAt)}</Text>
-            <Text className="text-sm text-typography-700 dark:text-[#9AA4B8]">Self-test and reallocation progress updates automatically</Text>
+          <HStack className="mt-5 py-3 border-y border-outline-100 dark:border-[#1E2F47] gap-x-6 gap-y-1 flex-wrap">
+            <Text numberOfLines={1} className="text-sm text-typography-700 dark:text-[#9AA4B8]">
+              {loading ? "Loading disks…" : refreshing ? "Refreshing disks…" : `${disks.length} disks`}
+            </Text>
+            <Text numberOfLines={1} className="text-sm text-typography-700 dark:text-[#9AA4B8]">
+              {schedules.length} schedules
+            </Text>
+            <Text numberOfLines={1} className="text-sm text-typography-700 dark:text-[#9AA4B8]">
+              {lastPollText(diskHealth?.lastPollAt)}
+            </Text>
           </HStack>
 
           {loading && disks.length === 0 ? (
@@ -818,7 +886,6 @@ export default function SmartDiskScreen() {
                           </VStack>
                         </HStack>
                         <HStack className="items-center gap-2">
-                          {renderHealthBadge(healthFor(disk))}
                           {badgeStatus(disk.healthStatus || disk.status || "Unknown")}
                           <Badge
                             className={neutralBadgeClass}
@@ -848,9 +915,7 @@ export default function SmartDiskScreen() {
                         </Text>
                       </HStack>
 
-                      <Text className="mt-2 text-sm text-typography-700 dark:text-[#9AA4B8]" numberOfLines={1}>
-                        Health: {diskHealthSummary(healthFor(disk))}
-                      </Text>
+                      {renderHealthLink(disk)}
                       {(disk.healthStatus || disk.status || "").toLowerCase() === "caution" ? (
                         <Text className="mt-3 text-sm text-typography-800 dark:text-[#E8EBF0]">
                           Caution indicators: {cautionCauses(disk).join(", ") || "Unknown — the server did not provide an identifiable indicator."}
@@ -914,14 +979,24 @@ export default function SmartDiskScreen() {
                     <HStack className="px-4 py-3 items-center justify-between">
                       <Text className="text-typography-900 dark:text-[#E8EBF0] font-semibold text-base">Retired disks</Text>
                       <HStack className="items-center gap-2">
-                        <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">{retiredDisks.length} not seen for 90 days</Text>
-                        <ChevronDown size={16} className={iconPrimaryClass} />
+                        <Text className="text-typography-600 dark:text-[#9AA4B8] text-sm">{retiredDisks.length} not seen for 90 days · all hosts</Text>
+                        <ChevronDown
+                          size={16}
+                          className={iconPrimaryClass}
+                          style={{ transform: [{ rotate: retiredOpen ? "180deg" : "0deg" }] }}
+                        />
                       </HStack>
                     </HStack>
                   </Pressable>
                   {retiredOpen
                     ? retiredDisks.map((d) => (
-                        <Pressable key={d.serial} onPress={() => openHealthPage(d.serial)}>
+                        <Pressable
+                          key={d.serial}
+                          onPress={() => openHealthPage(d.serial)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`View health history for ${d.serial}`}
+                          className="active:opacity-70 hover:bg-background-50 web:cursor-pointer dark:hover:bg-[#0A1628]"
+                        >
                           <HStack className="px-4 py-3 border-t border-outline-100 dark:border-[#1E2F47] items-center justify-between gap-2 flex-wrap">
                             <VStack className="flex-1 min-w-0">
                               <Text className="text-typography-900 dark:text-[#E8EBF0] text-sm font-mono break-all">
@@ -931,7 +1006,10 @@ export default function SmartDiskScreen() {
                                 Last seen on {d.machineName || "unknown host"} {d.device} · {new Date(d.lastSeen).toLocaleDateString()}
                               </Text>
                             </VStack>
-                            {renderHealthBadge(d, false)}
+                            <HStack className="items-center gap-2">
+                              {renderHealthBadge(d)}
+                              <ChevronRight size={16} className={iconPrimaryClass} />
+                            </HStack>
                           </HStack>
                         </Pressable>
                       ))

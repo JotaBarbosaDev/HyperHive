@@ -92,6 +92,14 @@ test("picks rows by serial and builds chart series", () => {
   expect(wearProjection(points, "2026-10-01T00:00:00Z")).toEqual([]);
 });
 
+test("prefers a live row over a retired row with the same serial", () => {
+  const retired = disk({ serial: "S1", retiredAt: "2026-10-01T00:00:00Z", score: 40, band: "at_risk" });
+  const live = disk({ serial: "S1", retiredAt: null, score: 90, band: "good" });
+  expect(pickDiskHealth([retired, live], "S1")).toBe(live);
+  expect(pickDiskHealth([live, retired], "S1")).toBe(live);
+  expect(pickDiskHealth([retired], "S1")).toBe(retired);
+});
+
 test("calls the disk health routes with the session token", async () => {
   const { apiFetch } = require("../services/api-client");
   const { listDiskHealth, getDiskHealthHistory, purgeDiskHealth } = require("../services/diskhealth");

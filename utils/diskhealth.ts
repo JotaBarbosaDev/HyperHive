@@ -36,10 +36,13 @@ export const bandBadgeLabel = (disk?: DiskHealthDisk | null): string =>
 export const bandColor = (band?: string): string =>
   BAND_RANGES.find((r) => r.band === band)?.color ?? "#94A3B8";
 
+// A live row wins over a retired row for the same serial: a disk that came back
+// must not keep showing the history of its retired namesake.
 export const pickDiskHealth = (disks: DiskHealthDisk[], serial?: string | null): DiskHealthDisk | undefined => {
   const key = serial?.trim();
   if (!key) return undefined;
-  return disks.find((d) => d.serial === key);
+  const live = disks.find((d) => d.serial === key && !d.retiredAt);
+  return live ?? disks.find((d) => d.serial === key);
 };
 
 const remainingText = (ms: number): string => {
