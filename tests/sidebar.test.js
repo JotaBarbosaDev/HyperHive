@@ -162,6 +162,16 @@ test("settings dismissal returns focus and leaves phone navigation open", async 
   container.remove();
 });
 
+test("Network Map is listed on web and hidden on native", async () => {
+  await act(async () => root.render(<AppSidebar {...props} />));
+  expect(container.querySelector('[aria-label="Network Map"]')).not.toBeNull();
+  const { Platform } = require("react-native");
+  Platform.OS = "android";
+  await act(async () => root.render(<AppSidebar {...props} connected={false} />));
+  Platform.OS = "web";
+  expect(container.querySelector('[aria-label="Network Map"]')).toBeNull();
+});
+
 test("compact closed navigation leaves no persistent rail", async () => {
   await act(async () => root.render(<AppSidebar {...props} compact isOpen={false} />));
   expect(container.querySelector('[aria-label="Settings"]')).toBeNull();

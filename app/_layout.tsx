@@ -89,6 +89,7 @@ const ROUTE_TITLE_MAP: Record<string, string> = {
   "/autobackups": "Auto-Backups",
   "/wireguard": "WireGuard VPN",
   "/dns": "DNS",
+  "/network-map": "Network Map",
   "/celld-fleet": "celld Fleets",
   "/updates": "Updates",
   "/logs": "Logs",

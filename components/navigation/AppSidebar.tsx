@@ -57,6 +57,7 @@ import {
   ArrowLeft,
   Bell,
   Workflow,
+  Network,
 } from "lucide-react-native";
 import { usePathname, useRouter } from "expo-router";
 import { clearAuthToken } from "@/services/auth-storage";
@@ -91,6 +92,7 @@ type MenuItem = {
   automationsRoot?: boolean;
   label: string;
   route?: string;
+  webOnly?: boolean;
   icon?: React.ComponentType<any>;
   iconProps?: Omit<Partial<React.ComponentProps<typeof Icon>>, "as">;
   children?: MenuItem[];
@@ -143,6 +145,12 @@ const MENU_ITEMS: MenuItem[] = [
     label: "DNS",
     icon: Globe,
     route: "/dns",
+  },
+  {
+    label: "Network Map",
+    icon: Network,
+    route: "/network-map",
+    webOnly: true,
   },
   {
     label: "K8 Cluster",
@@ -389,7 +397,7 @@ export function AppSidebar({ isOpen, onClose, onToggle, width, onResize, compact
   );
 
   // HH Automations always sits first inside HH Support, ahead of the workspace tabs.
-  const supportItems = MENU_ITEMS.map((item) => item.route !== "/support" ? item : { ...item, children: [{ key: "automations-root", label: "HH Automations", icon: Workflow, route: "/automations", automationsRoot: true,
+  const supportItems = MENU_ITEMS.filter((item) => !item.webOnly || Platform.OS === "web").map((item) => item.route !== "/support" ? item : { ...item, children: [{ key: "automations-root", label: "HH Automations", icon: Workflow, route: "/automations", automationsRoot: true,
     children: automationNav.automations.map((automation) => ({ key: "automation-" + automation.id, label: automation.name, route: "/automations", automation })) }, ...support.tabs.map((tab) => ({
     key: "support-tab-" + tab.id, label: tab.name, route: "/support", supportTabId: tab.id,
     children: support.apps.filter((app) => app.tab_id === tab.id).map((app) => ({ key: "support-app-" + app.id, label: app.name, route: "/support", supportTabId: tab.id, supportApp: app })),
