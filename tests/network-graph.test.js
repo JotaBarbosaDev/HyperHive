@@ -9,6 +9,7 @@ import {
   networkCardText,
   networkDetailRows,
   networkDivisions,
+  networkEdgeEnds,
   networkEdgeRates,
   networkEdgeRateText,
   networkEdgeWidth,
@@ -485,6 +486,35 @@ describe("celld on the board", () => {
     expect(networkCardText(celld.nodes.at(-1)).subtitle).toBe("192.0.2.2:18080 · Down");
     expect(networkCardText(celld.nodes.at(-3)).subtitle).toBe(":18080 · 2 members");
     expect(networkNodeRoute(celld.nodes.at(-1))).toBe("/celld-fleet");
+  });
+});
+
+describe("networkEdgeEnds", () => {
+  const rect = (x, y, width = 250, height = 54) => ({ x, y, width, height });
+
+  test("leaves the right side and enters the left side when the target is to the right", () => {
+    expect(networkEdgeEnds(rect(0, 100), rect(400, 200))).toEqual({
+      source: { x: 250, y: 127, side: "right" },
+      target: { x: 400, y: 227, side: "left" },
+    });
+  });
+
+  test("leaves the left side and enters the right side once the box is moved past its target", () => {
+    expect(networkEdgeEnds(rect(400, 200), rect(0, 100))).toEqual({
+      source: { x: 400, y: 227, side: "left" },
+      target: { x: 250, y: 127, side: "right" },
+    });
+  });
+
+  test("joins the near sides when one piece sits above the other", () => {
+    expect(networkEdgeEnds(rect(100, 0), rect(120, 300))).toEqual({
+      source: { x: 225, y: 54, side: "bottom" },
+      target: { x: 245, y: 300, side: "top" },
+    });
+    expect(networkEdgeEnds(rect(120, 300), rect(100, 0))).toEqual({
+      source: { x: 245, y: 300, side: "top" },
+      target: { x: 225, y: 54, side: "bottom" },
+    });
   });
 });
 

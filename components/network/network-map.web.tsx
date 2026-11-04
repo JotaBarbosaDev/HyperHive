@@ -1,5 +1,5 @@
 import React from "react";
-import { Background, BaseEdge, Controls, EdgeLabelRenderer, getBezierPath, Handle, MiniMap, Position, ReactFlow, useNodesState, type Edge, type EdgeProps, type Node, type NodeChange, type NodeProps, type ReactFlowInstance, ViewportPortal } from "@xyflow/react";
+import { Background, BaseEdge, Controls, EdgeLabelRenderer, getBezierPath, Handle, MiniMap, Position, ReactFlow, useInternalNode, useNodesState, type Edge, type EdgeProps, type Node, type NodeChange, type NodeProps, type ReactFlowInstance, ViewportPortal } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useRouter } from "expo-router";
 import { NetworkHistoryChart } from "@/components/network/network-history.web";
@@ -15,6 +15,7 @@ import {
   networkBoard,
   networkDetailRows,
   networkDivisions,
+  networkEdgeEnds,
   networkEdgeRates,
   networkGraphUnchanged,
   networkEdgeRateText,
@@ -36,6 +37,7 @@ import {
   type NetworkBoardEdge,
   type NetworkBoardNode,
   type NetworkEdgeRate,
+  type NetworkSide,
   networkSnap,
   type NetworkGuide,
 } from "@/utils/network-graph";
@@ -137,14 +139,33 @@ const LABEL_ROW = 34;
 
 type TrafficEdgeData = { label?: string; row?: number };
 
-// Labels sit in the gap beside the source: a line's midpoint can land on a card in the
-// next column, and lines sharing a target would stack their labels there.
-function TrafficEdge({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, data }: EdgeProps<Edge<TrafficEdgeData>>) {
-  const [path] = getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition });
+const SIDE_POSITION: Record<NetworkSide, Position> = { left: Position.Left, right: Position.Right, top: Position.Top, bottom: Position.Bottom };
+
+// The path is built from the facing sides of both boxes, not from fixed handles: a box moved
+// past another would otherwise keep its line on the old side and wrap it over both boxes.
+function TrafficEdge({ source, target, style, data }: EdgeProps<Edge<TrafficEdgeData>>) {
+  const from = useInternalNode(source);
+  const to = useInternalNode(target);
+  if (!from || !to) return null;
+  const ends = networkEdgeEnds(
+    { x: from.internals.positionAbsolute.x, y: from.internals.positionAbsolute.y, width: from.measured.width ?? 0, height: from.measured.height ?? 0 },
+    { x: to.internals.positionAbsolute.x, y: to.internals.positionAbsolute.y, width: to.measured.width ?? 0, height: to.measured.height ?? 0 },
+  );
+  const [path] = getBezierPath({ sourceX: ends.source.x, sourceY: ends.source.y, targetX: ends.target.x, targetY: ends.target.y, sourcePosition: SIDE_POSITION[ends.source.side], targetPosition: SIDE_POSITION[ends.target.side] });
+  // Labels sit outside the source, on the side the line leaves by. Lines from one piece take
+  // the next row, so they do not stack.
+  const row = (data?.row ?? 0) * LABEL_ROW;
+  const labelStyle = ends.source.side === "left"
+    ? { transform: `translate(${ends.source.x - LABEL_GAP}px, ${ends.source.y + row}px) translate(-100%, -50%)` }
+    : ends.source.side === "right"
+      ? { transform: `translate(${ends.source.x + LABEL_GAP}px, ${ends.source.y + row}px) translateY(-50%)` }
+      : ends.source.side === "top"
+        ? { transform: `translate(${ends.source.x + row}px, ${ends.source.y - LABEL_GAP}px) translate(-50%, -100%)` }
+        : { transform: `translate(${ends.source.x + row}px, ${ends.source.y + LABEL_GAP}px) translate(-50%, 0)` };
   return <>
     <BaseEdge path={path} style={style} interactionWidth={20} />
     {data?.label ? <EdgeLabelRenderer>
-      <div className={`rounded bg-background-0 dark:bg-[#101B2B] ${ink}`} style={{ position: "absolute", zIndex: 1001, transform: `translate(${sourceX + LABEL_GAP}px, ${sourceY + (data.row ?? 0) * LABEL_ROW}px) translateY(-50%)`, maxWidth: LABEL_WIDTH, padding: "2px 6px", fontSize: 11, lineHeight: "14px", fontVariantNumeric: "tabular-nums", pointerEvents: "none" }}>{data.label}</div>
+      <div className={`rounded bg-background-0 dark:bg-[#101B2B] ${ink}`} style={{ position: "absolute", zIndex: 1001, ...labelStyle, maxWidth: LABEL_WIDTH, padding: "2px 6px", fontSize: 11, lineHeight: "14px", fontVariantNumeric: "tabular-nums", pointerEvents: "none" }}>{data.label}</div>
     </EdgeLabelRenderer> : null}
   </>;
 }

@@ -432,6 +432,30 @@ export const networkPlacedBoard = <T extends { nodes: NetworkBoardNode[] }>(boar
 
 export type NetworkGuide = { x1: number; y1: number; x2: number; y2: number };
 
+export type NetworkSide = "left" | "right" | "top" | "bottom";
+export type NetworkEdgeEnd = { x: number; y: number; side: NetworkSide };
+
+// A line leaves the side of its source that faces its target and enters the opposite side of
+// the target, so a piece dragged past another keeps a short line. Fixed left and right sides
+// would wrap the line back across both boxes instead.
+export const networkEdgeEnds = (
+  from: { x: number; y: number; width: number; height: number },
+  to: { x: number; y: number; width: number; height: number },
+): { source: NetworkEdgeEnd; target: NetworkEdgeEnd } => {
+  const fromX = from.x + from.width / 2;
+  const fromY = from.y + from.height / 2;
+  const toX = to.x + to.width / 2;
+  const toY = to.y + to.height / 2;
+  if (Math.abs(toX - fromX) >= Math.abs(toY - fromY)) {
+    return toX >= fromX
+      ? { source: { x: from.x + from.width, y: fromY, side: "right" }, target: { x: to.x, y: toY, side: "left" } }
+      : { source: { x: from.x, y: fromY, side: "left" }, target: { x: to.x + to.width, y: toY, side: "right" } };
+  }
+  return toY >= fromY
+    ? { source: { x: fromX, y: from.y + from.height, side: "bottom" }, target: { x: toX, y: to.y, side: "top" } }
+    : { source: { x: fromX, y: from.y, side: "top" }, target: { x: toX, y: to.y + to.height, side: "bottom" } };
+};
+
 // Pulls a dragged piece onto the nearest edge or centre of any other piece, on each axis, and
 // returns the guide lines to draw. Guides are in board coordinates; the position stays relative
 // to the piece's parent, so pieces in different boxes still line up on screen. A piece never
