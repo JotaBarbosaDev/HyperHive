@@ -4,10 +4,18 @@ import { normalizeDiskHealthHistory, normalizeDiskHealthList } from "../services
 import {
   bandBadgeAction,
   bandBadgeLabel,
+  bandTextColor,
+  changeText,
+  chartTickText,
+  counterRows,
   counterSeries,
   diskHealthSummary,
   lastPollText,
   pickDiskHealth,
+  powerOnText,
+  seriesStats,
+  temperatureDomain,
+  temperatureSeries,
   wearProjection,
 } from "../utils/diskhealth";
 
@@ -90,6 +98,60 @@ test("picks rows by serial and builds chart series", () => {
   expect(projection[1].y).toBe(100);
   expect(wearProjection(points, null)).toEqual([]);
   expect(wearProjection(points, "2026-10-01T00:00:00Z")).toEqual([]);
+});
+
+test("reports counters with their change across the loaded range", () => {
+  const points = [
+    { at: "2026-11-01T00:00:00Z", pendingSectors: 1, reallocatedSectors: 4 },
+    { at: "2026-11-02T00:00:00Z", pendingSectors: 3, reallocatedSectors: 4 },
+  ];
+  const rows = counterRows(points, { pendingSectors: 5, reallocatedSectors: 4 }, false);
+  const pending = rows.find((r) => r.label === "Pending");
+  expect(pending).toMatchObject({ value: 5, change: 2, charted: true });
+  expect(rows.find((r) => r.label === "Reallocated")).toMatchObject({ value: 4, change: 0, charted: true });
+  expect(rows.find((r) => r.label === "CRC errors")).toMatchObject({ value: 0, charted: false });
+
+  expect(rows.map((r) => r.label)).not.toContain("Media errors");
+  expect(counterRows(points, { mediaErrors: 2 }, false).map((r) => r.label)).toContain("Media errors");
+  expect(counterRows(points, {}, true).map((r) => r.label)).toContain("Media errors");
+
+  expect(counterRows([], { pendingSectors: 7 }, false)[0]).toMatchObject({ value: 7, change: null, charted: false });
+});
+
+test("treats a missing temperature as a gap, not 0 degrees", () => {
+  const points = [
+    { at: "2026-11-01T00:00:00Z", temperatureC: 40 },
+    { at: "2026-11-01T06:00:00Z", temperatureC: 0 },
+    { at: "2026-11-01T12:00:00Z", temperatureC: 42 },
+  ];
+  expect(temperatureSeries(points).map((p) => p.y)).toEqual([40, 42]);
+  expect(temperatureDomain([40, 42])).toEqual([38, 44]);
+  expect(temperatureDomain([40, 40])).toEqual([37, 43]);
+  expect(temperatureDomain([])).toBeUndefined();
+});
+
+test("summarizes a series and formats its values", () => {
+  expect(seriesStats([])).toBeNull();
+  expect(seriesStats([28, 12, 15])).toEqual({ latest: 15, low: 12, high: 28, change: -13 });
+  expect(changeText(0)).toBe("No change");
+  expect(changeText(7)).toBe("+7");
+  expect(changeText(-16)).toBe("\u221216");
+  expect(powerOnText(12)).toBe("12 hours");
+  expect(powerOnText(72)).toBe("3 days");
+  expect(powerOnText(2190)).toBe("3 months");
+  expect(powerOnText(53874)).toBe("6.1 years");
+  expect(bandTextColor("critical", true)).toBe("#F87171");
+  expect(bandTextColor("critical", false)).toBe("#B91C1C");
+  expect(bandTextColor("", false)).toBe("#475569");
+});
+
+test("sizes time axis labels to the visible span", () => {
+  const at = new Date(2026, 10, 3, 18, 30);
+  const day = 86_400_000;
+  const dayText = at.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  expect(chartTickText(at, 30 * day)).toBe(dayText);
+  expect(chartTickText(at, 2 * day).startsWith(`${dayText} `)).toBe(true);
+  expect(chartTickText(at, 900 * day)).toBe(at.toLocaleDateString(undefined, { month: "short", year: "numeric" }));
 });
 
 test("prefers a live row over a retired row with the same serial", () => {
