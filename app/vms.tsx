@@ -103,6 +103,7 @@ import {
 } from "@/services/vms-client";
 import { listMounts, getCpuInfo, getMemInfo, listVmDisks, VmDisk } from "@/services/hyperhive";
 import { createBackup } from "@/services/backups";
+import { formatEnergy, getEnergySummary, type EnergyUsage } from "@/services/energy";
 import { listXmlTemplates, XmlTemplate } from "@/services/xml-templates-client";
 import { Mount } from "@/types/mount";
 import { ApiError } from "@/services/api-client";
@@ -1345,6 +1346,18 @@ export default function VirtualMachinesScreen() {
     return unsubscribe;
   }, [handleVmWsMessage, processWsPayload]);
 
+  // One summary per refresh for every card. Failures stay silent: an older master has no energy API.
+  const [energy, setEnergy] = React.useState<{ hasPrice: boolean; vms: Record<string, EnergyUsage> } | null>(null);
+  React.useEffect(() => {
+    const load = () =>
+      getEnergySummary()
+        .then((s) => setEnergy({ hasPrice: s.pricePerKWh != null, vms: Object.fromEntries(s.vms.map((v) => [v.name, v])) }))
+        .catch(() => {});
+    void load();
+    const interval = setInterval(load, 10_000);
+    return () => clearInterval(interval);
+  }, []);
+
   React.useEffect(() => {
     const interval = setInterval(() => {
       fetchAndSetVms().catch((err) => {
@@ -2248,6 +2261,14 @@ export default function VirtualMachinesScreen() {
                                     />
                                   </Progress>
                                 </HStack>
+                                {energy?.vms[vm.name] ? (
+                                  <Text
+                                    className="mb-3 text-xs text-[#9AA4B8] dark:text-[#8A94A8]"
+                                    style={{ fontFamily: "Inter_400Regular" }}
+                                  >
+                                    Est. power {formatEnergy(energy.vms[vm.name], energy.hasPrice)}
+                                  </Text>
+                                ) : null}
                                 <HStack className="flex flex-col">
                                   <Box className="flex flex-row justify-between">
                                     <Text
