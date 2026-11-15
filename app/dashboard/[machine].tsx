@@ -50,6 +50,7 @@ import {
 	setNodeHostHugepagesStatus,
 	setNodeIrqbalanceStatus,
 } from "@/services/vms-client";
+import { energyLine, getEnergySummary, type EnergySummary } from "@/services/energy";
 import { CpuInfo, DiskInfo, HistoryEntry, MemInfo, NetworkInfo, UptimeInfo } from "@/types/metrics";
 import { Machine } from "@/types/machine";
 import { ArrowLeft, BarChart3, ChevronDown, Clock3, Cpu, HardDrive, MemoryStick, Network, RefreshCcw, SignalHigh, ThermometerSun } from "lucide-react-native";
@@ -380,8 +381,13 @@ export default function MachineDetailsScreen() {
 	const [hostHugepagesPageSize, setHostHugepagesPageSize] = React.useState<string>(DEFAULT_HOST_HUGEPAGES_PAGE_SIZE);
 	const [hostHugepagesPageCountInput, setHostHugepagesPageCountInput] = React.useState<string>("");
 	const [isCoreIsolationModalOpen, setIsCoreIsolationModalOpen] = React.useState(false);
+	const [energySummary, setEnergySummary] = React.useState<EnergySummary | null>(null);
 
 	const selectedRange = React.useMemo(() => RANGE_OPTIONS.find((r) => r.key === rangeKey) ?? RANGE_OPTIONS[0], [rangeKey]);
+	const energyRow = React.useMemo(
+		() => energySummary?.machines.find((row) => row.machine === machineName) ?? null,
+		[energySummary, machineName]
+	);
 
 	React.useEffect(() => {
 		const found = machines.find((m) => m.MachineName === machineName) ?? null;
@@ -470,9 +476,18 @@ export default function MachineDetailsScreen() {
 		[machineName, syncHostHugepagesFormFromStatus]
 	);
 
+	const loadEnergy = React.useCallback(async () => {
+		try {
+			setEnergySummary(await getEnergySummary());
+		} catch {
+			setEnergySummary(null);
+		}
+	}, []);
+
 	const fetchData = React.useCallback(
 		async (mode: "initial" | "refresh" = "initial", showLoading: boolean = true) => {
 			if (!machineName) return;
+			void loadEnergy();
 			const isRefresh = mode === "refresh";
 			if (!showLoading) {
 				setError(null);
@@ -531,7 +546,7 @@ export default function MachineDetailsScreen() {
 				}
 			}
 		},
-		[machineName, selectedRange]
+		[machineName, selectedRange, loadEnergy]
 	);
 
 	React.useEffect(() => {
@@ -1040,6 +1055,12 @@ export default function MachineDetailsScreen() {
 											</Badge>
 										) : null}
 									</HStack>
+								) : null}
+								{energyRow ? (
+									<Text className="text-sm text-typography-500 dark:text-[#8A94A8]" numberOfLines={1}>
+										{energyLine(energyRow, energySummary?.pricePerKWh ?? null)}
+										{energyRow.cpuEstimate === "generic" ? " · generic CPU estimate" : ""}
+									</Text>
 								) : null}
 							</VStack>
 						</HStack>

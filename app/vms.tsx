@@ -104,6 +104,7 @@ import {
 import { listMounts, getCpuInfo, getMemInfo, listVmDisks, VmDisk } from "@/services/hyperhive";
 import { createBackup } from "@/services/backups";
 import { listXmlTemplates, XmlTemplate } from "@/services/xml-templates-client";
+import { energyLine, getEnergySummary, type EnergySummary } from "@/services/energy";
 import { Mount } from "@/types/mount";
 import { ApiError } from "@/services/api-client";
 import { apiFetch } from "@/services/api-client";
@@ -311,6 +312,7 @@ export default function VirtualMachinesScreen() {
   const [query, setQuery] = React.useState("");
   const [stateFilter, setStateFilter] = React.useState("All");
   const [refreshing, setRefreshing] = React.useState(false);
+  const [energySummary, setEnergySummary] = React.useState<EnergySummary | null>(null);
   const [loadingVm, setLoadingVm] = React.useState<string | null>(null);
   const [openMenuFor, setOpenMenuFor] = React.useState<string | null>(null);
   const [detailsVm, setDetailsVm] = React.useState<VM | null>(null);
@@ -1078,6 +1080,14 @@ export default function VirtualMachinesScreen() {
     []
   );
 
+  const loadEnergy = React.useCallback(async () => {
+    try {
+      setEnergySummary(await getEnergySummary());
+    } catch {
+      setEnergySummary(null);
+    }
+  }, []);
+
   // Initial fetch of VMs
   React.useEffect(() => {
     const fetchVMs = async () => {
@@ -1098,7 +1108,8 @@ export default function VirtualMachinesScreen() {
       }
     };
     fetchVMs();
-  }, [fetchAndSetVms, toast]);
+    void loadEnergy();
+  }, [fetchAndSetVms, loadEnergy, toast]);
 
   React.useEffect(() => {
     const fetchCloneOptions = async () => {
@@ -1233,6 +1244,14 @@ export default function VirtualMachinesScreen() {
       .filter(([, machines]) => machines.length > 0);
   }, [vmsBySlave, query, stateFilter]);
 
+  const energyByVm = React.useMemo(() => {
+    const map: Record<string, EnergySummary["vms"][number]> = {};
+    energySummary?.vms.forEach((row) => {
+      map[row.name] = row;
+    });
+    return map;
+  }, [energySummary]);
+
   const hasActiveFilters = query.trim().length > 0 || stateFilter !== "All";
   const visibleVmCount = vmsBySlaveEntries.reduce((sum, [, machines]) => sum + machines.length, 0);
   const clearFilters = () => {
@@ -1274,7 +1293,7 @@ export default function VirtualMachinesScreen() {
     setRefreshing(true);
     try {
       Haptics.selectionAsync();
-      await fetchAndSetVms();
+      await Promise.all([fetchAndSetVms(), loadEnergy()]);
       toast.show({
         placement: "top", render: ({ id }) => (
           <Toast nativeID={"toast-" + id} className="px-5 py-3 gap-3 shadow-soft-1 items-center flex-row" action="success">
@@ -1350,9 +1369,10 @@ export default function VirtualMachinesScreen() {
       fetchAndSetVms().catch((err) => {
         console.warn("Error updating VMs (interval):", err);
       });
+      void loadEnergy();
     }, 10_000);
     return () => clearInterval(interval);
-  }, [fetchAndSetVms]);
+  }, [fetchAndSetVms, loadEnergy]);
 
   React.useEffect(() => {
     if (!showActionsheet || !selectedVm) {
@@ -2131,6 +2151,7 @@ export default function VirtualMachinesScreen() {
                           const isStopped = vm.state === VmState.SHUTOFF;
                           const isLoading = loadingVm === vm.name;
                           const vmNfsName = getNfsNameByDiskPath(vm.diskPath);
+                          const energyRow = energyByVm[vm.name];
 
                           return (
 
@@ -2387,6 +2408,15 @@ export default function VirtualMachinesScreen() {
                                       {vmNfsName}
                                     </Text>
                                   </HStack>
+                                ) : null}
+                                {energyRow ? (
+                                  <Text
+                                    numberOfLines={1}
+                                    className="text-xs text-typography-500 dark:text-[#8A94A8] mt-2"
+                                    style={{ fontFamily: "Inter_400Regular" }}
+                                  >
+                                    {energyLine(energyRow, energySummary?.pricePerKWh ?? null)}
+                                  </Text>
                                 ) : null}
                               </Box>
 

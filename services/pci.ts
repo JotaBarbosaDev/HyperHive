@@ -1,6 +1,6 @@
 import { apiFetch } from "@/services/api-client";
 import { resolveToken } from "@/services/vms-client";
-import { PciGpu, PciHostResponse, PciVmGpuActionPayload } from "@/types/pci";
+import { PciGpu, PciHostResponse, PciGpuModePayload } from "@/types/pci";
 
 const encodeMachine = (machineName: string) => encodeURIComponent(machineName);
 
@@ -22,24 +22,10 @@ export async function listHostGpus(machineName: string): Promise<PciGpu[]> {
   return toGpuList(response);
 }
 
-export async function attachGpuToVm(
-  machineName: string,
-  payload: PciVmGpuActionPayload
-): Promise<void> {
+// Resolves once the switch is done. It rejects, naming the VM or host process, when the GPU is in use.
+export async function setGpuMode(machineName: string, payload: PciGpuModePayload): Promise<void> {
   const token = await resolveToken();
-  await apiFetch<void>(`/pci/attach/${encodeMachine(machineName)}`, {
-    method: "POST",
-    token,
-    body: payload,
-  });
-}
-
-export async function detachGpuFromVm(
-  machineName: string,
-  payload: PciVmGpuActionPayload
-): Promise<void> {
-  const token = await resolveToken();
-  await apiFetch<void>(`/pci/detach/${encodeMachine(machineName)}`, {
+  await apiFetch<void>(`/pci/mode/${encodeMachine(machineName)}`, {
     method: "POST",
     token,
     body: payload,

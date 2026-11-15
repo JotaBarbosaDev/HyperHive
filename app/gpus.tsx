@@ -32,9 +32,9 @@ import { VStack } from "@/components/ui/vstack";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useMachines } from "@/hooks/useMachines";
 import { useSelectedMachine } from "@/hooks/useSelectedMachine";
-import { attachGpuToVm, detachGpuFromVm, listHostGpus } from "@/services/pci";
+import { listHostGpus, setGpuMode } from "@/services/pci";
 import { getAllVMs, VirtualMachine } from "@/services/vms-client";
-import { PciGpu } from "@/types/pci";
+import { GpuMode, PciGpu } from "@/types/pci";
 
 const toTrimmedString = (value: unknown): string | null => {
   if (typeof value !== "string") return null;
@@ -108,6 +108,14 @@ const formatValue = (value: unknown, fallback = "N/A") => {
   return normalized ?? fallback;
 };
 
+const GPU_MODES: GpuMode[] = ["none", "host", "vm"];
+
+const toGpuMode = (value: unknown): GpuMode | null =>
+  GPU_MODES.includes(value as GpuMode) ? (value as GpuMode) : null;
+
+const modeLabel = (mode: GpuMode, vmName?: string | null) =>
+  mode === "vm" ? (vmName ? `VM: ${vmName}` : "VM") : mode === "host" ? "Host" : "None";
+
 type FetchMode = "initial" | "refresh";
 
 export default function GpusScreen() {
@@ -120,8 +128,8 @@ export default function GpusScreen() {
   const requestId = React.useRef(0);
   const [loadedMachine, setLoadedMachine] = React.useState<string | null>(null);
   const [machineVmNames, setMachineVmNames] = React.useState<string[]>([]);
-  const [attachModalGpu, setAttachModalGpu] = React.useState<PciGpu | null>(null);
-  const [attachVmName, setAttachVmName] = React.useState("");
+  const [modeModal, setModeModal] = React.useState<{ gpu: PciGpu; mode: GpuMode } | null>(null);
+  const [modeVmName, setModeVmName] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -205,78 +213,50 @@ export default function GpusScreen() {
     return () => { requestId.current += 1; };
   }, [selectedMachine, fetchGpuData]);
 
-  const openAttachModal = React.useCallback(
-    (gpu: PciGpu) => {
-      setAttachModalGpu(gpu);
-      setAttachVmName(machineVmNames[0] ?? "");
-      setActionError(null);
-    },
-    [machineVmNames]
-  );
-
-  const closeAttachModal = React.useCallback(() => {
-    setAttachModalGpu(null);
-    setAttachVmName("");
+  const closeModeModal = React.useCallback(() => {
+    setModeModal(null);
+    setModeVmName("");
   }, []);
 
-  const handleAttachConfirm = React.useCallback(async () => {
-    if (!selectedMachine || !attachModalGpu) return;
-
-    const gpuRef = toTrimmedString(attachModalGpu.address);
-    const vmName = toTrimmedString(attachVmName);
-    if (!gpuRef || !vmName || actionInProgress) return;
-
-    const actionKey = `attach:${gpuRef}`;
-    setActionInProgress(actionKey);
-    setActionError(null);
-    try {
-      await attachGpuToVm(selectedMachine, {
-        vm_name: vmName,
-        gpu_ref: gpuRef,
-      });
-      closeAttachModal();
-      await fetchGpuData("refresh");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to attach GPU.";
-      setActionError(message);
-    } finally {
-      setActionInProgress(null);
-    }
-  }, [actionInProgress, attachModalGpu, attachVmName, closeAttachModal, fetchGpuData, selectedMachine]);
-
-  const handleAttach = React.useCallback(
-    async (gpu: PciGpu) => {
-      if (actionInProgress) return;
-      openAttachModal(gpu);
-    },
-    [actionInProgress, openAttachModal]
-  );
-
-  const handleDetach = React.useCallback(
-    async (gpu: PciGpu, vmName: string) => {
-      if (!selectedMachine) return;
-
+  const applyMode = React.useCallback(
+    async (gpu: PciGpu, mode: GpuMode, vmName?: string) => {
       const gpuRef = toTrimmedString(gpu.address);
-      const normalizedVmName = toTrimmedString(vmName);
-      if (!gpuRef || !normalizedVmName || actionInProgress) return;
+      if (!selectedMachine || !gpuRef || actionInProgress) return;
 
-      const actionKey = `detach:${gpuRef}:${normalizedVmName}`;
-      setActionInProgress(actionKey);
+      setActionInProgress(`${mode}:${gpuRef}`);
       setActionError(null);
       try {
-        await detachGpuFromVm(selectedMachine, {
-          vm_name: normalizedVmName,
-          gpu_ref: gpuRef,
-        });
+        await setGpuMode(selectedMachine, { gpu_ref: gpuRef, mode, vm_name: vmName });
+        closeModeModal();
         await fetchGpuData("refresh");
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to remove GPU from VM.";
-        setActionError(message);
+        // The error is shown on the page, so the dialog must not cover it.
+        closeModeModal();
+        setActionError(err instanceof Error ? err.message : "Failed to change the GPU mode.");
       } finally {
         setActionInProgress(null);
       }
     },
-    [actionInProgress, fetchGpuData, selectedMachine]
+    [actionInProgress, closeModeModal, fetchGpuData, selectedMachine]
+  );
+
+  // VM mode needs a VM and the boot GPU needs a confirmation; anything else applies at once.
+  const requestMode = React.useCallback(
+    (gpu: PciGpu, mode: GpuMode) => {
+      if (actionInProgress) return;
+      if (mode !== "vm" && !gpu.boot_vga) {
+        applyMode(gpu, mode);
+        return;
+      }
+      setActionError(null);
+      setModeVmName(
+        mode === "vm"
+          ? toTrimmedString(gpu.desired_vm) ?? resolveAttachedVmNames(gpu)[0] ?? machineVmNames[0] ?? ""
+          : ""
+      );
+      setModeModal({ gpu, mode });
+    },
+    [actionInProgress, applyMode, machineVmNames]
   );
 
   if (isChecking || !token) return null;
@@ -312,7 +292,7 @@ export default function GpusScreen() {
               GPUs
             </Heading>
             <Text className="text-typography-600 dark:text-[#8A94A8] text-sm web:text-base">
-              Simple list of host GPUs with attach/remove actions.
+              Each GPU is unused (None), used by the host, or passed to one VM.
             </Text>
           </VStack>
 
@@ -368,7 +348,7 @@ export default function GpusScreen() {
                     </Badge>
                     <Badge variant="outline" className="rounded-lg border-outline-300 dark:border-[#243247]">
                       <BadgeText className="text-typography-600 dark:text-[#8A94A8]">
-                        Attached: {isLoading || isRefreshing || awaitingMachine || error || !selectedMachine ? "—" : attachedCount}
+                        In a VM: {isLoading || isRefreshing || awaitingMachine || error || !selectedMachine ? "—" : attachedCount}
                       </BadgeText>
                     </Badge>
                   </HStack>
@@ -412,12 +392,13 @@ export default function GpusScreen() {
                 const product = formatValue(gpu.product, "Unknown product");
                 const node = formatValue(gpu.node_name);
                 const attachedVmNames = resolveAttachedVmNames(gpu);
-                const isAttached = attachedVmNames.length > 0;
-                const detachVmName = attachedVmNames[0] ?? null;
-                const attachActionKey = addressRaw ? `attach:${addressRaw}` : null;
-                const isAttachBusy = attachActionKey !== null && actionInProgress === attachActionKey;
-                const detachActionKey = addressRaw && detachVmName ? `detach:${addressRaw}:${detachVmName}` : null;
-                const isDetachBusy = detachActionKey !== null && actionInProgress === detachActionKey;
+                // An old slave reports no mode: fall back to what the VM list says.
+                const actualMode = toGpuMode(gpu.actual_mode) ?? (attachedVmNames.length > 0 ? "vm" : "none");
+                const desiredMode = toGpuMode(gpu.desired_mode) ?? actualMode;
+                const desiredVm = toTrimmedString(gpu.desired_vm) ?? attachedVmNames[0];
+                const lastError = toTrimmedString(gpu.last_error);
+                const hostDriver = toTrimmedString(gpu.host_driver);
+                const isInUse = actualMode !== "none";
 
                 return (
                   <Box
@@ -433,24 +414,27 @@ export default function GpusScreen() {
                           <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">{product}</Text>
                           <Text className="text-xs font-mono text-typography-500 dark:text-[#8A94A8]">{addressLabel}</Text>
                         </VStack>
-                        <Badge
-                          variant={isAttached ? "solid" : "outline"}
-                          className={
-                            isAttached
-                              ? "rounded-lg border-transparent bg-primary-600"
-                              : "rounded-lg border-outline-300 dark:border-[#243247]"
-                          }
-                        >
-                          <BadgeText
+                        <VStack className="items-end gap-1">
+                          <Badge
+                            variant={isInUse ? "solid" : "outline"}
                             className={
-                              isAttached
-                                ? "text-background-0"
-                                : "text-typography-600 dark:text-[#8A94A8]"
+                              isInUse
+                                ? "rounded-lg border-transparent bg-primary-600"
+                                : "rounded-lg border-outline-300 dark:border-[#243247]"
                             }
                           >
-                            {isAttached ? "Attached" : "Available"}
-                          </BadgeText>
-                        </Badge>
+                            <BadgeText
+                              className={isInUse ? "text-background-0" : "text-typography-600 dark:text-[#8A94A8]"}
+                            >
+                              {modeLabel(actualMode, attachedVmNames[0])}
+                            </BadgeText>
+                          </Badge>
+                          {gpu.boot_vga ? (
+                            <Badge variant="outline" className="rounded-lg border-amber-500">
+                              <BadgeText className="text-amber-700 dark:text-amber-300">Boot GPU</BadgeText>
+                            </Badge>
+                          ) : null}
+                        </VStack>
                       </HStack>
 
                       <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
@@ -460,50 +444,41 @@ export default function GpusScreen() {
                         VID: {formatValue(gpu.vendor_id)} | PID: {formatValue(gpu.product_id)}
                       </Text>
 
-                      {attachedVmNames.length > 0 ? (
-                        <VStack className="gap-2 pt-1">
-                          <Text className="text-xs text-typography-600 dark:text-[#A3B1C6]">
-                            VM: {attachedVmNames.join(", ")}
-                          </Text>
-                          <HStack className="items-center justify-end">
+                      <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+                        Driver: {formatValue(gpu.driver, "none")}
+                      </Text>
+
+                      {desiredMode !== actualMode || lastError ? (
+                        <Text className="text-xs text-[#EF4444]">
+                          Wanted {modeLabel(desiredMode, desiredVm)}, currently {modeLabel(actualMode, attachedVmNames[0])}.
+                          {lastError ? ` ${lastError}` : ""}
+                        </Text>
+                      ) : null}
+
+                      <HStack className="items-center justify-end gap-2 pt-1 flex-wrap">
+                        {GPU_MODES.map((mode) => {
+                          const unavailable =
+                            (mode === "host" && !hostDriver) || (mode === "vm" && machineVmNames.length === 0);
+                          return (
                             <Button
+                              key={mode}
                               size="sm"
-                              variant="outline"
-                              action="negative"
+                              variant={mode === desiredMode ? "solid" : "outline"}
                               className="rounded-lg"
-                              onPress={() => {
-                                if (!detachVmName) return;
-                                handleDetach(gpu, detachVmName);
-                              }}
-                              isDisabled={!addressRaw || !detachVmName || !!actionInProgress}
+                              onPress={() => requestMode(gpu, mode)}
+                              isDisabled={!addressRaw || unavailable || !!actionInProgress}
                             >
-                              {isDetachBusy ? <ButtonSpinner /> : null}
-                              <ButtonText>Detach</ButtonText>
+                              {addressRaw && actionInProgress === `${mode}:${addressRaw}` ? <ButtonSpinner /> : null}
+                              <ButtonText>{modeLabel(mode)}</ButtonText>
                             </Button>
-                          </HStack>
-                        </VStack>
-                      ) : (
-                        <VStack className="gap-2 pt-1">
-                          {machineVmNames.length === 0 ? (
-                            <Text className="text-xs text-amber-700 dark:text-amber-300">
-                              No VMs available on this machine.
-                            </Text>
-                          ) : (
-                            <HStack className="items-center justify-end">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="rounded-lg"
-                                onPress={() => handleAttach(gpu)}
-                                isDisabled={!addressRaw || !!actionInProgress}
-                              >
-                                {isAttachBusy ? <ButtonSpinner /> : null}
-                                <ButtonText>Attach</ButtonText>
-                              </Button>
-                            </HStack>
-                          )}
-                        </VStack>
-                      )}
+                          );
+                        })}
+                      </HStack>
+                      {!hostDriver ? (
+                        <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+                          Host mode supports NVIDIA, AMD and Intel GPUs only.
+                        </Text>
+                      ) : null}
                     </VStack>
                   </Box>
                 );
@@ -513,60 +488,71 @@ export default function GpusScreen() {
         </Box>
       </ScrollView>
 
-      <Modal isOpen={!!attachModalGpu} onClose={closeAttachModal} size="md">
+      <Modal isOpen={!!modeModal} onClose={closeModeModal} size="md">
         <ModalBackdrop />
         <ModalContent className="mx-4 rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628] p-4 web:mx-0">
           <ModalHeader className="flex-row items-center justify-between pb-3">
             <Heading size="lg" className="text-typography-900 dark:text-[#E8EBF0]">
-              Attach GPU
+              {modeModal?.mode === "vm" ? "Use GPU in a VM" : "Change boot GPU mode"}
             </Heading>
-            <ModalCloseButton onPress={closeAttachModal} />
+            <ModalCloseButton onPress={closeModeModal} />
           </ModalHeader>
           <ModalBody>
             <VStack className="gap-3">
               <Text className="text-sm text-typography-600 dark:text-[#8A94A8]">
                 GPU:{" "}
                 <Text className="font-mono text-typography-900 dark:text-[#E8EBF0]">
-                  {formatValue(attachModalGpu?.address)}
+                  {formatValue(modeModal?.gpu.address)}
                 </Text>
               </Text>
-              <Select
-                selectedValue={attachVmName || undefined}
-                onValueChange={setAttachVmName as any}
-                isDisabled={machineVmNames.length === 0}
-              >
-                <SelectTrigger className="w-full h-11 rounded-xl border border-outline-300 dark:border-[#29405F] bg-background-0 dark:bg-[#0D1B31] px-3">
-                  <SelectInput placeholder={machineVmNames.length > 0 ? "Select VM" : "No VM available"} />
-                  <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-[#93C5FD]" />
-                </SelectTrigger>
-                <SelectPortal>
-                  <SelectBackdrop />
-                  <SelectContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
-                    <SelectDragIndicatorWrapper>
-                      <SelectDragIndicator />
-                    </SelectDragIndicatorWrapper>
-                    {machineVmNames.map((vmName) => (
-                      <SelectItem key={`modal-vm-${vmName}`} label={vmName} value={vmName} />
-                    ))}
-                  </SelectContent>
-                </SelectPortal>
-              </Select>
+              {modeModal?.gpu.boot_vga ? (
+                <Text className="text-sm text-amber-700 dark:text-amber-300">
+                  The host booted on this GPU. Changing its mode can turn off the host's local screen and console.
+                </Text>
+              ) : null}
+              {modeModal?.mode === "vm" ? (
+                <Select
+                  selectedValue={modeVmName || undefined}
+                  onValueChange={setModeVmName as any}
+                  isDisabled={machineVmNames.length === 0}
+                >
+                  <SelectTrigger className="w-full h-11 rounded-xl border border-outline-300 dark:border-[#29405F] bg-background-0 dark:bg-[#0D1B31] px-3">
+                    <SelectInput placeholder={machineVmNames.length > 0 ? "Select VM" : "No VM available"} />
+                    <SelectIcon as={ChevronDown} className="text-typography-500 dark:text-[#93C5FD]" />
+                  </SelectTrigger>
+                  <SelectPortal>
+                    <SelectBackdrop />
+                    <SelectContent className="rounded-2xl border border-outline-200 dark:border-[#1F2A3C] bg-background-0 dark:bg-[#0A1628]">
+                      <SelectDragIndicatorWrapper>
+                        <SelectDragIndicator />
+                      </SelectDragIndicatorWrapper>
+                      {machineVmNames.map((vmName) => (
+                        <SelectItem key={`modal-vm-${vmName}`} label={vmName} value={vmName} />
+                      ))}
+                    </SelectContent>
+                  </SelectPortal>
+                </Select>
+              ) : null}
+              {modeModal?.mode === "vm" ? (
+                <Text className="text-xs text-typography-500 dark:text-[#8A94A8]">
+                  The VM must be shut down. The GPU is removed from any other VM.
+                </Text>
+              ) : null}
             </VStack>
           </ModalBody>
           <ModalFooter className="flex-row gap-2 pt-4">
-            <Button variant="outline" className="rounded-lg flex-1" onPress={closeAttachModal}>
+            <Button variant="outline" className="rounded-lg flex-1" onPress={closeModeModal}>
               <ButtonText>Cancel</ButtonText>
             </Button>
             <Button
               className="rounded-lg flex-1"
-              onPress={handleAttachConfirm}
-              isDisabled={!toTrimmedString(attachVmName) || !toTrimmedString(attachModalGpu?.address) || !!actionInProgress}
+              onPress={() => {
+                if (modeModal) applyMode(modeModal.gpu, modeModal.mode, toTrimmedString(modeVmName) ?? undefined);
+              }}
+              isDisabled={(modeModal?.mode === "vm" && !toTrimmedString(modeVmName)) || !!actionInProgress}
             >
-              {attachModalGpu &&
-              actionInProgress === `attach:${toTrimmedString(attachModalGpu.address) ?? ""}` ? (
-                <ButtonSpinner />
-              ) : null}
-              <ButtonText>Attach</ButtonText>
+              {actionInProgress ? <ButtonSpinner /> : null}
+              <ButtonText>Confirm</ButtonText>
             </Button>
           </ModalFooter>
         </ModalContent>
