@@ -1393,7 +1393,7 @@ function ProxyHostsContent() {
                       <Text className="text-typography-600 text-sm">No locations defined.</Text>
                     ) : (
                       locations.map((loc, idx) => (
-                        <Box className="p-3 rounded-xl border border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] gap-3" key={`${loc.path}-${idx}`}>
+                        <Box className="p-3 rounded-xl border border-outline-200 dark:border-[#2A3B52] bg-background-50 dark:bg-[#0E1524] gap-3" key={idx}>
                           <FormControl>
                             <FormControlLabel>
                               <FormControlLabelText>Path</FormControlLabelText>

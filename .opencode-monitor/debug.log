@@ -1,0 +1,13 @@
+module loaded, origin-kind build
+prompt.submit origin={"kind":"composer"} command=undefined meta=undefined text=we had a power calculation on  states=[] inflight=[]
+pending length=0
+turn.start agent=main
+prompt.submit origin={"kind":"composer"} command=undefined meta=undefined text=i like it but i want a small g states=[] inflight=[]
+pending length=0
+turn.start agent=main
+prompt.submit origin={"kind":"composer"} command=undefined meta=undefined text=do i ned to update fback or on states=[] inflight=[]
+pending length=0
+turn.start agent=main
+prompt.submit origin={"kind":"composer"} command=undefined meta=undefined text=i want to hover each column an states=[] inflight=[]
+pending length=0
+turn.start agent=main
