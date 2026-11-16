@@ -25,7 +25,6 @@ import { useMachines } from "@/hooks/useMachines";
 import { useSelectedMachine } from "@/hooks/useSelectedMachine";
 import PowerScheduleCard from "@/components/PowerScheduleCard";
 import EnergyCard from "@/components/EnergyCard";
-import { energyLine, getEnergySummary, type EnergySummary } from "@/services/energy";
 import {
   applyTunedAdmProfile,
   getCpuInfo,
@@ -347,7 +346,6 @@ export default function DashboardScreen() {
     [machines]
   );
   const [snapshots, setSnapshots] = React.useState<MachineSnapshot[]>([]);
-  const [energySummary, setEnergySummary] = React.useState<EnergySummary | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -503,20 +501,12 @@ export default function DashboardScreen() {
     });
   }, []);
 
-  const loadEnergy = React.useCallback(async () => {
-    try {
-      setEnergySummary(await getEnergySummary());
-    } catch {
-      setEnergySummary(null);
-    }
-  }, []);
-
   const refreshDashboardData = React.useCallback(
     async (mode: "initial" | "refresh" = "initial") => {
       const machineNames = sortedMachines.map((machine) => machine.MachineName);
-      await Promise.all([loadSnapshots(mode), loadCpuProfiles(machineNames), loadEnergy()]);
+      await Promise.all([loadSnapshots(mode), loadCpuProfiles(machineNames)]);
     },
-    [loadSnapshots, loadCpuProfiles, loadEnergy, sortedMachines]
+    [loadSnapshots, loadCpuProfiles, sortedMachines]
   );
 
   React.useEffect(() => {
@@ -530,20 +520,11 @@ export default function DashboardScreen() {
     if (!isChecking && !isLoadingMachines && sortedMachines.length > 0) {
       const interval = setInterval(() => {
         loadSnapshots("refresh", false);
-        void loadEnergy();
       }, 5000);
 
       return () => clearInterval(interval);
     }
-  }, [isChecking, isLoadingMachines, sortedMachines.length, loadSnapshots, loadEnergy]);
-
-  const energyByMachine = React.useMemo(() => {
-    const map: Record<string, EnergySummary["machines"][number]> = {};
-    energySummary?.machines.forEach((row) => {
-      map[row.machine] = row;
-    });
-    return map;
-  }, [energySummary]);
+  }, [isChecking, isLoadingMachines, sortedMachines.length, loadSnapshots]);
 
   const overallTotals = React.useMemo(() => {
     const cpuSnapshots = snapshots.filter((snap) => (snap.cpu?.cores?.length ?? 0) > 0);
@@ -991,7 +972,6 @@ export default function DashboardScreen() {
                 const isPowerActioning =
                   powerActioning?.machineName === snap.machine.MachineName;
                 const machineName = snap.machine.MachineName;
-                const energyRow = energyByMachine[machineName];
                 const cpuProfileState = cpuProfilesByMachine[machineName];
                 const cpuProfiles = cpuProfileState?.profiles ?? [];
                 const currentCpuProfileName =
@@ -1070,12 +1050,6 @@ export default function DashboardScreen() {
                               {formatRelative(entryTime)}
                             </Text>
                           </HStack>
-                          {energyRow ? (
-                            <Text className="text-sm text-typography-500 dark:text-[#8A94A8]" numberOfLines={1}>
-                              {energyLine(energyRow, energySummary?.pricePerKWh ?? null)}
-                              {energyRow.cpuEstimate === "generic" ? " · generic CPU estimate" : ""}
-                            </Text>
-                          ) : null}
                         </VStack>
                       </HStack>
                       <HStack className="items-center gap-2 flex-wrap justify-end">
@@ -1284,11 +1258,11 @@ export default function DashboardScreen() {
           </Box>
 
           <Box className="mt-8">
-            <PowerScheduleCard token={token} />
+            <EnergyCard token={token} />
           </Box>
 
           <Box className="mt-8">
-            <EnergyCard token={token} />
+            <PowerScheduleCard token={token} />
           </Box>
         </Box>
       </ScrollView>
