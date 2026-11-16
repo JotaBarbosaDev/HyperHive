@@ -16,7 +16,7 @@ import {
 const POLL_AFTER_SAVE_MS = 3000;
 const POLL_AFTER_SAVE_COUNT = 10;
 
-// One schedule for the whole cluster, shown on the main dashboard. token comes from
+// One schedule for the whole cluster, shown on the Power page. token comes from
 // useAuthGuard: loading waits for it because the API base URL is restored with the session.
 export default function PowerScheduleCard({ token }: { token: string | null }) {
   const [view, setView] = React.useState<PowerScheduleView | null>(null);

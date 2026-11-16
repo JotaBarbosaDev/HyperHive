@@ -35,7 +35,7 @@ export const timeDomain = (points: DiskHealthPoint[]): TimeDomain | undefined =>
   return [start, end.getTime() > start.getTime() ? end : new Date(start.getTime() + 6 * 3600_000)];
 };
 
-const chartStyles = (isDark: boolean) => {
+export const chartStyles = (isDark: boolean) => {
   const tick = isDark ? "#9AA4B8" : "#475569";
   const line = isDark ? "#1E2F47" : "#E2E8F0";
   const tickLabels = { fill: tick, fontSize: 11, padding: 6, ...(Platform.OS === "web" ? { fontFamily: "inherit" } : {}) };
@@ -54,7 +54,7 @@ type ChartStyles = ReturnType<typeof chartStyles>;
 
 // Hover read-out on web only: the voronoi container captures touches on native,
 // which would stop the page scrolling when a finger lands on a chart.
-const hoverProps = (styles: ChartStyles, text: (datum: any) => string, blacklist?: string[]) =>
+export const hoverProps = (styles: ChartStyles, text: (datum: any) => string, blacklist?: string[]) =>
   Platform.OS === "web"
     ? {
         containerComponent: (
@@ -86,7 +86,7 @@ const timeTicks = (domain: TimeDomain | undefined, width: number) => {
   return Array.from({ length: count }, (_, index) => new Date(start + (span * (index + 0.5)) / count));
 };
 
-const timeAxis = (styles: ChartStyles, width: number, domain?: TimeDomain) => {
+export const timeAxis = (styles: ChartStyles, width: number, domain?: TimeDomain) => {
   const span = domain ? domain[1].getTime() - domain[0].getTime() : 0;
   return <VictoryAxis style={styles.xAxis} tickValues={timeTicks(domain, width)} tickFormat={(v: Date | number) => chartTickText(v, span)} />;
 };

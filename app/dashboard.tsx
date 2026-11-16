@@ -23,8 +23,6 @@ import { Toast, ToastTitle, useToast } from "@/components/ui/toast";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useMachines } from "@/hooks/useMachines";
 import { useSelectedMachine } from "@/hooks/useSelectedMachine";
-import PowerScheduleCard from "@/components/PowerScheduleCard";
-import EnergyCard from "@/components/EnergyCard";
 import {
   applyTunedAdmProfile,
   getCpuInfo,
@@ -1255,14 +1253,6 @@ export default function DashboardScreen() {
                 </Box>
               ) : null}
             </VStack>
-          </Box>
-
-          <Box className="mt-8">
-            <EnergyCard token={token} />
-          </Box>
-
-          <Box className="mt-8">
-            <PowerScheduleCard token={token} />
           </Box>
         </Box>
       </ScrollView>

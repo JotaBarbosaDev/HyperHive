@@ -40,6 +40,7 @@ import {
   EthernetPort,
   Layers,
   PlugZap,
+  Zap,
   Gauge,
   ServerCog,
   DatabaseBackup,
@@ -103,6 +104,11 @@ const MENU_ITEMS: MenuItem[] = [
     label: "Dashboard",
     icon: Gauge,
     route: "/dashboard",
+  },
+  {
+    label: "Power",
+    icon: Zap,
+    route: "/power",
   },
   {
     label: "Storage",

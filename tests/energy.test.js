@@ -35,3 +35,21 @@ describe("energyLine", () => {
     expect(energyLine(row, null)).toBe("~180 W · 42 kWh");
   });
 });
+
+describe("timeline helpers", () => {
+  const { stripSegments, wattPoints } = require("../services/energy");
+  const series = { kind: "vm", name: "vm1", machine: "", wh: [10, 30, null, null, 0, 5], runningS: [3600, 3600, null, null, 0, 600] };
+  const timeline = { start: 3600, stepSeconds: 1800, count: 6, series: [series] };
+
+  it("marks segments running, stopped or without data", () => {
+    expect(stripSegments(series, 3)).toEqual(["running", "none", "running"]);
+    expect(stripSegments({ ...series, runningS: [0, null] }, 96)).toEqual(["stopped", "none"]);
+  });
+
+  it("averages watts per group, keeps gaps and drops the filling bucket", () => {
+    const points = wattPoints(timeline, series, 3);
+    // 5 finished buckets in groups of 2; 10 Wh in half an hour is 20 W.
+    expect(points.map((p) => p.y)).toEqual([40, null, 0]);
+    expect(points[1].x.getTime()).toBe((3600 + 2 * 1800) * 1000);
+  });
+});

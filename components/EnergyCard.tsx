@@ -5,7 +5,7 @@ import { Button, ButtonText } from "@/components/ui/button";
 import { Heading } from "@/components/ui/heading";
 import { Input, InputField } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
-import { formatEnergy, getEnergySummary, parseEnergyPrice, setEnergyPrice, type EnergySummary } from "@/services/energy";
+import { formatEnergy, getEnergySummary, parseEnergyPrice, projectionText, setEnergyPrice, type EnergySummary } from "@/services/energy";
 
 const REFRESH_MS = 10_000; // the master samples every 10 seconds
 
@@ -78,7 +78,8 @@ export default function EnergyCard({ token }: { token: string | null }) {
           ["Now", `~${Math.round(summary.totals.liveWatts)} W`],
           ["This month", `${summary.totals.monthKWh.toFixed(1)} kWh`],
           ["Cost this month", hasPrice ? `€${summary.totals.monthCost.toFixed(2)}` : "Set a price"],
-        ].map(([label, value]) => <Box key={label} className="gap-0.5">
+          ["Projected this month", projectionText(summary.totals, hasPrice)],
+        ].map(([label, value]) => value == null ? null : <Box key={label} className="gap-0.5">
           <Text className={muted}>{label}</Text>
           <Text className={`text-xl font-semibold ${strong}`}>{value}</Text>
         </Box>)}
@@ -90,7 +91,7 @@ export default function EnergyCard({ token }: { token: string | null }) {
         {summary.machines.map((m) => <Box key={m.machine} style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", columnGap: 12 }}>
           <Text className={`text-sm ${strong}`}>{m.machine}</Text>
           <Text className="text-sm text-typography-600 dark:text-[#94A3B8]">
-            {formatEnergy(m, hasPrice)}{m.cpuEstimate === "generic" ? " · generic CPU guess" : ""}
+            {formatEnergy(m, hasPrice)}{projectionText(m, hasPrice) ? ` · projected ${projectionText(m, hasPrice)}` : ""}{m.cpuEstimate === "generic" ? " · generic CPU guess" : ""}
           </Text>
         </Box>)}
       </Box> : <Text className={muted}>No machine has reported power data yet. Slaves need the current version.</Text>}
