@@ -61,7 +61,7 @@ export const hoverProps = (styles: ChartStyles, text: (datum: any) => string, bl
           <VictoryVoronoiContainer
             voronoiDimension="x"
             voronoiBlacklist={blacklist}
-            labels={({ datum }: { datum: any }) => text(datum)}
+            labels={({ datum }: { datum: any }) => (datum == null || datum.y == null ? "" : text(datum))}
             labelComponent={
               <VictoryTooltip
                 constrainToVisibleArea

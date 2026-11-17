@@ -157,6 +157,9 @@ function WattsChart({ selected, timeline, rangeLong }: { selected: EnergySeriesR
   const series = timeline?.series[0];
   const data = timeline && series ? wattPoints(timeline, series) : [];
   const values = data.map((d) => d.y).filter((y): y is number => y != null);
+  // Gaps stay gaps in the line, but Victory's flyout crashes on null points, so
+  // tooltips read a separate transparent line without them.
+  const hoverData = data.filter((d): d is { x: Date; y: number } => d.y != null);
   const average = values.length ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : 0;
   const peak = values.length ? Math.round(Math.max(...values)) : 0;
   const domain: [Date, Date] | undefined = data.length > 1 ? [data[0].x, data[data.length - 1].x] : undefined;
@@ -168,17 +171,20 @@ function WattsChart({ selected, timeline, rangeLong }: { selected: EnergySeriesR
       <Text className={muted}>Average ~{average} W · peak ~{peak} W over the last {rangeLong}. Gaps are times with no data.</Text>
       <Box role="img" aria-label={`${title}: average about ${average} watts, peak about ${peak} watts over the last ${rangeLong}.`} style={{ height: CHART_HEIGHT }}>
         {width > 0 ? <VictoryChart
+          // Remount on series/range change: the voronoi keeps stale active points from the old data, and the flyout crashes on them.
+          key={`${selected.kind}:${selected.name}:${rangeLong}`}
           theme={VictoryTheme.material}
           height={CHART_HEIGHT}
           width={width}
           padding={{ top: 10, bottom: 32, left: 44, right: 14 }}
           scale={{ x: "time" }}
-          domain={{ x: domain, y: [0, Math.max(1, peak * 1.1)] }}
-          {...hoverProps(styles, (d) => `${d.x.toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}\n~${Math.round(d.y)} W`)}
+          domain={{ ...(domain ? { x: domain } : {}), y: [0, Math.max(1, peak * 1.1)] }}
+          {...hoverProps(styles, (d) => `${d.x.toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}\n~${Math.round(d.y)} W`, ["watts"])}
         >
           {timeAxis(styles, width, domain)}
           <VictoryAxis dependentAxis style={styles.yAxis} tickFormat={(v: number) => `${Math.round(v)} W`} />
-          <VictoryLine data={data} style={{ data: { stroke: styles.plotLine, strokeWidth: 2 } }} />
+          <VictoryLine name="hover" data={hoverData} style={{ data: { stroke: "transparent" } }} />
+          <VictoryLine name="watts" data={data} style={{ data: { stroke: styles.plotLine, strokeWidth: 2 } }} />
         </VictoryChart> : null}
       </Box>
     </>}
